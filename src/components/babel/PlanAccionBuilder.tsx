@@ -126,6 +126,21 @@ function priorityTier(rank: number, lang: PlanLang): { label: string; classes: s
   return { label: lang === 'en' ? 'Not worth pursuing' : 'Prioridad nula', classes: 'bg-slate-100 text-slate-500' };
 }
 
+function isFactibilidad(value: string): value is Factibilidad {
+  return value === 'alta' || value === 'media' || value === 'baja' || value === 'nula';
+}
+
+function isImpacto(value: string): value is Impacto {
+  return value === 'alto' || value === 'medio' || value === 'bajo' || value === 'nulo';
+}
+
+interface RawPrioridadIA {
+  id?: string;
+  factibilidad?: string;
+  impacto?: string;
+  justificacion?: string;
+}
+
 function addDays(base: Date, days: number): string {
   const d = new Date(base);
   d.setDate(d.getDate() + days);
@@ -194,6 +209,11 @@ const LABELS = {
     summaryVencidas: 'Acciones vencidas',
     summaryPorVencer: 'Por vencer en 7 dias',
     summaryValidar: 'Elementos pendientes de validar',
+    sugerirPrioridadSubtitle:
+      'Babel revisara cada accion de tu plan y propondra su Factibilidad e Impacto economico; podras validar o corregir cada una desde el menu correspondiente.',
+    sugerirPrioridadBtn: 'Sugerir Factibilidad e Impacto con IA',
+    sugerirPrioridadGenerando: 'Analizando acciones...',
+    sugerirPrioridadErrorHint: 'Puedes seguir asignando Factibilidad e Impacto manualmente mientras tanto.',
     addObjetivo: 'Agregar objetivo de negocio',
     perspectivaLabel: 'Perspectiva (Balanced Scorecard)',
     objetivoLabel: 'Objetivo de negocio',
@@ -252,6 +272,11 @@ const LABELS = {
     summaryVencidas: 'Overdue actions',
     summaryPorVencer: 'Due within 7 days',
     summaryValidar: 'Items pending validation',
+    sugerirPrioridadSubtitle:
+      'Babel will review every action in your plan and propose its Feasibility and Economic Impact; you can validate or correct each one from its dropdown.',
+    sugerirPrioridadBtn: 'Suggest Feasibility & Impact with AI',
+    sugerirPrioridadGenerando: 'Analyzing actions...',
+    sugerirPrioridadErrorHint: 'You can keep assigning Feasibility and Impact manually in the meantime.',
     addObjetivo: 'Add business objective',
     perspectivaLabel: 'Perspective (Balanced Scorecard)',
     objetivoLabel: 'Business objective',
@@ -337,6 +362,8 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
   const [acciones, setAcciones] = React.useState<Accion[]>([]);
   const [contactos, setContactos] = React.useState<Contacto[]>([]);
   const [expanded, setExpanded] = React.useState<ExpandedMap>({});
+  const [prioGenerating, setPrioGenerating] = React.useState(false);
+  const [prioGenError, setPrioGenError] = React.useState('');
   const [loaded, setLoaded] = React.useState(false);
   const [orgAssignments, setOrgAssignments] = React.useState<OrgAssignments>({});
   const [boardPresidente, setBoardPresidente] = React.useState('');
@@ -499,6 +526,62 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       })
     );
   const removeAccion = (id: string) => setAcciones((prev) => prev.filter((a) => a.id !== id));
+
+  const buildAccionesParaIA = (): Array<{ id: string; descripcion: string; entregable: string; contexto: string }> => {
+    const out: Array<{ id: string; descripcion: string; entregable: string; contexto: string }> = [];
+    objetivos.forEach((o) => {
+      const entornosDeO = entornos.filter((e) => e.objetivoId === o.id);
+      entornosDeO.forEach((e) => {
+        const fdsDeE = fds.filter((f) => f.entornoId === e.id);
+        fdsDeE.forEach((f) => {
+          const proyectosDeF = proyectos.filter((p) => p.fdId === f.id);
+          proyectosDeF.forEach((p) => {
+            const accionesDeP = acciones.filter((a) => a.proyectoId === p.id && !a.validado);
+            accionesDeP.forEach((a) => {
+              const contexto =
+                'Objetivo: ' + o.texto + ' | ' + (e.tipo === 'amenaza' ? 'Amenaza' : 'Oportunidad') + ': ' + e.descripcion + ' | Proyecto: ' + p.nombre;
+              out.push({ id: a.id, descripcion: a.descripcion, entregable: a.entregable, contexto: contexto });
+            });
+          });
+        });
+      });
+    });
+    return out;
+  };
+
+  const sugerirPrioridadConIA = async () => {
+    setPrioGenerating(true);
+    setPrioGenError('');
+    try {
+      const payload = buildAccionesParaIA();
+      if (payload.length === 0) {
+        setPrioGenError(lang === 'en' ? 'There are no actions yet to evaluate.' : 'Todavia no hay acciones para evaluar.');
+        return;
+      }
+      const res = await fetch('/api/babel/priorizacion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: lang, acciones: payload }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data || !Array.isArray(data.sugerencias)) {
+        setPrioGenError((data && data.error) || (lang === 'en' ? 'Unknown error contacting Babel.' : 'Error desconocido al contactar a Babel.'));
+        return;
+      }
+      (data.sugerencias as RawPrioridadIA[]).forEach((raw) => {
+        const id = (raw.id || '').trim();
+        if (!id) return;
+        const existe = acciones.some((a) => a.id === id);
+        if (!existe) return;
+        const factRaw = (raw.factibilidad || '').trim().toLowerCase();
+        const impRaw = (raw.impacto || '').trim().toLowerCase();
+        if (!isFactibilidad(factRaw) || !isImpacto(impRaw)) return;
+        updateAccion(id, { factibilidad: factRaw, impacto: impRaw, validado: false });
+      });
+    } finally {
+      setPrioGenerating(false);
+    }
+  };
 
   const vencidas = acciones.filter((a) => a.estatus !== 'terminado' && daysUntil(a.fecha) < 0);
   const porVencer = acciones.filter((a) => {
@@ -1045,6 +1128,26 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
           <div className="text-lg font-bold text-slate-800">{pendientesValidar}</div>
           <div className="text-xs text-slate-500">{t.summaryValidar}</div>
         </div>
+      </div>
+
+      <div className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+        <p className="text-sm text-indigo-900">{t.sugerirPrioridadSubtitle}</p>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={sugerirPrioridadConIA}
+            disabled={prioGenerating}
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {prioGenerating ? t.sugerirPrioridadGenerando : t.sugerirPrioridadBtn}
+          </button>
+        </div>
+        {prioGenError ? (
+          <div className="mt-2 rounded-lg bg-red-50 p-2 text-xs text-red-700">
+            <p>{prioGenError}</p>
+            <p className="mt-0.5">{t.sugerirPrioridadErrorHint}</p>
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-6">
