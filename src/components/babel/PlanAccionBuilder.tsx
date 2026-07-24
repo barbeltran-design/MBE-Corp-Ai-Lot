@@ -134,6 +134,16 @@ function isImpacto(value: string): value is Impacto {
   return value === 'alto' || value === 'medio' || value === 'bajo' || value === 'nulo';
 }
 
+function isEntornoTipo(value: string): value is EntornoTipo {
+  return value === 'amenaza' || value === 'oportunidad';
+}
+
+interface RawEntornoIA {
+  objetivoId?: string;
+  tipo?: string;
+  descripcion?: string;
+}
+
 interface RawPrioridadIA {
   id?: string;
   factibilidad?: string;
@@ -214,6 +224,13 @@ const LABELS = {
     sugerirPrioridadBtn: 'Sugerir Factibilidad e Impacto con IA',
     sugerirPrioridadGenerando: 'Analizando acciones...',
     sugerirPrioridadErrorHint: 'Puedes seguir asignando Factibilidad e Impacto manualmente mientras tanto.',
+    entornoIaTitle: 'Amenazas y Oportunidades con IA',
+    entornoIaSubtitle:
+      'Pega aqui el resumen de tu Fase 2 (Analisis de Mercado: PESTEL, Fuerzas del Mercado, Tendencias y Prospectiva a 5 anos). La IA tambien considera aspectos de Responsabilidad Socio Ambiental (ESG) dentro del mismo texto.',
+    entornoIaPlaceholder: 'Pega aqui el resumen de tu Fase 2...',
+    entornoIaBtn: 'Sugerir Amenazas y Oportunidades con IA',
+    entornoIaGenerando: 'Analizando el resumen...',
+    entornoIaErrorHint: 'Puedes seguir agregando Amenazas y Oportunidades manualmente mientras tanto.',
     addObjetivo: 'Agregar objetivo de negocio',
     perspectivaLabel: 'Perspectiva (Balanced Scorecard)',
     objetivoLabel: 'Objetivo de negocio',
@@ -277,6 +294,13 @@ const LABELS = {
     sugerirPrioridadBtn: 'Suggest Feasibility & Impact with AI',
     sugerirPrioridadGenerando: 'Analyzing actions...',
     sugerirPrioridadErrorHint: 'You can keep assigning Feasibility and Impact manually in the meantime.',
+    entornoIaTitle: 'Threats and Opportunities with AI',
+    entornoIaSubtitle:
+      'Paste your Phase 2 summary here (Market Analysis: PESTEL, Market Forces, Trends and 5-Year Outlook). The AI also considers Environmental, Social and Governance (ESG) aspects within the same text.',
+    entornoIaPlaceholder: 'Paste your Phase 2 summary here...',
+    entornoIaBtn: 'Suggest Threats and Opportunities with AI',
+    entornoIaGenerando: 'Analyzing summary...',
+    entornoIaErrorHint: 'You can keep adding Threats and Opportunities manually in the meantime.',
     addObjetivo: 'Add business objective',
     perspectivaLabel: 'Perspective (Balanced Scorecard)',
     objetivoLabel: 'Business objective',
@@ -364,6 +388,9 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
   const [expanded, setExpanded] = React.useState<ExpandedMap>({});
   const [prioGenerating, setPrioGenerating] = React.useState(false);
   const [prioGenError, setPrioGenError] = React.useState('');
+  const [resumenFase2, setResumenFase2] = React.useState('');
+  const [entornoGenerating, setEntornoGenerating] = React.useState(false);
+  const [entornoGenError, setEntornoGenError] = React.useState('');
   const [loaded, setLoaded] = React.useState(false);
   const [orgAssignments, setOrgAssignments] = React.useState<OrgAssignments>({});
   const [boardPresidente, setBoardPresidente] = React.useState('');
@@ -580,6 +607,51 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       });
     } finally {
       setPrioGenerating(false);
+    }
+  };
+
+  const sugerirEntornosConIA = async () => {
+    setEntornoGenerating(true);
+    setEntornoGenError('');
+    try {
+      const resumen = resumenFase2.trim();
+      if (!resumen) {
+        setEntornoGenError(lang === 'en' ? 'Paste your Phase 2 summary first.' : 'Primero pega el resumen de tu Fase 2.');
+        return;
+      }
+      if (objetivos.length === 0) {
+        setEntornoGenError(lang === 'en' ? 'Add at least one Strategic Objective first.' : 'Primero agrega al menos un Objetivo Estrategico.');
+        return;
+      }
+      const objetivosParaIA = objetivos.map((o) => ({ id: o.id, perspectiva: o.perspectiva, texto: o.texto }));
+      const res = await fetch('/api/babel/extractor-entornos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: lang, resumenFase2: resumen, objetivos: objetivosParaIA }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data || !Array.isArray(data.sugerencias)) {
+        setEntornoGenError((data && data.error) || (lang === 'en' ? 'Unknown error contacting Babel.' : 'Error desconocido al contactar a Babel.'));
+        return;
+      }
+      const objetivoIds = objetivos.map((o) => o.id);
+      const nuevos: AmenazaOportunidad[] = [];
+      (data.sugerencias as RawEntornoIA[]).forEach((raw) => {
+        const objetivoId = (raw.objetivoId || '').trim();
+        const tipoRaw = (raw.tipo || '').trim().toLowerCase();
+        const descripcion = (raw.descripcion || '').trim();
+        if (!objetivoId || objetivoIds.indexOf(objetivoId) === -1) return;
+        if (!isEntornoTipo(tipoRaw)) return;
+        if (!descripcion) return;
+        const eo = newEntorno(objetivoId, tipoRaw);
+        eo.descripcion = descripcion;
+        nuevos.push(eo);
+      });
+      if (nuevos.length > 0) {
+        setEntornos((prev) => prev.concat(nuevos));
+      }
+    } finally {
+      setEntornoGenerating(false);
     }
   };
 
@@ -1146,6 +1218,34 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
           <div className="mt-2 rounded-lg bg-red-50 p-2 text-xs text-red-700">
             <p>{prioGenError}</p>
             <p className="mt-0.5">{t.sugerirPrioridadErrorHint}</p>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="mt-4 rounded-xl border border-teal-200 bg-teal-50 p-4">
+        <h4 className="text-sm font-semibold text-teal-900">{t.entornoIaTitle}</h4>
+        <p className="mt-1 text-sm text-teal-900">{t.entornoIaSubtitle}</p>
+        <textarea
+          value={resumenFase2}
+          onChange={(ev) => setResumenFase2(ev.target.value)}
+          placeholder={t.entornoIaPlaceholder}
+          rows={5}
+          className="mt-2 w-full rounded-lg border border-teal-300 px-3 py-2 text-sm"
+        />
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={sugerirEntornosConIA}
+            disabled={entornoGenerating}
+            className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+          >
+            {entornoGenerating ? t.entornoIaGenerando : t.entornoIaBtn}
+          </button>
+        </div>
+        {entornoGenError ? (
+          <div className="mt-2 rounded-lg bg-red-50 p-2 text-xs text-red-700">
+            <p>{entornoGenError}</p>
+            <p className="mt-0.5">{t.entornoIaErrorHint}</p>
           </div>
         ) : null}
       </div>
