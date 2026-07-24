@@ -30,7 +30,7 @@ type Accion = {
   estatus: Estatus;
   validado: boolean;
 };
-type Contacto = { id: string; nombre: string; celular: string };
+type Contacto = { id: string; nombre: string; celular: string; correo: string };
 type ExpandedMap = Record<string, boolean>;
 type OrgAssignments = Record<string, { person: string }>;
 
@@ -188,6 +188,7 @@ const LABELS = {
     addContact: 'Agregar contacto',
     contactName: 'Nombre',
     contactPhone: 'Celular (con codigo de pais, ej. 52...)',
+    contactEmail: 'Correo electronico',
     summaryObjetivos: 'Objetivos',
     summaryAcciones: 'Acciones totales',
     summaryVencidas: 'Acciones vencidas',
@@ -245,6 +246,7 @@ const LABELS = {
     addContact: 'Add contact',
     contactName: 'Name',
     contactPhone: 'Phone (with country code, e.g. 52...)',
+    contactEmail: 'Email',
     summaryObjetivos: 'Objectives',
     summaryAcciones: 'Total actions',
     summaryVencidas: 'Overdue actions',
@@ -434,7 +436,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
     return undefined;
   };
 
-  const addContacto = () => setContactos((prev) => prev.concat([{ id: generateId(), nombre: '', celular: '' }]));
+  const addContacto = () => setContactos((prev) => prev.concat([{ id: generateId(), nombre: '', celular: '', correo: '' }]));
   const updateContacto = (id: string, patch: Partial<Contacto>) =>
     setContactos((prev) => prev.map((c) => (c.id === id ? Object.assign({}, c, patch) : c)));
   const removeContacto = (id: string) => setContactos((prev) => prev.filter((c) => c.id !== id));
@@ -990,20 +992,27 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
         <h4 className="mb-1 text-sm font-semibold text-slate-700">{t.contactsTitle}</h4>
         <p className="mb-2 text-xs text-slate-400">{t.contactsSubtitle}</p>
         {contactos.map((c) => (
-          <div key={c.id} className="mb-2 flex items-center gap-2">
+          <div key={c.id} className="mb-2 flex flex-wrap items-center gap-2">
             <input
               type="text"
               value={c.nombre}
               onChange={(ev) => updateContacto(c.id, { nombre: ev.target.value })}
               placeholder={t.contactName}
-              className="w-1/2 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+              className="min-w-[140px] flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
             />
             <input
               type="text"
               value={c.celular}
               onChange={(ev) => updateContacto(c.id, { celular: ev.target.value })}
               placeholder={t.contactPhone}
-              className="w-1/2 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+              className="min-w-[140px] flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+            />
+            <input
+              type="email"
+              value={c.correo || ''}
+              onChange={(ev) => updateContacto(c.id, { correo: ev.target.value })}
+              placeholder={t.contactEmail}
+              className="min-w-[140px] flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
             />
             <button type="button" onClick={() => removeContacto(c.id)} className="text-xs font-medium text-red-600 hover:underline">
               {t.eliminar}
