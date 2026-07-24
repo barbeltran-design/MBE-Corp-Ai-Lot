@@ -558,7 +558,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
         setPrioGenError(lang === 'en' ? 'There are no actions yet to evaluate.' : 'Todavia no hay acciones para evaluar.');
         return;
       }
-      const res = await fetch('/api/babel/priorizacion', {
+      const res = await fetch('/api/babel/indicadores/priorizacion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ language: lang, acciones: payload }),
