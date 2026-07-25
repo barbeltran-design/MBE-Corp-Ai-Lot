@@ -5,6 +5,7 @@ type PlanLang = 'es' | 'en';
 type Perspectiva = 'financiera' | 'clientes' | 'procesos_internos' | 'aprendizaje_crecimiento';
 type EntornoTipo = 'amenaza' | 'oportunidad';
 type FDTipo = 'fortaleza' | 'debilidad';
+type ConvocatoriaTipo = 'internacional' | 'nacional';
 type Factibilidad = 'alta' | 'media' | 'baja' | 'nula';
 type Impacto = 'alto' | 'medio' | 'bajo' | 'nulo';
 type Estatus = 'pendiente' | 'en_proceso' | 'terminado';
@@ -30,6 +31,7 @@ type Accion = {
   estatus: Estatus;
   validado: boolean;
 };
+type Convocatoria = { id: string; tipo: ConvocatoriaTipo; nombre: string; requisito: string; validado: boolean };
 type Contacto = { id: string; nombre: string; celular: string; correo: string };
 type ExpandedMap = Record<string, boolean>;
 type OrgAssignments = Record<string, { person: string }>;
@@ -158,6 +160,16 @@ function isPerspectivaBSC(value: string): value is 'clientes' | 'procesos_intern
   return value === 'clientes' || value === 'procesos_internos' || value === 'aprendizaje_crecimiento';
 }
 
+interface RawConvocatoriaIA {
+  tipo?: string;
+  nombre?: string;
+  requisito?: string;
+}
+
+function isConvocatoriaTipo(value: string): value is ConvocatoriaTipo {
+  return value === 'internacional' || value === 'nacional';
+}
+
 interface RawPrioridadIA {
   id?: string;
   factibilidad?: string;
@@ -259,6 +271,21 @@ const LABELS = {
     objetivoBscIaBtn: 'Sugerir Objetivos con IA',
     objetivoBscIaGenerando: 'Analizando el resumen...',
     objetivoBscIaErrorHint: 'Puedes seguir agregando objetivos manualmente mientras tanto.',
+    convocatoriaIaTitle: 'Convocatorias y Fondos con IA',
+    convocatoriaIaSubtitle:
+      'Pega aqui el resumen de tu Fase 1, punto 5 (Vinculacion con los ODS y Fondos). Estas convocatorias cambian de fecha con frecuencia: verifica siempre vigencia y requisitos exactos antes de aplicar.',
+    convocatoriaIaPlaceholder: 'Pega aqui el resumen de tu Fase 1...',
+    convocatoriaIaBtn: 'Sugerir Convocatorias con IA',
+    convocatoriaIaGenerando: 'Analizando el resumen...',
+    convocatoriaIaErrorHint: 'Puedes seguir agregando convocatorias manualmente mientras tanto.',
+    addConvocatoria: 'Agregar convocatoria o fondo',
+    convocatoriaTipo: 'Tipo',
+    internacional: 'Internacional',
+    nacional: 'Nacional/local',
+    convocatoriaNombre: 'Nombre del fondo o programa',
+    convocatoriaNombrePlaceholder: 'Ej. Fondo Multilateral de Inversiones (FOMIN)',
+    convocatoriaRequisito: 'Requisito clave',
+    convocatoriaRequisitoPlaceholder: 'Ej. Empresas con impacto socioambiental verificable',
     addObjetivo: 'Agregar objetivo de negocio',
     perspectivaLabel: 'Perspectiva (Balanced Scorecard)',
     objetivoLabel: 'Objetivo de negocio',
@@ -343,6 +370,21 @@ const LABELS = {
     objetivoBscIaBtn: 'Suggest Objectives with AI',
     objetivoBscIaGenerando: 'Analyzing summary...',
     objetivoBscIaErrorHint: 'You can keep adding objectives manually in the meantime.',
+    convocatoriaIaTitle: 'Funding Calls with AI',
+    convocatoriaIaSubtitle:
+      'Paste your Phase 1 summary here, point 5 (SDG and Funding Alignment). These calls change deadlines frequently: always verify current validity and exact requirements before applying.',
+    convocatoriaIaPlaceholder: 'Paste your Phase 1 summary here...',
+    convocatoriaIaBtn: 'Suggest Funding Calls with AI',
+    convocatoriaIaGenerando: 'Analyzing summary...',
+    convocatoriaIaErrorHint: 'You can keep adding funding calls manually in the meantime.',
+    addConvocatoria: 'Add funding call or program',
+    convocatoriaTipo: 'Type',
+    internacional: 'International',
+    nacional: 'National/local',
+    convocatoriaNombre: 'Fund or program name',
+    convocatoriaNombrePlaceholder: 'E.g. Multilateral Investment Fund (MIF)',
+    convocatoriaRequisito: 'Key requirement',
+    convocatoriaRequisitoPlaceholder: 'E.g. Companies with verifiable socio-environmental impact',
     addObjetivo: 'Add business objective',
     perspectivaLabel: 'Perspective (Balanced Scorecard)',
     objetivoLabel: 'Business objective',
@@ -398,6 +440,9 @@ function newEntorno(objetivoId: string, tipo: EntornoTipo): AmenazaOportunidad {
 function newFD(entornoId: string, tipo: FDTipo): FortalezaDebilidad {
   return { id: generateId(), entornoId: entornoId, tipo: tipo, descripcion: '', validado: false };
 }
+function newConvocatoria(tipo: ConvocatoriaTipo): Convocatoria {
+  return { id: generateId(), tipo: tipo, nombre: '', requisito: '', validado: false };
+}
 function newProyecto(fdId: string): Proyecto {
   return { id: generateId(), fdId: fdId, nombre: '', responsableRoleKey: '', responsableNombre: '', validado: false };
 }
@@ -426,6 +471,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
   const [fds, setFds] = React.useState<FortalezaDebilidad[]>([]);
   const [proyectos, setProyectos] = React.useState<Proyecto[]>([]);
   const [acciones, setAcciones] = React.useState<Accion[]>([]);
+  const [convocatorias, setConvocatorias] = React.useState<Convocatoria[]>([]);
   const [contactos, setContactos] = React.useState<Contacto[]>([]);
   const [expanded, setExpanded] = React.useState<ExpandedMap>({});
   const [prioGenerating, setPrioGenerating] = React.useState(false);
@@ -439,6 +485,9 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
   const [resumenFase5, setResumenFase5] = React.useState('');
   const [objetivoBscGenerating, setObjetivoBscGenerating] = React.useState(false);
   const [objetivoBscGenError, setObjetivoBscGenError] = React.useState('');
+  const [resumenFase1, setResumenFase1] = React.useState('');
+  const [convocatoriaGenerating, setConvocatoriaGenerating] = React.useState(false);
+  const [convocatoriaGenError, setConvocatoriaGenError] = React.useState('');
   const [loaded, setLoaded] = React.useState(false);
   const [orgAssignments, setOrgAssignments] = React.useState<OrgAssignments>({});
   const [boardPresidente, setBoardPresidente] = React.useState('');
@@ -453,6 +502,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
         if (parsed && Array.isArray(parsed.fds)) setFds(parsed.fds);
         if (parsed && Array.isArray(parsed.proyectos)) setProyectos(parsed.proyectos);
         if (parsed && Array.isArray(parsed.acciones)) setAcciones(parsed.acciones);
+        if (parsed && Array.isArray(parsed.convocatorias)) setConvocatorias(parsed.convocatorias);
       }
     } catch (err) {
       console.error(err);
@@ -490,12 +540,12 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
   React.useEffect(() => {
     if (!loaded) return;
     try {
-      const blob = { objetivos: objetivos, entornos: entornos, fds: fds, proyectos: proyectos, acciones: acciones };
+      const blob = { objetivos: objetivos, entornos: entornos, fds: fds, proyectos: proyectos, acciones: acciones, convocatorias: convocatorias };
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(blob));
     } catch (err) {
       console.error(err);
     }
-  }, [objetivos, entornos, fds, proyectos, acciones, loaded]);
+  }, [objetivos, entornos, fds, proyectos, acciones, convocatorias, loaded]);
 
   React.useEffect(() => {
     if (!loaded) return;
@@ -556,6 +606,11 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
     setProyectos((prev) => prev.filter((p) => fdsToRemove.indexOf(p.fdId) === -1));
     setAcciones((prev) => prev.filter((a) => proyectosToRemove.indexOf(a.proyectoId) === -1));
   };
+
+  const addConvocatoria = (tipo: ConvocatoriaTipo) => setConvocatorias((prev) => prev.concat([newConvocatoria(tipo)]));
+  const updateConvocatoria = (id: string, patch: Partial<Convocatoria>) =>
+    setConvocatorias((prev) => prev.map((c) => (c.id === id ? Object.assign({}, c, patch) : c)));
+  const removeConvocatoria = (id: string) => setConvocatorias((prev) => prev.filter((c) => c.id !== id));
 
   const addEntorno = (objetivoId: string, tipo: EntornoTipo) => setEntornos((prev) => prev.concat([newEntorno(objetivoId, tipo)]));
   const updateEntorno = (id: string, patch: Partial<AmenazaOportunidad>) =>
@@ -778,6 +833,42 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       }
     } finally {
       setObjetivoBscGenerating(false);
+    }
+  };
+
+  const sugerirConvocatoriasConIA = async () => {
+    setConvocatoriaGenerating(true);
+    setConvocatoriaGenError('');
+    try {
+      const resumen = resumenFase1.trim();
+      if (!resumen) {
+        setConvocatoriaGenError(lang === 'en' ? 'Paste your Phase 1 summary first.' : 'Primero pega el resumen de tu Fase 1.');
+        return;
+      }
+      const res = await fetch('/api/babel/extractor-convocatorias', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: lang, resumenFase1: resumen }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data || !Array.isArray(data.sugerencias)) {
+        setConvocatoriaGenError((data && data.error) || (lang === 'en' ? 'Unknown error contacting Babel.' : 'Error desconocido al contactar a Babel.'));
+        return;
+      }
+      const nuevas: Convocatoria[] = [];
+      (data.sugerencias as RawConvocatoriaIA[]).forEach((raw) => {
+        const tipo = (raw.tipo || '').trim();
+        const nombre = (raw.nombre || '').trim();
+        const requisito = (raw.requisito || '').trim();
+        if (!isConvocatoriaTipo(tipo)) return;
+        if (!nombre || !requisito) return;
+        nuevas.push({ id: generateId(), tipo: tipo, nombre: nombre, requisito: requisito, validado: false });
+      });
+      if (nuevas.length > 0) {
+        setConvocatorias((prev) => prev.concat(nuevas));
+      }
+    } finally {
+      setConvocatoriaGenerating(false);
     }
   };
 
@@ -1264,6 +1355,66 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
     );
   };
 
+  const renderConvocatoria = (c: Convocatoria) => {
+    return (
+      <div key={c.id} className="mb-3 rounded-lg border border-slate-300 bg-slate-50 p-3">
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-500">{t.convocatoriaTipo}</label>
+            <div className="flex gap-1.5">
+              <button
+                type="button"
+                onClick={() => updateConvocatoria(c.id, { tipo: 'internacional' })}
+                className={
+                  'rounded-full px-2.5 py-1 text-xs font-medium ' +
+                  (c.tipo === 'internacional' ? 'bg-emerald-100 text-emerald-800 ring-2 ring-emerald-500' : 'bg-slate-100 text-slate-600')
+                }
+              >
+                {t.internacional}
+              </button>
+              <button
+                type="button"
+                onClick={() => updateConvocatoria(c.id, { tipo: 'nacional' })}
+                className={
+                  'rounded-full px-2.5 py-1 text-xs font-medium ' +
+                  (c.tipo === 'nacional' ? 'bg-sky-100 text-sky-800 ring-2 ring-sky-500' : 'bg-slate-100 text-slate-600')
+                }
+              >
+                {t.nacional}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-500">{t.convocatoriaNombre}</label>
+            <input
+              type="text"
+              value={c.nombre}
+              onChange={(ev) => updateConvocatoria(c.id, { nombre: ev.target.value })}
+              placeholder={t.convocatoriaNombrePlaceholder}
+              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+            />
+          </div>
+        </div>
+        <div className="mt-2">
+          <label className="mb-1 block text-xs font-medium text-slate-500">{t.convocatoriaRequisito}</label>
+          <input
+            type="text"
+            value={c.requisito}
+            onChange={(ev) => updateConvocatoria(c.id, { requisito: ev.target.value })}
+            placeholder={t.convocatoriaRequisitoPlaceholder}
+            className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+          />
+        </div>
+        <div className="mt-2 flex items-center justify-end gap-2">
+          <ValidateBadge validado={c.validado} onToggle={() => updateConvocatoria(c.id, { validado: !c.validado })} />
+          <button type="button" onClick={() => removeConvocatoria(c.id)} className="text-xs font-medium text-red-600 hover:underline">
+            {t.eliminar}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="mx-auto max-w-4xl">
       <h3 className="text-xl font-bold text-slate-800">{t.title}</h3>
@@ -1437,6 +1588,54 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
         <button type="button" onClick={addObjetivo} className="mt-2 text-sm font-medium text-blue-600 hover:underline">
           {t.addObjetivo}
         </button>
+      </div>
+
+      <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+        <h4 className="text-sm font-semibold text-emerald-900">{t.convocatoriaIaTitle}</h4>
+        <p className="mt-1 text-sm text-emerald-900">{t.convocatoriaIaSubtitle}</p>
+        <textarea
+          value={resumenFase1}
+          onChange={(ev) => setResumenFase1(ev.target.value)}
+          placeholder={t.convocatoriaIaPlaceholder}
+          rows={5}
+          className="mt-2 w-full rounded-lg border border-emerald-300 px-3 py-2 text-sm"
+        />
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={sugerirConvocatoriasConIA}
+            disabled={convocatoriaGenerating}
+            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+          >
+            {convocatoriaGenerating ? t.convocatoriaIaGenerando : t.convocatoriaIaBtn}
+          </button>
+        </div>
+        {convocatoriaGenError ? (
+          <div className="mt-2 rounded-lg bg-red-50 p-2 text-xs text-red-700">
+            <p>{convocatoriaGenError}</p>
+            <p className="mt-0.5">{t.convocatoriaIaErrorHint}</p>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="mt-6">
+        {convocatorias.map((c) => renderConvocatoria(c))}
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => addConvocatoria('internacional')}
+            className="mt-2 text-sm font-medium text-blue-600 hover:underline"
+          >
+            {t.addConvocatoria + ' (' + t.internacional + ')'}
+          </button>
+          <button
+            type="button"
+            onClick={() => addConvocatoria('nacional')}
+            className="mt-2 text-sm font-medium text-blue-600 hover:underline"
+          >
+            {t.addConvocatoria + ' (' + t.nacional + ')'}
+          </button>
+        </div>
       </div>
 
       <p className="mt-4 text-xs text-slate-400">{t.savedNote}</p>
