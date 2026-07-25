@@ -32,7 +32,7 @@ type Accion = {
   validado: boolean;
 };
 type Convocatoria = { id: string; tipo: ConvocatoriaTipo; nombre: string; requisito: string; validado: boolean };
-type Contacto = { id: string; nombre: string; celular: string; correo: string };
+type Contacto = { id: string; nombre: string; celular: string; correo: string; roleKeys: string[] };
 type ExpandedMap = Record<string, boolean>;
 type OrgAssignments = Record<string, { person: string }>;
 
@@ -41,6 +41,8 @@ const CONTACTS_KEY = 'babel_plan_accion_contactos_v1';
 const ORG_KEY = 'babel_orgchart_v1';
 const BOARD_KEY = 'babel_orgchart_board_v1';
 const FIN_GOALS_KEY = 'babel_financial_goals_v1';
+const BOARD_PRESIDENTE_KEY = '__board_presidente';
+const BOARD_SECRETARIO_KEY = '__board_secretario';
 
 interface FinGoalsSaved {
   input: {
@@ -518,6 +520,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
   const [loaded, setLoaded] = React.useState(false);
   const [orgAssignments, setOrgAssignments] = React.useState<OrgAssignments>({});
   const [boardPresidente, setBoardPresidente] = React.useState('');
+  const [boardSecretario, setBoardSecretario] = React.useState('');
   const [finGoalsData, setFinGoalsData] = React.useState<FinGoalsSaved | null>(null);
 
   React.useEffect(() => {
@@ -558,6 +561,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       if (rawBoard) {
         const parsedBoard = JSON.parse(rawBoard);
         if (parsedBoard && typeof parsedBoard.presidente === 'string') setBoardPresidente(parsedBoard.presidente);
+        if (parsedBoard && typeof parsedBoard.secretario === 'string') setBoardSecretario(parsedBoard.secretario);
       }
     } catch (err) {
       console.error(err);
@@ -593,6 +597,20 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
     }
   }, [contactos, loaded]);
 
+  React.useEffect(() => {
+    if (!loaded) return;
+    const roster = orgRosterEntries();
+    const claimedKeys: Record<string, boolean> = {};
+    contactos.forEach((c) => {
+      (Array.isArray(c.roleKeys) ? c.roleKeys : []).forEach((k) => {
+        claimedKeys[k] = true;
+      });
+    });
+    const toAdd = roster.filter((e) => !claimedKeys[e.key]);
+    if (toAdd.length === 0) return;
+    setContactos((prev) => prev.concat(toAdd.map((e) => ({ id: generateId(), nombre: e.nombre, celular: '', correo: '', roleKeys: [e.key] }))));
+  }, [loaded, orgAssignments, boardPresidente, boardSecretario, contactos]);
+
   const toggleExpanded = (id: string) => {
     setExpanded((prev) => {
       const next = Object.assign({}, prev);
@@ -608,7 +626,103 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
     return a && a.person ? a.person : '';
   };
 
-  const resolveCelular = (nombre: string): string => {
+  const roleLabelFor = (roleKey: string): string => {
+    if (roleKey === BOARD_PRESIDENTE_KEY) return lang === 'en' ? 'Board President' : 'Presidente del Consejo';
+    if (roleKey === BOARD_SECRETARIO_KEY) return lang === 'en' ? 'Board Secretary' : 'Secretario del Consejo';
+    for (let i = 0; i < ROLE_OPTIONS.length; i++) {
+      if (ROLE_OPTIONS[i].key === roleKey) return lang === 'en' ? ROLE_OPTIONS[i].nameEn : ROLE_OPTIONS[i].nameEs;
+    }
+    return roleKey;
+  };
+
+  const orgRosterEntries = (): { key: string; nombre: string }[] => {
+    const list: { key: string; nombre: string }[] = [];
+    if (boardPresidente.trim()) list.push({ key: BOARD_PRESIDENTE_KEY, nombre: boardPresidente });
+    if (boardSecretario.trim()) list.push({ key: BOARD_SECRETARIO_KEY, nombre: boardSecretario });
+    ROLE_OPTIONS.forEach((r) => {
+      if (r.key === 'consejo_administrativo') return;
+      const nombre = resolvePersonForRole(r.key);
+      if (nombre.trim()) list.push({ key: r.key, nombre: nombre });
+    });
+    return list;
+  };
+
+  const syncNameToOrgChart = (roleKeys: string[], nombre: string) => {
+    if (!Array.isArray(roleKeys) || roleKeys.length === 0) return;
+    let boardChanged = false;
+    let nextPresidente = boardPresidente;
+    let nextSecretario = boardSecretario;
+    let nextAssignments = orgAssignments;
+    let assignmentsChanged = false;
+    roleKeys.forEach((rk) => {
+      if (rk === BOARD_PRESIDENTE_KEY) {
+        nextPresidente = nombre;
+        boardChanged = true;
+      } else if (rk === BOARD_SECRETARIO_KEY) {
+        nextSecretario = nombre;
+        boardChanged = true;
+      } else {
+        if (!assignmentsChanged) nextAssignments = Object.assign({}, orgAssignments);
+        nextAssignments[rk] = Object.assign({}, orgAssignments[rk], { person: nombre });
+        assignmentsChanged = true;
+      }
+    });
+    if (boardChanged) {
+      setBoardPresidente(nextPresidente);
+      setBoardSecretario(nextSecretario);
+      try {
+        const rawBoard = window.localStorage.getItem(BOARD_KEY);
+        const parsedBoard = rawBoard ? JSON.parse(rawBoard) : {};
+        const blob = Object.assign({}, parsedBoard, { presidente: nextPresidente, secretario: nextSecretario });
+        window.localStorage.setItem(BOARD_KEY, JSON.stringify(blob));
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    if (assignmentsChanged) {
+      setOrgAssignments(nextAssignments);
+      try {
+        window.localStorage.setItem(ORG_KEY, JSON.stringify(nextAssignments));
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+
+  const addRoleToContacto = (contactoId: string, roleKey: string) => {
+    setContactos((prev) =>
+      prev.map((c) => {
+        if (c.id === contactoId) {
+          const existing = Array.isArray(c.roleKeys) ? c.roleKeys : [];
+          if (existing.indexOf(roleKey) !== -1) return c;
+          return Object.assign({}, c, { roleKeys: existing.concat([roleKey]) });
+        }
+        const otherKeys = Array.isArray(c.roleKeys) ? c.roleKeys : [];
+        if (otherKeys.indexOf(roleKey) !== -1) {
+          return Object.assign({}, c, { roleKeys: otherKeys.filter((k) => k !== roleKey) });
+        }
+        return c;
+      })
+    );
+  };
+
+  const removeRoleFromContacto = (contactoId: string, roleKey: string) => {
+    setContactos((prev) =>
+      prev.map((c) =>
+        c.id === contactoId
+          ? Object.assign({}, c, { roleKeys: (Array.isArray(c.roleKeys) ? c.roleKeys : []).filter((k) => k !== roleKey) })
+          : c
+      )
+    );
+  };
+
+  const resolveCelular = (nombre: string, roleKey?: string): string => {
+    if (roleKey) {
+      for (let i = 0; i < contactos.length; i++) {
+        const keys = contactos[i].roleKeys;
+        if (Array.isArray(keys) && keys.indexOf(roleKey) !== -1) return contactos[i].celular;
+      }
+    }
     if (!nombre) return '';
     for (let i = 0; i < contactos.length; i++) {
       if (contactos[i].nombre.trim().toLowerCase() === nombre.trim().toLowerCase()) {
@@ -625,7 +739,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
     return undefined;
   };
 
-  const addContacto = () => setContactos((prev) => prev.concat([{ id: generateId(), nombre: '', celular: '', correo: '' }]));
+  const addContacto = () => setContactos((prev) => prev.concat([{ id: generateId(), nombre: '', celular: '', correo: '', roleKeys: [] }]));
   const updateContacto = (id: string, patch: Partial<Contacto>) =>
     setContactos((prev) => prev.map((c) => (c.id === id ? Object.assign({}, c, patch) : c)));
   const removeContacto = (id: string) => setContactos((prev) => prev.filter((c) => c.id !== id));
@@ -986,7 +1100,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
   const renderAccion = (proyectoNombre: string, a: Accion) => {
     const rank = priorityRank(a.factibilidad, a.impacto);
     const tier = priorityTier(rank, lang);
-    const celular = resolveCelular(a.responsableNombre);
+    const celular = resolveCelular(a.responsableNombre, a.responsableRoleKey);
     const d = daysUntil(a.fecha);
     const showDue = a.estatus !== 'terminado' && d <= 7;
     return (
@@ -1497,34 +1611,77 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <h4 className="mb-1 text-sm font-semibold text-slate-700">{t.contactsTitle}</h4>
         <p className="mb-2 text-xs text-slate-400">{t.contactsSubtitle}</p>
-        {contactos.map((c) => (
-          <div key={c.id} className="mb-2 flex flex-wrap items-center gap-2">
-            <input
-              type="text"
-              value={c.nombre}
-              onChange={(ev) => updateContacto(c.id, { nombre: ev.target.value })}
-              placeholder={t.contactName}
-              className="min-w-[140px] flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-            />
-            <input
-              type="text"
-              value={c.celular}
-              onChange={(ev) => updateContacto(c.id, { celular: ev.target.value })}
-              placeholder={t.contactPhone}
-              className="min-w-[140px] flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-            />
-            <input
-              type="email"
-              value={c.correo || ''}
-              onChange={(ev) => updateContacto(c.id, { correo: ev.target.value })}
-              placeholder={t.contactEmail}
-              className="min-w-[140px] flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-            />
-            <button type="button" onClick={() => removeContacto(c.id)} className="text-xs font-medium text-red-600 hover:underline">
-              {t.eliminar}
-            </button>
-          </div>
-        ))}
+        {contactos.map((c) => {
+          const roleKeys = Array.isArray(c.roleKeys) ? c.roleKeys : [];
+          const disponibles = orgRosterEntries().filter((e) => roleKeys.indexOf(e.key) === -1);
+          return (
+            <div key={c.id} className="mb-2 rounded-lg border border-slate-100 p-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="text"
+                  value={c.nombre}
+                  onChange={(ev) => {
+                    updateContacto(c.id, { nombre: ev.target.value });
+                    if (roleKeys.length > 0) syncNameToOrgChart(roleKeys, ev.target.value);
+                  }}
+                  placeholder={t.contactName}
+                  className="min-w-[140px] flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+                />
+                <input
+                  type="text"
+                  value={c.celular}
+                  onChange={(ev) => updateContacto(c.id, { celular: ev.target.value })}
+                  placeholder={t.contactPhone}
+                  className="min-w-[140px] flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+                />
+                <input
+                  type="email"
+                  value={c.correo || ''}
+                  onChange={(ev) => updateContacto(c.id, { correo: ev.target.value })}
+                  placeholder={t.contactEmail}
+                  className="min-w-[140px] flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+                />
+                <button type="button" onClick={() => removeContacto(c.id)} className="text-xs font-medium text-red-600 hover:underline">
+                  {t.eliminar}
+                </button>
+              </div>
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                {roleKeys.length === 0 ? (
+                  <span className="text-xs italic text-slate-400">
+                    {lang === 'en' ? '(manually added, not linked to the org chart)' : '(agregado manualmente, no ligado al organigrama)'}
+                  </span>
+                ) : (
+                  roleKeys.map((rk) => (
+                    <span key={rk} className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700">
+                      {roleLabelFor(rk)}
+                      <button type="button" onClick={() => removeRoleFromContacto(c.id, rk)} className="font-bold text-blue-400 hover:text-blue-700">
+                        ×
+                      </button>
+                    </span>
+                  ))
+                )}
+                {disponibles.length > 0 ? (
+                  <select
+                    value=""
+                    onChange={(ev) => {
+                      if (ev.target.value) addRoleToContacto(c.id, ev.target.value);
+                    }}
+                    className="rounded-lg border border-slate-300 px-2 py-0.5 text-xs text-slate-500"
+                  >
+                    <option value="">
+                      {lang === 'en' ? '+ same person as...' : '+ es la misma persona que...'}
+                    </option>
+                    {disponibles.map((e) => (
+                      <option key={e.key} value={e.key}>
+                        {roleLabelFor(e.key) + ' (' + e.nombre + ')'}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
+              </div>
+            </div>
+          );
+        })}
         <button type="button" onClick={addContacto} className="text-xs font-medium text-blue-600 hover:underline">
           {t.addContact}
         </button>
