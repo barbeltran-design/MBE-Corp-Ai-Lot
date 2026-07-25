@@ -225,6 +225,11 @@ interface RawObjetivoBSCIA {
   texto?: string;
 }
 
+interface RawAccionIA {
+  descripcion?: string;
+  entregable?: string;
+}
+
 function isPerspectivaBSC(value: string): value is 'clientes' | 'procesos_internos' | 'aprendizaje_crecimiento' {
   return value === 'clientes' || value === 'procesos_internos' || value === 'aprendizaje_crecimiento';
 }
@@ -304,10 +309,12 @@ function daysUntil(fecha: string): number {
 
 function reminderMessage(lang: PlanLang, nombre: string, tarea: string, proyecto: string, fecha: string, entregable: string): string {
   const entregableTxt = entregable ? entregable : (lang === 'en' ? 'not set' : 'sin definir');
+  const proyectoClauseEn = proyecto ? ' for project "' + proyecto + '"' : '';
+  const proyectoClauseEs = proyecto ? ' del proyecto "' + proyecto + '"' : '';
   if (lang === 'en') {
-    return 'Hi ' + nombre + ', your task "' + tarea + '" for project "' + proyecto + '" is due ' + fecha + '. Expected deliverable: ' + entregableTxt + '. Please confirm your progress.';
+    return 'Hi ' + nombre + ', your task "' + tarea + '"' + proyectoClauseEn + ' is due ' + fecha + '. Expected deliverable: ' + entregableTxt + '. Please confirm your progress.';
   }
-  return 'Hola ' + nombre + ', tu tarea "' + tarea + '" del proyecto "' + proyecto + '" tiene fecha compromiso ' + fecha + '. Entregable esperado: ' + entregableTxt + '. Por favor confirma como vas.';
+  return 'Hola ' + nombre + ', tu tarea "' + tarea + '"' + proyectoClauseEs + ' tiene fecha compromiso ' + fecha + '. Entregable esperado: ' + entregableTxt + '. Por favor confirma como vas.';
 }
 
 const LABELS = {
@@ -402,6 +409,8 @@ const LABELS = {
     responsableLabel: 'Responsable (rol del organigrama)',
     responsableNombreLabel: 'Nombre del responsable',
     addAccion: 'Agregar accion',
+    sugerirAccionesBtn: 'Sugerir acciones con IA',
+    sugerirAccionesGenerando: 'Proponiendo acciones...',
     accionDesc: 'Descripcion de la accion',
     accionPlaceholder: 'Ej. Cotizar 3 proveedores de ERP',
     crossLabel: 'Areas de apoyo (crossfuncional)',
@@ -511,6 +520,8 @@ const LABELS = {
     responsableLabel: 'Owner (org chart role)',
     responsableNombreLabel: 'Owner name',
     addAccion: 'Add action',
+    sugerirAccionesBtn: 'Suggest actions with AI',
+    sugerirAccionesGenerando: 'Proposing actions...',
     accionDesc: 'Action description',
     accionPlaceholder: 'E.g. Get quotes from 3 ERP vendors',
     crossLabel: 'Supporting areas (cross-functional)',
@@ -592,6 +603,8 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
   const [convocatoriaGenerating, setConvocatoriaGenerating] = React.useState(false);
   const [convocatoriaGenError, setConvocatoriaGenError] = React.useState('');
   const [convocatoriaYaSugerido, setConvocatoriaYaSugerido] = React.useState(false);
+  const [accionGenerating, setAccionGenerating] = React.useState<Record<string, boolean>>({});
+  const [accionGenError, setAccionGenError] = React.useState<Record<string, string>>({});
   const [loaded, setLoaded] = React.useState(false);
   const [orgAssignments, setOrgAssignments] = React.useState<OrgAssignments>({});
   const [boardPresidente, setBoardPresidente] = React.useState('');
@@ -1057,7 +1070,11 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
     setAcciones((prev) => prev.filter((a) => proyectosToRemove.indexOf(a.proyectoId) === -1));
   };
 
-  const addFD = (entornoId: string, tipo: FDTipo) => setFds((prev) => prev.concat([newFD(entornoId, tipo)]));
+  const addFD = (entornoId: string, tipo: FDTipo) => {
+    const fd = newFD(entornoId, tipo);
+    setFds((prev) => prev.concat([fd]));
+    setProyectos((prev) => prev.concat([newProyecto(fd.id)]));
+  };
   const updateFD = (id: string, patch: Partial<FortalezaDebilidad>) =>
     setFds((prev) => prev.map((f) => (f.id === id ? Object.assign({}, f, patch) : f)));
   const removeFD = (id: string) => {
@@ -1102,7 +1119,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
             const accionesDeP = acciones.filter((a) => a.proyectoId === p.id && !a.validado);
             accionesDeP.forEach((a) => {
               const contexto =
-                'Objetivo: ' + o.texto + ' | ' + (e.tipo === 'amenaza' ? 'Amenaza' : 'Oportunidad') + ': ' + e.descripcion + ' | Proyecto: ' + p.nombre;
+                'Objetivo: ' + o.texto + ' | ' + (e.tipo === 'amenaza' ? 'Amenaza' : 'Oportunidad') + ': ' + e.descripcion;
               out.push({ id: a.id, descripcion: a.descripcion, entregable: a.entregable, contexto: contexto });
             });
           });
@@ -1110,6 +1127,45 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       });
     });
     return out;
+  };
+
+  const sugerirAccionesConIA = async (proyectoId: string, f: FortalezaDebilidad, e: AmenazaOportunidad, o: Objetivo) => {
+    setAccionGenerating((prev) => Object.assign({}, prev, { [proyectoId]: true }));
+    setAccionGenError((prev) => Object.assign({}, prev, { [proyectoId]: '' }));
+    try {
+      const res = await fetch('/api/babel/extractor-acciones', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          language: lang,
+          objetivo: o.texto,
+          entornoTipo: e.tipo,
+          entornoDescripcion: e.descripcion,
+          fdTipo: f.tipo,
+          fdDescripcion: f.descripcion,
+        }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data || !Array.isArray(data.sugerencias)) {
+        const msg = (data && data.error) || (lang === 'en' ? 'Unknown error contacting Babel.' : 'Error desconocido al contactar a Babel.');
+        setAccionGenError((prev) => Object.assign({}, prev, { [proyectoId]: msg }));
+        return;
+      }
+      const nuevas: Accion[] = [];
+      (data.sugerencias as RawAccionIA[]).forEach((raw) => {
+        const descripcion = (raw.descripcion || '').trim();
+        if (!descripcion) return;
+        const nueva = newAccion(proyectoId, priorityRank('media', 'medio'));
+        nueva.descripcion = descripcion;
+        nueva.entregable = (raw.entregable || '').trim();
+        nuevas.push(nueva);
+      });
+      if (nuevas.length > 0) {
+        setAcciones((prev) => prev.concat(nuevas));
+      }
+    } finally {
+      setAccionGenerating((prev) => Object.assign({}, prev, { [proyectoId]: false }));
+    }
   };
 
   const sugerirPrioridadConIA = async () => {
@@ -1609,47 +1665,14 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
     );
   };
 
-  const renderProyecto = (p: Proyecto) => {
+  const renderProyecto = (p: Proyecto, f: FortalezaDebilidad, e: AmenazaOportunidad, o: Objetivo) => {
     const isExpanded = expanded[p.id] === true;
     const accionesDeP = acciones.filter((a) => a.proyectoId === p.id);
+    const generating = accionGenerating[p.id] === true;
+    const genError = accionGenError[p.id] || '';
     return (
       <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
-        <div className="grid gap-2 sm:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">{t.proyectoLabel}</label>
-            <input
-              type="text"
-              value={p.nombre}
-              onChange={(ev) => updateProyecto(p.id, { nombre: ev.target.value })}
-              placeholder={t.proyectoPlaceholder}
-              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">{t.responsableLabel}</label>
-            <select
-              value={p.responsableRoleKey}
-              onChange={(ev) => {
-                const roleKey = ev.target.value;
-                const person = resolvePersonForRole(roleKey);
-                updateProyecto(p.id, { responsableRoleKey: roleKey, responsableNombre: person ? person : p.responsableNombre });
-              }}
-              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-            >
-              <option value="">{t.responsableLabel}</option>
-              {ROLE_OPTIONS.map((opt) => {
-                const person = resolvePersonForRole(opt.key);
-                const label = roleLabel(opt.key, lang) + (person ? ' - ' + person : '');
-                return (
-                  <option key={opt.key} value={opt.key}>
-                    {label}
-                  </option>
-                );
-              })}
-            </select>
-          </div>
-        </div>
-        <div className="mt-2 flex items-center justify-between">
+        <div className="flex items-center justify-between">
           <button type="button" onClick={() => toggleExpanded(p.id)} className="text-xs font-medium text-blue-600 hover:underline">
             {(isExpanded ? t.ocultar : t.mostrar) + ' ' + t.addAccion + ' (' + accionesDeP.length + ')'}
           </button>
@@ -1662,7 +1685,18 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
         </div>
         {isExpanded ? (
           <div className="mt-3">
-            {accionesDeP.map((a) => renderAccion(p.nombre, a))}
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => sugerirAccionesConIA(p.id, f, e, o)}
+                disabled={generating}
+                className="rounded-full border border-blue-400 bg-white px-3 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50"
+              >
+                {generating ? t.sugerirAccionesGenerando : t.sugerirAccionesBtn}
+              </button>
+            </div>
+            {genError ? <p className="mb-2 text-xs text-red-700">{genError}</p> : null}
+            {accionesDeP.map((a) => renderAccion('', a))}
             <button type="button" onClick={() => addAccion(p.id)} className="mt-1 text-xs font-medium text-blue-600 hover:underline">
               {t.addAccion}
             </button>
@@ -1672,7 +1706,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
     );
   };
 
-  const renderFD = (f: FortalezaDebilidad) => {
+  const renderFD = (f: FortalezaDebilidad, e: AmenazaOportunidad, o: Objetivo) => {
     const proyecto = findProyectoByFd(f.id);
     return (
       <div key={f.id} className="mb-3 rounded-lg border border-slate-200 bg-white p-3">
@@ -1723,17 +1757,17 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
           </div>
         </div>
         {proyecto ? (
-          renderProyecto(proyecto)
+          renderProyecto(proyecto, f, e, o)
         ) : (
           <button type="button" onClick={() => addProyecto(f.id)} className="mt-2 text-xs font-medium text-blue-600 hover:underline">
-            {t.definirProyecto}
+            {t.addAccion}
           </button>
         )}
       </div>
     );
   };
 
-  const renderEntorno = (e: AmenazaOportunidad) => {
+  const renderEntorno = (e: AmenazaOportunidad, o: Objetivo) => {
     const isExpanded = expanded[e.id] === true;
     const fdsDeE = fds.filter((f) => f.entornoId === e.id);
     return (
@@ -1788,7 +1822,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
         </div>
         {isExpanded ? (
           <div className="mt-3">
-            {fdsDeE.map((f) => renderFD(f))}
+            {fdsDeE.map((f) => renderFD(f, e, o))}
             <div className="flex gap-3">
               <button type="button" onClick={() => addFD(e.id, 'fortaleza')} className="text-xs font-medium text-blue-600 hover:underline">
                 {t.addFD + ' (' + t.fortaleza + ')'}
@@ -1847,7 +1881,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
         </div>
         {isExpanded ? (
           <div className="mt-3">
-            {entornosDeO.map((e) => renderEntorno(e))}
+            {entornosDeO.map((e) => renderEntorno(e, o))}
             <div className="flex gap-3">
               <button
                 type="button"
