@@ -160,6 +160,17 @@ function isPerspectivaBSC(value: string): value is 'clientes' | 'procesos_intern
   return value === 'clientes' || value === 'procesos_internos' || value === 'aprendizaje_crecimiento';
 }
 
+const PERSPECTIVA_ORDER: Record<Perspectiva, number> = {
+  financiera: 0,
+  clientes: 1,
+  procesos_internos: 2,
+  aprendizaje_crecimiento: 3,
+};
+
+function sortObjetivosPorPerspectiva(list: Objetivo[]): Objetivo[] {
+  return list.slice().sort((a, b) => PERSPECTIVA_ORDER[a.perspectiva] - PERSPECTIVA_ORDER[b.perspectiva]);
+}
+
 interface RawConvocatoriaIA {
   tipo?: string;
   nombre?: string;
@@ -829,7 +840,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
         nuevos.push({ id: generateId(), perspectiva: perspectiva, texto: texto, validado: false });
       });
       if (nuevos.length > 0) {
-        setObjetivos((prev) => prev.concat(nuevos));
+        setObjetivos((prev) => sortObjetivosPorPerspectiva(prev.concat(nuevos)));
       }
     } finally {
       setObjetivoBscGenerating(false);
@@ -1564,7 +1575,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       </div>
 
       <div className="mt-6">
-        {objetivos.map((o) => renderObjetivo(o))}
+        {sortObjetivosPorPerspectiva(objetivos).map((o) => renderObjetivo(o))}
         <button type="button" onClick={addObjetivo} className="mt-2 text-sm font-medium text-blue-600 hover:underline">
           {t.addObjetivo}
         </button>
