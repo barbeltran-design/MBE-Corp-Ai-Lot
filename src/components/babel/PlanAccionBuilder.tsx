@@ -228,6 +228,7 @@ interface RawObjetivoBSCIA {
 interface RawAccionIA {
   descripcion?: string;
   entregable?: string;
+  responsableRoleKey?: string;
 }
 
 function isPerspectivaBSC(value: string): value is 'clientes' | 'procesos_internos' | 'aprendizaje_crecimiento' {
@@ -1133,6 +1134,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
     setAccionGenerating((prev) => Object.assign({}, prev, { [proyectoId]: true }));
     setAccionGenError((prev) => Object.assign({}, prev, { [proyectoId]: '' }));
     try {
+      const rolesParaIA = ROLE_OPTIONS.map((r) => ({ key: r.key, nombre: roleLabel(r.key, lang) }));
       const res = await fetch('/api/babel/extractor-acciones', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1143,6 +1145,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
           entornoDescripcion: e.descripcion,
           fdTipo: f.tipo,
           fdDescripcion: f.descripcion,
+          roles: rolesParaIA,
         }),
       });
       const data = await res.json().catch(() => null);
@@ -1151,6 +1154,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
         setAccionGenError((prev) => Object.assign({}, prev, { [proyectoId]: msg }));
         return;
       }
+      const roleKeysValidos = ROLE_OPTIONS.map((r) => r.key);
       const nuevas: Accion[] = [];
       (data.sugerencias as RawAccionIA[]).forEach((raw) => {
         const descripcion = (raw.descripcion || '').trim();
@@ -1158,6 +1162,12 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
         const nueva = newAccion(proyectoId, priorityRank('media', 'medio'));
         nueva.descripcion = descripcion;
         nueva.entregable = (raw.entregable || '').trim();
+        const roleKey = (raw.responsableRoleKey || '').trim();
+        if (roleKey && roleKeysValidos.indexOf(roleKey) !== -1) {
+          const person = resolvePersonForRole(roleKey);
+          nueva.responsableRoleKey = roleKey;
+          nueva.responsableNombre = person ? person : '';
+        }
         nuevas.push(nueva);
       });
       if (nuevas.length > 0) {
