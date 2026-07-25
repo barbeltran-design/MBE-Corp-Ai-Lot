@@ -1,5 +1,20 @@
 'use client';
 import React from 'react';
+import { onAuthStateChanged, type User } from 'firebase/auth';
+import { getFirebaseAuth } from '@/lib/firebase';
+import { getLatestAssessmentAnswers } from '@/lib/assessment';
+import { getMaturityDimensions } from '@/lib/maturity-dimensions';
+import { computeResults, type AssessmentResult } from '@/lib/maturity-scoring';
+import { getBabelSessionIfExists } from '@/lib/babel-session';
+
+const MATURITY_LEVEL_LABEL: Record<string, { es: string; en: string }> = {
+  execution: { es: 'Ejecucion', en: 'Execution' },
+  standard: { es: 'Estandar', en: 'Standard' },
+  control: { es: 'Control', en: 'Control' },
+  optimization: { es: 'Optimizacion', en: 'Optimization' },
+  excellence: { es: 'Excelencia', en: 'Excellence' },
+  influencer: { es: 'Influencer', en: 'Influencer' },
+};
 
 type PlanLang = 'es' | 'en';
 type Perspectiva = 'financiera' | 'clientes' | 'procesos_internos' | 'aprendizaje_crecimiento';
@@ -522,6 +537,47 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
   const [boardPresidente, setBoardPresidente] = React.useState('');
   const [boardSecretario, setBoardSecretario] = React.useState('');
   const [finGoalsData, setFinGoalsData] = React.useState<FinGoalsSaved | null>(null);
+  const [authUser, setAuthUser] = React.useState<User | null>(null);
+  const [madurezResult, setMadurezResult] = React.useState<AssessmentResult | null>(null);
+  const [babelFase3Summary, setBabelFase3Summary] = React.useState('');
+
+  React.useEffect(() => {
+    const auth = getFirebaseAuth();
+    const unsubscribe = onAuthStateChanged(auth, (u) => setAuthUser(u));
+    return unsubscribe;
+  }, []);
+
+  React.useEffect(() => {
+    if (!authUser) {
+      setMadurezResult(null);
+      setBabelFase3Summary('');
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const answers = await getLatestAssessmentAnswers(authUser.uid);
+        if (!cancelled && answers) {
+          const dims = getMaturityDimensions(lang);
+          setMadurezResult(computeResults(dims, answers));
+        }
+      } catch (err) {
+        console.error(err);
+      }
+      try {
+        const session = await getBabelSessionIfExists(authUser.uid);
+        if (!cancelled && session) {
+          const fase3 = (session.phases || []).find((p) => p.phase === 3 && p.approved);
+          if (fase3 && fase3.summary) setBabelFase3Summary(fase3.summary);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authUser, lang]);
 
   React.useEffect(() => {
     try {
@@ -944,6 +1000,34 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
     } finally {
       setEntornoGenerating(false);
     }
+  };
+
+  const usarResumenBabelFase3 = () => {
+    if (!babelFase3Summary) return;
+    if (
+      resumenFase3.trim() &&
+      !window.confirm(
+        lang === 'en'
+          ? 'Replace the current text with your Phase 3 summary from Babel?'
+          : 'Reemplazar el texto actual con tu resumen de la Fase 3 de Babel?'
+      )
+    ) {
+      return;
+    }
+    setResumenFase3(babelFase3Summary);
+  };
+
+  const agregarPerfilMadurez = () => {
+    if (!madurezResult) return;
+    const lines = madurezResult.dimensions.map((d) => {
+      const labelSet = MATURITY_LEVEL_LABEL[d.level];
+      const label = labelSet ? labelSet[lang] : d.level;
+      return '- ' + d.tema + ': ' + label;
+    });
+    const bloque =
+      (lang === 'en' ? 'Maturity profile (self-assessment):\n' : 'Perfil de madurez (autodiagnostico):\n') +
+      lines.join('\n');
+    setResumenFase3((prev) => (prev.trim() ? prev.trim() + '\n\n' + bloque : bloque));
   };
 
   const sugerirCapacidadesConIA = async () => {
@@ -1797,6 +1881,28 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       <div className="mt-4 rounded-xl border border-cyan-200 bg-cyan-50 p-4">
         <h4 className="text-sm font-semibold text-cyan-900">{t.capacidadIaTitle}</h4>
         <p className="mt-1 text-sm text-cyan-900">{t.capacidadIaSubtitle}</p>
+        {(babelFase3Summary || madurezResult) ? (
+          <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-white/60 p-2 text-xs text-cyan-900">
+            {babelFase3Summary ? (
+              <button
+                type="button"
+                onClick={usarResumenBabelFase3}
+                className="rounded-full border border-cyan-400 bg-white px-3 py-1 font-medium text-cyan-700 hover:bg-cyan-100"
+              >
+                {lang === 'en' ? 'Use my Babel Phase 3 summary' : 'Usar mi resumen de la Fase 3 (Babel)'}
+              </button>
+            ) : null}
+            {madurezResult ? (
+              <button
+                type="button"
+                onClick={agregarPerfilMadurez}
+                className="rounded-full border border-cyan-400 bg-white px-3 py-1 font-medium text-cyan-700 hover:bg-cyan-100"
+              >
+                {lang === 'en' ? 'Add my maturity profile' : 'Agregar mi perfil de madurez'}
+              </button>
+            ) : null}
+          </div>
+        ) : null}
         <textarea
           value={resumenFase3}
           onChange={(ev) => setResumenFase3(ev.target.value)}
