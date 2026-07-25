@@ -300,6 +300,8 @@ const LABELS = {
     entornoIaPlaceholder: 'Pega aqui el resumen de tu Fase 2...',
     entornoStakeholderHint:
       'Ya tienes pegado tu resumen de la Fase 5: la IA tambien usara la Matriz de Impacto en Stakeholders que contiene para identificar amenazas y oportunidades por grupo de interes (empleados, accionistas, clientes, proveedores, medio ambiente, sociedad y gobierno).',
+    entornoStakeholderMissingHint:
+      'Consejo: si primero pegas tu resumen de la Fase 5 en la tarjeta de Objetivos BSC (mas abajo), la IA tambien podra usar su Matriz de Impacto en Stakeholders para relacionar cada amenaza u oportunidad con un grupo de interes especifico (empleados, accionistas, clientes, proveedores, medio ambiente, sociedad y gobierno). Es opcional: si no lo haces, esta tarjeta funciona igual.',
     entornoIaBtn: 'Sugerir Amenazas y Oportunidades con IA',
     entornoIaGenerando: 'Analizando el resumen...',
     entornoIaErrorHint: 'Puedes seguir agregando Amenazas y Oportunidades manualmente mientras tanto.',
@@ -401,6 +403,8 @@ const LABELS = {
     entornoIaPlaceholder: 'Paste your Phase 2 summary here...',
     entornoStakeholderHint:
       'You already have your Phase 5 summary pasted: the AI will also use its Stakeholder Impact Matrix to identify threats and opportunities by stakeholder group (employees, shareholders, customers, suppliers, environment, society and government).',
+    entornoStakeholderMissingHint:
+      'Tip: if you paste your Phase 5 summary in the BSC Objectives card (further below) first, the AI will also be able to use its Stakeholder Impact Matrix to tie each threat or opportunity to a specific stakeholder group (employees, shareholders, customers, suppliers, environment, society and government). This is optional: this card works the same either way.',
     entornoIaBtn: 'Suggest Threats and Opportunities with AI',
     entornoIaGenerando: 'Analyzing summary...',
     entornoIaErrorHint: 'You can keep adding Threats and Opportunities manually in the meantime.',
@@ -1862,9 +1866,9 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       <div className="mt-4 rounded-xl border border-teal-200 bg-teal-50 p-4">
         <h4 className="text-sm font-semibold text-teal-900">{t.entornoIaTitle}</h4>
         <p className="mt-1 text-sm text-teal-900">{t.entornoIaSubtitle}</p>
-        {resumenFase5.trim() ? (
-          <p className="mt-1 rounded-lg bg-white/60 p-2 text-xs text-teal-900">{t.entornoStakeholderHint}</p>
-        ) : null}
+        <p className="mt-1 rounded-lg bg-white/60 p-2 text-xs text-teal-900">
+          {resumenFase5.trim() ? t.entornoStakeholderHint : t.entornoStakeholderMissingHint}
+        </p>
         <textarea
           value={resumenFase2}
           onChange={(ev) => setResumenFase2(ev.target.value)}
