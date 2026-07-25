@@ -39,6 +39,19 @@ export async function getOrCreateBabelSession(
   return fresh;
 }
 
+/**
+ * Lee la sesión de Babel de un usuario SIN crearla si no existe. A diferencia
+ * de getOrCreateBabelSession, esta función es de solo lectura — pensada para
+ * pantallas fuera del chat de Babel (como Plan de Acción) que quieren
+ * ofrecer "traer mi resumen de Fase X" sin generar por accidente un
+ * documento de sesión vacío para alguien que nunca ha usado Babel.
+ */
+export async function getBabelSessionIfExists(uid: string): Promise<SessionDoc | null> {
+  const db = getFirebaseDb();
+  const snap = await getDoc(doc(db, 'sessions', babelSessionId(uid)));
+  return snap.exists() ? (snap.data() as SessionDoc) : null;
+}
+
 export async function saveBabelMessages(uid: string, messages: ChatMessage[]): Promise<void> {
   const db = getFirebaseDb();
   await updateDoc(doc(db, 'sessions', babelSessionId(uid)), { messages });
