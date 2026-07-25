@@ -601,7 +601,10 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
   const [finGoalsData, setFinGoalsData] = React.useState<FinGoalsSaved | null>(null);
   const [authUser, setAuthUser] = React.useState<User | null>(null);
   const [madurezResult, setMadurezResult] = React.useState<AssessmentResult | null>(null);
+  const [babelFase1Summary, setBabelFase1Summary] = React.useState('');
+  const [babelFase2Summary, setBabelFase2Summary] = React.useState('');
   const [babelFase3Summary, setBabelFase3Summary] = React.useState('');
+  const [babelFase5Summary, setBabelFase5Summary] = React.useState('');
 
   React.useEffect(() => {
     const auth = getFirebaseAuth();
@@ -612,7 +615,10 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
   React.useEffect(() => {
     if (!authUser) {
       setMadurezResult(null);
+      setBabelFase1Summary('');
+      setBabelFase2Summary('');
       setBabelFase3Summary('');
+      setBabelFase5Summary('');
       return;
     }
     let cancelled = false;
@@ -629,8 +635,15 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       try {
         const session = await getBabelSessionIfExists(authUser.uid);
         if (!cancelled && session) {
-          const fase3 = (session.phases || []).find((p) => p.phase === 3 && p.approved);
+          const phases = session.phases || [];
+          const fase1 = phases.find((p) => p.phase === 1 && p.approved);
+          const fase2 = phases.find((p) => p.phase === 2 && p.approved);
+          const fase3 = phases.find((p) => p.phase === 3 && p.approved);
+          const fase5 = phases.find((p) => p.phase === 5 && p.approved);
+          if (fase1 && fase1.summary) setBabelFase1Summary(fase1.summary);
+          if (fase2 && fase2.summary) setBabelFase2Summary(fase2.summary);
           if (fase3 && fase3.summary) setBabelFase3Summary(fase3.summary);
+          if (fase5 && fase5.summary) setBabelFase5Summary(fase5.summary);
         }
       } catch (err) {
         console.error(err);
@@ -1197,6 +1210,51 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       return;
     }
     setResumenFase3(babelFase3Summary);
+  };
+
+  const usarResumenBabelFase1 = () => {
+    if (!babelFase1Summary) return;
+    if (
+      resumenFase1.trim() &&
+      !window.confirm(
+        lang === 'en'
+          ? 'Replace the current text with your Phase 1 summary from Babel?'
+          : 'Reemplazar el texto actual con tu resumen de la Fase 1 de Babel?'
+      )
+    ) {
+      return;
+    }
+    setResumenFase1(babelFase1Summary);
+  };
+
+  const usarResumenBabelFase2 = () => {
+    if (!babelFase2Summary) return;
+    if (
+      resumenFase2.trim() &&
+      !window.confirm(
+        lang === 'en'
+          ? 'Replace the current text with your Phase 2 summary from Babel?'
+          : 'Reemplazar el texto actual con tu resumen de la Fase 2 de Babel?'
+      )
+    ) {
+      return;
+    }
+    setResumenFase2(babelFase2Summary);
+  };
+
+  const usarResumenBabelFase5 = () => {
+    if (!babelFase5Summary) return;
+    if (
+      resumenFase5.trim() &&
+      !window.confirm(
+        lang === 'en'
+          ? 'Replace the current text with your Phase 5 summary from Babel?'
+          : 'Reemplazar el texto actual con tu resumen de la Fase 5 de Babel?'
+      )
+    ) {
+      return;
+    }
+    setResumenFase5(babelFase5Summary);
   };
 
   const agregarPerfilMadurez = () => {
@@ -2039,6 +2097,17 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       <div className="mt-4 rounded-xl border border-violet-200 bg-violet-50 p-4">
         <h4 className="text-sm font-semibold text-violet-900">{t.objetivoBscIaTitle}</h4>
         <p className="mt-1 text-sm text-violet-900">{t.objetivoBscIaSubtitle}</p>
+        {babelFase5Summary ? (
+          <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-white/60 p-2 text-xs text-violet-900">
+            <button
+              type="button"
+              onClick={usarResumenBabelFase5}
+              className="rounded-full border border-violet-400 bg-white px-3 py-1 font-medium text-violet-700 hover:bg-violet-100"
+            >
+              {lang === 'en' ? 'Use my Babel Phase 5 summary' : 'Usar mi resumen de la Fase 5 (Babel)'}
+            </button>
+          </div>
+        ) : null}
         <textarea
           value={resumenFase5}
           onChange={(ev) => setResumenFase5(ev.target.value)}
@@ -2067,6 +2136,17 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       <div className="mt-4 rounded-xl border border-teal-200 bg-teal-50 p-4">
         <h4 className="text-sm font-semibold text-teal-900">{t.entornoIaTitle}</h4>
         <p className="mt-1 text-sm text-teal-900">{t.entornoIaSubtitle}</p>
+        {babelFase2Summary ? (
+          <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-white/60 p-2 text-xs text-teal-900">
+            <button
+              type="button"
+              onClick={usarResumenBabelFase2}
+              className="rounded-full border border-teal-400 bg-white px-3 py-1 font-medium text-teal-700 hover:bg-teal-100"
+            >
+              {lang === 'en' ? 'Use my Babel Phase 2 summary' : 'Usar mi resumen de la Fase 2 (Babel)'}
+            </button>
+          </div>
+        ) : null}
         <p className="mt-1 rounded-lg bg-white/60 p-2 text-xs text-teal-900">
           {resumenFase5.trim() ? t.entornoStakeholderHint : t.entornoStakeholderMissingHint}
         </p>
@@ -2155,6 +2235,17 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
         <h4 className="text-sm font-semibold text-emerald-900">{t.convocatoriaIaTitle}</h4>
         <p className="mt-1 text-sm text-emerald-900">{t.convocatoriaIaSubtitle}</p>
+        {babelFase1Summary ? (
+          <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-white/60 p-2 text-xs text-emerald-900">
+            <button
+              type="button"
+              onClick={usarResumenBabelFase1}
+              className="rounded-full border border-emerald-400 bg-white px-3 py-1 font-medium text-emerald-700 hover:bg-emerald-100"
+            >
+              {lang === 'en' ? 'Use my Babel Phase 1 summary' : 'Usar mi resumen de la Fase 1 (Babel)'}
+            </button>
+          </div>
+        ) : null}
         <textarea
           value={resumenFase1}
           onChange={(ev) => setResumenFase1(ev.target.value)}
