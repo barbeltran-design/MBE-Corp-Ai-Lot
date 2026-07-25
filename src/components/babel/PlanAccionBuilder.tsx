@@ -40,6 +40,22 @@ const STORAGE_KEY = 'babel_plan_accion_v2';
 const CONTACTS_KEY = 'babel_plan_accion_contactos_v1';
 const ORG_KEY = 'babel_orgchart_v1';
 const BOARD_KEY = 'babel_orgchart_board_v1';
+const FIN_GOALS_KEY = 'babel_financial_goals_v1';
+
+interface FinGoalsSaved {
+  input: {
+    language?: 'es' | 'en';
+    unitPrice?: number;
+    channels?: { name: string; pct: number }[];
+    desiredProfit?: number;
+  };
+  result: {
+    fixedTotal?: number;
+    breakEven?: number;
+    targetRevenue?: number;
+  };
+  savedAt?: string;
+}
 
 const ROLE_OPTIONS: RoleOption[] = [
   { key: 'consejo_administrativo', nameEs: 'Consejo Administrativo', nameEn: 'Board of Directors' },
@@ -502,6 +518,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
   const [loaded, setLoaded] = React.useState(false);
   const [orgAssignments, setOrgAssignments] = React.useState<OrgAssignments>({});
   const [boardPresidente, setBoardPresidente] = React.useState('');
+  const [finGoalsData, setFinGoalsData] = React.useState<FinGoalsSaved | null>(null);
 
   React.useEffect(() => {
     try {
@@ -541,6 +558,15 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       if (rawBoard) {
         const parsedBoard = JSON.parse(rawBoard);
         if (parsedBoard && typeof parsedBoard.presidente === 'string') setBoardPresidente(parsedBoard.presidente);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    try {
+      const rawFin = window.localStorage.getItem(FIN_GOALS_KEY);
+      if (rawFin) {
+        const parsedFin = JSON.parse(rawFin);
+        if (parsedFin && parsedFin.input && parsedFin.result) setFinGoalsData(parsedFin);
       }
     } catch (err) {
       console.error(err);
@@ -605,6 +631,43 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
   const removeContacto = (id: string) => setContactos((prev) => prev.filter((c) => c.id !== id));
 
   const addObjetivo = () => setObjetivos((prev) => prev.concat([newObjetivo()]));
+  const agregarObjetivosFinancieros = () => {
+    if (!finGoalsData) return;
+    const input = finGoalsData.input || {};
+    const result = finGoalsData.result || {};
+    const nuevos: Objetivo[] = [];
+    const targetRevenue = typeof result.targetRevenue === 'number' ? result.targetRevenue : null;
+    const channels = Array.isArray(input.channels) ? input.channels : [];
+    channels.forEach((c) => {
+      if (!c || !c.name) return;
+      const monto = targetRevenue !== null ? Math.round(targetRevenue * c.pct) : null;
+      const texto =
+        lang === 'en'
+          ? monto !== null
+            ? 'Reach $' + monto.toLocaleString() + ' in revenue through the "' + c.name + '" channel'
+            : 'Grow revenue through the "' + c.name + '" channel'
+          : monto !== null
+            ? 'Alcanzar $' + monto.toLocaleString() + ' de ingresos a traves del canal "' + c.name + '"'
+            : 'Aumentar los ingresos del canal "' + c.name + '"';
+      nuevos.push({ id: generateId(), perspectiva: 'financiera', texto: texto, validado: false });
+    });
+    if (typeof result.fixedTotal === 'number' && typeof result.breakEven === 'number') {
+      const texto =
+        lang === 'en'
+          ? 'Cover fixed costs of $' + Math.round(result.fixedTotal).toLocaleString() + ' and reach the break-even point of $' + Math.round(result.breakEven).toLocaleString() + ' in sales'
+          : 'Cubrir gastos fijos de $' + Math.round(result.fixedTotal).toLocaleString() + ' y alcanzar el punto de equilibrio de $' + Math.round(result.breakEven).toLocaleString() + ' en ventas';
+      nuevos.push({ id: generateId(), perspectiva: 'financiera', texto: texto, validado: false });
+    }
+    if (typeof input.desiredProfit === 'number' && input.desiredProfit > 0) {
+      const texto =
+        lang === 'en'
+          ? 'Reach a profit of $' + Math.round(input.desiredProfit).toLocaleString()
+          : 'Alcanzar una utilidad de $' + Math.round(input.desiredProfit).toLocaleString();
+      nuevos.push({ id: generateId(), perspectiva: 'financiera', texto: texto, validado: false });
+    }
+    if (nuevos.length === 0) return;
+    setObjetivos((prev) => sortObjetivosPorPerspectiva(prev.concat(nuevos)));
+  };
   const updateObjetivo = (id: string, patch: Partial<Objetivo>) =>
     setObjetivos((prev) => prev.map((o) => (o.id === id ? Object.assign({}, o, patch) : o)));
   const removeObjetivo = (id: string) => {
@@ -1488,6 +1551,34 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
           <div className="text-lg font-bold text-slate-800">{pendientesValidar}</div>
           <div className="text-xs text-slate-500">{t.summaryValidar}</div>
         </div>
+      </div>
+
+      <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <h4 className="text-sm font-semibold text-amber-900">
+          {lang === 'en' ? 'Financial objectives (from your Break-Even tool)' : 'Objetivos financieros (desde tu herramienta de Punto de Equilibrio)'}
+        </h4>
+        {finGoalsData ? (
+          <>
+            <p className="mt-1 text-sm text-amber-900">
+              {lang === 'en'
+                ? 'We found saved data from your Break-Even / Financial Goals tool. Add it as financial objectives so you can review and edit each one below.'
+                : 'Encontramos datos guardados de tu herramienta de Punto de Equilibrio / Metas Financieras. Agregalos como objetivos financieros para revisar y editar cada uno abajo.'}
+            </p>
+            <button
+              type="button"
+              onClick={agregarObjetivosFinancieros}
+              className="mt-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700"
+            >
+              {lang === 'en' ? 'Add as financial objectives' : 'Agregar como objetivos financieros'}
+            </button>
+          </>
+        ) : (
+          <p className="mt-1 text-sm text-amber-900">
+            {lang === 'en'
+              ? 'You have not filled out the Break-Even / Financial Goals tool yet (in the main Babel page). Once you do, its data (revenue by channel, fixed costs, profit target) will appear here.'
+              : 'Todavia no has llenado la herramienta de Punto de Equilibrio / Metas Financieras (en la pagina principal de Babel). En cuanto la llenes, sus datos (ingresos por canal, gastos fijos, utilidad objetivo) apareceran aqui.'}
+          </p>
+        )}
       </div>
 
       <div className="mt-4 rounded-xl border border-violet-200 bg-violet-50 p-4">
