@@ -144,6 +144,11 @@ interface RawEntornoIA {
   descripcion?: string;
 }
 
+interface RawCapacidadIA {
+  entornoId?: string;
+  descripcion?: string;
+}
+
 interface RawPrioridadIA {
   id?: string;
   factibilidad?: string;
@@ -231,6 +236,13 @@ const LABELS = {
     entornoIaBtn: 'Sugerir Amenazas y Oportunidades con IA',
     entornoIaGenerando: 'Analizando el resumen...',
     entornoIaErrorHint: 'Puedes seguir agregando Amenazas y Oportunidades manualmente mientras tanto.',
+    capacidadIaTitle: 'Capacidades con IA',
+    capacidadIaSubtitle:
+      'Pega aqui el resumen de tu Fase 3 (Capacidades Clave: basicas y diferenciadoras). Necesitas al menos una Amenaza u Oportunidad ya registrada para poder vincular las capacidades.',
+    capacidadIaPlaceholder: 'Pega aqui el resumen de tu Fase 3...',
+    capacidadIaBtn: 'Sugerir Capacidades con IA',
+    capacidadIaGenerando: 'Analizando el resumen...',
+    capacidadIaErrorHint: 'Puedes seguir agregando fortalezas y debilidades manualmente mientras tanto.',
     addObjetivo: 'Agregar objetivo de negocio',
     perspectivaLabel: 'Perspectiva (Balanced Scorecard)',
     objetivoLabel: 'Objetivo de negocio',
@@ -301,6 +313,13 @@ const LABELS = {
     entornoIaBtn: 'Suggest Threats and Opportunities with AI',
     entornoIaGenerando: 'Analyzing summary...',
     entornoIaErrorHint: 'You can keep adding Threats and Opportunities manually in the meantime.',
+    capacidadIaTitle: 'Capabilities with AI',
+    capacidadIaSubtitle:
+      'Paste your Phase 3 summary here (Key Capabilities: basic and differentiating). You need at least one Threat or Opportunity already registered to link the capabilities to.',
+    capacidadIaPlaceholder: 'Paste your Phase 3 summary here...',
+    capacidadIaBtn: 'Suggest Capabilities with AI',
+    capacidadIaGenerando: 'Analyzing summary...',
+    capacidadIaErrorHint: 'You can keep adding strengths and weaknesses manually in the meantime.',
     addObjetivo: 'Add business objective',
     perspectivaLabel: 'Perspective (Balanced Scorecard)',
     objetivoLabel: 'Business objective',
@@ -391,6 +410,9 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
   const [resumenFase2, setResumenFase2] = React.useState('');
   const [entornoGenerating, setEntornoGenerating] = React.useState(false);
   const [entornoGenError, setEntornoGenError] = React.useState('');
+  const [resumenFase3, setResumenFase3] = React.useState('');
+  const [capacidadGenerating, setCapacidadGenerating] = React.useState(false);
+  const [capacidadGenError, setCapacidadGenError] = React.useState('');
   const [loaded, setLoaded] = React.useState(false);
   const [orgAssignments, setOrgAssignments] = React.useState<OrgAssignments>({});
   const [boardPresidente, setBoardPresidente] = React.useState('');
@@ -652,6 +674,49 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       }
     } finally {
       setEntornoGenerating(false);
+    }
+  };
+
+  const sugerirCapacidadesConIA = async () => {
+    setCapacidadGenerating(true);
+    setCapacidadGenError('');
+    try {
+      const resumen = resumenFase3.trim();
+      if (!resumen) {
+        setCapacidadGenError(lang === 'en' ? 'Paste your Phase 3 summary first.' : 'Primero pega el resumen de tu Fase 3.');
+        return;
+      }
+      if (entornos.length === 0) {
+        setCapacidadGenError(lang === 'en' ? 'Add at least one Threat/Opportunity first.' : 'Primero agrega al menos una Amenaza/Oportunidad.');
+        return;
+      }
+      const entornosParaIA = entornos.map((e) => ({ id: e.id, tipo: e.tipo, descripcion: e.descripcion }));
+      const res = await fetch('/api/babel/extractor-capacidades', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: lang, resumenFase3: resumen, entornos: entornosParaIA }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data || !Array.isArray(data.sugerencias)) {
+        setCapacidadGenError((data && data.error) || (lang === 'en' ? 'Unknown error contacting Babel.' : 'Error desconocido al contactar a Babel.'));
+        return;
+      }
+      const entornoIds = entornos.map((e) => e.id);
+      const nuevos: FortalezaDebilidad[] = [];
+      (data.sugerencias as RawCapacidadIA[]).forEach((raw) => {
+        const entornoId = (raw.entornoId || '').trim();
+        const descripcion = (raw.descripcion || '').trim();
+        if (!entornoId || entornoIds.indexOf(entornoId) === -1) return;
+        if (!descripcion) return;
+        const fd = newFD(entornoId, 'fortaleza');
+        fd.descripcion = descripcion;
+        nuevos.push(fd);
+      });
+      if (nuevos.length > 0) {
+        setFds((prev) => prev.concat(nuevos));
+      }
+    } finally {
+      setCapacidadGenerating(false);
     }
   };
 
@@ -1246,6 +1311,34 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
           <div className="mt-2 rounded-lg bg-red-50 p-2 text-xs text-red-700">
             <p>{entornoGenError}</p>
             <p className="mt-0.5">{t.entornoIaErrorHint}</p>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="mt-4 rounded-xl border border-cyan-200 bg-cyan-50 p-4">
+        <h4 className="text-sm font-semibold text-cyan-900">{t.capacidadIaTitle}</h4>
+        <p className="mt-1 text-sm text-cyan-900">{t.capacidadIaSubtitle}</p>
+        <textarea
+          value={resumenFase3}
+          onChange={(ev) => setResumenFase3(ev.target.value)}
+          placeholder={t.capacidadIaPlaceholder}
+          rows={5}
+          className="mt-2 w-full rounded-lg border border-cyan-300 px-3 py-2 text-sm"
+        />
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={sugerirCapacidadesConIA}
+            disabled={capacidadGenerating}
+            className="rounded-lg bg-cyan-600 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-700 disabled:opacity-50"
+          >
+            {capacidadGenerating ? t.capacidadIaGenerando : t.capacidadIaBtn}
+          </button>
+        </div>
+        {capacidadGenError ? (
+          <div className="mt-2 rounded-lg bg-red-50 p-2 text-xs text-red-700">
+            <p>{capacidadGenError}</p>
+            <p className="mt-0.5">{t.capacidadIaErrorHint}</p>
           </div>
         ) : null}
       </div>
