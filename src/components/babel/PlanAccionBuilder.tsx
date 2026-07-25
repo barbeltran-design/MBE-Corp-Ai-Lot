@@ -298,6 +298,8 @@ const LABELS = {
     entornoIaSubtitle:
       'Pega aqui el resumen de tu Fase 2 (Analisis de Mercado: PESTEL, Fuerzas del Mercado, Tendencias y Prospectiva a 5 anos). La IA tambien considera aspectos de Responsabilidad Socio Ambiental (ESG) dentro del mismo texto.',
     entornoIaPlaceholder: 'Pega aqui el resumen de tu Fase 2...',
+    entornoStakeholderHint:
+      'Ya tienes pegado tu resumen de la Fase 5: la IA tambien usara la Matriz de Impacto en Stakeholders que contiene para identificar amenazas y oportunidades por grupo de interes (empleados, accionistas, clientes, proveedores, medio ambiente, sociedad y gobierno).',
     entornoIaBtn: 'Sugerir Amenazas y Oportunidades con IA',
     entornoIaGenerando: 'Analizando el resumen...',
     entornoIaErrorHint: 'Puedes seguir agregando Amenazas y Oportunidades manualmente mientras tanto.',
@@ -397,6 +399,8 @@ const LABELS = {
     entornoIaSubtitle:
       'Paste your Phase 2 summary here (Market Analysis: PESTEL, Market Forces, Trends and 5-Year Outlook). The AI also considers Environmental, Social and Governance (ESG) aspects within the same text.',
     entornoIaPlaceholder: 'Paste your Phase 2 summary here...',
+    entornoStakeholderHint:
+      'You already have your Phase 5 summary pasted: the AI will also use its Stakeholder Impact Matrix to identify threats and opportunities by stakeholder group (employees, shareholders, customers, suppliers, environment, society and government).',
     entornoIaBtn: 'Suggest Threats and Opportunities with AI',
     entornoIaGenerando: 'Analyzing summary...',
     entornoIaErrorHint: 'You can keep adding Threats and Opportunities manually in the meantime.',
@@ -974,7 +978,12 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       const res = await fetch('/api/babel/extractor-entornos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ language: lang, resumenFase2: resumen, objetivos: objetivosParaIA }),
+        body: JSON.stringify({
+          language: lang,
+          resumenFase2: resumen,
+          objetivos: objetivosParaIA,
+          resumenFase5: resumenFase5.trim(),
+        }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data || !Array.isArray(data.sugerencias)) {
@@ -1853,6 +1862,9 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       <div className="mt-4 rounded-xl border border-teal-200 bg-teal-50 p-4">
         <h4 className="text-sm font-semibold text-teal-900">{t.entornoIaTitle}</h4>
         <p className="mt-1 text-sm text-teal-900">{t.entornoIaSubtitle}</p>
+        {resumenFase5.trim() ? (
+          <p className="mt-1 rounded-lg bg-white/60 p-2 text-xs text-teal-900">{t.entornoStakeholderHint}</p>
+        ) : null}
         <textarea
           value={resumenFase2}
           onChange={(ev) => setResumenFase2(ev.target.value)}
