@@ -1479,22 +1479,30 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
         </div>
       </div>
 
-      <div className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50 p-4">
-        <p className="text-sm text-indigo-900">{t.sugerirPrioridadSubtitle}</p>
+      <div className="mt-4 rounded-xl border border-violet-200 bg-violet-50 p-4">
+        <h4 className="text-sm font-semibold text-violet-900">{t.objetivoBscIaTitle}</h4>
+        <p className="mt-1 text-sm text-violet-900">{t.objetivoBscIaSubtitle}</p>
+        <textarea
+          value={resumenFase5}
+          onChange={(ev) => setResumenFase5(ev.target.value)}
+          placeholder={t.objetivoBscIaPlaceholder}
+          rows={5}
+          className="mt-2 w-full rounded-lg border border-violet-300 px-3 py-2 text-sm"
+        />
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <button
             type="button"
-            onClick={sugerirPrioridadConIA}
-            disabled={prioGenerating}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            onClick={sugerirObjetivosBSCConIA}
+            disabled={objetivoBscGenerating}
+            className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700 disabled:opacity-50"
           >
-            {prioGenerating ? t.sugerirPrioridadGenerando : t.sugerirPrioridadBtn}
+            {objetivoBscGenerating ? t.objetivoBscIaGenerando : t.objetivoBscIaBtn}
           </button>
         </div>
-        {prioGenError ? (
+        {objetivoBscGenError ? (
           <div className="mt-2 rounded-lg bg-red-50 p-2 text-xs text-red-700">
-            <p>{prioGenError}</p>
-            <p className="mt-0.5">{t.sugerirPrioridadErrorHint}</p>
+            <p>{objetivoBscGenError}</p>
+            <p className="mt-0.5">{t.objetivoBscIaErrorHint}</p>
           </div>
         ) : null}
       </div>
@@ -1555,34 +1563,6 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
         ) : null}
       </div>
 
-      <div className="mt-4 rounded-xl border border-violet-200 bg-violet-50 p-4">
-        <h4 className="text-sm font-semibold text-violet-900">{t.objetivoBscIaTitle}</h4>
-        <p className="mt-1 text-sm text-violet-900">{t.objetivoBscIaSubtitle}</p>
-        <textarea
-          value={resumenFase5}
-          onChange={(ev) => setResumenFase5(ev.target.value)}
-          placeholder={t.objetivoBscIaPlaceholder}
-          rows={5}
-          className="mt-2 w-full rounded-lg border border-violet-300 px-3 py-2 text-sm"
-        />
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={sugerirObjetivosBSCConIA}
-            disabled={objetivoBscGenerating}
-            className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700 disabled:opacity-50"
-          >
-            {objetivoBscGenerating ? t.objetivoBscIaGenerando : t.objetivoBscIaBtn}
-          </button>
-        </div>
-        {objetivoBscGenError ? (
-          <div className="mt-2 rounded-lg bg-red-50 p-2 text-xs text-red-700">
-            <p>{objetivoBscGenError}</p>
-            <p className="mt-0.5">{t.objetivoBscIaErrorHint}</p>
-          </div>
-        ) : null}
-      </div>
-
       <div className="mt-6">
         {objetivos.map((o) => renderObjetivo(o))}
         <button type="button" onClick={addObjetivo} className="mt-2 text-sm font-medium text-blue-600 hover:underline">
@@ -1636,6 +1616,26 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
             {t.addConvocatoria + ' (' + t.nacional + ')'}
           </button>
         </div>
+      </div>
+
+      <div className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+        <p className="text-sm text-indigo-900">{t.sugerirPrioridadSubtitle}</p>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={sugerirPrioridadConIA}
+            disabled={prioGenerating}
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {prioGenerating ? t.sugerirPrioridadGenerando : t.sugerirPrioridadBtn}
+          </button>
+        </div>
+        {prioGenError ? (
+          <div className="mt-2 rounded-lg bg-red-50 p-2 text-xs text-red-700">
+            <p>{prioGenError}</p>
+            <p className="mt-0.5">{t.sugerirPrioridadErrorHint}</p>
+          </div>
+        ) : null}
       </div>
 
       <p className="mt-4 text-xs text-slate-400">{t.savedNote}</p>
