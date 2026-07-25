@@ -784,6 +784,15 @@ export default function BabelPage() {
         channels: normalizedChannels,
         marketingPct: finMarketingPct / 100,
       };
+      try {
+        const resultForSave = computeFinancialGoals(goalsInput);
+        window.localStorage.setItem(
+          'babel_financial_goals_v1',
+          JSON.stringify({ input: goalsInput, result: resultForSave, savedAt: new Date().toISOString() })
+        );
+      } catch (saveErr) {
+        console.error(saveErr);
+      }
       downloadFinancialGoalsExcel(goalsInput);
       setFinDone(true);
     } catch (err) {
