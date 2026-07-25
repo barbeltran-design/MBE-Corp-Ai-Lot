@@ -17,6 +17,12 @@ import { NextRequest, NextResponse } from 'next/server';
 // ruta convierte ese texto libre en Amenazas/Oportunidades concretas,
 // tomando en cuenta tambien aspectos de Responsabilidad Socio Ambiental
 // (ESG) como una lente adicional de lectura sobre el mismo texto pegado.
+//
+// Tarea #37: si el usuario ya tiene pegado el resumen de su Fase 5 (que
+// incluye una Matriz de Impacto en Stakeholders), se envia tambien como
+// contexto OPCIONAL para que la IA pueda relacionar cada Amenaza/Oportunidad
+// con un grupo de interes especifico. Es opcional: si no llega, la ruta
+// funciona exactamente igual que antes.
 // ---------------------------------------------------------------------------
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
@@ -47,6 +53,7 @@ interface ExtractorEntornosRequestBody {
   language?: 'es' | 'en';
   resumenFase2?: string;
   objetivos?: ObjetivoParaIA[];
+  resumenFase5?: string;
 }
 
 function buildSystemPrompt(language: 'es' | 'en'): string {
@@ -55,7 +62,11 @@ function buildSystemPrompt(language: 'es' | 'en'): string {
       'You are Babel, a strategic business architect. The user gives you (1) the summary of Phase 2 of their strategic diagnostic ' +
       '- which includes a PESTEL analysis (Political, Economic, Social, Technological, Ecological and Legal factors), a Market Forces ' +
       'analysis, Sector Trends, and a 5-Year Strategic Outlook - and (2) the list of the business current Strategic Objectives, each ' +
-      'with a unique id, its Balanced Scorecard perspective, and its text.\n\n' +
+      'with a unique id, its Balanced Scorecard perspective, and its text. You may ALSO optionally receive (3) a Stakeholder Impact ' +
+      'Matrix from Phase 5 of the same diagnostic, describing the expected impact on groups such as Employees, Shareholders, ' +
+      'Customers, Suppliers, Environment, Society and Government - if you receive it, use it as additional context so that, when a ' +
+      'Threat or Opportunity relates clearly to one of those groups, the description reflects that; if you do not receive it, ignore ' +
+      'this and proceed exactly as before.\n\n' +
       'Your task: read the summary and extract CONCRETE (not generic) Threats and Opportunities for the business. Also consider, ' +
       'within that same summary, Environmental, Social and Governance (ESG) aspects that could represent a threat (e.g. legal or ' +
       'reputational risk) or an opportunity (e.g. certifications, cost savings, new sustainable markets).\n\n' +
@@ -70,7 +81,11 @@ function buildSystemPrompt(language: 'es' | 'en'): string {
     'Eres Babel, un arquitecto estrategico de negocios. El usuario te da (1) el resumen de la Fase 2 de su diagnostico estrategico ' +
     '- que incluye un analisis PESTEL (factores Politicos, Economicos, Sociales, Tecnologicos, Ecologicos y Legales), un analisis de ' +
     'Fuerzas del Mercado, Tendencias Sectoriales y una Prospectiva Estrategica a 5 anos - y (2) la lista de Objetivos Estrategicos ' +
-    'actuales del negocio, cada uno con un id unico, su perspectiva (Balanced Scorecard) y su texto.\n\n' +
+    'actuales del negocio, cada uno con un id unico, su perspectiva (Balanced Scorecard) y su texto. Tambien puedes recibir de forma ' +
+    'OPCIONAL (3) una Matriz de Impacto en Stakeholders de la Fase 5 del mismo diagnostico, que describe el impacto esperado sobre ' +
+    'grupos como Empleados, Accionistas, Clientes, Proveedores, Medio Ambiente, Sociedad y Gobierno - si la recibes, usala como ' +
+    'contexto adicional para que, cuando una Amenaza u Oportunidad se relacione claramente con alguno de esos grupos, la descripcion ' +
+    'lo refleje; si no la recibes, ignora esto y procede exactamente como antes.\n\n' +
     'Tu tarea: lee el resumen y extrae Amenazas y Oportunidades CONCRETAS (no genericas) para el negocio. Considera tambien, dentro ' +
     'del mismo resumen, aspectos de Responsabilidad Social y Ambiental (ESG) que puedan representar una amenaza (por ejemplo riesgos ' +
     'legales o reputacionales) o una oportunidad (por ejemplo certificaciones, ahorro de costos, nuevos mercados sostenibles).\n\n' +
@@ -187,7 +202,7 @@ export async function GET() {
   return NextResponse.json({
     status: 'ok',
     route: '/api/babel/extractor-entornos',
-    note: 'Extractor de Amenazas/Oportunidades (PESTEL + Fuerzas + Prospectiva + ESG) a partir del resumen pegado de la Fase 2',
+    note: 'Extractor de Amenazas/Oportunidades (PESTEL + Fuerzas + Prospectiva + ESG) a partir del resumen pegado de la Fase 2, con Matriz de Stakeholders de la Fase 5 como contexto opcional',
   });
 }
 
@@ -202,6 +217,7 @@ export async function POST(req: NextRequest) {
   const language = body.language === 'en' ? 'en' : 'es';
   const resumenFase2 = typeof body.resumenFase2 === 'string' ? body.resumenFase2.trim() : '';
   const objetivos = Array.isArray(body.objetivos) ? body.objetivos : [];
+  const resumenFase5 = typeof body.resumenFase5 === 'string' ? body.resumenFase5.trim() : '';
 
   if (!resumenFase2) {
     return NextResponse.json(
@@ -225,11 +241,19 @@ export async function POST(req: NextRequest) {
   const systemPrompt = buildSystemPrompt(language);
   const resumenRecortado = resumenFase2.slice(0, 12000);
   const objetivosJson = JSON.stringify(objetivos).slice(0, 4000);
-  const userMessage =
+  let userMessage =
     (language === 'en' ? 'Phase 2 summary:\n\n' : 'Resumen de la Fase 2:\n\n') +
     resumenRecortado +
     (language === 'en' ? '\n\nExisting Strategic Objectives (JSON array):\n\n' : '\n\nObjetivos Estrategicos existentes (arreglo JSON):\n\n') +
     objetivosJson;
+
+  if (resumenFase5) {
+    const resumenFase5Recortado = resumenFase5.slice(0, 8000);
+    userMessage +=
+      (language === 'en'
+        ? '\n\nOptional additional context - Stakeholder Impact Matrix from Phase 5:\n\n'
+        : '\n\nContexto adicional opcional - Matriz de Impacto en Stakeholders de la Fase 5:\n\n') + resumenFase5Recortado;
+  }
 
   const diagnostics: Diagnostic[] = [];
 
