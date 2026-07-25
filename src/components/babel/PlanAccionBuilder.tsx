@@ -341,6 +341,7 @@ const LABELS = {
     entornoStakeholderMissingHint:
       'Consejo: si primero pegas tu resumen de la Fase 5 en la tarjeta de Objetivos BSC (mas abajo), la IA tambien podra usar su Matriz de Impacto en Stakeholders para relacionar cada amenaza u oportunidad con un grupo de interes especifico (empleados, accionistas, clientes, proveedores, medio ambiente, sociedad y gobierno). Es opcional: si no lo haces, esta tarjeta funciona igual.',
     entornoIaBtn: 'Sugerir Amenazas y Oportunidades con IA',
+    entornoIaBtnAgain: 'Volver a sugerir Amenazas y Oportunidades con IA',
     entornoIaGenerando: 'Analizando el resumen...',
     entornoIaErrorHint: 'Puedes seguir agregando Amenazas y Oportunidades manualmente mientras tanto.',
     capacidadIaTitle: 'Capacidades con IA',
@@ -348,6 +349,7 @@ const LABELS = {
       'Pega aqui el resumen de tu Fase 3 (Capacidades Clave: basicas y diferenciadoras). Necesitas al menos una Amenaza u Oportunidad ya registrada para poder vincular las capacidades.',
     capacidadIaPlaceholder: 'Pega aqui el resumen de tu Fase 3...',
     capacidadIaBtn: 'Sugerir Capacidades con IA',
+    capacidadIaBtnAgain: 'Volver a sugerir Capacidades con IA',
     capacidadIaGenerando: 'Analizando el resumen...',
     capacidadIaErrorHint: 'Puedes seguir agregando fortalezas y debilidades manualmente mientras tanto.',
     objetivoBscIaTitle: 'Objetivos BSC con IA',
@@ -355,6 +357,7 @@ const LABELS = {
       'Pega aqui el resumen de tu Fase 5 (Balanced Scorecard + OKRs). Solo se sugeriran objetivos para Clientes, Procesos Internos y Aprendizaje/Crecimiento (la perspectiva Financiera se captura en Objetivos Financieros).',
     objetivoBscIaPlaceholder: 'Pega aqui el resumen de tu Fase 5...',
     objetivoBscIaBtn: 'Sugerir Objetivos con IA',
+    objetivoBscIaBtnAgain: 'Volver a sugerir Objetivos con IA',
     objetivoBscIaGenerando: 'Analizando el resumen...',
     objetivoBscIaErrorHint: 'Puedes seguir agregando objetivos manualmente mientras tanto.',
     convocatoriaIaTitle: 'Convocatorias y Fondos con IA',
@@ -362,6 +365,7 @@ const LABELS = {
       'Pega aqui el resumen de tu Fase 1, punto 5 (Vinculacion con los ODS y Fondos). Estas convocatorias cambian de fecha con frecuencia: verifica siempre vigencia y requisitos exactos antes de aplicar.',
     convocatoriaIaPlaceholder: 'Pega aqui el resumen de tu Fase 1...',
     convocatoriaIaBtn: 'Sugerir Convocatorias con IA',
+    convocatoriaIaBtnAgain: 'Volver a sugerir Convocatorias con IA',
     convocatoriaIaGenerando: 'Analizando el resumen...',
     convocatoriaIaErrorHint: 'Puedes seguir agregando convocatorias manualmente mientras tanto.',
     addConvocatoria: 'Agregar convocatoria o fondo',
@@ -446,6 +450,7 @@ const LABELS = {
     entornoStakeholderMissingHint:
       'Tip: if you paste your Phase 5 summary in the BSC Objectives card (further below) first, the AI will also be able to use its Stakeholder Impact Matrix to tie each threat or opportunity to a specific stakeholder group (employees, shareholders, customers, suppliers, environment, society and government). This is optional: this card works the same either way.',
     entornoIaBtn: 'Suggest Threats and Opportunities with AI',
+    entornoIaBtnAgain: 'Suggest Threats and Opportunities again with AI',
     entornoIaGenerando: 'Analyzing summary...',
     entornoIaErrorHint: 'You can keep adding Threats and Opportunities manually in the meantime.',
     capacidadIaTitle: 'Capabilities with AI',
@@ -453,6 +458,7 @@ const LABELS = {
       'Paste your Phase 3 summary here (Key Capabilities: basic and differentiating). You need at least one Threat or Opportunity already registered to link the capabilities to.',
     capacidadIaPlaceholder: 'Paste your Phase 3 summary here...',
     capacidadIaBtn: 'Suggest Capabilities with AI',
+    capacidadIaBtnAgain: 'Suggest Capabilities again with AI',
     capacidadIaGenerando: 'Analyzing summary...',
     capacidadIaErrorHint: 'You can keep adding strengths and weaknesses manually in the meantime.',
     objetivoBscIaTitle: 'BSC Objectives with AI',
@@ -460,6 +466,7 @@ const LABELS = {
       'Paste your Phase 5 summary here (Balanced Scorecard + OKRs). Only Customer, Internal Processes, and Learning & Growth objectives will be suggested (the Financial perspective is captured in Financial Objectives).',
     objetivoBscIaPlaceholder: 'Paste your Phase 5 summary here...',
     objetivoBscIaBtn: 'Suggest Objectives with AI',
+    objetivoBscIaBtnAgain: 'Suggest Objectives again with AI',
     objetivoBscIaGenerando: 'Analyzing summary...',
     objetivoBscIaErrorHint: 'You can keep adding objectives manually in the meantime.',
     convocatoriaIaTitle: 'Funding Calls with AI',
@@ -467,6 +474,7 @@ const LABELS = {
       'Paste your Phase 1 summary here, point 5 (SDG and Funding Alignment). These calls change deadlines frequently: always verify current validity and exact requirements before applying.',
     convocatoriaIaPlaceholder: 'Paste your Phase 1 summary here...',
     convocatoriaIaBtn: 'Suggest Funding Calls with AI',
+    convocatoriaIaBtnAgain: 'Suggest Funding Calls again with AI',
     convocatoriaIaGenerando: 'Analyzing summary...',
     convocatoriaIaErrorHint: 'You can keep adding funding calls manually in the meantime.',
     addConvocatoria: 'Add funding call or program',
@@ -571,15 +579,19 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
   const [resumenFase2, setResumenFase2] = React.useState('');
   const [entornoGenerating, setEntornoGenerating] = React.useState(false);
   const [entornoGenError, setEntornoGenError] = React.useState('');
+  const [entornoYaSugerido, setEntornoYaSugerido] = React.useState(false);
   const [resumenFase3, setResumenFase3] = React.useState('');
   const [capacidadGenerating, setCapacidadGenerating] = React.useState(false);
   const [capacidadGenError, setCapacidadGenError] = React.useState('');
+  const [capacidadYaSugerido, setCapacidadYaSugerido] = React.useState(false);
   const [resumenFase5, setResumenFase5] = React.useState('');
   const [objetivoBscGenerating, setObjetivoBscGenerating] = React.useState(false);
   const [objetivoBscGenError, setObjetivoBscGenError] = React.useState('');
+  const [objetivoBscYaSugerido, setObjetivoBscYaSugerido] = React.useState(false);
   const [resumenFase1, setResumenFase1] = React.useState('');
   const [convocatoriaGenerating, setConvocatoriaGenerating] = React.useState(false);
   const [convocatoriaGenError, setConvocatoriaGenError] = React.useState('');
+  const [convocatoriaYaSugerido, setConvocatoriaYaSugerido] = React.useState(false);
   const [loaded, setLoaded] = React.useState(false);
   const [orgAssignments, setOrgAssignments] = React.useState<OrgAssignments>({});
   const [boardPresidente, setBoardPresidente] = React.useState('');
@@ -640,6 +652,14 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
         if (parsed && Array.isArray(parsed.proyectos)) setProyectos(parsed.proyectos);
         if (parsed && Array.isArray(parsed.acciones)) setAcciones(parsed.acciones);
         if (parsed && Array.isArray(parsed.convocatorias)) setConvocatorias(parsed.convocatorias);
+        if (parsed && typeof parsed.resumenFase1 === 'string') setResumenFase1(parsed.resumenFase1);
+        if (parsed && typeof parsed.resumenFase2 === 'string') setResumenFase2(parsed.resumenFase2);
+        if (parsed && typeof parsed.resumenFase3 === 'string') setResumenFase3(parsed.resumenFase3);
+        if (parsed && typeof parsed.resumenFase5 === 'string') setResumenFase5(parsed.resumenFase5);
+        if (parsed && typeof parsed.convocatoriaYaSugerido === 'boolean') setConvocatoriaYaSugerido(parsed.convocatoriaYaSugerido);
+        if (parsed && typeof parsed.entornoYaSugerido === 'boolean') setEntornoYaSugerido(parsed.entornoYaSugerido);
+        if (parsed && typeof parsed.capacidadYaSugerido === 'boolean') setCapacidadYaSugerido(parsed.capacidadYaSugerido);
+        if (parsed && typeof parsed.objetivoBscYaSugerido === 'boolean') setObjetivoBscYaSugerido(parsed.objetivoBscYaSugerido);
       }
     } catch (err) {
       console.error(err);
@@ -694,12 +714,43 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
   React.useEffect(() => {
     if (!loaded) return;
     try {
-      const blob = { objetivos: objetivos, entornos: entornos, fds: fds, proyectos: proyectos, acciones: acciones, convocatorias: convocatorias };
+      const blob = {
+        objetivos: objetivos,
+        entornos: entornos,
+        fds: fds,
+        proyectos: proyectos,
+        acciones: acciones,
+        convocatorias: convocatorias,
+        resumenFase1: resumenFase1,
+        resumenFase2: resumenFase2,
+        resumenFase3: resumenFase3,
+        resumenFase5: resumenFase5,
+        convocatoriaYaSugerido: convocatoriaYaSugerido,
+        entornoYaSugerido: entornoYaSugerido,
+        capacidadYaSugerido: capacidadYaSugerido,
+        objetivoBscYaSugerido: objetivoBscYaSugerido,
+      };
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(blob));
     } catch (err) {
       console.error(err);
     }
-  }, [objetivos, entornos, fds, proyectos, acciones, convocatorias, loaded]);
+  }, [
+    objetivos,
+    entornos,
+    fds,
+    proyectos,
+    acciones,
+    convocatorias,
+    resumenFase1,
+    resumenFase2,
+    resumenFase3,
+    resumenFase5,
+    convocatoriaYaSugerido,
+    entornoYaSugerido,
+    capacidadYaSugerido,
+    objetivoBscYaSugerido,
+    loaded,
+  ]);
 
   React.useEffect(() => {
     if (!loaded) return;
@@ -1111,6 +1162,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
         setEntornoGenError((data && data.error) || (lang === 'en' ? 'Unknown error contacting Babel.' : 'Error desconocido al contactar a Babel.'));
         return;
       }
+      setEntornoYaSugerido(true);
       const objetivoIds = objetivos.map((o) => o.id);
       const nuevos: AmenazaOportunidad[] = [];
       (data.sugerencias as RawEntornoIA[]).forEach((raw) => {
@@ -1184,6 +1236,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
         setCapacidadGenError((data && data.error) || (lang === 'en' ? 'Unknown error contacting Babel.' : 'Error desconocido al contactar a Babel.'));
         return;
       }
+      setCapacidadYaSugerido(true);
       const entornoIds = entornos.map((e) => e.id);
       const nuevos: FortalezaDebilidad[] = [];
       (data.sugerencias as RawCapacidadIA[]).forEach((raw) => {
@@ -1222,6 +1275,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
         setObjetivoBscGenError((data && data.error) || (lang === 'en' ? 'Unknown error contacting Babel.' : 'Error desconocido al contactar a Babel.'));
         return;
       }
+      setObjetivoBscYaSugerido(true);
       const nuevos: Objetivo[] = [];
       (data.sugerencias as RawObjetivoBSCIA[]).forEach((raw) => {
         const perspectiva = (raw.perspectiva || '').trim();
@@ -1257,6 +1311,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
         setConvocatoriaGenError((data && data.error) || (lang === 'en' ? 'Unknown error contacting Babel.' : 'Error desconocido al contactar a Babel.'));
         return;
       }
+      setConvocatoriaYaSugerido(true);
       const nuevas: Convocatoria[] = [];
       (data.sugerencias as RawConvocatoriaIA[]).forEach((raw) => {
         const tipo = (raw.tipo || '').trim();
@@ -1998,7 +2053,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
             disabled={objetivoBscGenerating}
             className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700 disabled:opacity-50"
           >
-            {objetivoBscGenerating ? t.objetivoBscIaGenerando : t.objetivoBscIaBtn}
+            {objetivoBscGenerating ? t.objetivoBscIaGenerando : objetivoBscYaSugerido ? t.objetivoBscIaBtnAgain : t.objetivoBscIaBtn}
           </button>
         </div>
         {objetivoBscGenError ? (
@@ -2029,7 +2084,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
             disabled={entornoGenerating}
             className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
           >
-            {entornoGenerating ? t.entornoIaGenerando : t.entornoIaBtn}
+            {entornoGenerating ? t.entornoIaGenerando : entornoYaSugerido ? t.entornoIaBtnAgain : t.entornoIaBtn}
           </button>
         </div>
         {entornoGenError ? (
@@ -2079,7 +2134,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
             disabled={capacidadGenerating}
             className="rounded-lg bg-cyan-600 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-700 disabled:opacity-50"
           >
-            {capacidadGenerating ? t.capacidadIaGenerando : t.capacidadIaBtn}
+            {capacidadGenerating ? t.capacidadIaGenerando : capacidadYaSugerido ? t.capacidadIaBtnAgain : t.capacidadIaBtn}
           </button>
         </div>
         {capacidadGenError ? (
@@ -2114,7 +2169,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
             disabled={convocatoriaGenerating}
             className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
           >
-            {convocatoriaGenerating ? t.convocatoriaIaGenerando : t.convocatoriaIaBtn}
+            {convocatoriaGenerating ? t.convocatoriaIaGenerando : convocatoriaYaSugerido ? t.convocatoriaIaBtnAgain : t.convocatoriaIaBtn}
           </button>
         </div>
         {convocatoriaGenError ? (
