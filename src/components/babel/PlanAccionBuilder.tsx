@@ -1591,12 +1591,12 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-500">{t.fdDesc}</label>
-            <input
-              type="text"
+            <textarea
               value={f.descripcion}
               onChange={(ev) => updateFD(f.id, { descripcion: ev.target.value })}
               placeholder={t.fdPlaceholder}
-              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+              rows={2}
+              className="w-full resize-y rounded-lg border border-slate-300 px-3 py-1.5 text-sm leading-snug"
             />
           </div>
         </div>
@@ -1653,12 +1653,12 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-500">{t.entornoDesc}</label>
-            <input
-              type="text"
+            <textarea
               value={e.descripcion}
               onChange={(ev) => updateEntorno(e.id, { descripcion: ev.target.value })}
               placeholder={t.entornoPlaceholder}
-              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+              rows={2}
+              className="w-full resize-y rounded-lg border border-slate-300 px-3 py-1.5 text-sm leading-snug"
             />
           </div>
         </div>
@@ -1712,12 +1712,12 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-500">{t.objetivoLabel}</label>
-            <input
-              type="text"
+            <textarea
               value={o.texto}
               onChange={(ev) => updateObjetivo(o.id, { texto: ev.target.value })}
               placeholder={t.objetivoPlaceholder}
-              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+              rows={2}
+              className="w-full resize-y rounded-lg border border-slate-300 px-3 py-1.5 text-sm leading-snug"
             />
           </div>
         </div>
