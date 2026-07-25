@@ -149,6 +149,15 @@ interface RawCapacidadIA {
   descripcion?: string;
 }
 
+interface RawObjetivoBSCIA {
+  perspectiva?: string;
+  texto?: string;
+}
+
+function isPerspectivaBSC(value: string): value is 'clientes' | 'procesos_internos' | 'aprendizaje_crecimiento' {
+  return value === 'clientes' || value === 'procesos_internos' || value === 'aprendizaje_crecimiento';
+}
+
 interface RawPrioridadIA {
   id?: string;
   factibilidad?: string;
@@ -243,6 +252,13 @@ const LABELS = {
     capacidadIaBtn: 'Sugerir Capacidades con IA',
     capacidadIaGenerando: 'Analizando el resumen...',
     capacidadIaErrorHint: 'Puedes seguir agregando fortalezas y debilidades manualmente mientras tanto.',
+    objetivoBscIaTitle: 'Objetivos BSC con IA',
+    objetivoBscIaSubtitle:
+      'Pega aqui el resumen de tu Fase 5 (Balanced Scorecard + OKRs). Solo se sugeriran objetivos para Clientes, Procesos Internos y Aprendizaje/Crecimiento (la perspectiva Financiera se captura en Objetivos Financieros).',
+    objetivoBscIaPlaceholder: 'Pega aqui el resumen de tu Fase 5...',
+    objetivoBscIaBtn: 'Sugerir Objetivos con IA',
+    objetivoBscIaGenerando: 'Analizando el resumen...',
+    objetivoBscIaErrorHint: 'Puedes seguir agregando objetivos manualmente mientras tanto.',
     addObjetivo: 'Agregar objetivo de negocio',
     perspectivaLabel: 'Perspectiva (Balanced Scorecard)',
     objetivoLabel: 'Objetivo de negocio',
@@ -320,6 +336,13 @@ const LABELS = {
     capacidadIaBtn: 'Suggest Capabilities with AI',
     capacidadIaGenerando: 'Analyzing summary...',
     capacidadIaErrorHint: 'You can keep adding strengths and weaknesses manually in the meantime.',
+    objetivoBscIaTitle: 'BSC Objectives with AI',
+    objetivoBscIaSubtitle:
+      'Paste your Phase 5 summary here (Balanced Scorecard + OKRs). Only Customer, Internal Processes, and Learning & Growth objectives will be suggested (the Financial perspective is captured in Financial Objectives).',
+    objetivoBscIaPlaceholder: 'Paste your Phase 5 summary here...',
+    objetivoBscIaBtn: 'Suggest Objectives with AI',
+    objetivoBscIaGenerando: 'Analyzing summary...',
+    objetivoBscIaErrorHint: 'You can keep adding objectives manually in the meantime.',
     addObjetivo: 'Add business objective',
     perspectivaLabel: 'Perspective (Balanced Scorecard)',
     objetivoLabel: 'Business objective',
@@ -413,6 +436,9 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
   const [resumenFase3, setResumenFase3] = React.useState('');
   const [capacidadGenerating, setCapacidadGenerating] = React.useState(false);
   const [capacidadGenError, setCapacidadGenError] = React.useState('');
+  const [resumenFase5, setResumenFase5] = React.useState('');
+  const [objetivoBscGenerating, setObjetivoBscGenerating] = React.useState(false);
+  const [objetivoBscGenError, setObjetivoBscGenError] = React.useState('');
   const [loaded, setLoaded] = React.useState(false);
   const [orgAssignments, setOrgAssignments] = React.useState<OrgAssignments>({});
   const [boardPresidente, setBoardPresidente] = React.useState('');
@@ -717,6 +743,41 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       }
     } finally {
       setCapacidadGenerating(false);
+    }
+  };
+
+  const sugerirObjetivosBSCConIA = async () => {
+    setObjetivoBscGenerating(true);
+    setObjetivoBscGenError('');
+    try {
+      const resumen = resumenFase5.trim();
+      if (!resumen) {
+        setObjetivoBscGenError(lang === 'en' ? 'Paste your Phase 5 summary first.' : 'Primero pega el resumen de tu Fase 5.');
+        return;
+      }
+      const res = await fetch('/api/babel/extractor-objetivos-bsc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: lang, resumenFase5: resumen }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data || !Array.isArray(data.sugerencias)) {
+        setObjetivoBscGenError((data && data.error) || (lang === 'en' ? 'Unknown error contacting Babel.' : 'Error desconocido al contactar a Babel.'));
+        return;
+      }
+      const nuevos: Objetivo[] = [];
+      (data.sugerencias as RawObjetivoBSCIA[]).forEach((raw) => {
+        const perspectiva = (raw.perspectiva || '').trim();
+        const texto = (raw.texto || '').trim();
+        if (!isPerspectivaBSC(perspectiva)) return;
+        if (!texto) return;
+        nuevos.push({ id: generateId(), perspectiva: perspectiva, texto: texto, validado: false });
+      });
+      if (nuevos.length > 0) {
+        setObjetivos((prev) => prev.concat(nuevos));
+      }
+    } finally {
+      setObjetivoBscGenerating(false);
     }
   };
 
@@ -1339,6 +1400,34 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
           <div className="mt-2 rounded-lg bg-red-50 p-2 text-xs text-red-700">
             <p>{capacidadGenError}</p>
             <p className="mt-0.5">{t.capacidadIaErrorHint}</p>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="mt-4 rounded-xl border border-violet-200 bg-violet-50 p-4">
+        <h4 className="text-sm font-semibold text-violet-900">{t.objetivoBscIaTitle}</h4>
+        <p className="mt-1 text-sm text-violet-900">{t.objetivoBscIaSubtitle}</p>
+        <textarea
+          value={resumenFase5}
+          onChange={(ev) => setResumenFase5(ev.target.value)}
+          placeholder={t.objetivoBscIaPlaceholder}
+          rows={5}
+          className="mt-2 w-full rounded-lg border border-violet-300 px-3 py-2 text-sm"
+        />
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={sugerirObjetivosBSCConIA}
+            disabled={objetivoBscGenerating}
+            className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700 disabled:opacity-50"
+          >
+            {objetivoBscGenerating ? t.objetivoBscIaGenerando : t.objetivoBscIaBtn}
+          </button>
+        </div>
+        {objetivoBscGenError ? (
+          <div className="mt-2 rounded-lg bg-red-50 p-2 text-xs text-red-700">
+            <p>{objetivoBscGenError}</p>
+            <p className="mt-0.5">{t.objetivoBscIaErrorHint}</p>
           </div>
         ) : null}
       </div>
