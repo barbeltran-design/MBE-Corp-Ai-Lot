@@ -1133,6 +1133,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
   const sugerirAccionesConIA = async (proyectoId: string, f: FortalezaDebilidad, e: AmenazaOportunidad, o: Objetivo) => {
     setAccionGenerating((prev) => Object.assign({}, prev, { [proyectoId]: true }));
     setAccionGenError((prev) => Object.assign({}, prev, { [proyectoId]: '' }));
+    setExpanded((prev) => Object.assign({}, prev, { [proyectoId]: true }));
     try {
       const rolesParaIA = ROLE_OPTIONS.map((r) => ({ key: r.key, nombre: roleLabel(r.key, lang) }));
       const res = await fetch('/api/babel/extractor-acciones', {
@@ -1682,30 +1683,28 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
     const genError = accionGenError[p.id] || '';
     return (
       <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <button type="button" onClick={() => toggleExpanded(p.id)} className="text-xs font-medium text-blue-600 hover:underline">
             {(isExpanded ? t.ocultar : t.mostrar) + ' ' + t.addAccion + ' (' + accionesDeP.length + ')'}
           </button>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => sugerirAccionesConIA(p.id, f, e, o)}
+              disabled={generating}
+              className="rounded-full border border-blue-400 bg-white px-3 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50"
+            >
+              {generating ? t.sugerirAccionesGenerando : t.sugerirAccionesBtn}
+            </button>
             <ValidateBadge validado={p.validado} onToggle={() => updateProyecto(p.id, { validado: !p.validado })} />
             <button type="button" onClick={() => removeProyecto(p.id)} className="text-xs font-medium text-red-600 hover:underline">
               {t.eliminar}
             </button>
           </div>
         </div>
+        {genError ? <p className="mt-2 text-xs text-red-700">{genError}</p> : null}
         {isExpanded ? (
           <div className="mt-3">
-            <div className="mb-2 flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => sugerirAccionesConIA(p.id, f, e, o)}
-                disabled={generating}
-                className="rounded-full border border-blue-400 bg-white px-3 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50"
-              >
-                {generating ? t.sugerirAccionesGenerando : t.sugerirAccionesBtn}
-              </button>
-            </div>
-            {genError ? <p className="mb-2 text-xs text-red-700">{genError}</p> : null}
             {accionesDeP.map((a) => renderAccion('', a))}
             <button type="button" onClick={() => addAccion(p.id)} className="mt-1 text-xs font-medium text-blue-600 hover:underline">
               {t.addAccion}
