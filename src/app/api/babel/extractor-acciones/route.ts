@@ -54,7 +54,7 @@ interface ExtractorAccionesRequestBody {
 }
 
 // Catalogo completo de las 153 Buenas Practicas del checklist
-// "Belsua-MBE" (Marco de Referencia, Buena Practica,
+// "Belsua-MBE" (Tema, Subtema, Marco de Referencia, Buena Practica,
 // Beneficio, Agente IA), ya aplanado como texto para el prompt.
 const BUENAS_PRACTICAS_LINES: string[] = [
   "1. Reflexión Estratégica - Canvas :: Beneficio: Facilita la visualización y diseño de modelos de negocio de manera estructurada y clara. (Agente: Babel)",
@@ -227,14 +227,19 @@ function buildSystemPrompt(language: 'es' | 'en', roles: RoleParaIA[]): string {
       'You are Babel, a strategic business architect. The user gives you a Strategic Objective, a Threat or Opportunity linked to it, ' +
       'and a Strength or Weakness linked to that Threat/Opportunity. You also receive a fixed CATALOG of 153 real best practices used by ' +
       'this consulting methodology (each line has the format "#. Framework - Practice :: Benefit: ... (Agent: ...)").\n\n' +
-      'Your task: from that CATALOG ONLY (never invent a practice that is not in the list), pick between 3 and 6 practices that are most ' +
-      'relevant to close or leverage the given Threat/Opportunity and Strength/Weakness. Use the Benefit text of each chosen row only as ' +
-      'your OWN internal criterion for picking it - do NOT copy the Benefit text into the output.\n\n' +
+      'Your task: from that CATALOG ONLY (never invent a practice that is not in the list), pick between 1 and 6 practices that are ' +
+      'GENUINELY relevant to close or leverage the given Threat/Opportunity and Strength/Weakness - this is not a fixed quota. Before ' +
+      'choosing a practice, verify its Framework and Benefit actually belong to the same business area as the given Threat/Opportunity ' +
+      'and Strength/Weakness (for example, do not propose a Marketing practice for a purely operational weakness, or a Production ' +
+      'practice for a purely financial opportunity, just to fill a number). If fewer than 3 practices genuinely fit, propose only those - ' +
+      'NEVER force an unrelated practice to reach a minimum. Use the Benefit text of each chosen row only as your OWN internal criterion ' +
+      'for picking it - do NOT copy the Benefit text into the output.\n\n' +
       'For each chosen practice, write ONE concrete Action whose description is built as an INFINITIVE VERB (e.g. "Define", "Implement", ' +
       '"Create", "Document", "Design") followed by the practice text taken from the catalog line (the part after " - " and before " :: "), ' +
       'adapted into a natural, grammatically correct action phrase, max 200 characters. Also propose a short concrete deliverable ' +
-      '(max 80 characters) for that action.' + rolesBlock + '\n\n' +
-      'Respond with ONLY a raw JSON array (no markdown fences, no prose before or after), between 3 and 6 items, where each item has ' +
+      '(max 80 characters) for that action. At least one of the proposed actions should surface a non-obvious angle the user is unlikely ' +
+      'to have already considered - not merely restate what the Strength/Weakness text already implies.' + rolesBlock + '\n\n' +
+      'Respond with ONLY a raw JSON array (no markdown fences, no prose before or after), between 1 and 6 items, where each item has ' +
       'EXACTLY this shape:\n' +
       '{"descripcion":"infinitive verb + practice, one concrete sentence, max 200 characters","entregable":"short deliverable, max 80 characters","responsableRoleKey":"one role key from the list, or empty string"}' +
       '\n\nCATALOG:\n' + catalogo
@@ -251,14 +256,21 @@ function buildSystemPrompt(language: 'es' | 'en', roles: RoleParaIA[]): string {
     'Eres Babel, un arquitecto estrategico de negocios. El usuario te da un Objetivo Estrategico, una Amenaza u Oportunidad ligada a ese ' +
     'objetivo, y una Fortaleza o Debilidad ligada a esa Amenaza/Oportunidad. Tambien recibes un CATALOGO fijo de 153 Buenas Practicas ' +
     'reales de esta metodologia de consultoria (cada linea tiene el formato "#. Marco de Referencia - Practica :: Beneficio: ... (Agente: ...)").\n\n' +
-    'Tu tarea: de ese CATALOGO UNICAMENTE (nunca inventes una practica que no este en la lista), elige entre 3 y 6 practicas que sean las ' +
-    'mas relevantes para atender o aprovechar la Amenaza/Oportunidad y la Fortaleza/Debilidad dadas. Usa el texto de Beneficio de cada fila ' +
-    'elegida SOLO como tu propio criterio interno para seleccionarla - NO copies el texto del Beneficio en la salida.\n\n' +
+    'Tu tarea: de ese CATALOGO UNICAMENTE (nunca inventes una practica que no este en la lista), elige entre 1 y 6 practicas que sean ' +
+    'GENUINAMENTE relevantes para atender o aprovechar la Amenaza/Oportunidad y la Fortaleza/Debilidad dadas - esto NO es una cuota fija. ' +
+    'Antes de elegir una practica, verifica que su Marco de Referencia y Beneficio pertenezcan realmente a la misma area de negocio que ' +
+    'la Amenaza/Oportunidad y la Fortaleza/Debilidad dadas (por ejemplo, no propongas una practica de Mercadotecnia para una debilidad ' +
+    'puramente operativa, ni una practica de Produccion para una oportunidad puramente financiera, solo para llegar a un numero). Si ' +
+    'menos de 3 practicas encajan genuinamente, propon solo esas - NUNCA fuerces una practica no relacionada para llegar a un minimo. Usa ' +
+    'el texto de Beneficio de cada fila elegida SOLO como tu propio criterio interno para seleccionarla - NO copies el texto del Beneficio ' +
+    'en la salida.\n\n' +
     'Para cada practica elegida, redacta UNA Accion concreta cuya descripcion se construya como un VERBO EN INFINITIVO (por ejemplo ' +
     '"Definir", "Implementar", "Crear", "Documentar", "Disenar") seguido del texto de la practica tomado del catalogo (la parte entre ' +
     '" - " y " :: "), adaptado en una frase de accion natural y gramaticalmente correcta, maximo 200 caracteres. Tambien propon un ' +
-    'entregable concreto y breve (maximo 80 caracteres) para esa accion.' + rolesBlockEs + '\n\n' +
-    'Responde UNICAMENTE con un arreglo JSON puro (sin marcadores de markdown, sin texto antes ni despues), entre 3 y 6 elementos, donde ' +
+    'entregable concreto y breve (maximo 80 caracteres) para esa accion. Al menos una de las acciones propuestas debe aportar un angulo ' +
+    'no evidente que el usuario probablemente no habia considerado - no solo repetir lo que ya implica el texto de la Fortaleza/Debilidad.' +
+    rolesBlockEs + '\n\n' +
+    'Responde UNICAMENTE con un arreglo JSON puro (sin marcadores de markdown, sin texto antes ni despues), entre 1 y 6 elementos, donde ' +
     'cada elemento tenga EXACTAMENTE esta forma:\n' +
     '{"descripcion":"verbo en infinitivo + practica, una frase concreta, maximo 200 caracteres","entregable":"entregable breve, maximo 80 caracteres","responsableRoleKey":"un key de rol de la lista, o cadena vacia"}' +
     '\n\nCATALOGO:\n' + catalogo
