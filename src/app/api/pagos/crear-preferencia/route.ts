@@ -25,7 +25,7 @@ import { MercadoPagoConfig, Preference } from 'mercadopago';
 import { getAdminAuth } from '@/lib/firebase-admin';
 
 // TODO: ajusta este precio al precio real de tu plan de pago.
-const PLAN_PRICE_MXN = 999;
+const PLAN_PRICE_MXN = 99;
 const PLAN_TITLE = 'MBE Corpilot AI — Plan completo';
 
 export async function POST(req: NextRequest) {
