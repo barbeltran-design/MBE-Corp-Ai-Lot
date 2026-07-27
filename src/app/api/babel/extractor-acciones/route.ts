@@ -32,6 +32,13 @@ const TERTIARY_MODEL = process.env.TERTIARY_MODEL || 'openai/gpt-oss-20b:free';
 const ROUTER_ENDPOINT = process.env.ROUTER_ENDPOINT || '';
 const ROUTER_MODEL = process.env.ROUTER_MODEL || 'oc/qwen3-coder-plus';
 
+// Tarea #47 (punto "nuevas tendencias"): proveedor de busqueda web opcional
+// (Tavily) para dar a Babel contexto de tendencias actuales al sugerir
+// acciones. Si TAVILY_API_KEY no esta configurada en Vercel, fetchTendencias
+// simplemente regresa cadena vacia y el resto de la ruta funciona igual que
+// antes (mismo patron que GEMINI_API_KEY/ROUTER_ENDPOINT: proveedor opcional).
+const TAVILY_ENDPOINT = 'https://api.tavily.com/search';
+
 interface Diagnostic {
   provider: string;
   status: string;
@@ -238,7 +245,10 @@ function buildSystemPrompt(language: 'es' | 'en', roles: RoleParaIA[]): string {
       '"Create", "Document", "Design") followed by the practice text taken from the catalog line (the part after " - " and before " :: "), ' +
       'adapted into a natural, grammatically correct action phrase, max 200 characters. Also propose a short concrete deliverable ' +
       '(max 80 characters) for that action. At least one of the proposed actions should surface a non-obvious angle the user is unlikely ' +
-      'to have already considered - not merely restate what the Strength/Weakness text already implies.' + rolesBlock + '\n\n' +
+      'to have already considered - not merely restate what the Strength/Weakness text already implies. If the user message includes ' +
+      'a block labeled "Relevant current trends" with real web-search results, you may use ONE of those trends as light inspiration ' +
+      'for at most one proposed action - only if it is genuinely relevant, never forced; if that block is absent, ignore this ' +
+      'instruction entirely and never invent a trend.' + rolesBlock + '\n\n' +
       'Respond with ONLY a raw JSON array (no markdown fences, no prose before or after), between 1 and 6 items, where each item has ' +
       'EXACTLY this shape:\n' +
       '{"descripcion":"infinitive verb + practice, one concrete sentence, max 200 characters","entregable":"short deliverable, max 80 characters","responsableRoleKey":"one role key from the list, or empty string"}' +
@@ -268,7 +278,10 @@ function buildSystemPrompt(language: 'es' | 'en', roles: RoleParaIA[]): string {
     '"Definir", "Implementar", "Crear", "Documentar", "Disenar") seguido del texto de la practica tomado del catalogo (la parte entre ' +
     '" - " y " :: "), adaptado en una frase de accion natural y gramaticalmente correcta, maximo 200 caracteres. Tambien propon un ' +
     'entregable concreto y breve (maximo 80 caracteres) para esa accion. Al menos una de las acciones propuestas debe aportar un angulo ' +
-    'no evidente que el usuario probablemente no habia considerado - no solo repetir lo que ya implica el texto de la Fortaleza/Debilidad.' +
+    'no evidente que el usuario probablemente no habia considerado - no solo repetir lo que ya implica el texto de la Fortaleza/Debilidad. ' +
+    'Si el mensaje del usuario incluye un bloque llamado "Tendencias actuales relevantes" con resultados reales de busqueda web, puedes ' +
+    'usar UNA de esas tendencias como inspiracion ligera para como maximo una accion propuesta - solo si es genuinamente relevante, ' +
+    'nunca forzada; si ese bloque no aparece, ignora esta instruccion por completo y nunca inventes una tendencia.' +
     rolesBlockEs + '\n\n' +
     'Responde UNICAMENTE con un arreglo JSON puro (sin marcadores de markdown, sin texto antes ni despues), entre 1 y 6 elementos, donde ' +
     'cada elemento tenga EXACTAMENTE esta forma:\n' +
@@ -377,6 +390,46 @@ async function tryOpenAICompatible(
   }
 }
 
+// Busca hasta 3 resultados de tendencias actuales en Tavily para el query
+// dado. Nunca lanza excepcion hacia afuera: cualquier fallo (sin llave,
+// timeout, error de red, respuesta invalida) regresa cadena vacia y la
+// ruta sigue funcionando exactamente igual que sin este proveedor.
+async function fetchTendencias(query: string): Promise<string> {
+  const apiKey = process.env.TAVILY_API_KEY;
+  if (!apiKey) return '';
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const res = await fetch(TAVILY_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: apiKey,
+        query: query,
+        search_depth: 'basic',
+        max_results: 3,
+        include_answer: false,
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (!res.ok) return '';
+    const data = await res.json();
+    const results = Array.isArray(data && data.results) ? data.results : [];
+    if (results.length === 0) return '';
+    return results
+      .slice(0, 3)
+      .map((r: { title?: unknown; content?: unknown }) => {
+        const title = typeof r.title === 'string' ? r.title : '';
+        const content = typeof r.content === 'string' ? r.content.slice(0, 300) : '';
+        return '- ' + title + ': ' + content;
+      })
+      .join('\n');
+  } catch {
+    return '';
+  }
+}
+
 export async function GET() {
   return NextResponse.json({
     status: 'ok',
@@ -436,7 +489,7 @@ export async function POST(req: NextRequest) {
   const fdLabel =
     fdTipo === 'fortaleza' ? (language === 'en' ? 'Strength' : 'Fortaleza') : language === 'en' ? 'Weakness' : 'Debilidad';
 
-  const userMessage =
+  let userMessage =
     (language === 'en' ? 'Strategic Objective: ' : 'Objetivo Estrategico: ') +
     objetivo.slice(0, 500) +
     '\n' +
@@ -447,6 +500,20 @@ export async function POST(req: NextRequest) {
     fdLabel +
     ': ' +
     fdDescripcion.slice(0, 500);
+
+  // Tarea #47: contexto opcional de tendencias actuales (Tavily). Si no hay
+  // TAVILY_API_KEY configurada, o la busqueda falla, tendencias queda vacio
+  // y userMessage no cambia respecto al comportamiento anterior.
+  const tendenciasQuery = ('tendencias 2026 ' + (entornoDescripcion + ' ' + fdDescripcion).trim()).slice(0, 200);
+  const tendencias = await fetchTendencias(tendenciasQuery);
+  if (tendencias) {
+    userMessage +=
+      '\n' +
+      (language === 'en'
+        ? 'Relevant current trends (optional web search context):\n'
+        : 'Tendencias actuales relevantes (busqueda web, opcional):\n') +
+      tendencias;
+  }
 
   const diagnostics: Diagnostic[] = [];
 
