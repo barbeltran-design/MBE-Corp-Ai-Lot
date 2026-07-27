@@ -132,6 +132,8 @@ Ya tienes en el historial de esta conversación las respuestas de la Fase 0 (gir
 
 Cubre TODAS las subsecciones enumeradas abajo, en el mismo orden, sin omitir ninguna. Si para alguna subsección específica la información disponible es insuficiente para desarrollarla con solidez, no la omitas ni la saltes: escríbela de todas formas y anota explícitamente, en una línea aparte, qué supuesto usaste y qué dato haría falta para afinarla.
 
+Además, en el punto de este entregable que consideres más relevante, señala explícitamente, con la etiqueta "💡 Punto ciego:", un riesgo, supuesto o implicación que el usuario probablemente no había considerado por sí mismo. No lo incluyas si ya es obvio a partir del contexto que él mismo dio — solo cuando aporte algo genuinamente nuevo.
+
 ESTA ES LA FASE 1: ADN Estratégico y Propósito. Construye estos entregables:
 
 ### 1. Propuesta de Valor 360°
@@ -167,6 +169,8 @@ FORMATTING RULES (mandatory, no exceptions):
 You already have the Phase 0 answers in this conversation's history (line of business, location, maturity, resources, financial ambition, mission/vision, and financial inputs). Use them — do not ask again for what you already know. If a truly critical piece of information for this specific phase is missing and cannot be reasonably assumed, ask about it briefly before drafting. If you already have enough, draft the complete deliverable for this phase directly.
 
 Cover ALL the subsections listed below, in the same order, without skipping any. If for a specific subsection the available information is insufficient to develop it soundly, do not omit or skip it: write it anyway and explicitly note, on a separate line, what assumption you used and what information would be needed to refine it.
+
+Additionally, at whichever point in this deliverable you consider most relevant, explicitly flag, labeled "💡 Blind spot:", a risk, assumption, or implication the user has probably not considered on their own. Do not include it if it is already obvious from context the user provided — only when it adds something genuinely new.
 
 THIS IS PHASE 1: Strategic DNA and Purpose. Build these deliverables:
 
@@ -207,6 +211,8 @@ Ya tienes en el historial de esta conversación las respuestas de la Fase 0 y el
 
 Cubre TODAS las subsecciones enumeradas abajo, en el mismo orden, sin omitir ninguna. Si para alguna subsección específica la información disponible es insuficiente para desarrollarla con solidez, no la omitas ni la saltes: escríbela de todas formas y anota explícitamente, en una línea aparte, qué supuesto usaste y qué dato haría falta para afinarla.
 
+Además, en el punto de este entregable que consideres más relevante, señala explícitamente, con la etiqueta "💡 Punto ciego:", un riesgo, supuesto o implicación que el usuario probablemente no había considerado por sí mismo. No lo incluyas si ya es obvio a partir del contexto que él mismo dio — solo cuando aporte algo genuinamente nuevo.
+
 ESTA ES LA FASE 2: Inteligencia de Mercado Data-Driven. Con base en la geolocalización y el giro ya conocidos, construye:
 
 ### 1. Análisis PESTEL Localizado
@@ -241,6 +247,8 @@ FORMATTING RULES (mandatory, no exceptions):
 You already have the Phase 0 answers and the Phase 1 Strategic DNA in this conversation's history. Use them — do not ask again for what you already know. If a truly critical piece of information for this phase is missing, ask about it briefly before drafting. If you already have enough, draft the complete deliverable directly.
 
 Cover ALL the subsections listed below, in the same order, without skipping any. If for a specific subsection the available information is insufficient to develop it soundly, do not omit or skip it: write it anyway and explicitly note, on a separate line, what assumption you used and what information would be needed to refine it.
+
+Additionally, at whichever point in this deliverable you consider most relevant, explicitly flag, labeled "💡 Blind spot:", a risk, assumption, or implication the user has probably not considered on their own. Do not include it if it is already obvious from context the user provided — only when it adds something genuinely new.
 
 THIS IS PHASE 2: Data-Driven Market Intelligence. Building on the location and business line already known, produce:
 
@@ -280,6 +288,8 @@ Ya tienes en el historial de esta conversación las respuestas de las Fases 0, 1
 
 Cubre TODAS las subsecciones enumeradas abajo, en el mismo orden, sin omitir ninguna. Si para alguna subsección específica la información disponible es insuficiente para desarrollarla con solidez, no la omitas ni la saltes: escríbela de todas formas y anota explícitamente, en una línea aparte, qué supuesto usaste y qué dato haría falta para afinarla.
 
+Además, en el punto de este entregable que consideres más relevante, señala explícitamente, con la etiqueta "💡 Punto ciego:", un riesgo, supuesto o implicación que el usuario probablemente no había considerado por sí mismo. No lo incluyas si ya es obvio a partir del contexto que él mismo dio — solo cuando aporte algo genuinamente nuevo.
+
 ESTA ES LA FASE 3: Operaciones, Experiencia y Modelo Delta. Construye:
 
 ### 1. Capacidades Clave
@@ -308,6 +318,8 @@ FORMATTING RULES (mandatory, no exceptions):
 You already have the Phase 0, 1, and 2 answers in this conversation's history. Use them — do not ask again for what you already know. If a truly critical piece of information for this phase is missing, ask about it briefly before drafting. If you already have enough, draft the complete deliverable directly.
 
 Cover ALL the subsections listed below, in the same order, without skipping any. If for a specific subsection the available information is insufficient to develop it soundly, do not omit or skip it: write it anyway and explicitly note, on a separate line, what assumption you used and what information would be needed to refine it.
+
+Additionally, at whichever point in this deliverable you consider most relevant, explicitly flag, labeled "💡 Blind spot:", a risk, assumption, or implication the user has probably not considered on their own. Do not include it if it is already obvious from context the user provided — only when it adds something genuinely new.
 
 THIS IS PHASE 3: Operations, Experience, and Delta Model. Build:
 
@@ -406,6 +418,8 @@ Ya tienes en el historial de esta conversación las respuestas de las Fases 0, 1
 
 Cubre TODAS las subsecciones enumeradas abajo, en el mismo orden, sin omitir ninguna. Si para alguna subsección específica la información disponible es insuficiente para desarrollarla con solidez, no la omitas ni la saltes: escríbela de todas formas y anota explícitamente, en una línea aparte, qué supuesto usaste y qué dato haría falta para afinarla.
 
+Además, en el punto de este entregable que consideres más relevante, señala explícitamente, con la etiqueta "💡 Punto ciego:", un riesgo, supuesto o implicación que el usuario probablemente no había considerado por sí mismo. No lo incluyas si ya es obvio a partir del contexto que él mismo dio — solo cuando aporte algo genuinamente nuevo.
+
 ESTA ES LA FASE 5: Ejecución Ágil, Gobernanza y Pitch. Es la última fase antes de compilar el plan completo. Construye:
 
 ### 1. Balanced Scorecard + OKRs
@@ -435,6 +449,8 @@ FORMATTING RULES (mandatory, no exceptions):
 You already have the Phase 0, 1, 2, 3, and 4 answers in this conversation's history. Use them — do not ask again for what you already know.
 
 Cover ALL the subsections listed below, in the same order, without skipping any. If for a specific subsection the available information is insufficient to develop it soundly, do not omit or skip it: write it anyway and explicitly note, on a separate line, what assumption you used and what information would be needed to refine it.
+
+Additionally, at whichever point in this deliverable you consider most relevant, explicitly flag, labeled "💡 Blind spot:", a risk, assumption, or implication the user has probably not considered on their own. Do not include it if it is already obvious from context the user provided — only when it adds something genuinely new.
 
 THIS IS PHASE 5: Agile Execution, Governance, and Pitch. This is the last phase before compiling the complete plan. Build:
 
