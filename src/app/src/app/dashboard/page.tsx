@@ -28,6 +28,11 @@ type UserDoc = {
   email?: string;
 };
 
+type SessionDoc = {
+  currentPhase?: number;
+  agentId?: string;
+};
+
 function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -35,6 +40,7 @@ function DashboardContent() {
 
   const [user, setUser] = useState<User | null>(null);
   const [userDoc, setUserDoc] = useState<UserDoc | null>(null);
+  const [sessionDoc, setSessionDoc] = useState<SessionDoc | null>(null);
   const [loading, setLoading] = useState(true);
   const [payLoading, setPayLoading] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
@@ -50,6 +56,13 @@ function DashboardContent() {
 
       const snap = await getDoc(doc(getFirebaseDb(), 'users', firebaseUser.uid));
       setUserDoc(snap.exists() ? (snap.data() as UserDoc) : null);
+
+      // El id del documento de sesión de Babel es "babel_" + uid, no el uid solo.
+      const sessionSnap = await getDoc(
+        doc(getFirebaseDb(), 'sessions', `babel_${firebaseUser.uid}`)
+      );
+      setSessionDoc(sessionSnap.exists() ? (sessionSnap.data() as SessionDoc) : null);
+
       setLoading(false);
     });
 
@@ -103,6 +116,18 @@ function DashboardContent() {
       {pagoParam === 'fallido' && (
         <div className="rounded-lg bg-red-50 border border-red-200 p-4 text-red-800">
           El pago no se completó. Puedes intentarlo de nuevo cuando quieras.
+        </div>
+      )}
+
+      {sessionDoc?.currentPhase !== undefined && (
+        <div className="rounded-lg border border-gray-200 p-6">
+          <h2 className="text-lg font-medium mb-2">Tu progreso</h2>
+          <p className="text-gray-700">
+            Fase actual: <span className="font-semibold">{sessionDoc.currentPhase}</span>
+          </p>
+          {/* Entregables por fase: pendiente — falta ver la subcolección
+              "entries" dentro de assessments/{'{uid}'} para saber qué campos
+              mostrar aquí sin inventar nada. */}
         </div>
       )}
 
