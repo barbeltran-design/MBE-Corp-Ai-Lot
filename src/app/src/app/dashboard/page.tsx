@@ -7,12 +7,9 @@
 // ⚠️ ANTES DE SUBIRLO: si ya tienes algo funcionando en /dashboard,
 // avísame primero — este archivo lo reemplazaría por completo.
 //
-// Qué es: primera versión del dashboard — estado del plan + botón de pago.
-// Todavía NO incluye progreso de fases ni entregables generados (eso es
-// el resto de la Task #51) — para eso necesito ver primero cómo están
-// estructuradas tus colecciones "assessments" y "sessions" en Firestore,
-// que aún no me has mostrado. Prefiero decírtelo claro a inventar campos
-// que no sé si existen.
+// Qué es: dashboard con estado del plan, botón de pago, fase actual y
+// entregables generados por fase — usando el campo "phases" del documento
+// sessions/babel_{uid} (confirmado por captura de pantalla real).
 // ─────────────────────────────────────────────────────────────────────────
 
 import { Suspense, useEffect, useState } from 'react';
@@ -28,9 +25,16 @@ type UserDoc = {
   email?: string;
 };
 
+type PhaseEntry = {
+  phase: number;
+  summary?: string;
+  approved?: boolean;
+};
+
 type SessionDoc = {
   currentPhase?: number;
   agentId?: string;
+  phases?: PhaseEntry[];
 };
 
 function DashboardContent() {
@@ -125,9 +129,29 @@ function DashboardContent() {
           <p className="text-gray-700">
             Fase actual: <span className="font-semibold">{sessionDoc.currentPhase}</span>
           </p>
-          {/* Entregables por fase: pendiente — falta ver la subcolección
-              "entries" dentro de assessments/{'{uid}'} para saber qué campos
-              mostrar aquí sin inventar nada. */}
+        </div>
+      )}
+
+      {sessionDoc?.phases && sessionDoc.phases.length > 0 && (
+        <div className="rounded-lg border border-gray-200 p-6">
+          <h2 className="text-lg font-medium mb-4">Entregables por fase</h2>
+          <div className="space-y-2">
+            {[...sessionDoc.phases]
+              .sort((a, b) => a.phase - b.phase)
+              .map((p) => (
+                <details key={p.phase} className="border border-gray-100 rounded-md p-3">
+                  <summary className="cursor-pointer font-medium">
+                    Fase {p.phase} {p.approved ? '— aprobada' : '— pendiente de aprobación'}
+                  </summary>
+                  {/* Texto tal cual viene de Firestore (markdown sin procesar).
+                      Si quieres que se vea con negritas/títulos reales, hay que
+                      agregar una librería de markdown — dímelo y la agrego. */}
+                  <div className="mt-3 text-sm text-gray-700 whitespace-pre-wrap">
+                    {p.summary || 'Sin resumen disponible.'}
+                  </div>
+                </details>
+              ))}
+          </div>
         </div>
       )}
 
