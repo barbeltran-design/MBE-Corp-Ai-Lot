@@ -1,5 +1,25 @@
 'use client';
 
+// ─────────────────────────────────────────────────────────────────────────
+// ESTE ARCHIVO REEMPLAZA A: src/app/[locale]/dashboard/page.tsx
+// (el que me confirmaste que ya existe — este es el mismo archivo, con
+// las secciones de Fase 5 agregadas al final: estado del plan / pago,
+// fase actual, y entregables por fase).
+//
+// CÓMO SUBIRLO:
+// 1. En GitHub, entra a src/app/[locale]/dashboard/page.tsx
+// 2. Clic en el ícono de lápiz (Edit this file)
+// 3. Selecciona todo el contenido (Ctrl+A) y bórralo
+// 4. Pega TODO el contenido de este archivo
+// 5. Comitea directo en "main"
+//
+// Nota: agregué las secciones nuevas ("Tu plan" y "Tu progreso en Babel AI")
+// con texto fijo en español, NO usan el sistema de traducciones (next-intl)
+// que usa el resto de la página — así no tienes que editar también los
+// archivos de idioma (es.json / en.json). Si más adelante quieres que
+// también se traduzcan al inglés, dímelo y lo conecto al sistema de t().
+// ─────────────────────────────────────────────────────────────────────────
+
 // Fase 2/5 (stub): pantalla que recibe al usuario después del diagnóstico de
 // madurez y en cada login posterior. Lee el último diagnóstico guardado,
 // muestra el resumen tipo tabla pivote + gráficas + próximos pasos, y deja
@@ -11,9 +31,10 @@
 //   aquí se muestran los próximos pasos por tema -> placeholder de Babel AI
 //   (Fase 3) para el Mes 1 de Estrategia.
 import * as React from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { onAuthStateChanged, type User } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 import {
   Radar,
   RadarChart,
@@ -30,21 +51,46 @@ import {
 } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { getFirebaseAuth } from '@/lib/firebase';
+import { getFirebaseAuth, getFirebaseDb } from '@/lib/firebase';
 import { getMaturityDimensions } from '@/lib/maturity-dimensions';
 import { computeResults, type AssessmentResult } from '@/lib/maturity-scoring';
 import { getLatestAssessmentAnswers } from '@/lib/assessment';
 import type { Language } from '@/types/firestore';
 
-export default function DashboardPage() {
+// ── Tipos nuevos para Fase 5 (plan de pago + progreso Babel AI) ───────────
+type UserDoc = {
+  subscription?: string;
+  planStatus?: string;
+};
+
+type PhaseEntry = {
+  phase: number;
+  summary?: string;
+  approved?: boolean;
+};
+
+type SessionDoc = {
+  currentPhase?: number;
+  phases?: PhaseEntry[];
+};
+
+function DashboardPageInner() {
   const router = useRouter();
   const locale = useLocale() as Language;
   const t = useTranslations('dashboard');
   const tLevel = useTranslations('common.maturityLevel');
+  const searchParams = useSearchParams();
+  const pagoParam = searchParams.get('pago'); // 'exitoso' | 'fallido' | 'pendiente' | null
 
   const [user, setUser] = React.useState<User | null | undefined>(undefined);
   const [result, setResult] = React.useState<AssessmentResult | null>(null);
   const [loadError, setLoadError] = React.useState(false);
+
+  // ── Estado nuevo para Fase 5 ─────────────────────────────────────────
+  const [userDoc, setUserDoc] = React.useState<UserDoc | null>(null);
+  const [sessionDoc, setSessionDoc] = React.useState<SessionDoc | null>(null);
+  const [payLoading, setPayLoading] = React.useState(false);
+  const [payError, setPayError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     const auth = getFirebaseAuth();
@@ -79,6 +125,55 @@ export default function DashboardPage() {
     };
   }, [user, locale]);
 
+  // ── Carga nueva para Fase 5: plan de pago + sesión de Babel AI ───────
+  React.useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const db = getFirebaseDb();
+        const [userSnap, sessionSnap] = await Promise.all([
+          getDoc(doc(db, 'users', user.uid)),
+          getDoc(doc(db, 'sessions', `babel_${user.uid}`)),
+        ]);
+        if (cancelled) return;
+        setUserDoc(userSnap.exists() ? (userSnap.data() as UserDoc) : null);
+        setSessionDoc(sessionSnap.exists() ? (sessionSnap.data() as SessionDoc) : null);
+      } catch (err) {
+        console.error('[MBE Dashboard] failed to load plan/session data', err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  async function handlePagar() {
+    if (!user) return;
+    setPayLoading(true);
+    setPayError(null);
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/pagos/crear-preferencia', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ locale }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.checkoutUrl) {
+        throw new Error(data.error || 'No se pudo iniciar el pago.');
+      }
+      window.location.href = data.checkoutUrl;
+    } catch (err) {
+      console.error(err);
+      setPayError('No se pudo iniciar el pago. Intenta de nuevo en unos segundos.');
+      setPayLoading(false);
+    }
+  }
+
   if (user === undefined || (!result && !loadError)) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-white">
@@ -100,6 +195,7 @@ export default function DashboardPage() {
 
   const radarData = result.dimensions.map((d) => ({ tema: d.tema, value: Math.round(d.score) }));
   const progressData = result.levelProgress.map((l) => ({ nivel: tLevel(l.key), avance: Math.round(l.percent) }));
+  const esPro = userDoc?.subscription === 'pro' && userDoc?.planStatus === 'active';
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-emerald-50/40 to-white px-6 py-10">
@@ -114,6 +210,23 @@ export default function DashboardPage() {
             {t('retakeLink')}
           </button>
         </div>
+
+        {/* ── Banners de resultado de pago (Fase 5) ──────────────────── */}
+        {pagoParam === 'exitoso' && (
+          <div className="mt-6 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+            Tu pago se está confirmando. En unos segundos verás tu plan activado aquí abajo.
+          </div>
+        )}
+        {pagoParam === 'pendiente' && (
+          <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            Tu pago quedó pendiente de confirmación por Mercado Pago.
+          </div>
+        )}
+        {pagoParam === 'fallido' && (
+          <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+            El pago no se completó. Puedes intentarlo de nuevo cuando quieras.
+          </div>
+        )}
 
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Card className="p-6">
@@ -196,6 +309,52 @@ export default function DashboardPage() {
           </table>
         </Card>
 
+        {/* ── Tu plan (Fase 5) ────────────────────────────────────────── */}
+        <Card className="mt-8 p-6">
+          <h2 className="text-sm font-semibold text-slate-700">Tu plan</h2>
+          {esPro ? (
+            <p className="mt-2 text-sm font-medium text-emerald-700">Plan completo activo.</p>
+          ) : (
+            <>
+              <p className="mt-2 text-sm text-slate-500">
+                Estás en el diagnóstico gratuito. Desbloquea el plan completo para acceder a todas las herramientas.
+              </p>
+              <Button className="mt-4" onClick={handlePagar} disabled={payLoading}>
+                {payLoading ? 'Abriendo Mercado Pago…' : 'Pagar plan completo'}
+              </Button>
+              {payError && <p className="mt-2 text-sm text-red-600">{payError}</p>}
+            </>
+          )}
+        </Card>
+
+        {/* ── Tu progreso en Babel AI + entregables por fase (Fase 5) ─── */}
+        {sessionDoc && (sessionDoc.currentPhase !== undefined || (sessionDoc.phases && sessionDoc.phases.length > 0)) && (
+          <Card className="mt-8 p-6">
+            <h2 className="text-sm font-semibold text-slate-700">Tu progreso en Babel AI</h2>
+            {sessionDoc.currentPhase !== undefined && (
+              <p className="mt-2 text-sm text-slate-600">
+                Fase actual: <span className="font-semibold text-slate-900">{sessionDoc.currentPhase}</span>
+              </p>
+            )}
+            {sessionDoc.phases && sessionDoc.phases.length > 0 && (
+              <div className="mt-4 space-y-2">
+                {[...sessionDoc.phases]
+                  .sort((a, b) => a.phase - b.phase)
+                  .map((p) => (
+                    <details key={p.phase} className="rounded-md border border-slate-100 p-3">
+                      <summary className="cursor-pointer text-sm font-medium text-slate-800">
+                        Fase {p.phase} {p.approved ? '— aprobada' : '— pendiente de aprobación'}
+                      </summary>
+                      <div className="mt-3 whitespace-pre-wrap text-sm text-slate-600">
+                        {p.summary || 'Sin resumen disponible.'}
+                      </div>
+                    </details>
+                  ))}
+              </div>
+            )}
+          </Card>
+        )}
+
         <Card className="mt-8 p-6 text-center">
           <h2 className="text-sm font-semibold text-slate-700">{t('babelTitle')}</h2>
           <p className="mt-1 text-sm text-slate-500">{t('babelBody')}</p>
@@ -205,5 +364,19 @@ export default function DashboardPage() {
         </Card>
       </div>
     </main>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-white">
+          <p className="text-sm text-slate-400">Cargando…</p>
+        </main>
+      }
+    >
+      <DashboardPageInner />
+    </React.Suspense>
   );
 }
