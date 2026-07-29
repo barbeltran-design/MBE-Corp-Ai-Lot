@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { ExecutiveShell, type ExecutiveNavItem } from '@/components/executive-shell';
 import {
+  BackgroundBlobs,
   DataTable,
   GlassCard,
   MetricCard,
@@ -139,16 +140,18 @@ const phaseColumns: ColumnDef<PhaseRow>[] = [
 export default function ExecutivePreviewPage() {
   const params = useParams<{ locale: string }>();
   const router = useRouter();
-  const locale = params?.locale ?? 'es';
+  const routeLocale = params?.locale ?? 'es';
+  const [lang, setLang] = React.useState<'es' | 'en'>(routeLocale as 'es' | 'en');
+
+  const navLabel = (es: string, en: string) => lang === 'en' ? en : es;
 
   const navItems: ExecutiveNavItem[] = [
-    { href: `/${locale}/executive-preview`, label: 'Resumen ejecutivo', icon: NAV_ICON_MAP.LayoutDashboard },
-    { href: `/${locale}/babel`, label: 'Babel AI', icon: NAV_ICON_MAP.Sparkles },
-    { href: `/${locale}/babel/organigrama`, label: 'Organigrama y roles', icon: NAV_ICON_MAP.Users },
-    { href: `/${locale}/babel/plan-accion`, label: 'Plan de acción', icon: NAV_ICON_MAP.ClipboardList },
-    { href: `/${locale}/babel/indicadores`, label: 'Objetivos financieros', icon: NAV_ICON_MAP.TrendingUp },
-    { href: `/${locale}/dashboard`, label: 'Evaluación de madurez', icon: NAV_ICON_MAP.Gauge },
-    { href: `/${locale}/onboarding`, label: 'Diagnóstico', icon: NAV_ICON_MAP.ClipboardList },
+    { href: `/${routeLocale}/executive-preview`, label: navLabel('Resumen ejecutivo', 'Executive Summary'), icon: NAV_ICON_MAP.LayoutDashboard },
+    { href: `/${routeLocale}/babel`, label: navLabel('Reflexión estratégica', 'Strategic Reflection'), icon: NAV_ICON_MAP.Sparkles },
+    { href: `/${routeLocale}/babel/organigrama`, label: navLabel('Organigrama y roles', 'Org Chart & Roles'), icon: NAV_ICON_MAP.Users },
+    { href: `/${routeLocale}/babel/plan-accion`, label: navLabel('Plan de acción', 'Action Plan'), icon: NAV_ICON_MAP.ClipboardList },
+    { href: `/${routeLocale}/babel/indicadores`, label: navLabel('Objetivos financieros', 'Financial Goals'), icon: NAV_ICON_MAP.TrendingUp },
+    { href: `/${routeLocale}/dashboard`, label: navLabel('Evaluación de madurez', 'Maturity Assessment'), icon: NAV_ICON_MAP.Gauge },
   ];
 
   const commandItems: CommandPaletteItem[] = [
@@ -164,21 +167,41 @@ export default function ExecutivePreviewPage() {
       id: 'go-babel',
       label: 'Ir a Babel AI',
       group: 'Navegación',
-      onSelect: () => router.push(`/${locale}/babel`),
+      onSelect: () => router.push(`/${routeLocale}/babel`),
     },
     {
       id: 'go-dashboard',
       label: 'Ir al dashboard real',
       group: 'Navegación',
-      onSelect: () => router.push(`/${locale}/dashboard`),
+      onSelect: () => router.push(`/${routeLocale}/dashboard`),
     },
   ];
 
   const completedPhases = PHASE_ROWS.filter((r) => r.status === 'completado').length;
   const overallProgress = Math.round((completedPhases / PHASE_ROWS.length) * 100 + 5); // +5: fase en progreso parcial
 
+  const langToggle = (
+    <div className="flex gap-0.5 rounded-full border border-glass-border bg-glass p-0.5 text-xs">
+      <button
+        type="button"
+        onClick={() => setLang('es')}
+        className={'rounded-full px-2.5 py-1 font-medium transition-colors ' + (lang === 'es' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}
+      >
+        ES
+      </button>
+      <button
+        type="button"
+        onClick={() => setLang('en')}
+        className={'rounded-full px-2.5 py-1 font-medium transition-colors ' + (lang === 'en' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}
+      >
+        EN
+      </button>
+    </div>
+  );
+
   return (
-    <ExecutiveShell navItems={navItems} commandItems={commandItems} brandLabel="MBE Corpilot AI">
+    <ExecutiveShell navItems={navItems} commandItems={commandItems} brandLabel="MBE Corpilot AI" headerRight={langToggle}>
+      <BackgroundBlobs />
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <div className="animate-fade-in">
           <h1 className="text-xl font-semibold tracking-tight text-foreground">Resumen ejecutivo</h1>

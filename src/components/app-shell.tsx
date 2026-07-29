@@ -8,22 +8,25 @@ import { BackgroundBlobs } from '@/components/ui/executive/background-blobs';
 export function AppShell({
   children,
   locale,
+  headerRight,
 }: {
   children: React.ReactNode;
   locale: string;
+  headerRight?: React.ReactNode;
 }) {
+  const navLabel = (es: string, en: string) => locale === 'en' ? en : es;
+
   const navItems: ExecutiveNavItem[] = [
-    { href: `/${locale}/executive-preview`, label: 'Resumen ejecutivo', icon: LayoutDashboard },
-    { href: `/${locale}/babel`, label: 'Babel AI', icon: Sparkles },
-    { href: `/${locale}/babel/organigrama`, label: 'Organigrama y roles', icon: Users },
-    { href: `/${locale}/babel/plan-accion`, label: 'Plan de acción', icon: ClipboardList },
-    { href: `/${locale}/babel/indicadores`, label: 'Objetivos financieros', icon: TrendingUp },
-    { href: `/${locale}/dashboard`, label: 'Evaluación de madurez', icon: Gauge },
-    { href: `/${locale}/onboarding`, label: 'Diagnóstico', icon: ClipboardList },
+    { href: `/${locale}/executive-preview`, label: navLabel('Resumen ejecutivo', 'Executive Summary'), icon: LayoutDashboard },
+    { href: `/${locale}/babel`, label: navLabel('Reflexión estratégica', 'Strategic Reflection'), icon: Sparkles },
+    { href: `/${locale}/babel/organigrama`, label: navLabel('Organigrama y roles', 'Org Chart & Roles'), icon: Users },
+    { href: `/${locale}/babel/plan-accion`, label: navLabel('Plan de acción', 'Action Plan'), icon: ClipboardList },
+    { href: `/${locale}/babel/indicadores`, label: navLabel('Objetivos financieros', 'Financial Goals'), icon: TrendingUp },
+    { href: `/${locale}/dashboard`, label: navLabel('Evaluación de madurez', 'Maturity Assessment'), icon: Gauge },
   ];
 
   return (
-    <ExecutiveShell navItems={navItems} brandLabel="MBE Corpilot AI">
+    <ExecutiveShell navItems={navItems} brandLabel="MBE Corpilot AI" headerRight={headerRight}>
       <BackgroundBlobs />
       {children}
     </ExecutiveShell>
