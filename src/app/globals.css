@@ -62,7 +62,7 @@
 
   .dark {
     /* ---------- Executive-dark theme ---------- */
-    --background: 225 20% 4%;         /* #08090C */
+    --background: 220 9% 11%;         /* #1A1C20 — gris oscuro (antes #08090C casi negro) */
     --foreground: 220 9% 94%;         /* #EDEEF0 */
 
     --card: 223 21% 6%;               /* #0D0F14 */
@@ -102,8 +102,8 @@
     --brand-slate: 180 3% 49%;        /* #788080 */
 
     /* Superficies de vidrio (glassmorphism) — dark */
-    --glass-bg: rgba(13, 15, 20, 0.6);
-    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-bg: rgba(255, 255, 255, 0.06);
+    --glass-border: rgba(255, 255, 255, 0.14);
 
     --radius: 0.5rem;
   }
