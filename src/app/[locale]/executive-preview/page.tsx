@@ -33,7 +33,7 @@ import {
 } from '@/components/ui/executive';
 import { BABEL_PHASE_TOPICS_ES } from '@/lib/babel-constants';
 import { cn } from '@/lib/utils';
-import { useDisplayLang } from '@/components/display-lang-provider';
+import { DisplayLangProvider, useDisplayLang } from '@/components/display-lang-provider';
 
 type PhaseStatus = 'completado' | 'en_progreso' | 'pendiente';
 
@@ -98,6 +98,16 @@ const STATUS_ICON: Record<PhaseStatus, React.ComponentType<{ className?: string;
   pendiente: CircleDashed,
 };
 
+function TopicCell({ phase, topic }: { phase: number; topic: string }) {
+  const { lang } = useDisplayLang();
+  return (
+    <div className="flex flex-col">
+      <span className="font-medium text-foreground">{topic}</span>
+      <span className="text-xs text-muted-foreground">{lang === 'en' ? `Phase ${phase}` : `Fase ${phase}`}</span>
+    </div>
+  );
+}
+
 function StatusCell({ status }: { status: PhaseStatus }) {
   const { lang } = useDisplayLang();
   const labels: Record<PhaseStatus, string> = {
@@ -119,12 +129,7 @@ const phaseColumns: ColumnDef<PhaseRow>[] = [
     id: 'topic',
     header: 'Fase',
     accessorFn: (row) => row.topic,
-    cell: ({ row }) => (
-      <div className="flex flex-col">
-        <span className="font-medium text-foreground">{row.original.topic}</span>
-        <span className="text-xs text-muted-foreground">Fase {row.original.phase}</span>
-      </div>
-    ),
+    cell: ({ row }) => <TopicCell phase={row.original.phase} topic={row.original.topic} />,
   },
   {
     id: 'status',
@@ -186,6 +191,7 @@ export default function ExecutivePreviewPage() {
   const overallProgress = Math.round((completedPhases / PHASE_ROWS.length) * 100 + 5);
 
   return (
+    <DisplayLangProvider>
     <ExecutiveShell navItems={navItems} commandItems={commandItems} brandLabel="MBE Corpilot AI">
       <BackgroundBlobs />
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
@@ -304,5 +310,6 @@ export default function ExecutivePreviewPage() {
         </div>
       </div>
     </ExecutiveShell>
+    </DisplayLangProvider>
   );
 }

@@ -131,7 +131,8 @@ export default function BabelPage() {
   const [phase0Answers, setPhase0Answers] = React.useState<Record<string, string>>({});
   const [isPhase0Complete, setIsPhase0Complete] = React.useState(false);
   const [dispLang, setDispLang] = React.useState<'es' | 'en'>(locale);
-  const { setLang: setCtxLang } = useDisplayLang();
+  const { lang: ctxLang, setLang: setCtxLang } = useDisplayLang();
+  React.useEffect(() => { setDispLang(ctxLang); }, [ctxLang]);
   // Cache de traducciones (por IA) del contenido REAL de los mensajes de
   // Babel, para cuando dispLang no coincide con el idioma en que se generaron.
   // Clave: indice del mensaje + '::' + idioma destino.

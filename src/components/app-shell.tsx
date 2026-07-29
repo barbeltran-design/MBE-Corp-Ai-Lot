@@ -4,9 +4,9 @@ import * as React from 'react';
 import { ClipboardList, Gauge, LayoutDashboard, Sparkles, TrendingUp, Users } from 'lucide-react';
 import { ExecutiveShell, type ExecutiveNavItem } from '@/components/executive-shell';
 import { BackgroundBlobs } from '@/components/ui/executive/background-blobs';
-import { useDisplayLang } from '@/components/display-lang-provider';
+import { DisplayLangProvider, useDisplayLang } from '@/components/display-lang-provider';
 
-export function AppShell({
+function AppShellInner({
   children,
   locale,
 }: {
@@ -14,7 +14,6 @@ export function AppShell({
   locale: string;
 }) {
   const { lang } = useDisplayLang();
-
   const navLabel = (es: string, en: string) => lang === 'en' ? en : es;
 
   const navItems: ExecutiveNavItem[] = [
@@ -31,5 +30,19 @@ export function AppShell({
       <BackgroundBlobs />
       {children}
     </ExecutiveShell>
+  );
+}
+
+export function AppShell({
+  children,
+  locale,
+}: {
+  children: React.ReactNode;
+  locale: string;
+}) {
+  return (
+    <DisplayLangProvider>
+      <AppShellInner locale={locale}>{children}</AppShellInner>
+    </DisplayLangProvider>
   );
 }

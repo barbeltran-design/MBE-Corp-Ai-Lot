@@ -7,7 +7,7 @@ import { Moon, PanelLeftClose, PanelLeftOpen, Search, Sun } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/theme-provider';
 import { CommandPalette, type CommandPaletteItem } from '@/components/ui/executive/command-palette';
-import { DisplayLangProvider, useDisplayLang } from '@/components/display-lang-provider';
+import { useDisplayLang } from '@/components/display-lang-provider';
 
 export interface ExecutiveNavItem {
   href: string;
@@ -104,7 +104,6 @@ export function ExecutiveShell({
   const [commandOpen, setCommandOpen] = React.useState(false);
 
   return (
-    <DisplayLangProvider>
       <div className="flex min-h-screen text-foreground">
         <aside
           className={cn(
@@ -127,7 +126,7 @@ export function ExecutiveShell({
 
           <nav className="flex-1 space-y-1 overflow-y-auto p-2">
             {navItems.map((item) => {
-              const active = pathname === item.href || pathname?.startsWith(`${item.href}/`);
+              const active = pathname === item.href || pathname === `${item.href}/`;
               const Icon = item.icon;
               return (
                 <Link
@@ -208,6 +207,5 @@ export function ExecutiveShell({
 
         <CommandPalette items={commandItems} open={commandOpen} onOpenChange={setCommandOpen} />
       </div>
-    </DisplayLangProvider>
   );
 }
