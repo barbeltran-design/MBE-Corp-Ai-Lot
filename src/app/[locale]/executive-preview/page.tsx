@@ -177,9 +177,9 @@ export default function ExecutivePreviewPage() {
   return (
     <ExecutiveShell navItems={navItems} commandItems={commandItems} brandLabel="MBE Corpilot AI">
       <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute -left-24 top-20 h-96 w-96 rounded-full bg-primary/20 blur-[120px]" />
-        <div className="absolute right-0 top-1/3 h-80 w-80 rounded-full bg-primary/15 blur-[120px]" />
-        <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-primary/10 blur-[120px]" />
+        <div className="absolute -left-32 top-0 h-[480px] w-[480px] rounded-full bg-primary/30 blur-[110px]" />
+        <div className="absolute -right-20 top-0 h-[420px] w-[420px] rounded-full bg-primary/20 blur-[110px]" />
+        <div className="absolute left-1/2 top-[420px] h-[380px] w-[620px] -translate-x-1/2 rounded-full bg-primary/12 blur-[130px]" />
       </div>
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <div className="animate-fade-in">
