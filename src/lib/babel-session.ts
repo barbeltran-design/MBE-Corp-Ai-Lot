@@ -32,6 +32,7 @@ export async function getOrCreateBabelSession(
     topic: topics[0],
     createdAt: serverTimestamp() as SessionDoc['createdAt'],
     messages: [],
+    locale: language,
     currentPhase: 0,
     phases: [],
   };
@@ -145,6 +146,7 @@ export async function resetBabelSession(
     topic: topics[0],
     createdAt: serverTimestamp() as SessionDoc['createdAt'],
     messages: [],
+    locale: language,
     currentPhase: 0,
     phases: [],
   };

@@ -105,6 +105,7 @@ export interface SessionDoc {
   topic: string;
   createdAt: Timestamp;
   messages: ChatMessage[];
+  locale?: 'es' | 'en';
   // Solo se usa cuando agentId === 'babel'.
   currentPhase?: number;
   phases?: BabelPhaseRecord[];

@@ -204,8 +204,9 @@ export default function BabelPage() {
   // distinto al de la ruta. Solo se traducen mensajes de Babel (no las
   // respuestas propias del usuario, ni el par de resumen de Fase 0, que ya
   // se reconstruye localmente sin IA).
+  const sessionLocale = (session as any)?.locale ?? locale;
   React.useEffect(() => {
-    if (!session || dispLang === locale) return;
+    if (!session || dispLang === sessionLocale) return;
     session.messages.forEach(function (m, i) {
       if (m.role !== 'assistant') return;
       if (currentPhase === 0 && i <= 1) return;
@@ -1003,7 +1004,7 @@ export default function BabelPage() {
           const isFase0SummaryPair = currentPhase === 0 && i <= 1 && Object.keys(phase0Answers).length > 0;
           if (isFase0SummaryPair && i === 0) return null;
           const translationKey = i + '::' + dispLang;
-          const isTranslatable = m.role === 'assistant' && !isFase0SummaryPair && dispLang !== locale;
+          const isTranslatable = m.role === 'assistant' && !isFase0SummaryPair && dispLang !== sessionLocale;
           const hasTranslation = isTranslatable && translatedCache[translationKey] !== undefined;
           const isTranslatingThis = isTranslatable && !hasTranslation && translatingSet.has(i);
           const displayContent = isFase0SummaryPair

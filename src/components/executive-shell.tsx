@@ -66,14 +66,11 @@ function LangToggle() {
   const router = useRouter();
   const navigateLang = (newLang: 'es' | 'en') => {
     setLang(newLang);
-    const isDashboard = pathname === '/' + pathname.split('/')[1] + '/dashboard';
-    if (isDashboard) {
-      const segments = pathname.split('/');
-      if (segments[1] === 'es' || segments[1] === 'en') {
-        segments[1] = newLang;
-      }
-      router.replace(segments.join('/'));
+    const segments = pathname.split('/');
+    if (segments[1] === 'es' || segments[1] === 'en') {
+      segments[1] = newLang;
     }
+    router.replace(segments.join('/'));
   };
   return (
     <div className="flex gap-0.5 rounded-full border border-glass-border bg-glass p-0.5 text-xs">
