@@ -39,6 +39,35 @@ async function tryGoogleTranslate(text: string, targetLang: 'es' | 'en'): Promis
   return translated;
 }
 
+export async function GET() {
+  const apiKey = process.env.GOOGLE_TRANSLATE_API_KEY;
+  let googleStatus = 'not_tested';
+  let googleRaw: unknown = null;
+  if (apiKey) {
+    try {
+      const res = await fetch(
+        'https://translation.googleapis.com/language/translate/v2?key=' + apiKey,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ q: 'Hello', target: 'es', format: 'text' }),
+        }
+      );
+      googleStatus = res.status.toString();
+      googleRaw = await res.json();
+    } catch (e) {
+      googleStatus = 'fetch_error';
+      googleRaw = e instanceof Error ? e.message : String(e);
+    }
+  }
+  const present = !!apiKey;
+  const prefix = apiKey ? apiKey.substring(0, 4) : '(none)';
+  return NextResponse.json({
+    GOOGLE_TRANSLATE_API_KEY: { present, prefix },
+    google_response: { status: googleStatus, body: googleRaw },
+  });
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as TranslateBody;
