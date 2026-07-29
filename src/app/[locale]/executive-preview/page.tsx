@@ -176,10 +176,14 @@ export default function ExecutivePreviewPage() {
 
   return (
     <ExecutiveShell navItems={navItems} commandItems={commandItems} brandLabel="MBE Corpilot AI">
+      {/* Manchas de color difuminadas detrás de las tarjetas de vidrio: sin
+          esto, el efecto "transparente" no tiene nada que revelar y las
+          tarjetas solo se ven como un gris ligeramente distinto. */}
       <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute -left-32 top-0 h-[480px] w-[480px] rounded-full bg-primary/30 blur-[110px]" />
-        <div className="absolute -right-20 top-0 h-[420px] w-[420px] rounded-full bg-primary/20 blur-[110px]" />
-        <div className="absolute left-1/2 top-[420px] h-[380px] w-[620px] -translate-x-1/2 rounded-full bg-primary/12 blur-[130px]" />
+        <div className="absolute -left-32 -top-32 h-[600px] w-[600px] rounded-full bg-[hsl(189_64%_50%_/_0.35)] blur-[120px]" />
+        <div className="absolute -right-20 top-0 h-[500px] w-[500px] rounded-full bg-[hsl(189_64%_50%_/_0.25)] blur-[120px]" />
+        <div className="absolute bottom-0 left-1/3 h-[400px] w-[700px] -translate-x-1/2 rounded-full bg-[hsl(180_3%_49%_/_0.15)] blur-[140px]" />
+        <div className="absolute -bottom-20 right-1/4 h-[350px] w-[350px] rounded-full bg-[hsl(189_64%_50%_/_0.15)] blur-[100px]" />
       </div>
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <div className="animate-fade-in">
