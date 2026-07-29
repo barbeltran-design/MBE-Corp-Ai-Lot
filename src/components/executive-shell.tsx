@@ -66,7 +66,7 @@ function LangToggle() {
   const router = useRouter();
   const navigateLang = (newLang: 'es' | 'en') => {
     setLang(newLang);
-    const isDashboard = pathname.includes('/dashboard');
+    const isDashboard = pathname === '/' + pathname.split('/')[1] + '/dashboard';
     if (isDashboard) {
       const segments = pathname.split('/');
       if (segments[1] === 'es' || segments[1] === 'en') {
