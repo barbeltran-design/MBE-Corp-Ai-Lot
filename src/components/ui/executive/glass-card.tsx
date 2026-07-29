@@ -3,7 +3,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const glassCardVariants = cva(
-  'relative rounded-2xl border border-glass-border bg-glass shadow-[0_8px_32px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.2)] backdrop-blur-2xl backdrop-saturate-150 transition-all duration-200 ease-executive',
+  'relative rounded-2xl border border-glass-border bg-glass shadow-[0_8px_32px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur-2xl backdrop-saturate-150 transition-all duration-200 ease-executive',
   {
     variants: {
       interactive: {

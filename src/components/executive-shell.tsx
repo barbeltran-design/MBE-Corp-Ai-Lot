@@ -96,7 +96,7 @@ export function ExecutiveShell({
   const [commandOpen, setCommandOpen] = React.useState(false);
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
+    <div className="flex min-h-screen text-foreground">
       <aside
         className={cn(
           'sticky top-0 flex h-screen shrink-0 flex-col border-r border-border bg-card/60 backdrop-blur-md transition-[width] duration-200 ease-executive',
