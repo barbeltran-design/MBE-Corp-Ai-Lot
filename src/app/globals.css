@@ -2,27 +2,109 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * MBE Corpilot AI — Executive Design Tokens
+ * ------------------------------------------------------------
+ * Paleta derivada del logo MBE Corp (#201818 ink / #788080 slate / #30B8D0 teal)
+ * combinada con una familia de neutros fríos casi-negros (inspiración Linear/Vercel)
+ * para el tema "executive-dark". Todos los pares texto/fondo verificados con
+ * contraste WCAG 2.1 AA (>=4.5:1 para texto normal).
+ */
+
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* ---------- Light theme ---------- */
+    --background: 220 23% 97%;        /* #F7F8FA */
+    --foreground: 218 17% 9%;         /* #14171C */
+
+    --card: 0 0% 100%;                /* #FFFFFF */
+    --card-foreground: 218 17% 9%;    /* #14171C */
+
+    --popover: 0 0% 100%;             /* #FFFFFF */
+    --popover-foreground: 218 17% 9%; /* #14171C */
+
+    --primary: 189 64% 32%;           /* #1D7686 */
+    --primary-foreground: 0 0% 100%;  /* #FFFFFF */
+
+    --secondary: 210 21% 95%;         /* #EEF1F4 */
+    --secondary-foreground: 218 17% 9%; /* #14171C */
+
+    --muted: 210 21% 95%;             /* #EEF1F4 */
+    --muted-foreground: 217 11% 40%;  /* #5B6472 */
+
+    --accent: 218 17% 91%;            /* #E4E7EC */
+    --accent-foreground: 218 17% 9%;  /* #14171C */
+
+    --destructive: 358 65% 51%;       /* #D33036 */
+    --destructive-foreground: 0 0% 100%; /* #FFFFFF */
+
+    --success: 153 69% 30%;           /* #188152 */
+    --success-foreground: 0 0% 100%;  /* #FFFFFF */
+
+    --warning: 34 84% 36%;            /* #A9660F */
+    --warning-foreground: 0 0% 100%;  /* #FFFFFF */
+
+    --border: 218 17% 91%;            /* #E4E7EC */
+    --input: 218 17% 91%;             /* #E4E7EC */
+    --ring: 189 64% 32%;              /* #1D7686 */
+
+    /* Colores de marca crudos (del logo, no siguen tema claro/oscuro) */
+    --brand-teal: 189 63% 50%;        /* #30B8D0 */
+    --brand-ink: 0 14% 11%;           /* #201818 */
+    --brand-slate: 180 3% 49%;        /* #788080 */
+
+    /* Superficies de vidrio (glassmorphism) — light */
+    --glass-bg: rgba(255, 255, 255, 0.65);
+    --glass-border: rgba(20, 23, 28, 0.08);
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* ---------- Executive-dark theme ---------- */
+    --background: 225 20% 4%;         /* #08090C */
+    --foreground: 220 9% 94%;         /* #EDEEF0 */
+
+    --card: 223 21% 6%;               /* #0D0F14 */
+    --card-foreground: 220 9% 94%;    /* #EDEEF0 */
+
+    --popover: 220 20% 9%;            /* #12151B */
+    --popover-foreground: 220 9% 94%; /* #EDEEF0 */
+
+    --primary: 189 64% 50%;           /* #2FB8D1 */
+    --primary-foreground: 196 73% 6%; /* #04141A */
+
+    --secondary: 222 18% 11%;         /* #171A21 */
+    --secondary-foreground: 220 9% 94%; /* #EDEEF0 */
+
+    --muted: 220 20% 9%;              /* #12151B */
+    --muted-foreground: 221 14% 60%;  /* #8A93A6 */
+
+    --accent: 219 21% 13%;            /* #1B2029 */
+    --accent-foreground: 220 9% 94%;  /* #EDEEF0 */
+
+    --destructive: 358 86% 64%;       /* #F2555B */
+    --destructive-foreground: 223 21% 6%; /* #0D0F14 */
+
+    --success: 151 65% 54%;           /* #3DD68C */
+    --success-foreground: 154 67% 5%; /* #04140D */
+
+    --warning: 39 74% 56%;            /* #E2A83D */
+    --warning-foreground: 39 79% 6%;  /* #1A1203 */
+
+    --border: 222 19% 14%;            /* #1C2029 */
+    --input: 222 19% 14%;             /* #1C2029 */
+    --ring: 189 64% 50%;              /* #2FB8D1 */
+
+    /* Colores de marca crudos (idénticos al light — el teal del logo no cambia) */
+    --brand-teal: 189 63% 50%;        /* #30B8D0 */
+    --brand-ink: 0 14% 11%;           /* #201818 */
+    --brand-slate: 180 3% 49%;        /* #788080 */
+
+    /* Superficies de vidrio (glassmorphism) — dark */
+    --glass-bg: rgba(13, 15, 20, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.08);
+
     --radius: 0.5rem;
   }
 }

@@ -181,6 +181,10 @@ export default function BabelPage() {
         content: fase0IntroText(dispLang) + firstQuestion.question,
         timestamp: Timestamp.now(),
       };
+      // session.messages se siembra una sola vez cuando la sesion llega vacia;
+      // session sigue siendo la fuente unica de verdad consumida por el resto
+      // del componente (render, saveBabelMessages), no un valor derivable en render.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSession(prev => prev ? { ...prev, messages: [questionMsg] } : prev);
     }
   }, [session, currentQuestionIndex, isPhase0Complete, questions, dispLang]);
@@ -277,6 +281,10 @@ export default function BabelPage() {
   }
   React.useEffect(() => {
     if (session && (session.currentPhase ?? 0) > 0) {
+      // isPhase0Complete se sincroniza cuando una sesion existente carga con
+      // fase ya avanzada (usuario que regresa); isPhase0Complete tambien se
+      // escribe desde varios manejadores de eventos, no es un valor derivable.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsPhase0Complete(true);
     }
   }, [session]);

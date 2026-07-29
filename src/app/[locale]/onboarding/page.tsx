@@ -70,6 +70,9 @@ function OnboardingInner() {
   React.useEffect(() => {
     if (!user) return;
     if (isRetake) {
+      // Atajo sincrono del mismo flujo fetch-then-setState de este efecto
+      // (ver setGate('ready') en las ramas post-await de abajo, sin marcar).
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setGate('ready');
       return;
     }
