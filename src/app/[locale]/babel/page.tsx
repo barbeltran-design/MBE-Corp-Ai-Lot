@@ -1001,6 +1001,7 @@ export default function BabelPage() {
       <Card className="flex-1 space-y-3 overflow-y-auto p-4 min-h-[60vh]">
         {session.messages.map(function (m, i) {
           const isFase0SummaryPair = currentPhase === 0 && i <= 1 && Object.keys(phase0Answers).length > 0;
+          if (isFase0SummaryPair && i === 0) return null;
           const translationKey = i + '::' + dispLang;
           const isTranslatable = m.role === 'assistant' && !isFase0SummaryPair && dispLang !== locale;
           const hasTranslation = isTranslatable && translatedCache[translationKey] !== undefined;
