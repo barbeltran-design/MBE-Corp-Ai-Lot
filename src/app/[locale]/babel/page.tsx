@@ -18,6 +18,7 @@ import { downloadCompiledPlanPdf, downloadFinancialGoalsExcel, computeFinancialG
 import type { FinancialGoalsInput, FinancialGoalsResult } from '@/lib/deliverables';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useDisplayLang } from '@/components/display-lang-provider';
 import type { BabelPhaseRecord, ChatMessage, SessionDoc } from '@/types/firestore';
 // Preguntas de la Fase 0 (una por una)
 const PHASE_0_QUESTIONS = {
@@ -130,6 +131,7 @@ export default function BabelPage() {
   const [phase0Answers, setPhase0Answers] = React.useState<Record<string, string>>({});
   const [isPhase0Complete, setIsPhase0Complete] = React.useState(false);
   const [dispLang, setDispLang] = React.useState<'es' | 'en'>(locale);
+  const { setLang: setCtxLang } = useDisplayLang();
   // Cache de traducciones (por IA) del contenido REAL de los mensajes de
   // Babel, para cuando dispLang no coincide con el idioma en que se generaron.
   // Clave: indice del mensaje + '::' + idioma destino.
@@ -264,14 +266,14 @@ export default function BabelPage() {
         <span>{dispLang === 'en' ? 'Language:' : 'Idioma:'}</span>
         <button
           type="button"
-          onClick={function () { setDispLang('es'); }}
+          onClick={function () { setDispLang('es'); setCtxLang('es'); }}
           className={'rounded px-2 py-0.5 font-medium ' + (dispLang === 'es' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200')}
         >
           ES
         </button>
         <button
           type="button"
-          onClick={function () { setDispLang('en'); }}
+          onClick={function () { setDispLang('en'); setCtxLang('en'); }}
           className={'rounded px-2 py-0.5 font-medium ' + (dispLang === 'en' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200')}
         >
           EN

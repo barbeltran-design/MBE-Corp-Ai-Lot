@@ -4,17 +4,18 @@ import * as React from 'react';
 import { ClipboardList, Gauge, LayoutDashboard, Sparkles, TrendingUp, Users } from 'lucide-react';
 import { ExecutiveShell, type ExecutiveNavItem } from '@/components/executive-shell';
 import { BackgroundBlobs } from '@/components/ui/executive/background-blobs';
+import { useDisplayLang } from '@/components/display-lang-provider';
 
 export function AppShell({
   children,
   locale,
-  headerRight,
 }: {
   children: React.ReactNode;
   locale: string;
-  headerRight?: React.ReactNode;
 }) {
-  const navLabel = (es: string, en: string) => locale === 'en' ? en : es;
+  const { lang } = useDisplayLang();
+
+  const navLabel = (es: string, en: string) => lang === 'en' ? en : es;
 
   const navItems: ExecutiveNavItem[] = [
     { href: `/${locale}/executive-preview`, label: navLabel('Resumen ejecutivo', 'Executive Summary'), icon: LayoutDashboard },
@@ -26,7 +27,7 @@ export function AppShell({
   ];
 
   return (
-    <ExecutiveShell navItems={navItems} brandLabel="MBE Corpilot AI" headerRight={headerRight}>
+    <ExecutiveShell navItems={navItems} brandLabel="MBE Corpilot AI">
       <BackgroundBlobs />
       {children}
     </ExecutiveShell>

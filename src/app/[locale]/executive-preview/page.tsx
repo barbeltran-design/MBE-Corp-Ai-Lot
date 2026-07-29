@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/executive';
 import { BABEL_PHASE_TOPICS_ES } from '@/lib/babel-constants';
 import { cn } from '@/lib/utils';
+import { useDisplayLang } from '@/components/display-lang-provider';
 
 type PhaseStatus = 'completado' | 'en_progreso' | 'pendiente';
 
@@ -47,19 +48,6 @@ interface PhaseRow {
 }
 
 const NAV_ICON_MAP = { LayoutDashboard, Gauge, Sparkles, ClipboardList, Users, TrendingUp };
-
-const STATUS_META: Record<
-  PhaseStatus,
-  {
-    label: string;
-    className: string;
-    icon: React.ComponentType<{ className?: string; strokeWidth?: number | string }>;
-  }
-> = {
-  completado: { label: 'Completado', className: 'text-success', icon: CheckCircle2 },
-  en_progreso: { label: 'En progreso', className: 'text-warning', icon: Clock },
-  pendiente: { label: 'Pendiente', className: 'text-muted-foreground', icon: CircleDashed },
-};
 
 // Datos mock alineados a BABEL_PHASE_TOPICS_ES — 6 fases reales (0 a 5) del
 // diagnóstico Babel, con avance narrativo: 0-2 completadas, 3 en progreso,
@@ -98,6 +86,34 @@ const OVERALL_PROGRESS_TREND = [38, 42, 47, 55, 58, 63, 68];
 const DELIVERABLES_TREND = [1, 1, 2, 3, 3, 4, 6];
 const RISK_TREND = [22, 20, 19, 17, 18, 15, 13];
 
+const STATUS_CLASS: Record<PhaseStatus, string> = {
+  completado: 'text-success',
+  en_progreso: 'text-warning',
+  pendiente: 'text-muted-foreground',
+};
+
+const STATUS_ICON: Record<PhaseStatus, React.ComponentType<{ className?: string; strokeWidth?: number | string }>> = {
+  completado: CheckCircle2,
+  en_progreso: Clock,
+  pendiente: CircleDashed,
+};
+
+function StatusCell({ status }: { status: PhaseStatus }) {
+  const { lang } = useDisplayLang();
+  const labels: Record<PhaseStatus, string> = {
+    completado: lang === 'en' ? 'Completed' : 'Completado',
+    en_progreso: lang === 'en' ? 'In progress' : 'En progreso',
+    pendiente: lang === 'en' ? 'Pending' : 'Pendiente',
+  };
+  const Icon = STATUS_ICON[status];
+  return (
+    <span className={cn('inline-flex items-center gap-1.5 text-sm font-medium', STATUS_CLASS[status])}>
+      <Icon className="h-3.5 w-3.5" strokeWidth={2} />
+      {labels[status]}
+    </span>
+  );
+}
+
 const phaseColumns: ColumnDef<PhaseRow>[] = [
   {
     id: 'topic',
@@ -114,16 +130,7 @@ const phaseColumns: ColumnDef<PhaseRow>[] = [
     id: 'status',
     header: 'Estado',
     accessorFn: (row) => row.status,
-    cell: ({ row }) => {
-      const meta = STATUS_META[row.original.status];
-      const Icon = meta.icon;
-      return (
-        <span className={cn('inline-flex items-center gap-1.5 text-sm font-medium', meta.className)}>
-          <Icon className="h-3.5 w-3.5" strokeWidth={2} />
-          {meta.label}
-        </span>
-      );
-    },
+    cell: ({ row }) => <StatusCell status={row.original.status} />,
   },
   {
     id: 'owner',
@@ -141,72 +148,51 @@ export default function ExecutivePreviewPage() {
   const params = useParams<{ locale: string }>();
   const router = useRouter();
   const routeLocale = params?.locale ?? 'es';
-  const [lang, setLang] = React.useState<'es' | 'en'>(routeLocale as 'es' | 'en');
+  const { lang } = useDisplayLang();
 
-  const navLabel = (es: string, en: string) => lang === 'en' ? en : es;
+  const t = (es: string, en: string) => lang === 'en' ? en : es;
 
   const navItems: ExecutiveNavItem[] = [
-    { href: `/${routeLocale}/executive-preview`, label: navLabel('Resumen ejecutivo', 'Executive Summary'), icon: NAV_ICON_MAP.LayoutDashboard },
-    { href: `/${routeLocale}/babel`, label: navLabel('Reflexión estratégica', 'Strategic Reflection'), icon: NAV_ICON_MAP.Sparkles },
-    { href: `/${routeLocale}/babel/organigrama`, label: navLabel('Organigrama y roles', 'Org Chart & Roles'), icon: NAV_ICON_MAP.Users },
-    { href: `/${routeLocale}/babel/plan-accion`, label: navLabel('Plan de acción', 'Action Plan'), icon: NAV_ICON_MAP.ClipboardList },
-    { href: `/${routeLocale}/babel/indicadores`, label: navLabel('Objetivos financieros', 'Financial Goals'), icon: NAV_ICON_MAP.TrendingUp },
-    { href: `/${routeLocale}/dashboard`, label: navLabel('Evaluación de madurez', 'Maturity Assessment'), icon: NAV_ICON_MAP.Gauge },
+    { href: `/${routeLocale}/executive-preview`, label: t('Resumen ejecutivo', 'Executive Summary'), icon: NAV_ICON_MAP.LayoutDashboard },
+    { href: `/${routeLocale}/babel`, label: t('Reflexión estratégica', 'Strategic Reflection'), icon: NAV_ICON_MAP.Sparkles },
+    { href: `/${routeLocale}/babel/organigrama`, label: t('Organigrama y roles', 'Org Chart & Roles'), icon: NAV_ICON_MAP.Users },
+    { href: `/${routeLocale}/babel/plan-accion`, label: t('Plan de acción', 'Action Plan'), icon: NAV_ICON_MAP.ClipboardList },
+    { href: `/${routeLocale}/babel/indicadores`, label: t('Objetivos financieros', 'Financial Goals'), icon: NAV_ICON_MAP.TrendingUp },
+    { href: `/${routeLocale}/dashboard`, label: t('Evaluación de madurez', 'Maturity Assessment'), icon: NAV_ICON_MAP.Gauge },
   ];
 
   const commandItems: CommandPaletteItem[] = [
     ...PHASE_ROWS.map((row) => ({
       id: row.id,
       label: row.topic,
-      group: 'Fases Babel',
-      // Preview sin deep-linking por fase todavía; el placeholder deja el
-      // patrón listo para cuando cada fase tenga su propia sub-ruta.
+      group: t('Fases Babel', 'Babel Phases'),
       onSelect: () => {},
     })),
     {
       id: 'go-babel',
-      label: 'Ir a Babel AI',
-      group: 'Navegación',
+      label: t('Ir a Babel AI', 'Go to Babel AI'),
+      group: t('Navegación', 'Navigation'),
       onSelect: () => router.push(`/${routeLocale}/babel`),
     },
     {
       id: 'go-dashboard',
-      label: 'Ir al dashboard real',
-      group: 'Navegación',
+      label: t('Ir al dashboard', 'Go to dashboard'),
+      group: t('Navegación', 'Navigation'),
       onSelect: () => router.push(`/${routeLocale}/dashboard`),
     },
   ];
 
   const completedPhases = PHASE_ROWS.filter((r) => r.status === 'completado').length;
-  const overallProgress = Math.round((completedPhases / PHASE_ROWS.length) * 100 + 5); // +5: fase en progreso parcial
-
-  const langToggle = (
-    <div className="flex gap-0.5 rounded-full border border-glass-border bg-glass p-0.5 text-xs">
-      <button
-        type="button"
-        onClick={() => setLang('es')}
-        className={'rounded-full px-2.5 py-1 font-medium transition-colors ' + (lang === 'es' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}
-      >
-        ES
-      </button>
-      <button
-        type="button"
-        onClick={() => setLang('en')}
-        className={'rounded-full px-2.5 py-1 font-medium transition-colors ' + (lang === 'en' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}
-      >
-        EN
-      </button>
-    </div>
-  );
+  const overallProgress = Math.round((completedPhases / PHASE_ROWS.length) * 100 + 5);
 
   return (
-    <ExecutiveShell navItems={navItems} commandItems={commandItems} brandLabel="MBE Corpilot AI" headerRight={langToggle}>
+    <ExecutiveShell navItems={navItems} commandItems={commandItems} brandLabel="MBE Corpilot AI">
       <BackgroundBlobs />
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <div className="animate-fade-in">
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">Resumen ejecutivo</h1>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">{t('Resumen ejecutivo', 'Executive Summary')}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Avance del diagnóstico Babel · datos de muestra para validar el nuevo sistema visual.
+            {t('Avance del diagnóstico Babel · datos de muestra para validar el nuevo sistema visual.', 'Babel diagnostic progress · sample data to validate the new visual system.')}
           </p>
         </div>
 
@@ -214,8 +200,8 @@ export default function ExecutivePreviewPage() {
           <MetricCard
             className="animate-slide-up"
             style={{ animationDelay: '0ms' }}
-            label="Fase actual"
-            value={`Fase ${PHASE_ROWS[3].phase}`}
+            label={t('Fase actual', 'Current phase')}
+            value={`${t('Fase', 'Phase')} ${PHASE_ROWS[3].phase}`}
             unit={PHASE_ROWS[3].topic.split(':')[1]?.trim()}
             icon={Sparkles}
             variant="default"
@@ -223,11 +209,11 @@ export default function ExecutivePreviewPage() {
           <MetricCard
             className="animate-slide-up"
             style={{ animationDelay: '60ms' }}
-            label="Progreso general"
+            label={t('Progreso general', 'Overall progress')}
             value={overallProgress}
             unit="%"
             delta={5.2}
-            deltaLabel="vs. semana pasada"
+            deltaLabel={t('vs. semana pasada', 'vs. last week')}
             trend={OVERALL_PROGRESS_TREND}
             icon={TrendingUp}
             variant="success"
@@ -235,10 +221,10 @@ export default function ExecutivePreviewPage() {
           <MetricCard
             className="animate-slide-up"
             style={{ animationDelay: '120ms' }}
-            label="Entregables generados"
+            label={t('Entregables generados', 'Deliverables generated')}
             value={DELIVERABLES_TREND[DELIVERABLES_TREND.length - 1]}
             delta={12.5}
-            deltaLabel="vs. mes pasado"
+            deltaLabel={t('vs. mes pasado', 'vs. last month')}
             trend={DELIVERABLES_TREND}
             icon={FileCheck2}
             variant="default"
@@ -246,11 +232,11 @@ export default function ExecutivePreviewPage() {
           <MetricCard
             className="animate-slide-up"
             style={{ animationDelay: '180ms' }}
-            label="Riesgo normativo"
+            label={t('Riesgo normativo', 'Regulatory risk')}
             value={RISK_TREND[RISK_TREND.length - 1]}
             unit="/100"
             delta={-2.1}
-            deltaLabel="reducción sostenida"
+            deltaLabel={t('reducción sostenida', 'sustained reduction')}
             trend={RISK_TREND}
             icon={ShieldAlert}
             variant="warning"
@@ -260,8 +246,8 @@ export default function ExecutivePreviewPage() {
         <GlassCard className="animate-slide-up" style={{ animationDelay: '220ms' }}>
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h2 className="text-sm font-semibold text-foreground">Avance por fase</h2>
-              <p className="text-xs text-muted-foreground">6 fases del diagnóstico Babel (0 a 5)</p>
+              <h2 className="text-sm font-semibold text-foreground">{t('Avance por fase', 'Progress by phase')}</h2>
+              <p className="text-xs text-muted-foreground">{t('6 fases del diagnóstico Babel (0 a 5)', '6 phases of the Babel diagnostic (0 to 5)')}</p>
             </div>
             <Users className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
           </div>
@@ -275,7 +261,7 @@ export default function ExecutivePreviewPage() {
                   variant={
                     row.status === 'completado' ? 'success' : row.status === 'en_progreso' ? 'warning' : 'default'
                   }
-                  label={`Fase ${row.phase}`}
+                  label={`${t('Fase', 'Phase')} ${row.phase}`}
                 />
                 <span className="max-w-[7.5rem] text-center text-[11px] leading-tight text-muted-foreground">
                   {row.topic.split(':')[1]?.trim() ?? row.topic}
@@ -287,17 +273,23 @@ export default function ExecutivePreviewPage() {
 
         <div className="animate-slide-up" style={{ animationDelay: '260ms' }}>
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-foreground">Detalle de fases</h2>
+            <h2 className="text-sm font-semibold text-foreground">{t('Detalle de fases', 'Phase details')}</h2>
           </div>
           <DataTable<PhaseRow>
-            columns={phaseColumns}
+            columns={phaseColumns.map((col) => {
+              if (col.id === 'topic') return { ...col, header: t('Fase', 'Phase') };
+              if (col.id === 'status') return { ...col, header: t('Estado', 'Status') };
+              if (col.id === 'owner') return { ...col, header: t('Responsable', 'Owner') };
+              if (col.id === 'nextMilestone') return { ...col, header: t('Próximo hito', 'Next milestone') };
+              return col;
+            })}
             data={PHASE_ROWS}
             enableExport
-            exportFileName="babel-fases"
-            emptyMessage="Sin fases registradas."
+            exportFileName={t('babel-fases', 'babel-phases')}
+            emptyMessage={t('Sin fases registradas.', 'No phases registered.')}
             renderSubRow={(row) => (
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-medium text-muted-foreground">Entregables:</span>
+                <span className="text-xs font-medium text-muted-foreground">{t('Entregables:', 'Deliverables:')}</span>
                 {row.deliverables.map((d) => (
                   <span
                     key={d}
