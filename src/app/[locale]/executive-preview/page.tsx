@@ -299,7 +299,10 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
             data={PHASE_ROWS}
             enableExport
             exportFileName={t('babel-fases', 'babel-phases')}
+            exportLabel={t('Exportar CSV', 'Export CSV')}
             emptyMessage={t('Sin fases registradas.', 'No phases registered.')}
+            expandLabel={t('Expandir fila', 'Expand row')}
+            collapseLabel={t('Contraer fila', 'Collapse row')}
             renderSubRow={(row) => (
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-medium text-muted-foreground">{t('Entregables:', 'Deliverables:')}</span>

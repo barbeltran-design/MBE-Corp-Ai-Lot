@@ -18,12 +18,14 @@ import { cn } from '@/lib/utils';
 export interface DataTableProps<TData> {
   columns: ColumnDef<TData>[];
   data: TData[];
-  /** Contenido expandido bajo una fila; si se omite, ninguna fila es expandible */
   renderSubRow?: (row: TData) => React.ReactNode;
   enableColumnVisibility?: boolean;
   enableExport?: boolean;
   exportFileName?: string;
+  exportLabel?: string;
   emptyMessage?: string;
+  expandLabel?: string;
+  collapseLabel?: string;
   className?: string;
 }
 
@@ -43,7 +45,10 @@ export function DataTable<TData extends object>({
   enableColumnVisibility = false,
   enableExport = false,
   exportFileName = 'export',
+  exportLabel = 'Exportar CSV',
   emptyMessage = 'Sin datos.',
+  expandLabel = 'Expandir fila',
+  collapseLabel = 'Contraer fila',
   className,
 }: DataTableProps<TData>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -119,7 +124,7 @@ export function DataTable<TData extends object>({
               className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs font-medium text-foreground transition-colors duration-150 hover:bg-accent"
             >
               <Download className="h-3.5 w-3.5" strokeWidth={1.75} />
-              Exportar CSV
+              {exportLabel}
             </button>
           ) : null}
         </div>
@@ -185,7 +190,7 @@ export function DataTable<TData extends object>({
                               style={{
                                 transform: row.getIsExpanded() ? 'rotate(90deg)' : 'rotate(0deg)',
                               }}
-                              aria-label={row.getIsExpanded() ? 'Contraer fila' : 'Expandir fila'}
+                              aria-label={row.getIsExpanded() ? collapseLabel : expandLabel}
                             >
                               <ChevronRight className="h-3.5 w-3.5" strokeWidth={1.75} />
                             </button>
