@@ -51,7 +51,7 @@ import {
 } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { useDisplayLang } from '@/components/display-lang-provider';
+
 import { getFirebaseAuth, getFirebaseDb } from '@/lib/firebase';
 import { getMaturityDimensions } from '@/lib/maturity-dimensions';
 import { computeResults, type AssessmentResult } from '@/lib/maturity-scoring';
@@ -78,17 +78,10 @@ type SessionDoc = {
 function DashboardPageInner() {
   const router = useRouter();
   const locale = useLocale() as Language;
-  const { lang: displayLang } = useDisplayLang();
   const t = useTranslations('dashboard');
   const tLevel = useTranslations('common.maturityLevel');
   const searchParams = useSearchParams();
   const pagoParam = searchParams.get('pago'); // 'exitoso' | 'fallido' | 'pendiente' | null
-
-  React.useEffect(() => {
-    if (displayLang !== locale) {
-      router.replace(`/${displayLang}/dashboard`);
-    }
-  }, [displayLang, locale, router]);
 
   const [user, setUser] = React.useState<User | null | undefined>(undefined);
   const [result, setResult] = React.useState<AssessmentResult | null>(null);

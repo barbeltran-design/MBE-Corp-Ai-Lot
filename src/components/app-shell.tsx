@@ -41,7 +41,7 @@ export function AppShell({
   locale: string;
 }) {
   return (
-    <DisplayLangProvider>
+    <DisplayLangProvider initialLang={locale as 'es' | 'en'}>
       <AppShellInner locale={locale}>{children}</AppShellInner>
     </DisplayLangProvider>
   );

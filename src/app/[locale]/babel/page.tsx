@@ -131,7 +131,7 @@ export default function BabelPage() {
   const [phase0Answers, setPhase0Answers] = React.useState<Record<string, string>>({});
   const [isPhase0Complete, setIsPhase0Complete] = React.useState(false);
   const [dispLang, setDispLang] = React.useState<'es' | 'en'>(locale);
-  const { lang: ctxLang, setLang: setCtxLang } = useDisplayLang();
+  const { lang: ctxLang } = useDisplayLang();
   React.useEffect(() => { setDispLang(ctxLang); }, [ctxLang]);
   // Cache de traducciones (por IA) del contenido REAL de los mensajes de
   // Babel, para cuando dispLang no coincide con el idioma en que se generaron.
@@ -261,27 +261,7 @@ export default function BabelPage() {
     }
     return raw;
   }
-  function renderLangToggle() {
-    return (
-      <div className="flex items-center gap-1 text-xs text-slate-500">
-        <span>{dispLang === 'en' ? 'Language:' : 'Idioma:'}</span>
-        <button
-          type="button"
-          onClick={function () { setDispLang('es'); setCtxLang('es'); }}
-          className={'rounded px-2 py-0.5 font-medium ' + (dispLang === 'es' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200')}
-        >
-          ES
-        </button>
-        <button
-          type="button"
-          onClick={function () { setDispLang('en'); setCtxLang('en'); }}
-          className={'rounded px-2 py-0.5 font-medium ' + (dispLang === 'en' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200')}
-        >
-          EN
-        </button>
-      </div>
-    );
-  }
+
   React.useEffect(() => {
     if (session && (session.currentPhase ?? 0) > 0) {
       // isPhase0Complete se sincroniza cuando una sesion existente carga con
@@ -853,7 +833,6 @@ export default function BabelPage() {
             <p className="text-sm text-slate-500">{dispLang === 'en' ? 'Phase 0: Initial Calibration' : 'Fase 0: Calibración Inicial'}</p>
           </div>
           <div className="flex flex-col items-end gap-2">
-            {renderLangToggle()}
             <div className="flex gap-2">
               <Button onClick={handleReset} disabled={sending} variant="outline" size="sm">{dispLang === 'en' ? 'Start over' : 'Empezar de nuevo'}</Button>
               <Button onClick={handleLogout} variant="outline" size="sm">{dispLang === 'en' ? 'Log out' : 'Cerrar sesión'}</Button>
@@ -1007,7 +986,6 @@ export default function BabelPage() {
           <p className="text-sm text-slate-500">{(session as any).phaseData?.topic || (dispLang === locale ? t('subtitle') : UI_FALLBACK[dispLang].subtitle)}</p>
         </div>
         <div className="flex flex-col items-end gap-2">
-          {renderLangToggle()}
           <div className="flex gap-2">
             <Button onClick={function () { router.push('/' + locale + '/babel/organigrama'); }} variant="outline" size="sm">
               {dispLang === 'en' ? 'Org Chart & Roles' : 'Organigrama y Roles'}

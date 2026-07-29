@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Moon, PanelLeftClose, PanelLeftOpen, Search, Sun } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/theme-provider';
@@ -62,18 +62,28 @@ function getSidebarServerSnapshot(): boolean {
 
 function LangToggle() {
   const { lang, setLang } = useDisplayLang();
+  const pathname = usePathname();
+  const router = useRouter();
+  const navigateLang = (newLang: 'es' | 'en') => {
+    setLang(newLang);
+    const segments = pathname.split('/');
+    if (segments[1] === 'es' || segments[1] === 'en') {
+      segments[1] = newLang;
+    }
+    router.replace(segments.join('/'));
+  };
   return (
     <div className="flex gap-0.5 rounded-full border border-glass-border bg-glass p-0.5 text-xs">
       <button
         type="button"
-        onClick={() => setLang('es')}
+        onClick={() => navigateLang('es')}
         className={'rounded-full px-2.5 py-1 font-medium transition-colors ' + (lang === 'es' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}
       >
         ES
       </button>
       <button
         type="button"
-        onClick={() => setLang('en')}
+        onClick={() => navigateLang('en')}
         className={'rounded-full px-2.5 py-1 font-medium transition-colors ' + (lang === 'en' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}
       >
         EN

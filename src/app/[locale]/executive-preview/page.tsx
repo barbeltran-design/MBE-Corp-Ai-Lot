@@ -151,8 +151,16 @@ const phaseColumns: ColumnDef<PhaseRow>[] = [
 
 export default function ExecutivePreviewPage() {
   const params = useParams<{ locale: string }>();
-  const router = useRouter();
   const routeLocale = params?.locale ?? 'es';
+  return (
+    <DisplayLangProvider initialLang={routeLocale as 'es' | 'en'}>
+      <ExecutivePreviewContent routeLocale={routeLocale} />
+    </DisplayLangProvider>
+  );
+}
+
+function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
+  const router = useRouter();
   const { lang } = useDisplayLang();
 
   const t = (es: string, en: string) => lang === 'en' ? en : es;
@@ -191,7 +199,6 @@ export default function ExecutivePreviewPage() {
   const overallProgress = Math.round((completedPhases / PHASE_ROWS.length) * 100 + 5);
 
   return (
-    <DisplayLangProvider>
     <ExecutiveShell navItems={navItems} commandItems={commandItems} brandLabel="MBE Corpilot AI">
       <BackgroundBlobs />
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
@@ -310,6 +317,5 @@ export default function ExecutivePreviewPage() {
         </div>
       </div>
     </ExecutiveShell>
-    </DisplayLangProvider>
   );
 }
