@@ -31,7 +31,7 @@ import {
   ProgressRing,
   type CommandPaletteItem,
 } from '@/components/ui/executive';
-import { BABEL_PHASE_TOPICS_ES } from '@/lib/babel-constants';
+import { babelPhaseTopics } from '@/lib/babel-constants';
 import { cn } from '@/lib/utils';
 import { DisplayLangProvider, useDisplayLang } from '@/components/display-lang-provider';
 
@@ -49,42 +49,7 @@ interface PhaseRow {
 
 const NAV_ICON_MAP = { LayoutDashboard, Gauge, Sparkles, ClipboardList, Users, TrendingUp };
 
-// Datos mock alineados a BABEL_PHASE_TOPICS_ES — 6 fases reales (0 a 5) del
-// diagnóstico Babel, con avance narrativo: 0-2 completadas, 3 en progreso,
-// 4-5 pendientes.
-const PHASE_ROWS: PhaseRow[] = BABEL_PHASE_TOPICS_ES.map((topic, phase) => {
-  const status: PhaseStatus = phase <= 2 ? 'completado' : phase === 3 ? 'en_progreso' : 'pendiente';
-  const owners = ['Equipo fundador', 'Equipo fundador', 'Mercadotecnia', 'Operaciones', 'Finanzas', 'Dirección general'];
-  const milestones = [
-    'Cerrado 04 mar',
-    'Cerrado 18 mar',
-    'Cerrado 02 abr',
-    '30 jul — validación de mercado',
-    'Sin agendar',
-    'Sin agendar',
-  ];
-  const deliverablesByPhase = [
-    ['Acta de calibración', 'Mapa de involucrados'],
-    ['Lienzo de propósito', 'Declaración de ADN estratégico'],
-    ['Estudio de mercado data-driven', 'Matriz de competencia'],
-    ['Modelo Delta (borrador)', 'Mapa de experiencia del cliente'],
-    ['Modelo financiero 3 años'],
-    ['Pitch deck ejecutivo', 'Tablero de gobernanza ágil'],
-  ];
-  return {
-    id: `fase-${phase}`,
-    phase,
-    topic,
-    status,
-    owner: owners[phase] ?? 'Sin asignar',
-    nextMilestone: milestones[phase] ?? 'Sin agendar',
-    deliverables: deliverablesByPhase[phase] ?? [],
-  };
-});
 
-const OVERALL_PROGRESS_TREND = [38, 42, 47, 55, 58, 63, 68];
-const DELIVERABLES_TREND = [1, 1, 2, 3, 3, 4, 6];
-const RISK_TREND = [22, 20, 19, 17, 18, 15, 13];
 
 const STATUS_CLASS: Record<PhaseStatus, string> = {
   completado: 'text-success',
@@ -98,14 +63,8 @@ const STATUS_ICON: Record<PhaseStatus, React.ComponentType<{ className?: string;
   pendiente: CircleDashed,
 };
 
-function TopicCell({ phase, topic }: { phase: number; topic: string }) {
-  const { lang } = useDisplayLang();
-  return (
-    <div className="flex flex-col">
-      <span className="font-medium text-foreground">{topic}</span>
-      <span className="text-xs text-muted-foreground">{lang === 'en' ? `Phase ${phase}` : `Fase ${phase}`}</span>
-    </div>
-  );
+function TopicCell({ topic }: { topic: string }) {
+  return <span className="font-medium text-foreground">{topic}</span>;
 }
 
 function StatusCell({ status }: { status: PhaseStatus }) {
@@ -129,7 +88,7 @@ const phaseColumns: ColumnDef<PhaseRow>[] = [
     id: 'topic',
     header: 'Fase',
     accessorFn: (row) => row.topic,
-    cell: ({ row }) => <TopicCell phase={row.original.phase} topic={row.original.topic} />,
+    cell: ({ row }) => <TopicCell topic={row.original.topic} />,
   },
   {
     id: 'status',
@@ -165,6 +124,8 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
 
   const t = (es: string, en: string) => lang === 'en' ? en : es;
 
+  const phaseTopics = babelPhaseTopics(lang);
+
   const navItems: ExecutiveNavItem[] = [
     { href: `/${routeLocale}/executive-preview`, label: t('Resumen ejecutivo', 'Executive Summary'), icon: NAV_ICON_MAP.LayoutDashboard },
     { href: `/${routeLocale}/babel`, label: t('Reflexión estratégica', 'Strategic Reflection'), icon: NAV_ICON_MAP.Sparkles },
@@ -173,6 +134,40 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
     { href: `/${routeLocale}/babel/indicadores`, label: t('Objetivos financieros', 'Financial Goals'), icon: NAV_ICON_MAP.TrendingUp },
     { href: `/${routeLocale}/dashboard`, label: t('Evaluación de madurez', 'Maturity Assessment'), icon: NAV_ICON_MAP.Gauge },
   ];
+
+  const owners = ['Equipo fundador', 'Equipo fundador', 'Mercadotecnia', 'Operaciones', 'Finanzas', 'Dirección general'];
+  const ownersEn = ['Founding team', 'Founding team', 'Marketing', 'Operations', 'Finance', 'General management'];
+  const milestones = ['Cerrado 04 mar', 'Cerrado 18 mar', 'Cerrado 02 abr', '30 jul — validación de mercado', 'Sin agendar', 'Sin agendar'];
+  const milestonesEn = ['Closed Mar 4', 'Closed Mar 18', 'Closed Apr 2', 'Jul 30 — market validation', 'Not scheduled', 'Not scheduled'];
+  const deliverablesByPhase: string[][] = [
+    ['Acta de calibración', 'Mapa de involucrados'],
+    ['Lienzo de propósito', 'Declaración de ADN estratégico'],
+    ['Estudio de mercado data-driven', 'Matriz de competencia'],
+    ['Modelo Delta (borrador)', 'Mapa de experiencia del cliente'],
+    ['Modelo financiero 3 años'],
+    ['Pitch deck ejecutivo', 'Tablero de gobernanza ágil'],
+  ];
+  const deliverablesByPhaseEn: string[][] = [
+    ['Calibration record', 'Stakeholder map'],
+    ['Purpose canvas', 'Strategic DNA statement'],
+    ['Data-driven market study', 'Competitive matrix'],
+    ['Delta Model (draft)', 'Customer experience map'],
+    ['3-year financial model'],
+    ['Executive pitch deck', 'Agile governance board'],
+  ];
+
+  const PHASE_ROWS: PhaseRow[] = phaseTopics.map((topic, phase) => {
+    const status: PhaseStatus = phase <= 2 ? 'completado' : phase === 3 ? 'en_progreso' : 'pendiente';
+    return {
+      id: `fase-${phase}`,
+      phase,
+      topic,
+      status,
+      owner: lang === 'en' ? ownersEn[phase] ?? 'Unassigned' : owners[phase] ?? 'Sin asignar',
+      nextMilestone: lang === 'en' ? milestonesEn[phase] ?? 'Not scheduled' : milestones[phase] ?? 'Sin agendar',
+      deliverables: lang === 'en' ? deliverablesByPhaseEn[phase] ?? [] : deliverablesByPhase[phase] ?? [],
+    };
+  });
 
   const commandItems: CommandPaletteItem[] = [
     ...PHASE_ROWS.map((row) => ({
@@ -194,6 +189,10 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
       onSelect: () => router.push(`/${routeLocale}/dashboard`),
     },
   ];
+
+  const OVERALL_PROGRESS_TREND = [38, 42, 47, 55, 58, 63, 68];
+  const DELIVERABLES_TREND = [1, 1, 2, 3, 3, 4, 6];
+  const RISK_TREND = [22, 20, 19, 17, 18, 15, 13];
 
   const completedPhases = PHASE_ROWS.filter((r) => r.status === 'completado').length;
   const overallProgress = Math.round((completedPhases / PHASE_ROWS.length) * 100 + 5);
