@@ -11,7 +11,7 @@ export default function OrganigramaPage() {
   const [lang, setLang] = React.useState<'es' | 'en'>(routeLocale);
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-8">
+    <div className="px-4 py-8">
       <div className="mx-auto max-w-3xl">
         <div className="mb-4 flex items-center justify-between">
           <Link href={'/' + routeLocale + '/babel'} className="text-sm font-medium text-blue-600 hover:underline">

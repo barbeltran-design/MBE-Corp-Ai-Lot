@@ -11,7 +11,7 @@ export default function IndicadoresPage() {
   const [lang, setLang] = React.useState<'es' | 'en'>(routeLocale === 'en' ? 'en' : 'es');
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-8">
+    <div className="px-4 py-8">
       <div className="mx-auto max-w-4xl">
         <div className="mb-4 flex items-center justify-between">
           <Button onClick={function () { router.push('/' + routeLocale + '/babel'); }} variant="outline" size="sm">

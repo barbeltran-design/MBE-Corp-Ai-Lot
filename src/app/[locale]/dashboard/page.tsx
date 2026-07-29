@@ -184,7 +184,7 @@ function DashboardPageInner() {
 
   if (loadError || !result) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-white px-6 text-center">
+      <main className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-6 text-center">
         <p className="text-sm text-slate-500">{t('loadError')}</p>
         <Button type="button" variant="primary" onClick={() => router.push(`/${locale}/onboarding`)}>
           {t('loadErrorCta')}
@@ -198,7 +198,7 @@ function DashboardPageInner() {
   const esPro = userDoc?.subscription === 'pro' && userDoc?.planStatus === 'active';
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-emerald-50/40 to-white px-6 py-10">
+    <main className="px-6 py-10">
       <div className="mx-auto max-w-5xl">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-slate-900">{t('welcomeTitle')}</h1>
@@ -371,7 +371,7 @@ export default function DashboardPage() {
   return (
     <React.Suspense
       fallback={
-        <main className="flex min-h-screen items-center justify-center bg-white">
+      <main className="flex min-h-[60vh] items-center justify-center">
           <p className="text-sm text-slate-400">Cargando…</p>
         </main>
       }

@@ -45,6 +45,8 @@ interface PhaseRow {
   deliverables: string[];
 }
 
+const NAV_ICON_MAP = { LayoutDashboard, Gauge, Sparkles, ClipboardList, Users, TrendingUp };
+
 const STATUS_META: Record<
   PhaseStatus,
   {
@@ -134,8 +136,6 @@ const phaseColumns: ColumnDef<PhaseRow>[] = [
   },
 ];
 
-const NAV_ICON_MAP = { LayoutDashboard, Sparkles, Gauge, ClipboardList };
-
 export default function ExecutivePreviewPage() {
   const params = useParams<{ locale: string }>();
   const router = useRouter();
@@ -144,7 +144,10 @@ export default function ExecutivePreviewPage() {
   const navItems: ExecutiveNavItem[] = [
     { href: `/${locale}/executive-preview`, label: 'Resumen ejecutivo', icon: NAV_ICON_MAP.LayoutDashboard },
     { href: `/${locale}/babel`, label: 'Babel AI', icon: NAV_ICON_MAP.Sparkles },
-    { href: `/${locale}/dashboard`, label: 'Dashboard real', icon: NAV_ICON_MAP.Gauge },
+    { href: `/${locale}/babel/organigrama`, label: 'Organigrama y roles', icon: NAV_ICON_MAP.Users },
+    { href: `/${locale}/babel/plan-accion`, label: 'Plan de acción', icon: NAV_ICON_MAP.ClipboardList },
+    { href: `/${locale}/babel/indicadores`, label: 'Objetivos financieros', icon: NAV_ICON_MAP.TrendingUp },
+    { href: `/${locale}/dashboard`, label: 'Evaluación de madurez', icon: NAV_ICON_MAP.Gauge },
     { href: `/${locale}/onboarding`, label: 'Diagnóstico', icon: NAV_ICON_MAP.ClipboardList },
   ];
 
@@ -176,17 +179,6 @@ export default function ExecutivePreviewPage() {
 
   return (
     <ExecutiveShell navItems={navItems} commandItems={commandItems} brandLabel="MBE Corpilot AI">
-      {/* Fondo con manchas de color + patrón de puntos: el vidrio necesita
-          algo que revelar detrás — sin textura ni color, el backdrop-blur
-          no se nota. */}
-      <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute inset-0 bg-dot-pattern" />
-        <div className="absolute -left-32 -top-32 h-[700px] w-[700px] rounded-full bg-[hsl(189_64%_50%_/_0.5)] blur-[130px]" />
-        <div className="absolute -right-20 top-0 h-[600px] w-[600px] rounded-full bg-[hsl(47_85%_60%_/_0.25)] blur-[130px]" />
-        <div className="absolute bottom-0 left-1/3 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-[hsl(189_64%_50%_/_0.25)] blur-[150px]" />
-        <div className="absolute -bottom-20 right-1/4 h-[400px] w-[400px] rounded-full bg-[hsl(189_64%_50%_/_0.2)] blur-[110px]" />
-        <div className="absolute left-1/4 top-1/3 h-[300px] w-[300px] rounded-full bg-[hsl(340_80%_60%_/_0.12)] blur-[100px]" />
-      </div>
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <div className="animate-fade-in">
           <h1 className="text-xl font-semibold tracking-tight text-foreground">Resumen ejecutivo</h1>

@@ -838,12 +838,12 @@ export default function BabelPage() {
     }
   }
   if (!session) {
-    return <div className="flex min-h-screen items-center justify-center text-slate-500">{dispLang === locale ? t('loading') : UI_FALLBACK[dispLang].loading}</div>;
+    return <div className="flex min-h-[60vh] items-center justify-center text-slate-500">{dispLang === locale ? t('loading') : UI_FALLBACK[dispLang].loading}</div>;
   }
   const isPhase0Active = currentPhase === 0 && currentQuestionIndex < questions.length && !isPhase0Complete;
   if (isPhase0Active) {
     return (
-      <div className="mx-auto flex min-h-screen max-w-2xl flex-col gap-4 p-4 sm:p-6">
+      <div className="mx-auto flex max-w-2xl flex-col gap-4 p-4 sm:p-6">
         <div className="flex items-center justify-between border-b pb-4">
           <div>
             <h1 className="text-xl font-semibold text-slate-900">{dispLang === locale ? t('title') : UI_FALLBACK[dispLang].title}</h1>
@@ -997,7 +997,7 @@ export default function BabelPage() {
         })
       : null;
   return (
-    <div className="mx-auto flex min-h-screen max-w-4xl flex-col gap-4 p-4 sm:p-6">
+    <div className="mx-auto flex max-w-4xl flex-col gap-4 p-4 sm:p-6">
       <div className="flex items-center justify-between border-b pb-4">
         <div>
           <h1 className="text-xl font-semibold text-slate-900">{dispLang === locale ? t('title') : UI_FALLBACK[dispLang].title}</h1>
