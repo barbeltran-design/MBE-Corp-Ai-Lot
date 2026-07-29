@@ -204,7 +204,7 @@ export default function BabelPage() {
   // distinto al de la ruta. Solo se traducen mensajes de Babel (no las
   // respuestas propias del usuario, ni el par de resumen de Fase 0, que ya
   // se reconstruye localmente sin IA).
-  const sessionLocale = (session as any)?.locale ?? locale;
+  const sessionLocale = (session as any)?.locale ?? 'es';
   React.useEffect(() => {
     if (!session || dispLang === sessionLocale) return;
     session.messages.forEach(function (m, i) {
