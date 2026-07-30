@@ -138,7 +138,7 @@ function matchTextToId<T extends { id: string }>(text: string, list: T[], getTex
 
 const LABELS = {
   es: {
-    title: 'Propuesta de Indicadores (SMART + Balanced Scorecard)',
+    title: 'Objetivos Estratégicos (SMART + Balanced Scorecard)',
     subtitle:
       'Babel propone indicadores con metodologia SMART, alineados a las 4 perspectivas del Balanced Scorecard, vinculados a tus amenazas/oportunidades y a las acciones ya asignadas en tu Plan de Accion. Puedes modificar cualquier campo y validar cada indicador.',
     noObjetivos:
@@ -186,7 +186,7 @@ const LABELS = {
     savedNote: 'Los cambios se guardan automaticamente en este navegador.',
   },
   en: {
-    title: 'Indicator Proposal (SMART + Balanced Scorecard)',
+    title: 'Strategic Objectives (SMART + Balanced Scorecard)',
     subtitle:
       'Babel proposes indicators using the SMART methodology, aligned to the 4 Balanced Scorecard perspectives, linked to your threats/opportunities and to the actions already assigned in your Action Plan. You can edit any field and validate each indicator.',
     noObjetivos:
