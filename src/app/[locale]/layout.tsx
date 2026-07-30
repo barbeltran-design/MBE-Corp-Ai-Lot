@@ -24,7 +24,7 @@ const geistMono = localFont({
 // del primer pintado, evitando el "flash" de tema incorrecto. También expone el valor
 // resuelto en `window.__MBE_THEME__` para que <ThemeProvider> inicialice su estado de
 // React ya sincronizado con el DOM real, sin un segundo render ni warning de hidratación.
-const NO_FLASH_THEME_SCRIPT = `(function(){try{var s=localStorage.getItem('mbe-theme');var t=(s==='light'||s==='dark')?s:((window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark');window.__MBE_THEME__=t;if(t==='dark'){document.documentElement.classList.add('dark');}}catch(e){window.__MBE_THEME__='dark';document.documentElement.classList.add('dark');}})();`;
+const NO_FLASH_THEME_SCRIPT = `(function(){try{var s=localStorage.getItem('mbe-theme');var t=(s==='light'||s==='dark')?s:'dark';window.__MBE_THEME__=t;if(t==='dark'){document.documentElement.classList.add('dark');}}catch(e){window.__MBE_THEME__='dark';document.documentElement.classList.add('dark');}})();`;
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));

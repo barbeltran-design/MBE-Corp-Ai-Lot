@@ -133,4 +133,94 @@
     background-image: radial-gradient(circle, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
     background-size: 24px 24px;
   }
+
+  /* ------------------------------------------------------------
+   * Dark-mode overrides for hardcoded Tailwind utility colors
+   * Makes text legible on the dark background without touching
+   * every component file. Text inside white/light container cards
+   * preserves original dark colors for readability on those bgs.
+   * ------------------------------------------------------------ */
+
+  /* --- Slate text: light on dark bg --- */
+  .dark .text-slate-900,
+  .dark .text-slate-800 {
+    color: hsl(var(--foreground));
+  }
+  .dark .text-slate-700,
+  .dark .text-slate-600,
+  .dark .text-slate-500 {
+    color: hsl(var(--muted-foreground));
+  }
+
+  /* --- Restore dark text inside white / light containers --- */
+  .dark .bg-white.text-slate-900,
+  .dark .bg-white .text-slate-900,
+  .dark .bg-white.text-slate-800,
+  .dark .bg-white .text-slate-800,
+  .dark .bg-white.text-slate-700,
+  .dark .bg-white .text-slate-700,
+  .dark .bg-white.text-slate-600,
+  .dark .bg-white .text-slate-600,
+  .dark .bg-white.text-slate-500,
+  .dark .bg-white .text-slate-500 {
+    color: hsl(222, 47%, 11%);
+  }
+
+  .dark .bg-slate-50.text-slate-900,
+  .dark .bg-slate-50 .text-slate-900,
+  .dark .bg-slate-50.text-slate-800,
+  .dark .bg-slate-50 .text-slate-800,
+  .dark .bg-slate-50.text-slate-700,
+  .dark .bg-slate-50 .text-slate-700,
+  .dark .bg-slate-50.text-slate-600,
+  .dark .bg-slate-50 .text-slate-600,
+  .dark .bg-slate-50.text-slate-500,
+  .dark .bg-slate-50 .text-slate-500,
+  .dark .bg-slate-100.text-slate-900,
+  .dark .bg-slate-100 .text-slate-900,
+  .dark .bg-slate-100.text-slate-800,
+  .dark .bg-slate-100 .text-slate-800,
+  .dark .bg-slate-100.text-slate-700,
+  .dark .bg-slate-100 .text-slate-700,
+  .dark .bg-slate-100.text-slate-600,
+  .dark .bg-slate-100 .text-slate-600,
+  .dark .bg-slate-100.text-slate-500,
+  .dark .bg-slate-100 .text-slate-500 {
+    color: hsl(215, 25%, 27%);
+  }
+
+  /* --- Amber / yellow: darken bg, lighten text --- */
+  .dark .bg-amber-50 { background-color: hsl(39, 50%, 10%); }
+  .dark .bg-amber-100 { background-color: hsl(39, 50%, 15%); }
+  .dark .bg-amber-200 { background-color: hsl(39, 40%, 20%); }
+  .dark .text-amber-700,
+  .dark .text-amber-800 { color: hsl(39, 80%, 70%); }
+  .dark .border-amber-200 { border-color: hsl(39, 40%, 25%); }
+
+  .dark .bg-yellow-100 { background-color: hsl(50, 50%, 15%); }
+  .dark .text-yellow-800 { color: hsl(50, 80%, 70%); }
+
+  /* --- Other colored badge backgrounds: tone down --- */
+  .dark .bg-green-100 { background-color: hsl(150, 40%, 12%); }
+  .dark .text-green-800 { color: hsl(150, 60%, 65%); }
+  .dark .bg-red-100 { background-color: hsl(0, 50%, 15%); }
+  .dark .text-red-800,
+  .dark .text-red-600 { color: hsl(0, 70%, 70%); }
+  .dark .bg-indigo-100 { background-color: hsl(240, 40%, 15%); }
+  .dark .text-indigo-800 { color: hsl(240, 60%, 70%); }
+  .dark .bg-emerald-100 { background-color: hsl(160, 40%, 12%); }
+  .dark .text-emerald-800 { color: hsl(160, 60%, 65%); }
+  .dark .bg-sky-100 { background-color: hsl(200, 40%, 14%); }
+  .dark .text-sky-800 { color: hsl(200, 60%, 70%); }
+  .dark .bg-blue-100 { background-color: hsl(220, 40%, 14%); }
+  .dark .text-blue-700,
+  .dark .text-blue-800 { color: hsl(220, 60%, 70%); }
+
+  /* --- Input / textarea default text in dark mode --- */
+  .dark textarea,
+  .dark input[type='text'],
+  .dark input[type='email'],
+  .dark input[type='number'] {
+    color-scheme: dark;
+  }
 }
