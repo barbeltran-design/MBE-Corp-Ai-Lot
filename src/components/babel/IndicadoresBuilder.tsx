@@ -161,7 +161,7 @@ const LABELS = {
     sinVincular: 'Sin vincular',
     entornoLabel: 'Amenaza u oportunidad relacionada',
     entornoPlaceholder: 'Ninguna en particular',
-    accionesLabel: 'Acciones del Plan de Accion relacionadas',
+    accionesLabel: 'Acciones del Plan Estratégico relacionadas',
     nombreLabel: 'Nombre del indicador',
     nombrePlaceholder: 'Ej. Tasa de conversion de cotizacion a venta',
     formulaLabel: 'Formula de calculo',
@@ -209,7 +209,7 @@ const LABELS = {
     sinVincular: 'Not linked',
     entornoLabel: 'Related threat or opportunity',
     entornoPlaceholder: 'None in particular',
-    accionesLabel: 'Related Action Plan actions',
+    accionesLabel: 'Related Strategic Plan actions',
     nombreLabel: 'Indicator name',
     nombrePlaceholder: 'E.g. Quote-to-sale conversion rate',
     formulaLabel: 'Calculation formula',
@@ -633,7 +633,7 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
                       (active ? 'bg-indigo-100 text-indigo-800 ring-1 ring-indigo-400' : 'bg-slate-100 text-slate-600')
                     }
                   >
-                    {opt.label}
+                    {tr(opt.label)}
                   </button>
                 );
               })
