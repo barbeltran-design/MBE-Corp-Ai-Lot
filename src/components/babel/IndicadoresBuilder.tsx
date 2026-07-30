@@ -284,6 +284,11 @@ function isFrecuencia(value: string): value is Frecuencia {
 
 export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
   const t = LABELS[lang];
+  const [translationCache, setTranslationCache] = React.useState<Record<string, string>>({});
+  const tr = React.useCallback(function (text: string): string {
+    if (lang === 'es' || !text) return text;
+    return translationCache[text] ?? text;
+  }, [lang, translationCache]);
 
   const [objetivos, setObjetivos] = React.useState<PlanObjetivo[]>([]);
   const [entornos, setEntornos] = React.useState<PlanEntorno[]>([]);
@@ -341,6 +346,40 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
     }
     setLoaded(true);
   }, []);
+
+  React.useEffect(() => {
+    if (!loaded || lang === 'es') return;
+    const texts = new Set<string>();
+    indicadores.forEach(function (ind) {
+      if (ind.nombre) texts.add(ind.nombre);
+      if (ind.formula) texts.add(ind.formula);
+      if (ind.especifico) texts.add(ind.especifico);
+      if (ind.medible) texts.add(ind.medible);
+      if (ind.alcanzable) texts.add(ind.alcanzable);
+      if (ind.relevante) texts.add(ind.relevante);
+      if (ind.temporal) texts.add(ind.temporal);
+      if (ind.lineaBase) texts.add(ind.lineaBase);
+      if (ind.meta) texts.add(ind.meta);
+      if (ind.notaIA) texts.add(ind.notaIA);
+    });
+    objetivos.forEach(function (o) { if (o.texto) texts.add(o.texto); });
+    entornos.forEach(function (e) { if (e.descripcion) texts.add(e.descripcion); });
+    texts.forEach(function (text) {
+      fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, targetLang: 'en' }),
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          const translated = data && typeof data.translation === 'string' ? data.translation : text;
+          setTranslationCache(function (prev) { return { ...prev, [text]: translated }; });
+        })
+        .catch(function () {
+          setTranslationCache(function (prev) { return { ...prev, [text]: text }; });
+        });
+    });
+  }, [loaded, lang, indicadores, objetivos, entornos]);
 
   React.useEffect(() => {
     if (!loaded) return;
@@ -553,7 +592,7 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
               <option value="">{t.objetivoPlaceholder}</option>
               {objetivos.map((o) => (
                 <option key={o.id} value={o.id}>
-                  {o.texto || t.objetivoPlaceholder}
+                  {tr(o.texto) || t.objetivoPlaceholder}
                 </option>
               ))}
             </select>
@@ -569,7 +608,7 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
               <option value="">{t.entornoPlaceholder}</option>
               {entornosDisponibles.map((e) => (
                 <option key={e.id} value={e.id}>
-                  {(e.tipo === 'amenaza' ? '⚠ ' : '✦ ') + e.descripcion}
+                  {(e.tipo === 'amenaza' ? '⚠ ' : '✦ ') + tr(e.descripcion)}
                 </option>
               ))}
             </select>
@@ -607,7 +646,7 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
             <label className="mb-1 block text-xs font-medium text-slate-500">{t.nombreLabel}</label>
             <input
               type="text"
-              value={ind.nombre}
+              value={tr(ind.nombre)}
               onChange={(ev) => updateIndicador(ind.id, { nombre: ev.target.value })}
               placeholder={t.nombrePlaceholder}
               className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
@@ -617,7 +656,7 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
             <label className="mb-1 block text-xs font-medium text-slate-500">{t.formulaLabel}</label>
             <input
               type="text"
-              value={ind.formula}
+              value={tr(ind.formula)}
               onChange={(ev) => updateIndicador(ind.id, { formula: ev.target.value })}
               placeholder={t.formulaPlaceholder}
               className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
@@ -629,7 +668,7 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-500">{t.especificoLabel}</label>
             <textarea
-              value={ind.especifico}
+              value={tr(ind.especifico)}
               onChange={(ev) => updateIndicador(ind.id, { especifico: ev.target.value })}
               rows={2}
               className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
@@ -639,7 +678,7 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
             <label className="mb-1 block text-xs font-medium text-slate-500">{t.medibleLabel}</label>
             <input
               type="text"
-              value={ind.medible}
+              value={tr(ind.medible)}
               onChange={(ev) => updateIndicador(ind.id, { medible: ev.target.value })}
               className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
             />
@@ -647,7 +686,7 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-500">{t.alcanzableLabel}</label>
             <textarea
-              value={ind.alcanzable}
+              value={tr(ind.alcanzable)}
               onChange={(ev) => updateIndicador(ind.id, { alcanzable: ev.target.value })}
               rows={2}
               className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
@@ -656,7 +695,7 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-500">{t.relevanteLabel}</label>
             <textarea
-              value={ind.relevante}
+              value={tr(ind.relevante)}
               onChange={(ev) => updateIndicador(ind.id, { relevante: ev.target.value })}
               rows={2}
               className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
@@ -666,7 +705,7 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
             <label className="mb-1 block text-xs font-medium text-slate-500">{t.temporalLabel}</label>
             <input
               type="text"
-              value={ind.temporal}
+              value={tr(ind.temporal)}
               onChange={(ev) => updateIndicador(ind.id, { temporal: ev.target.value })}
               className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
             />
@@ -678,7 +717,7 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
             <label className="mb-1 block text-xs font-medium text-slate-500">{t.lineaBaseLabel}</label>
             <input
               type="text"
-              value={ind.lineaBase}
+              value={tr(ind.lineaBase)}
               onChange={(ev) => updateIndicador(ind.id, { lineaBase: ev.target.value })}
               className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
             />
@@ -687,7 +726,7 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
             <label className="mb-1 block text-xs font-medium text-slate-500">{t.metaLabel}</label>
             <input
               type="text"
-              value={ind.meta}
+              value={tr(ind.meta)}
               onChange={(ev) => updateIndicador(ind.id, { meta: ev.target.value })}
               className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
             />
@@ -755,7 +794,7 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
         {ind.notaIA ? (
           <div className="mt-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-700">
             <span className="font-medium">{t.notaIALabel}: </span>
-            {ind.notaIA}
+            {tr(ind.notaIA)}
           </div>
         ) : null}
 
