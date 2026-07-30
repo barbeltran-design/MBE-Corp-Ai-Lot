@@ -364,6 +364,8 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
     });
     objetivos.forEach(function (o) { if (o.texto) texts.add(o.texto); });
     entornos.forEach(function (e) { if (e.descripcion) texts.add(e.descripcion); });
+    proyectos.forEach(function (p) { if (p.nombre) texts.add(p.nombre); });
+    acciones.forEach(function (a) { if (a.descripcion) texts.add(a.descripcion); });
     texts.forEach(function (text) {
       fetch('/api/translate', {
         method: 'POST',
@@ -379,7 +381,7 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
           setTranslationCache(function (prev) { return { ...prev, [text]: text }; });
         });
     });
-  }, [loaded, lang, indicadores, objetivos, entornos]);
+  }, [loaded, lang, indicadores, objetivos, entornos, proyectos, acciones]);
 
   React.useEffect(() => {
     if (!loaded) return;
@@ -419,7 +421,9 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
   const accionesDisponibles: { id: string; label: string }[] = acciones.map((a) => {
     const proyectoNombre = proyectoNombreById(a.proyectoId);
     const base = a.descripcion || (lang === 'en' ? '(untitled action)' : '(accion sin titulo)');
-    return { id: a.id, label: proyectoNombre ? base + ' — ' + proyectoNombre : base };
+    const translatedBase = tr(base);
+    const translatedProyecto = proyectoNombre ? tr(proyectoNombre) : '';
+    return { id: a.id, label: translatedProyecto ? translatedBase + ' — ' + translatedProyecto : translatedBase };
   });
 
   const addIndicador = () => setIndicadores((prev) => prev.concat([blankIndicador()]));
