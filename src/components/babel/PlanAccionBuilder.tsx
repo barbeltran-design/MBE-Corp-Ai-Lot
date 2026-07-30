@@ -578,6 +578,11 @@ function newAccion(proyectoId: string, rank: number): Accion {
 
 export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
   const t = LABELS[lang];
+  const [translationCache, setTranslationCache] = React.useState<Record<string, string>>({});
+  const tr = React.useCallback(function (text: string): string {
+    if (lang === 'es' || !text) return text;
+    return translationCache[text] ?? text;
+  }, [lang, translationCache]);
   const [objetivos, setObjetivos] = React.useState<Objetivo[]>([]);
   const [entornos, setEntornos] = React.useState<AmenazaOportunidad[]>([]);
   const [fds, setFds] = React.useState<FortalezaDebilidad[]>([]);
@@ -737,6 +742,42 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
     }
     setLoaded(true);
   }, []);
+
+  React.useEffect(() => {
+    if (!loaded || lang === 'es') return;
+    const texts = new Set<string>();
+    objetivos.forEach(function (o) { if (o.texto) texts.add(o.texto); });
+    entornos.forEach(function (e) { if (e.descripcion) texts.add(e.descripcion); });
+    fds.forEach(function (f) { if (f.descripcion) texts.add(f.descripcion); });
+    acciones.forEach(function (a) {
+      if (a.descripcion) texts.add(a.descripcion);
+      if (a.entregable) texts.add(a.entregable);
+    });
+    convocatorias.forEach(function (c) {
+      if (c.nombre) texts.add(c.nombre);
+      if (c.requisito) texts.add(c.requisito);
+    });
+    if (resumenFase1) texts.add(resumenFase1);
+    if (resumenFase2) texts.add(resumenFase2);
+    if (resumenFase3) texts.add(resumenFase3);
+    if (resumenFase5) texts.add(resumenFase5);
+    texts.forEach(function (text) {
+      if (translationCache[text] !== undefined) return;
+      fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, targetLang: 'en' }),
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          const translated = data && typeof data.translation === 'string' ? data.translation : text;
+          setTranslationCache(function (prev) { return { ...prev, [text]: translated }; });
+        })
+        .catch(function () {
+          setTranslationCache(function (prev) { return { ...prev, [text]: text }; });
+        });
+    });
+  }, [loaded, lang, objetivos, entornos, fds, acciones, convocatorias, resumenFase1, resumenFase2, resumenFase3, resumenFase5]);
 
   React.useEffect(() => {
     if (!loaded) return;
@@ -1504,7 +1545,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
             <label className="mb-1 block text-xs font-medium text-slate-500">{t.accionDesc}</label>
             <input
               type="text"
-              value={a.descripcion}
+              value={tr(a.descripcion)}
               onChange={(ev) => updateAccion(a.id, { descripcion: ev.target.value })}
               placeholder={t.accionPlaceholder}
               className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
@@ -1568,7 +1609,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
             <label className="mb-1 block text-xs font-medium text-slate-500">{t.entregableLabel}</label>
             <input
               type="text"
-              value={a.entregable}
+              value={tr(a.entregable)}
               onChange={(ev) => updateAccion(a.id, { entregable: ev.target.value })}
               placeholder={t.entregablePlaceholder}
               className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
@@ -1748,7 +1789,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-500">{t.fdDesc}</label>
             <textarea
-              value={f.descripcion}
+              value={tr(f.descripcion)}
               onChange={(ev) => updateFD(f.id, { descripcion: ev.target.value })}
               placeholder={t.fdPlaceholder}
               rows={2}
@@ -1810,7 +1851,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-500">{t.entornoDesc}</label>
             <textarea
-              value={e.descripcion}
+              value={tr(e.descripcion)}
               onChange={(ev) => updateEntorno(e.id, { descripcion: ev.target.value })}
               placeholder={t.entornoPlaceholder}
               rows={2}
@@ -1869,7 +1910,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-500">{t.objetivoLabel}</label>
             <textarea
-              value={o.texto}
+              value={tr(o.texto)}
               onChange={(ev) => updateObjetivo(o.id, { texto: ev.target.value })}
               placeholder={t.objetivoPlaceholder}
               rows={2}
@@ -1946,7 +1987,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
             <label className="mb-1 block text-xs font-medium text-slate-500">{t.convocatoriaNombre}</label>
             <input
               type="text"
-              value={c.nombre}
+              value={tr(c.nombre)}
               onChange={(ev) => updateConvocatoria(c.id, { nombre: ev.target.value })}
               placeholder={t.convocatoriaNombrePlaceholder}
               className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
@@ -1957,7 +1998,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
           <label className="mb-1 block text-xs font-medium text-slate-500">{t.convocatoriaRequisito}</label>
           <input
             type="text"
-            value={c.requisito}
+            value={tr(c.requisito)}
             onChange={(ev) => updateConvocatoria(c.id, { requisito: ev.target.value })}
             placeholder={t.convocatoriaRequisitoPlaceholder}
             className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
@@ -2152,7 +2193,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
           </div>
         ) : null}
         <textarea
-          value={resumenFase5}
+          value={tr(resumenFase5)}
           onChange={(ev) => setResumenFase5(ev.target.value)}
           placeholder={t.objetivoBscIaPlaceholder}
           rows={5}
@@ -2194,7 +2235,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
           {resumenFase5.trim() ? t.entornoStakeholderHint : t.entornoStakeholderMissingHint}
         </p>
         <textarea
-          value={resumenFase2}
+          value={tr(resumenFase2)}
           onChange={(ev) => setResumenFase2(ev.target.value)}
           placeholder={t.entornoIaPlaceholder}
           rows={5}
@@ -2244,7 +2285,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
           </div>
         ) : null}
         <textarea
-          value={resumenFase3}
+          value={tr(resumenFase3)}
           onChange={(ev) => setResumenFase3(ev.target.value)}
           placeholder={t.capacidadIaPlaceholder}
           rows={5}
@@ -2290,7 +2331,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
           </div>
         ) : null}
         <textarea
-          value={resumenFase1}
+          value={tr(resumenFase1)}
           onChange={(ev) => setResumenFase1(ev.target.value)}
           placeholder={t.convocatoriaIaPlaceholder}
           rows={5}
