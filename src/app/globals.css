@@ -78,7 +78,7 @@
     --secondary-foreground: 220 9% 94%; /* #EDEEF0 */
 
     --muted: 220 20% 9%;              /* #12151B */
-    --muted-foreground: 221 14% 60%;  /* #8A93A6 */
+    --muted-foreground: 220 9% 82%;  /* #CBCED3 — casi blanco para sidebar/header */
 
     --accent: 219 21% 13%;            /* #1B2029 */
     --accent-foreground: 220 9% 94%;  /* #EDEEF0 */
@@ -211,6 +211,11 @@
   .dark input[type='text'],
   .dark input[type='email'],
   .dark input[type='number'],
+  .dark input[type='date'],
+  .dark input[type='tel'],
+  .dark input[type='url'],
+  .dark input[type='search'],
+  .dark input[type='password'],
   .dark select {
     background-color: hsl(0, 0%, 100%) !important;
     color: hsl(222, 47%, 11%) !important;
