@@ -135,72 +135,55 @@
   }
 
   /* ------------------------------------------------------------
-   * Dark-mode overrides for hardcoded Tailwind utility colors
-   * Makes text legible on the dark background without touching
-   * every component file. Text inside white/light container cards
-   * preserves original dark colors for readability on those bgs.
+   * Dark mode: cajas blancas → gris oscuro, texto gris → casi blanco
    * ------------------------------------------------------------ */
 
-  /* --- Slate text: light on dark bg --- */
+  /* --- all hardcoded slate text becomes light --- */
   .dark .text-slate-900,
-  .dark .text-slate-800 {
-    color: hsl(var(--foreground));
-  }
+  .dark .text-slate-800,
   .dark .text-slate-700,
   .dark .text-slate-600,
-  .dark .text-slate-500 {
-    color: hsl(var(--muted-foreground));
+  .dark .text-slate-500,
+  .dark .text-slate-400 {
+    color: hsl(var(--foreground));
   }
 
-  /* --- Restore dark text inside white / light containers --- */
-  .dark .bg-white.text-slate-900,
-  .dark .bg-white .text-slate-900,
-  .dark .bg-white.text-slate-800,
-  .dark .bg-white .text-slate-800,
-  .dark .bg-white.text-slate-700,
-  .dark .bg-white .text-slate-700,
-  .dark .bg-white.text-slate-600,
-  .dark .bg-white .text-slate-600,
-  .dark .bg-white.text-slate-500,
-  .dark .bg-white .text-slate-500 {
+  /* --- all white / translucent-white cards become dark --- */
+  .dark .bg-white {
+    background-color: hsl(var(--card));
+  }
+  .dark .bg-white\/60,
+  .dark [class*="bg-white/"] {
+    background-color: hsl(220, 9%, 11%);
+  }
+
+  /* --- restore dark text inside colored badges (still have their own bg) --- */
+  .dark .bg-slate-50.text-slate-900, .dark .bg-slate-50 .text-slate-900,
+  .dark .bg-slate-50.text-slate-800, .dark .bg-slate-50 .text-slate-800,
+  .dark .bg-slate-50.text-slate-700, .dark .bg-slate-50 .text-slate-700,
+  .dark .bg-slate-50.text-slate-600, .dark .bg-slate-50 .text-slate-600,
+  .dark .bg-slate-50.text-slate-500, .dark .bg-slate-50 .text-slate-500 {
+    color: hsl(215, 25%, 27%);
+  }
+  .dark .bg-slate-100.text-slate-900, .dark .bg-slate-100 .text-slate-900,
+  .dark .bg-slate-100.text-slate-800, .dark .bg-slate-100 .text-slate-800,
+  .dark .bg-slate-100.text-slate-700, .dark .bg-slate-100 .text-slate-700,
+  .dark .bg-slate-100.text-slate-600, .dark .bg-slate-100 .text-slate-600,
+  .dark .bg-slate-100.text-slate-500, .dark .bg-slate-100 .text-slate-500 {
     color: hsl(222, 47%, 11%);
   }
 
-  .dark .bg-slate-50.text-slate-900,
-  .dark .bg-slate-50 .text-slate-900,
-  .dark .bg-slate-50.text-slate-800,
-  .dark .bg-slate-50 .text-slate-800,
-  .dark .bg-slate-50.text-slate-700,
-  .dark .bg-slate-50 .text-slate-700,
-  .dark .bg-slate-50.text-slate-600,
-  .dark .bg-slate-50 .text-slate-600,
-  .dark .bg-slate-50.text-slate-500,
-  .dark .bg-slate-50 .text-slate-500,
-  .dark .bg-slate-100.text-slate-900,
-  .dark .bg-slate-100 .text-slate-900,
-  .dark .bg-slate-100.text-slate-800,
-  .dark .bg-slate-100 .text-slate-800,
-  .dark .bg-slate-100.text-slate-700,
-  .dark .bg-slate-100 .text-slate-700,
-  .dark .bg-slate-100.text-slate-600,
-  .dark .bg-slate-100 .text-slate-600,
-  .dark .bg-slate-100.text-slate-500,
-  .dark .bg-slate-100 .text-slate-500 {
-    color: hsl(215, 25%, 27%);
-  }
-
-  /* --- Amber / yellow: darken bg, lighten text --- */
+  /* --- amber / yellow: surfaces oscuras, texto claro --- */
   .dark .bg-amber-50 { background-color: hsl(39, 50%, 10%); }
   .dark .bg-amber-100 { background-color: hsl(39, 50%, 15%); }
   .dark .bg-amber-200 { background-color: hsl(39, 40%, 20%); }
   .dark .text-amber-700,
   .dark .text-amber-800 { color: hsl(39, 80%, 70%); }
   .dark .border-amber-200 { border-color: hsl(39, 40%, 25%); }
-
   .dark .bg-yellow-100 { background-color: hsl(50, 50%, 15%); }
   .dark .text-yellow-800 { color: hsl(50, 80%, 70%); }
 
-  /* --- Other colored badge backgrounds: tone down --- */
+  /* --- otros colores de badge: oscuros con texto claro --- */
   .dark .bg-green-100 { background-color: hsl(150, 40%, 12%); }
   .dark .text-green-800 { color: hsl(150, 60%, 65%); }
   .dark .bg-red-100 { background-color: hsl(0, 50%, 15%); }
@@ -215,12 +198,22 @@
   .dark .bg-blue-100 { background-color: hsl(220, 40%, 14%); }
   .dark .text-blue-700,
   .dark .text-blue-800 { color: hsl(220, 60%, 70%); }
+  .dark .text-violet-700,
+  .dark .text-violet-900 { color: hsl(260, 60%, 70%); }
+  .dark .text-teal-700,
+  .dark .text-teal-900 { color: hsl(170, 60%, 65%); }
+  .dark .text-cyan-700,
+  .dark .text-cyan-900 { color: hsl(190, 60%, 65%); }
+  .dark .text-emerald-900 { color: hsl(160, 60%, 65%); }
 
-  /* --- Input / textarea default text in dark mode --- */
+  /* --- input / textarea: keep white bg & dark text in dark mode --- */
   .dark textarea,
   .dark input[type='text'],
   .dark input[type='email'],
-  .dark input[type='number'] {
-    color-scheme: dark;
+  .dark input[type='number'],
+  .dark select {
+    background-color: hsl(0, 0%, 100%) !important;
+    color: hsl(222, 47%, 11%) !important;
+    color-scheme: light;
   }
 }
