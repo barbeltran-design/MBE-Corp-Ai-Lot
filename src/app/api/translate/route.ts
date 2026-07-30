@@ -19,6 +19,7 @@ async function tryGoogleTranslate(text: string, targetLang: 'es' | 'en'): Promis
       body: JSON.stringify({
         q: text,
         target: targetLang,
+        source: 'es',
         format: 'text',
       }),
     }
