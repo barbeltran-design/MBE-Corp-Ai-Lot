@@ -155,12 +155,12 @@ function OnboardingInner() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-emerald-50/40 to-white px-6 py-10">
       <div className="mx-auto max-w-3xl">
-        <p className="text-xs font-medium uppercase tracking-wide text-emerald-600">
+        <p className="text-xs font-medium uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
           {t('stepLabel', { current: step + 1, total: totalSteps })}
         </p>
-        <div className="mt-2 h-1.5 w-full rounded-full bg-slate-100">
+        <div className="mt-2 h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-700">
           <div
-            className="h-1.5 rounded-full bg-emerald-600 transition-all"
+            className="h-1.5 rounded-full bg-emerald-600 dark:bg-emerald-500 transition-all"
             style={{ width: `${((step + 1) / totalSteps) * 100}%` }}
           />
         </div>
@@ -171,8 +171,8 @@ function OnboardingInner() {
 
           <div className="mt-6 space-y-6">
             {currentDimension.levels.map((level, i) => (
-              <div key={level.key} className="rounded-xl border border-slate-200 p-4">
-                <p className="text-xs font-medium text-emerald-700">{tLevel(level.key)}</p>
+              <div key={level.key} className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">{tLevel(level.key)}</p>
                 <p className="mt-1 text-sm text-slate-700">{level.description}</p>
                 <p className="mt-1 text-xs text-slate-400">
                   {t('expectedEvidence')} {level.deliverable}
@@ -200,7 +200,7 @@ function OnboardingInner() {
             ))}
           </div>
 
-          {saveError && <p className="mt-4 text-sm text-red-600">{saveError}</p>}
+          {saveError && <p className="mt-4 text-sm text-red-600 dark:text-red-400">{saveError}</p>}
 
           <div className="mt-8 flex justify-between">
             <Button type="button" variant="outline" onClick={handleBack} disabled={step === 0 || finishing}>

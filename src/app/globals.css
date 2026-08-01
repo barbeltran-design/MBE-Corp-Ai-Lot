@@ -157,6 +157,11 @@
     background-color: hsl(220, 9%, 11%);
   }
 
+  /* --- light emerald gradient (landing + onboarding) becomes dark --- */
+  .dark .bg-gradient-to-b {
+    background-image: linear-gradient(to bottom, hsl(220, 9%, 11%), hsl(220, 9%, 11%));
+  }
+
   /* --- restore dark text inside colored badges (still have their own bg) --- */
   .dark .bg-slate-50.text-slate-900, .dark .bg-slate-50 .text-slate-900,
   .dark .bg-slate-50.text-slate-800, .dark .bg-slate-50 .text-slate-800,
