@@ -172,10 +172,10 @@ const CONTENT: Record<Language, Record<DimensionId, DimensionText>> = {
       explicacion: 'Estrategia de Ecosistemas',
       levels: [
         ['Opero relacionándome con otros negocios o con la comunidad de forma espontánea', 'Directorio informal de contactos de la zona o industria'],
-        ['Participo en la cámara comercial de mi sector y defino mis compromisos éticos con proveedores', 'Registro de Proveedores, Competidores y Complementadores. Comprobante de Afiliación Vigente a una cámara'],
+        ['Defino mis alcances de relacionamiento con proveedores, clientes y competencia', 'Base de datos de Proveedores, Competidores y Complementadores'],
         ['Establezco alianzas comerciales con empresas complementarias y mido el número de clientes o beneficios intercambiados', 'Convenio de Alianza Comercial firmado y Reporte Mensual de Clientes Referidos'],
-        ['Integro a la empresa a un grupo empresarial para optimizar esfuerzos y productos/servicios en favor de los grupos de interes', 'Oferta de Solución Conjunta y reconocimiento de Empresa Socialmente Responsable'],
-        ['Invito a los grupos de interés en definir las soluciones que ofrece la comunidad empresarial', 'Acuerdos de colaboración con los grupos de interés'],
+        ['Integro a la empresa a un grupo empresarial para optimizar esfuerzos y productos/servicios en favor de los grupos de interes', 'Comprobante de Afiliación Vigente a una cámara'],
+        ['Invito a los grupos de interés en definir las soluciones que ofrece la comunidad empresarial', 'Firma de acuerdos de colaboración con los grupos de interés'],
         ['La empresa se convierte en el organismo que conecta a otras empresas con sus grupos de interés dentro de la industria', 'Acta Constitutiva de la agrupación'],
       ],
     },
