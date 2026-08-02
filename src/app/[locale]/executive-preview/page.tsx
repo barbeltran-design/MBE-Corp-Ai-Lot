@@ -332,7 +332,7 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
 
   const subscriptionLabel = (() => {
     const s = userDoc?.subscription;
-    if (s === 'active' || s === 'premium') return t('Plan Pro', 'Pro plan');
+    if (s === 'pro' || s === 'active' || s === 'premium') return t('Plan Pro', 'Pro plan');
     if (s === 'cancelled') return t('Plan cancelado', 'Cancelled plan');
     return t('Plan gratuito', 'Free plan');
   })();

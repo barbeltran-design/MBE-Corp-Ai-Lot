@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/theme-provider';
 import { CommandPalette, type CommandPaletteItem } from '@/components/ui/executive/command-palette';
 import { useDisplayLang } from '@/components/display-lang-provider';
+import { UserMenu } from '@/components/user-menu';
 
 export interface ExecutiveNavItem {
   href: string;
@@ -195,6 +196,7 @@ export function ExecutiveShell({
             </button>
 
             <div className="flex shrink-0 items-center gap-2">
+              <UserMenu />
               {headerRight}
               <LangToggle />
               <button

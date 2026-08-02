@@ -48,9 +48,13 @@ export async function POST(req: NextRequest) {
     // no viene, o viene un valor que no es un idioma soportado, usamos
     // "es" como respaldo — así nunca se arma una URL de regreso rota.
     let requestedLocale: string | undefined;
+    let returnPath = '/dashboard';
     try {
       const body = await req.json();
       requestedLocale = body?.locale;
+      if (typeof body?.returnPath === 'string' && (body.returnPath === '/perfil' || body.returnPath === '/dashboard')) {
+        returnPath = body.returnPath;
+      }
     } catch {
       // Sin body o body inválido — seguimos con el respaldo.
     }
@@ -84,9 +88,9 @@ export async function POST(req: NextRequest) {
         external_reference: uid,
         notification_url: `${siteUrl}/api/webhooks/mercadopago`,
         back_urls: {
-          success: `${siteUrl}/${locale}/dashboard?pago=exitoso`,
-          failure: `${siteUrl}/${locale}/dashboard?pago=fallido`,
-          pending: `${siteUrl}/${locale}/dashboard?pago=pendiente`,
+          success: `${siteUrl}/${locale}${returnPath}?pago=exitoso`,
+          failure: `${siteUrl}/${locale}${returnPath}?pago=fallido`,
+          pending: `${siteUrl}/${locale}${returnPath}?pago=pendiente`,
         },
         auto_return: 'approved',
       },

@@ -1,7 +1,7 @@
 import type { Timestamp } from 'firebase/firestore';
 
 export type Language = 'es' | 'en';
-export type SubscriptionStatus = 'free' | 'active' | 'cancelled' | 'premium';
+export type SubscriptionStatus = 'free' | 'pro' | 'active' | 'cancelled' | 'premium';
 export type Industry = 'manufacturing' | 'services' | 'commerce' | 'tech';
 export type CompanySize = '1-5' | '6-20' | '21-50' | '50+';
 export type AgentId = 'babel' | 'karmetin' | 'fisnando' | 'normau' | 'atech';
@@ -20,10 +20,14 @@ export interface UserDoc {
   name: string;
   language: Language;
   country: string;
+  photoURL?: string;
   createdAt: Timestamp;
   subscription: SubscriptionStatus;
   subscriptionStart?: Timestamp;
   stripeCustomerId?: string;
+  planStatus?: string;
+  planActivatedAt?: string;
+  mercadoPagoPaymentId?: string;
   currentMonth: number; // 1-12
   totalMaturity: number; // 0-120
   assessmentCompleted?: boolean; // true once saveAssessment() has run at least once
