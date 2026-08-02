@@ -87,6 +87,20 @@ function DashboardPageInner() {
   const [result, setResult] = React.useState<AssessmentResult | null>(null);
   const [loadError, setLoadError] = React.useState(false);
 
+  const dimensions = React.useMemo(() => getMaturityDimensions(locale), [locale]);
+
+  // key del nivel (execution, standard, ...) -> definición con descripción y
+  // evidencia, para redactar los pasos parcialmente trabajados en la tabla.
+  const levelsByKey = React.useMemo(() => {
+    const map = new Map<string, { key: string; description: string; deliverable: string }>();
+    for (const dim of dimensions) {
+      for (const level of dim.levels) {
+        map.set(level.key, level);
+      }
+    }
+    return map;
+  }, [dimensions]);
+
   // ── Estado nuevo para Fase 5 ─────────────────────────────────────────
   const [userDoc, setUserDoc] = React.useState<UserDoc | null>(null);
   const [sessionDoc, setSessionDoc] = React.useState<SessionDoc | null>(null);
@@ -114,7 +128,6 @@ function DashboardPageInner() {
           setLoadError(true);
           return;
         }
-        const dimensions = getMaturityDimensions(locale);
         setResult(computeResults(dimensions, answers));
       } catch (err) {
         console.error('[MBE Dashboard] failed to load assessment', err);
@@ -274,16 +287,13 @@ function DashboardPageInner() {
 
         <Card className="mt-8 overflow-x-auto p-6">
           <h2 className="text-sm font-semibold text-slate-700">{t('tableTitle')}</h2>
-          <table className="mt-4 w-full min-w-[920px] text-left text-sm">
+          <table className="mt-4 w-full min-w-[720px] text-left text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-xs uppercase text-slate-400">
                 <th className="py-2 pr-4">{t('colTema')}</th>
                 <th className="py-2 pr-4">{t('colScore')}</th>
                 <th className="py-2 pr-4">{t('colLevel')}</th>
-                <th className="py-2 pr-4">{t('colAchieved')}</th>
-                <th className="py-2 pr-4">{t('colInProgress')}</th>
-                <th className="py-2 pr-4">{t('colPending')}</th>
-                <th className="py-2 pr-4">{t('colNextStep')}</th>
+                <th className="py-2 pr-4">{t('colPartialSteps')}</th>
               </tr>
             </thead>
             <tbody>
@@ -292,11 +302,19 @@ function DashboardPageInner() {
                   <td className="py-2 pr-4 font-medium text-slate-900">{d.tema}</td>
                   <td className="py-2 pr-4">{Math.round(d.score)}%</td>
                   <td className="py-2 pr-4">{tLevel(d.level)}</td>
-                  <td className="py-2 pr-4 text-slate-500">{d.superados.map((k) => tLevel(k)).join(', ') || '—'}</td>
-                  <td className="py-2 pr-4 text-slate-500">{d.enProgreso.map((k) => tLevel(k)).join(', ') || '—'}</td>
-                  <td className="py-2 pr-4 text-slate-500">{d.pendientes.map((k) => tLevel(k)).join(', ') || '—'}</td>
                   <td className="py-2 pr-4 text-slate-500">
-                    {d.nextStep ? `${d.nextStep.description} — ${d.nextStep.deliverable}` : t('masteredLabel')}
+                    {d.enProgreso.length > 0 ? (
+                      d.enProgreso.map((k, ki) => {
+                        const def = levelsByKey.get(k);
+                        return (
+                          <div key={k} className={ki > 0 ? 'mt-1.5' : undefined}>
+                            {def ? `${def.description} — ${def.deliverable}` : k}
+                          </div>
+                        );
+                      })
+                    ) : (
+                      '—'
+                    )}
                   </td>
                 </tr>
               ))}
@@ -304,7 +322,7 @@ function DashboardPageInner() {
                 <td className="py-2 pr-4">{t('totalRow')}</td>
                 <td className="py-2 pr-4">{Math.round(result.overallScore)}%</td>
                 <td className="py-2 pr-4">{tLevel(result.overallLevel)}</td>
-                <td className="py-2 pr-4" colSpan={4} />
+                <td className="py-2 pr-4" />
               </tr>
             </tbody>
           </table>
