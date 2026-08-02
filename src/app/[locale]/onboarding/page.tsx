@@ -40,6 +40,23 @@ function mergeAnswers(saved: Partial<DimensionAnswers>): DimensionAnswers {
   return merged;
 }
 
+// Borrador en curso de localStorage: devuelve las respuestas SOLO si tienen
+// al menos una respuesta real. Un borrador vacío (de un intento anterior sin
+// responder) se ignora para no bloquear la precarga desde Firestore.
+function loadDraft(): DimensionAnswers | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem('mbe-assessment-draft');
+    if (!raw) return null;
+    const merged = mergeAnswers(JSON.parse(raw) as Partial<DimensionAnswers>);
+    const hasAny = Object.values(merged).some((arr) => arr.some((v) => v !== null));
+    return hasAny ? merged : null;
+  } catch (err) {
+    console.error('[MBE Assessment] failed to load draft', err);
+    return null;
+  }
+}
+
 export default function OnboardingPage() {
   const t = useTranslations('assessment');
   return (
@@ -69,17 +86,7 @@ function OnboardingInner() {
   const [user, setUser] = React.useState<User | null | undefined>(undefined);
   const [gate, setGate] = React.useState<'checking' | 'ready'>('checking');
   const [step, setStep] = React.useState(0);
-  const [answers, setAnswers] = React.useState<DimensionAnswers>(() => {
-    if (typeof window === 'undefined') return emptyAnswers();
-    try {
-      const raw = window.localStorage.getItem('mbe-assessment-draft');
-      if (!raw) return emptyAnswers();
-      return mergeAnswers(JSON.parse(raw) as Partial<DimensionAnswers>);
-    } catch (err) {
-      console.error('[MBE Assessment] failed to load draft', err);
-      return emptyAnswers();
-    }
-  });
+  const [answers, setAnswers] = React.useState<DimensionAnswers>(() => loadDraft() ?? emptyAnswers());
   const [finishing, setFinishing] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
 
@@ -122,12 +129,7 @@ function OnboardingInner() {
     let cancelled = false;
     (async () => {
       try {
-        let hasDraft = false;
-        try {
-          hasDraft = !!window.localStorage.getItem(DRAFT_KEY);
-        } catch {
-          hasDraft = false;
-        }
+        const draft = loadDraft();
         const snap = await getDoc(doc(getFirebaseDb(), 'users', user.uid));
         const data = snap.data() as UserDoc | undefined;
         if (cancelled) return;
@@ -137,7 +139,7 @@ function OnboardingInner() {
         }
         // Sin borrador en curso: precarga el último diagnóstico guardado
         // (así "repetir diagnóstico" conserva las respuestas previas).
-        if (!hasDraft) {
+        if (!draft) {
           const saved = await getLatestAssessmentAnswers(user.uid);
           if (cancelled) return;
           if (saved) setAnswers(mergeAnswers(saved));
