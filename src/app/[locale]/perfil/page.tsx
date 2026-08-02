@@ -7,11 +7,12 @@ import { onAuthStateChanged, signOut, updateProfile, type User } from 'firebase/
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getFirebaseAuth, getFirebaseDb, getFirebaseStorage } from '@/lib/firebase';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import { useDisplayLang } from '@/components/display-lang-provider';
 import type { CompanySize, Industry, Language, UserDoc } from '@/types/firestore';
 
@@ -75,6 +76,7 @@ function ProfilePageInner() {
 
   const [uploading, setUploading] = React.useState(false);
   const [uploadError, setUploadError] = React.useState('');
+  const [photoUrlInput, setPhotoUrlInput] = React.useState('');
 
   const [subscription, setSubscription] = React.useState<string>('');
   const [planStatus, setPlanStatus] = React.useState<string>('');
@@ -181,12 +183,40 @@ function ProfilePageInner() {
       await updateProfile(user, { photoURL: url }).catch(() => {});
       const db = getFirebaseDb();
       await setDoc(doc(db, 'users', user.uid), { photoURL: url }, { merge: true });
+      setSavedMsg(t('Foto actualizada.', 'Photo updated.'));
     } catch (err) {
       console.error('[perfil] photo upload failed', err);
-      setUploadError(t('No se pudo subir la foto.', 'Could not upload the photo.'));
+      setUploadError(t('No se pudo subir la foto. Revisa las reglas de Firebase Storage o usa un enlace de imagen.', 'Could not upload the photo. Check your Firebase Storage rules or use an image link instead.'));
     } finally {
       setUploading(false);
       if (e.target) e.target.value = '';
+    }
+  }
+
+  async function handleApplyPhotoUrl() {
+    if (!user) return;
+    const url = photoUrlInput.trim();
+    if (!url) {
+      setUploadError(t('Pega primero el enlace de la foto.', 'Paste the photo link first.'));
+      return;
+    }
+    if (!/^https?:\/\//i.test(url)) {
+      setUploadError(t('El enlace debe empezar con http:// o https://.', 'The link must start with http:// or https://.'));
+      return;
+    }
+    setUploading(true);
+    setUploadError('');
+    try {
+      setPhotoURL(url);
+      await updateProfile(user, { photoURL: url }).catch(() => {});
+      const db = getFirebaseDb();
+      await setDoc(doc(db, 'users', user.uid), { photoURL: url }, { merge: true });
+      setSavedMsg(t('Foto actualizada.', 'Photo updated.'));
+    } catch (err) {
+      console.error('[perfil] photo link failed', err);
+      setUploadError(t('No se pudo guardar la foto.', 'Could not save the photo.'));
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -299,22 +329,39 @@ function ProfilePageInner() {
             )}
           </div>
           <div className="flex flex-col gap-2">
-            <input
-              type="file"
-              accept="image/*"
-              id="profile-photo-input"
-              onChange={handlePhotoUpload}
-              className="hidden"
-            />
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('profile-photo-input')?.click()}>
+            <div className="flex flex-wrap items-center gap-2">
+              <label
+                htmlFor="profile-photo-input"
+                className={cn(
+                  buttonVariants({ variant: 'outline', size: 'sm' }),
+                  'cursor-pointer'
+                )}
+              >
                 {uploading ? t('Subiendo...', 'Uploading...') : t('Subir foto', 'Upload photo')}
-              </Button>
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                id="profile-photo-input"
+                onChange={handlePhotoUpload}
+                className="hidden"
+              />
               {photoURL && (
                 <Button type="button" variant="ghost" size="sm" onClick={handleRemovePhoto}>
                   {t('Quitar foto', 'Remove photo')}
                 </Button>
               )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                value={photoUrlInput}
+                onChange={(e) => setPhotoUrlInput(e.target.value)}
+                placeholder={t('O pega un enlace de imagen (http...), ej. Google Drive', 'Or paste an image link (http...), e.g. Google Drive')}
+                className="w-64"
+              />
+              <Button type="button" variant="outline" size="sm" onClick={handleApplyPhotoUrl} disabled={uploading}>
+                {t('Usar enlace', 'Use link')}
+              </Button>
             </div>
             {uploadError && <p className="text-sm text-red-600">{uploadError}</p>}
           </div>
