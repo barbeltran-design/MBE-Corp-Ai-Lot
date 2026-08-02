@@ -177,10 +177,14 @@ ESTA ES LA FASE 3: Capacidades Clave. Construye:
 Distingue entre capacidades básicas (indispensables para operar, no diferencian) y capacidades diferenciadoras (las que hacen único al negocio frente a la competencia).
 
 ### 3.2. Plan Operativo
-- Infraestructura necesaria (local, equipo, tecnología, inventario) según la madurez actual del negocio con el precio de cada rubro.
-- Cadena de suministro: proveedores clave típicos de este giro, su costo y cómo gestionarlos.
-- Perfiles de personal necesarios con una estimación económica de mercado laboral (rango de sueldo aproximado según el país declarado) para cada rol clave.
-- Insumos fijos comunes para este giro con su precio estimado actual.
+- Infraestructura necesaria (local, equipo, tecnología, inventario) según la madurez actual del negocio con el precio de cada rubro y el total de todos.
+- Cadena de suministro: proveedores clave típicos de este giro, su costo y cómo gestionarlos y el total de todos.
+- Perfiles de personal necesarios con una estimación económica de mercado laboral (rango de sueldo aproximado según el país declarado) para cada rol clave y el total de todos.
+- Insumos fijos comunes para este giro con su precio estimado actual y el total de todos.
+- Suma al final todos los gastos mensuales y calcula una inversión anual.
+
+### 3.3. Plan Operativo
+- Indica precios de referencia en el mercado para cada producto y servicio en la zona señalada.
 
 Cuando termines este entregable, ciérralo preguntando explícitamente: "¿Apruebas este resumen de la Fase 3 para continuar a la Fase 4?". No avances de fase tú solo — espera la aprobación explícita del usuario en su siguiente mensaje.`,
   4: `Ya tienes en el historial de esta conversación las respuestas de las Fases 0, 1, 2 y 3. Úsalas — no vuelvas a preguntar lo que ya sabes. Si falta un dato verdaderamente crítico para esta fase, pregúntalo brevemente antes de redactar. Si ya tienes lo suficiente, redacta directamente el entregable completo.
@@ -292,10 +296,14 @@ THIS IS PHASE 3: Key Capabilities. Build:
 Distinguish between basic capabilities (essential for operations but not a source of differentiation) and differentiating capabilities (those that make the business unique compared to the competition).
 
 ### 3.2. Operational Plan
-- Necessary infrastructure (premises, equipment, technology, inventory) based on the business's current stage of maturity, including the cost of each item.
-- Supply chain: key suppliers typical for this type of business, their costs, and how to manage them.
-- Required personnel profiles, including labor market cost estimates (approximate salary ranges based on the specified country) for each key role.
-- Common fixed inputs for this type of business, along with their current estimated prices.
+- Necessary infrastructure (premises, equipment, technology, inventory) based on the business's current stage of maturity, including the cost of each item and the total cost.
+- Supply chain: key suppliers typical for this type of business, their costs, management approach, and the total cost.
+- Required personnel profiles with labor market cost estimates (approximate salary range based on the specified country) for each key role and the total cost.
+- Standard supplies/inputs for this type of business, including current estimated prices and the total cost.
+- Sum up all monthly expenses and calculate the annual investment.
+
+### 3.3. Operational Plan
+- Indicate market reference prices for each product and service in the specified area.
 
 When you finish this deliverable, close by explicitly asking: "Do you approve this Phase 3 summary to move on to Phase 4?". Do not advance the phase yourself — wait for the user's explicit approval in their next message.`,
   4: `You already have the Phase 0, 1, 2, and 3 answers in this conversation's history. Use them — do not ask again for what you already know. If a truly critical piece of information for this phase is missing, ask about it briefly before drafting. If you already have enough, draft the complete deliverable directly.
