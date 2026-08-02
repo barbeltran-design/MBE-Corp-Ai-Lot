@@ -105,6 +105,7 @@
     "colScore": "% Madurez",
     "colLevel": "Nivel",
     "colPartialSteps": "Pasos parcialmente trabajados",
+    "colNextStep": "Próximo paso recomendado",
     "totalRow": "Total (promedio de los 11 temas)",
     "masteredLabel": "Nivel máximo alcanzado",
     "retakeLink": "Repetir el diagnóstico",

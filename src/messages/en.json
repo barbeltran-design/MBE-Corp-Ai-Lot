@@ -105,6 +105,7 @@
     "colScore": "Maturity %",
     "colLevel": "Level",
     "colPartialSteps": "Steps in progress",
+    "colNextStep": "Recommended next step",
     "totalRow": "Total (average of the 11 topics)",
     "masteredLabel": "Maximum level reached",
     "retakeLink": "Retake the assessment",

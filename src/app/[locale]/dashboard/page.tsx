@@ -294,6 +294,7 @@ function DashboardPageInner() {
                 <th className="py-2 pr-4">{t('colScore')}</th>
                 <th className="py-2 pr-4">{t('colLevel')}</th>
                 <th className="py-2 pr-4">{t('colPartialSteps')}</th>
+                <th className="py-2 pr-4">{t('colNextStep')}</th>
               </tr>
             </thead>
             <tbody>
@@ -315,6 +316,9 @@ function DashboardPageInner() {
                     ) : (
                       '—'
                     )}
+                  </td>
+                  <td className="py-2 pr-4 text-slate-500">
+                    {d.nextStep ? `${d.nextStep.description} — ${d.nextStep.deliverable}` : t('masteredLabel')}
                   </td>
                 </tr>
               ))}
