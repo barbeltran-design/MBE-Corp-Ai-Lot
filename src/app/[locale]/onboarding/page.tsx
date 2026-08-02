@@ -46,14 +46,45 @@ function OnboardingInner() {
   const t = useTranslations('assessment');
   const tLevel = useTranslations('common.maturityLevel');
 
+  const DRAFT_KEY = 'mbe-assessment-draft';
+
   const isRetake = searchParams.get('retake') === 'true';
 
   const [user, setUser] = React.useState<User | null | undefined>(undefined);
   const [gate, setGate] = React.useState<'checking' | 'ready'>('checking');
   const [step, setStep] = React.useState(0);
-  const [answers, setAnswers] = React.useState<DimensionAnswers>(() => emptyAnswers());
+  const [answers, setAnswers] = React.useState<DimensionAnswers>(() => {
+    if (typeof window === 'undefined') return emptyAnswers();
+    try {
+      const raw = window.localStorage.getItem('mbe-assessment-draft');
+      if (!raw) return emptyAnswers();
+      const parsed = JSON.parse(raw) as Partial<DimensionAnswers>;
+      const merged = emptyAnswers();
+      for (const id of Object.keys(merged) as (keyof DimensionAnswers)[]) {
+        const saved = parsed[id];
+        if (Array.isArray(saved)) {
+          merged[id] = merged[id].map((_v, i) => {
+            const s = saved[i];
+            return s === 'yes' || s === 'partial' || s === 'no' ? s : null;
+          });
+        }
+      }
+      return merged;
+    } catch (err) {
+      console.error('[MBE Assessment] failed to load draft', err);
+      return emptyAnswers();
+    }
+  });
   const [finishing, setFinishing] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    try {
+      window.localStorage.setItem('mbe-assessment-draft', JSON.stringify(answers));
+    } catch (err) {
+      console.error('[MBE Assessment] failed to persist draft', err);
+    }
+  }, [answers]);
 
   const dimensions = React.useMemo(() => getMaturityDimensions(locale), [locale]);
 
@@ -122,6 +153,11 @@ function OnboardingInner() {
     try {
       const result = computeResults(dimensions, answers);
       await saveAssessment(user.uid, answers, result);
+      try {
+        window.localStorage.removeItem(DRAFT_KEY);
+      } catch {
+        // best effort
+      }
       router.push(`/${locale}/dashboard`);
     } catch (err) {
       console.error('[MBE Assessment] failed to save', err);
@@ -130,16 +166,24 @@ function OnboardingInner() {
     }
   }
 
+  function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   function handleNext() {
     if (step < totalSteps - 1) {
       setStep(step + 1);
+      scrollToTop();
       return;
     }
     void handleFinish();
   }
 
   function handleBack() {
-    if (step > 0) setStep(step - 1);
+    if (step > 0) {
+      setStep(step - 1);
+      scrollToTop();
+    }
   }
 
   if (user === undefined || gate !== 'ready') {
@@ -155,19 +199,21 @@ function OnboardingInner() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-emerald-50/40 to-white px-6 py-10">
       <div className="mx-auto max-w-3xl">
-        <p className="text-xs font-medium uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
-          {t('stepLabel', { current: step + 1, total: totalSteps })}
-        </p>
-        <div className="mt-2 h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-700">
-          <div
-            className="h-1.5 rounded-full bg-emerald-600 dark:bg-emerald-500 transition-all"
-            style={{ width: `${((step + 1) / totalSteps) * 100}%` }}
-          />
+        <div className="sticky top-0 z-10 -mx-6 border-b border-slate-200 bg-card/95 px-6 pb-4 pt-2 backdrop-blur-sm dark:border-slate-700">
+          <p className="text-xs font-medium uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
+            {t('stepLabel', { current: step + 1, total: totalSteps })}
+          </p>
+          <div className="mt-2 h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-700">
+            <div
+              className="h-1.5 rounded-full bg-emerald-600 dark:bg-emerald-500 transition-all"
+              style={{ width: `${((step + 1) / totalSteps) * 100}%` }}
+            />
+          </div>
+          <h1 className="mt-4 text-xl font-semibold text-slate-900">{currentDimension.tema}</h1>
+          <p className="mt-1 text-sm text-slate-500">{currentDimension.explicacion}</p>
         </div>
 
         <Card className="mt-6 p-6 sm:p-8">
-          <h1 className="text-xl font-semibold text-slate-900">{currentDimension.tema}</h1>
-          <p className="mt-1 text-sm text-slate-500">{currentDimension.explicacion}</p>
 
           <div className="mt-6 space-y-6">
             {currentDimension.levels.map((level, i) => (
