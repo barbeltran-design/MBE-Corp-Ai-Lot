@@ -162,7 +162,7 @@ Analiza fortalezas y áreas de oportunidad de cada una de las siguientes fuerzas
 - Proveedores: principal proveedor de la industria.
 
 ### 2.3. Matriz de Impacto en Stakeholders
-Para cada uno de estos grupos de interés, describe brevemente el impacto esperado (positivo o riesgo a mitigar) de las operaciones y del producto/servicio del giro del negocio: Colaboradores, Accionistas, Clientes, Proveedores, Medio Ambiente, Sociedad y Gobierno.
+Para cada uno de estos grupos de interés, describe brevemente los impactos esperados (positivos a aprovechar y los riesgos a mitigar) y señala si es consecuencia de nuestras operaciones y/o del producto/servicio del giro del negocio: Colaboradores, Accionistas, Clientes, Competidores, Proveedores, Medio Ambiente, Sociedad, ONG's y Gobierno.
 
 Cuando termines este entregable, ciérralo preguntando explícitamente: "¿Apruebas este resumen de la Fase 2 para continuar a la Fase 3?". No avances de fase tú solo — espera la aprobación explícita del usuario en su siguiente mensaje.`,
   3: `Ya tienes en el historial de esta conversación las respuestas de las Fases 0, 1 y 2. Úsalas — no vuelvas a preguntar lo que ya sabes. Si falta un dato verdaderamente crítico para esta fase, pregúntalo brevemente antes de redactar. Si ya tienes lo suficiente, redacta directamente el entregable completo.
@@ -281,8 +281,7 @@ Analyze the strengths and opportunities for each of the following market forces,
 - Suppliers: key industry suppliers.
 
 ### 2.3. Stakeholder Impact Matrix
-For each of these stakeholder groups, briefly describe the expected impact (positive or risk to be mitigated) arising from operations and the core business product/service: Employees, Shareholders, Customers, Suppliers, the Environment, Society, and Government.
-
+For each of these stakeholder groups, briefly describe the expected impacts (positive impacts to leverage and risks to mitigate) and indicate whether they result from our operations and/or the product or service associated with our core business: Employees, Shareholders, Customers, Competitors, Suppliers, the Environment, NGOs, Society, and Government.
 When you finish this deliverable, close by explicitly asking: "Do you approve this Phase 2 summary to move on to Phase 3?". Do not advance the phase yourself — wait for the user's explicit approval in their next message.`,
   3: `You already have the Phase 0, 1, and 2 answers in this conversation's history. Use them — do not ask again for what you already know. If a truly critical piece of information for this phase is missing, ask about it briefly before drafting. If you already have enough, draft the complete deliverable directly.
 
