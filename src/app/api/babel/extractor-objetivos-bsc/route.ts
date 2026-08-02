@@ -12,13 +12,13 @@ import { NextRequest, NextResponse } from 'next/server';
 //   GEMINI_MODEL / GEMINI_API_KEY                            -> Gemini (3er intento, solo si hay llave)
 //   ROUTER_ENDPOINT / ROUTER_MODEL / ROUTER_API_KEY          -> 9Router opcional (solo si esta configurado)
 //
-// Esta ruta NO lee nada de la Fase 5 directamente (esa conversacion no se
-// toca). El usuario pega el resumen de su Fase 5 en Plan de Accion, y esta
-// ruta convierte ese texto libre en Objetivos de negocio (Balanced Scorecard)
-// para las perspectivas de Clientes, Procesos Internos y Aprendizaje/Crecimiento
-// UNICAMENTE. La perspectiva Financiera se deja fuera a proposito: esa se
-// captura en el flujo separado de Objetivos Financieros (Fase 4.5), para no
-// duplicar ni contradecir esa otra herramienta.
+// Esta ruta NO lee nada de la Fase 4 directamente (esa conversacion no se
+// toca). El usuario pega el resumen de su Fase 4 (Estrategia) en Plan de Accion,
+// y esta ruta convierte ese texto libre en Objetivos de negocio (Balanced
+// Scorecard) para las perspectivas de Clientes, Procesos Internos y
+// Aprendizaje/Crecimiento UNICAMENTE. La perspectiva Financiera se deja fuera a
+// proposito: esa se captura en el flujo separado de Objetivos Financieros
+// (Fase 4.5), para no duplicar ni contradecir esa otra herramienta.
 // ---------------------------------------------------------------------------
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
@@ -41,17 +41,16 @@ interface Diagnostic {
 
 interface ExtractorObjetivosBSCRequestBody {
   language?: 'es' | 'en';
-  resumenFase5?: string;
+  resumenFase4?: string;
 }
 
 function buildSystemPrompt(language: 'es' | 'en'): string {
   if (language === 'en') {
     return (
-      'You are Babel, a strategic business architect. The user gives you the summary of Phase 5 of their strategic diagnostic, which ' +
-      'includes a "Balanced Scorecard + OKRs" section defining quarterly Objectives for the 4 Balanced Scorecard perspectives ' +
-      '(Financial, Customer, Internal Processes, Learning & Growth), plus other unrelated sections (Stakeholder Impact Matrix, ' +
-      'Dynamic Cross-SWOT, Agile Execution Framework, Elevator Pitch) that you must IGNORE for this task.\n\n' +
-      'Your task: read ONLY the "Balanced Scorecard + OKRs" section and extract CONCRETE (not generic) business Objectives for ' +
+      'You are Babel, a strategic business architect. The user gives you the summary of Phase 4 (Strategy) of their strategic diagnostic, ' +
+      'which includes a 5-Year Strategic Foresight (critical uncertainties, Peter Schwartz scenarios, disruptive morphological configuration, ' +
+      'backcasting actions) and a Customer-Focused Strategy section (Delta Model and Customer Journey).\n\n' +
+      'Your task: read the summary and extract CONCRETE (not generic) business Objectives for ' +
       'EXACTLY these 3 perspectives: Customer, Internal Processes, and Learning & Growth. Do NOT extract Financial-perspective ' +
       'objectives - those are handled separately.\n\n' +
       'Respond with ONLY a raw JSON array (no markdown fences, no prose before or after), between 3 and 9 items, where each item ' +
@@ -60,11 +59,10 @@ function buildSystemPrompt(language: 'es' | 'en'): string {
     );
   }
   return (
-    'Eres Babel, un arquitecto estrategico de negocios. El usuario te da el resumen de la Fase 5 de su diagnostico estrategico, que ' +
-    'incluye una seccion de "Balanced Scorecard + OKRs" con Objetivos trimestrales para las 4 perspectivas del Balanced Scorecard ' +
-    '(Finanzas, Clientes, Procesos Internos, Aprendizaje/Crecimiento), ademas de otras secciones no relacionadas (Matriz de Impacto ' +
-    'en Stakeholders, FODA Cruzado Dinamico, Marco Agil de Ejecucion, Elevator Pitch) que debes IGNORAR para esta tarea.\n\n' +
-    'Tu tarea: lee UNICAMENTE la seccion "Balanced Scorecard + OKRs" y extrae Objetivos de negocio CONCRETOS (no genericos) para ' +
+    'Eres Babel, un arquitecto estrategico de negocios. El usuario te da el resumen de la Fase 4 (Estrategia) de su diagnostico ' +
+    'estrategico, que incluye una Prospectiva Estrategica a 5 Anos (incertidumbres criticas, escenarios de Peter Schwartz, ' +
+    'configuracion morfologica disruptiva, backcasting) y una seccion de Estrategia enfocada al Cliente (Modelo Delta y Customer Journey).\n\n' +
+    'Tu tarea: lee el resumen y extrae Objetivos de negocio CONCRETOS (no genericos) para ' +
     'EXACTAMENTE estas 3 perspectivas: Clientes, Procesos Internos y Aprendizaje/Crecimiento. NO extraigas objetivos de la ' +
     'perspectiva Financiera - esos se manejan por separado.\n\n' +
     'Responde UNICAMENTE con un arreglo JSON puro (sin marcadores de markdown, sin texto antes ni despues), entre 3 y 9 elementos, ' +
@@ -177,7 +175,7 @@ export async function GET() {
   return NextResponse.json({
     status: 'ok',
     route: '/api/babel/extractor-objetivos-bsc',
-    note: 'Extractor de Objetivos BSC (Clientes, Procesos Internos, Aprendizaje/Crecimiento) a partir del resumen pegado de la Fase 5',
+    note: 'Extractor de Objetivos BSC (Clientes, Procesos Internos, Aprendizaje/Crecimiento) a partir del resumen pegado de la Fase 4',
   });
 }
 
@@ -190,18 +188,18 @@ export async function POST(req: NextRequest) {
   }
 
   const language = body.language === 'en' ? 'en' : 'es';
-  const resumenFase5 = typeof body.resumenFase5 === 'string' ? body.resumenFase5.trim() : '';
+  const resumenFase4 = typeof body.resumenFase4 === 'string' ? body.resumenFase4.trim() : '';
 
-  if (!resumenFase5) {
+  if (!resumenFase4) {
     return NextResponse.json(
-      { error: language === 'en' ? 'No Phase 5 summary was provided.' : 'No se recibio el resumen de la Fase 5.' },
+      { error: language === 'en' ? 'No Phase 4 summary was provided.' : 'No se recibio el resumen de la Fase 4.' },
       { status: 400 },
     );
   }
 
   const systemPrompt = buildSystemPrompt(language);
-  const resumenRecortado = resumenFase5.slice(0, 12000);
-  const userMessage = (language === 'en' ? 'Phase 5 summary:\n\n' : 'Resumen de la Fase 5:\n\n') + resumenRecortado;
+  const resumenRecortado = resumenFase4.slice(0, 12000);
+  const userMessage = (language === 'en' ? 'Phase 4 summary:\n\n' : 'Resumen de la Fase 4:\n\n') + resumenRecortado;
 
   const diagnostics: Diagnostic[] = [];
 

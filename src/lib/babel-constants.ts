@@ -7,16 +7,16 @@
 // edita el texto de alguna pregunta en route.ts, hay que actualizar también
 // esta función).
 
-// Pregunta de aprobación por fase. La Fase 5 (última) usa una redacción
-// distinta ("¿Apruebas este resumen de la Fase 5?", sin "para continuar a la
-// Fase X") porque no hay una Fase 6 a la que avanzar — después de aprobarla,
+// Pregunta de aprobación por fase. La Fase 4 (última) usa una redacción
+// distinta ("¿Apruebas este resumen de la Fase 4?", sin "para continuar a la
+// Fase X") porque no hay una Fase 5 a la que avanzar — después de aprobarla,
 // el usuario usa /compilar.
 export function babelApprovalQuestion(language: 'es' | 'en', phase: number): string {
-  const safePhase = Number.isFinite(phase) ? Math.min(Math.max(Math.trunc(phase), 0), 5) : 0;
-  if (safePhase >= 5) {
+  const safePhase = Number.isFinite(phase) ? Math.min(Math.max(Math.trunc(phase), 0), 4) : 0;
+  if (safePhase >= 4) {
     return language === 'en'
-      ? 'Do you approve this Phase 5 summary?'
-      : '¿Apruebas este resumen de la Fase 5?';
+      ? 'Do you approve this Phase 4 summary?'
+      : '¿Apruebas este resumen de la Fase 4?';
   }
   return language === 'en'
     ? `Do you approve this Phase ${safePhase} summary to move on to Phase ${safePhase + 1}?`
@@ -30,26 +30,24 @@ export function babelApprovalMarker(language: 'es' | 'en'): string {
   return language === 'en' ? 'Do you approve this Phase' : '¿Apruebas este resumen de la Fase';
 }
 
-/** Cuántas fases (0-5) ya tienen un system prompt real de Gemini escrito en
- * route.ts. Las 6 fases (0 a 5) están completas. */
-export const BABEL_IMPLEMENTED_PHASES = 6;
+/** Cuántas fases (0-4) ya tienen un system prompt real de Gemini escrito en
+ * route.ts. Las 5 fases (0 a 4) están completas. */
+export const BABEL_IMPLEMENTED_PHASES = 5;
 
 export const BABEL_PHASE_TOPICS_ES = [
   'Fase 0: Calibración inicial',
   'Fase 1: ADN Estratégico y Propósito',
-  'Fase 2: Inteligencia de Mercado Data-Driven',
-  'Fase 3: Operaciones, Experiencia y Modelo Delta',
-  'Fase 4: Ingeniería Financiera',
-  'Fase 5: Ejecución Ágil, Gobernanza y Pitch',
+  'Fase 2: Análisis del entorno',
+  'Fase 3: Capacidades Clave',
+  'Fase 4: Estrategia',
 ] as const;
 
 export const BABEL_PHASE_TOPICS_EN = [
   'Phase 0: Initial Calibration',
   'Phase 1: Strategic DNA and Purpose',
-  'Phase 2: Data-Driven Market Intelligence',
-  'Phase 3: Operations, Experience, and Delta Model',
-  'Phase 4: Financial Engineering',
-  'Phase 5: Agile Execution, Governance, and Pitch',
+  'Phase 2: Environment Analysis',
+  'Phase 3: Key Capabilities',
+  'Phase 4: Strategy',
 ] as const;
 
 export function babelPhaseTopics(language: 'es' | 'en'): readonly string[] {

@@ -3,7 +3,7 @@
 // Página de muestra del nuevo sistema de diseño ejecutivo (ExecutiveShell +
 // componentes en src/components/ui/executive/). NO sustituye a /dashboard
 // (el dashboard real conectado a Firestore); es un escaparate autocontenido
-// con datos mock basados en las 6 fases reales de Babel (ver
+// con datos mock basados en las 5 fases reales de Babel (ver
 // src/lib/babel-constants.ts) para validar look & feel antes de conectar
 // datos reales. Enteramente client-side, sin llamadas a Firebase.
 import * as React from 'react';
@@ -135,25 +135,23 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
     { href: `/${routeLocale}/babel/plan-accion`, label: t('Plan de acción estratégico', 'Strategic Action Plan'), icon: NAV_ICON_MAP.ClipboardList },
   ];
 
-  const owners = ['Equipo fundador', 'Equipo fundador', 'Mercadotecnia', 'Operaciones', 'Finanzas', 'Dirección general'];
-  const ownersEn = ['Founding team', 'Founding team', 'Marketing', 'Operations', 'Finance', 'General management'];
-  const milestones = ['Cerrado 04 mar', 'Cerrado 18 mar', 'Cerrado 02 abr', '30 jul — validación de mercado', 'Sin agendar', 'Sin agendar'];
-  const milestonesEn = ['Closed Mar 4', 'Closed Mar 18', 'Closed Apr 2', 'Jul 30 — market validation', 'Not scheduled', 'Not scheduled'];
+  const owners = ['Equipo fundador', 'Equipo fundador', 'Mercadotecnia', 'Operaciones', 'Dirección general'];
+  const ownersEn = ['Founding team', 'Founding team', 'Marketing', 'Operations', 'General management'];
+  const milestones = ['Cerrado 04 mar', 'Cerrado 18 mar', 'Cerrado 02 abr', '30 jul — validación de mercado', 'Sin agendar'];
+  const milestonesEn = ['Closed Mar 4', 'Closed Mar 18', 'Closed Apr 2', 'Jul 30 — market validation', 'Not scheduled'];
   const deliverablesByPhase: string[][] = [
     ['Acta de calibración', 'Mapa de involucrados'],
-    ['Lienzo de propósito', 'Declaración de ADN estratégico'],
-    ['Estudio de mercado data-driven', 'Matriz de competencia'],
-    ['Modelo Delta (borrador)', 'Mapa de experiencia del cliente'],
-    ['Modelo financiero 3 años'],
-    ['Pitch deck ejecutivo', 'Tablero de gobernanza ágil'],
+    ['Círculo Dorado', 'ODS y fondos', 'Propuesta de valor y segmentación'],
+    ['Análisis PESTEL', 'Fuerzas del mercado', 'Matriz de impacto en stakeholders'],
+    ['Capacidades clave', 'Plan operativo'],
+    ['Prospectiva estratégica a 5 años', 'Estrategia Modelo Delta y Customer Journey'],
   ];
   const deliverablesByPhaseEn: string[][] = [
     ['Calibration record', 'Stakeholder map'],
-    ['Purpose canvas', 'Strategic DNA statement'],
-    ['Data-driven market study', 'Competitive matrix'],
-    ['Delta Model (draft)', 'Customer experience map'],
-    ['3-year financial model'],
-    ['Executive pitch deck', 'Agile governance board'],
+    ['Golden Circle', 'SDGs and funding', 'Value proposition and segmentation'],
+    ['PESTEL analysis', 'Market forces', 'Stakeholder impact matrix'],
+    ['Key capabilities', 'Operational plan'],
+    ['5-year strategic foresight', 'Delta Model strategy and Customer Journey'],
   ];
 
   const PHASE_ROWS: PhaseRow[] = phaseTopics.map((topic, phase) => {
@@ -259,7 +257,7 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="text-sm font-semibold text-foreground">{t('Avance por fase', 'Progress by phase')}</h2>
-              <p className="text-xs text-muted-foreground">{t('6 fases del diagnóstico Babel (0 a 5)', '6 phases of the Babel diagnostic (0 to 5)')}</p>
+              <p className="text-xs text-muted-foreground">{t('5 fases del diagnóstico Babel (0 a 4)', '5 phases of the Babel diagnostic (0 to 4)')}</p>
             </div>
             <Users className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
           </div>

@@ -84,12 +84,12 @@ export interface ChatMessage {
   deliverables?: ChatDeliverableRef[];
 }
 
-/** Fase 0-5 de Babel AI. Cada fase se cierra con un resumen de Babel y avanza
+/** Fase 0-4 de Babel AI. Cada fase se cierra con un resumen de Babel y avanza
  * solo cuando el usuario la aprueba explícitamente (ver src/lib/babel-session.ts
  * y src/lib/babel-constants.ts). approvedAt usa Timestamp.now() en vez de
  * serverTimestamp() porque Firestore no permite ese sentinel dentro de arreglos. */
 export interface BabelPhaseRecord {
-  phase: number; // 0-5
+  phase: number; // 0-4
   approved: boolean;
   approvedAt: Timestamp;
   summary: string;

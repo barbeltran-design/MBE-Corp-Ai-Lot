@@ -342,12 +342,12 @@ const LABELS = {
     sugerirPrioridadErrorHint: 'Puedes seguir asignando Factibilidad e Impacto manualmente mientras tanto.',
     entornoIaTitle: 'Amenazas y Oportunidades con IA',
     entornoIaSubtitle:
-      'Pega aqui el resumen de tu Fase 2 (Analisis de Mercado: PESTEL, Fuerzas del Mercado, Tendencias y Prospectiva a 5 anos). La IA tambien considera aspectos de Responsabilidad Socio Ambiental (ESG) dentro del mismo texto.',
+      'Pega aqui el resumen de tu Fase 2 (Analisis del entorno: PESTEL Localizado, Fuerzas del Mercado y Matriz de Impacto en Stakeholders). La IA tambien considera aspectos de Responsabilidad Socio Ambiental (ESG) dentro del mismo texto.',
     entornoIaPlaceholder: 'Pega aqui el resumen de tu Fase 2...',
     entornoStakeholderHint:
-      'Ya tienes pegado tu resumen de la Fase 5: la IA tambien usara la Matriz de Impacto en Stakeholders que contiene para identificar amenazas y oportunidades por grupo de interes (empleados, accionistas, clientes, proveedores, medio ambiente, sociedad y gobierno).',
+      'Si tu resumen de la Fase 2 incluye la Matriz de Impacto en Stakeholders, la IA tambien la usara para identificar amenazas y oportunidades por grupo de interes (empleados, accionistas, clientes, proveedores, medio ambiente, sociedad y gobierno).',
     entornoStakeholderMissingHint:
-      'Consejo: si primero pegas tu resumen de la Fase 5 en la tarjeta de Objetivos BSC (mas abajo), la IA tambien podra usar su Matriz de Impacto en Stakeholders para relacionar cada amenaza u oportunidad con un grupo de interes especifico (empleados, accionistas, clientes, proveedores, medio ambiente, sociedad y gobierno). Es opcional: si no lo haces, esta tarjeta funciona igual.',
+      'Consejo: la Fase 2 incluye la seccion "Matriz de Impacto en Stakeholders" (colaboradores, accionistas, clientes, proveedores, medio ambiente, sociedad y gobierno). Si tu resumen la contiene, la IA la usara para relacionar cada amenaza u oportunidad con un grupo de interes especifico. Es opcional: esta tarjeta funciona igual sin ella.',
     entornoIaBtn: 'Sugerir Amenazas y Oportunidades con IA',
     entornoIaBtnAgain: 'Volver a sugerir Amenazas y Oportunidades con IA',
     entornoIaGenerando: 'Analizando el resumen...',
@@ -362,8 +362,8 @@ const LABELS = {
     capacidadIaErrorHint: 'Puedes seguir agregando fortalezas y debilidades manualmente mientras tanto.',
     objetivoBscIaTitle: 'Objetivos BSC con IA',
     objetivoBscIaSubtitle:
-      'Pega aqui el resumen de tu Fase 5 (Balanced Scorecard + OKRs). Solo se sugeriran objetivos para Clientes, Procesos Internos y Aprendizaje/Crecimiento (la perspectiva Financiera se captura en Objetivos Financieros).',
-    objetivoBscIaPlaceholder: 'Pega aqui el resumen de tu Fase 5...',
+      'Pega aqui el resumen de tu Fase 4 (Estrategia: Prospectiva a 5 Anos, Modelo Delta y Customer Journey). Solo se sugeriran objetivos para Clientes, Procesos Internos y Aprendizaje/Crecimiento (la perspectiva Financiera se captura en Objetivos Financieros).',
+    objetivoBscIaPlaceholder: 'Pega aqui el resumen de tu Fase 4...',
     objetivoBscIaBtn: 'Sugerir Objetivos con IA',
     objetivoBscIaBtnAgain: 'Volver a sugerir Objetivos con IA',
     objetivoBscIaGenerando: 'Analizando el resumen...',
@@ -453,12 +453,12 @@ const LABELS = {
     sugerirPrioridadErrorHint: 'You can keep assigning Feasibility and Impact manually in the meantime.',
     entornoIaTitle: 'Threats and Opportunities with AI',
     entornoIaSubtitle:
-      'Paste your Phase 2 summary here (Market Analysis: PESTEL, Market Forces, Trends and 5-Year Outlook). The AI also considers Environmental, Social and Governance (ESG) aspects within the same text.',
+      'Paste your Phase 2 summary here (Environment Analysis: Localized PESTEL, Market Forces, and Stakeholder Impact Matrix). The AI also considers Environmental, Social and Governance (ESG) aspects within the same text.',
     entornoIaPlaceholder: 'Paste your Phase 2 summary here...',
     entornoStakeholderHint:
-      'You already have your Phase 5 summary pasted: the AI will also use its Stakeholder Impact Matrix to identify threats and opportunities by stakeholder group (employees, shareholders, customers, suppliers, environment, society and government).',
+      'If your Phase 2 summary includes the Stakeholder Impact Matrix, the AI will also use it to identify threats and opportunities by stakeholder group (employees, shareholders, customers, suppliers, environment, society and government).',
     entornoStakeholderMissingHint:
-      'Tip: if you paste your Phase 5 summary in the BSC Objectives card (further below) first, the AI will also be able to use its Stakeholder Impact Matrix to tie each threat or opportunity to a specific stakeholder group (employees, shareholders, customers, suppliers, environment, society and government). This is optional: this card works the same either way.',
+      'Tip: Phase 2 includes the "Stakeholder Impact Matrix" section (employees, shareholders, customers, suppliers, environment, society and government). If your summary contains it, the AI will use it to tie each threat or opportunity to a specific stakeholder group. This is optional: this card works the same either way.',
     entornoIaBtn: 'Suggest Threats and Opportunities with AI',
     entornoIaBtnAgain: 'Suggest Threats and Opportunities again with AI',
     entornoIaGenerando: 'Analyzing summary...',
@@ -473,8 +473,8 @@ const LABELS = {
     capacidadIaErrorHint: 'You can keep adding strengths and weaknesses manually in the meantime.',
     objetivoBscIaTitle: 'BSC Objectives with AI',
     objetivoBscIaSubtitle:
-      'Paste your Phase 5 summary here (Balanced Scorecard + OKRs). Only Customer, Internal Processes, and Learning & Growth objectives will be suggested (the Financial perspective is captured in Financial Objectives).',
-    objetivoBscIaPlaceholder: 'Paste your Phase 5 summary here...',
+      'Paste your Phase 4 summary here (Strategy: 5-Year Strategic Foresight, Delta Model, and Customer Journey). Only Customer, Internal Processes, and Learning & Growth objectives will be suggested (the Financial perspective is captured in Financial Objectives).',
+    objetivoBscIaPlaceholder: 'Paste your Phase 4 summary here...',
     objetivoBscIaBtn: 'Suggest Objectives with AI',
     objetivoBscIaBtnAgain: 'Suggest Objectives again with AI',
     objetivoBscIaGenerando: 'Analyzing summary...',
@@ -601,7 +601,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
   const [capacidadGenerating, setCapacidadGenerating] = React.useState(false);
   const [capacidadGenError, setCapacidadGenError] = React.useState('');
   const [capacidadYaSugerido, setCapacidadYaSugerido] = React.useState(false);
-  const [resumenFase5, setResumenFase5] = React.useState('');
+  const [resumenFase4, setResumenFase4] = React.useState('');
   const [objetivoBscGenerating, setObjetivoBscGenerating] = React.useState(false);
   const [objetivoBscGenError, setObjetivoBscGenError] = React.useState('');
   const [objetivoBscYaSugerido, setObjetivoBscYaSugerido] = React.useState(false);
@@ -623,7 +623,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
   const [babelFase1Summary, setBabelFase1Summary] = React.useState('');
   const [babelFase2Summary, setBabelFase2Summary] = React.useState('');
   const [babelFase3Summary, setBabelFase3Summary] = React.useState('');
-  const [babelFase5Summary, setBabelFase5Summary] = React.useState('');
+  const [babelFase4Summary, setBabelFase4Summary] = React.useState('');
 
   React.useEffect(() => {
     const auth = getFirebaseAuth();
@@ -637,7 +637,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       setBabelFase1Summary('');
       setBabelFase2Summary('');
       setBabelFase3Summary('');
-      setBabelFase5Summary('');
+      setBabelFase4Summary('');
       return;
     }
     let cancelled = false;
@@ -658,11 +658,11 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
           const fase1 = phases.find((p) => p.phase === 1 && p.approved);
           const fase2 = phases.find((p) => p.phase === 2 && p.approved);
           const fase3 = phases.find((p) => p.phase === 3 && p.approved);
-          const fase5 = phases.find((p) => p.phase === 5 && p.approved);
+          const fase4 = phases.find((p) => p.phase === 4 && p.approved);
           if (fase1 && fase1.summary) setBabelFase1Summary(fase1.summary);
           if (fase2 && fase2.summary) setBabelFase2Summary(fase2.summary);
           if (fase3 && fase3.summary) setBabelFase3Summary(fase3.summary);
-          if (fase5 && fase5.summary) setBabelFase5Summary(fase5.summary);
+          if (fase4 && fase4.summary) setBabelFase4Summary(fase4.summary);
         }
       } catch (err) {
         console.error(err);
@@ -687,7 +687,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
         if (parsed && typeof parsed.resumenFase1 === 'string') setResumenFase1(parsed.resumenFase1);
         if (parsed && typeof parsed.resumenFase2 === 'string') setResumenFase2(parsed.resumenFase2);
         if (parsed && typeof parsed.resumenFase3 === 'string') setResumenFase3(parsed.resumenFase3);
-        if (parsed && typeof parsed.resumenFase5 === 'string') setResumenFase5(parsed.resumenFase5);
+        if (parsed && typeof parsed.resumenFase4 === 'string') setResumenFase4(parsed.resumenFase4);
         if (parsed && typeof parsed.convocatoriaYaSugerido === 'boolean') setConvocatoriaYaSugerido(parsed.convocatoriaYaSugerido);
         if (parsed && typeof parsed.entornoYaSugerido === 'boolean') setEntornoYaSugerido(parsed.entornoYaSugerido);
         if (parsed && typeof parsed.capacidadYaSugerido === 'boolean') setCapacidadYaSugerido(parsed.capacidadYaSugerido);
@@ -760,7 +760,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
     if (resumenFase1) texts.add(resumenFase1);
     if (resumenFase2) texts.add(resumenFase2);
     if (resumenFase3) texts.add(resumenFase3);
-    if (resumenFase5) texts.add(resumenFase5);
+    if (resumenFase4) texts.add(resumenFase4);
     texts.forEach(function (text) {
       if (translationCache[text] !== undefined) return;
       fetch('/api/translate', {
@@ -777,7 +777,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
           setTranslationCache(function (prev) { return { ...prev, [text]: text }; });
         });
     });
-  }, [loaded, lang, objetivos, entornos, fds, acciones, convocatorias, resumenFase1, resumenFase2, resumenFase3, resumenFase5]);
+  }, [loaded, lang, objetivos, entornos, fds, acciones, convocatorias, resumenFase1, resumenFase2, resumenFase3, resumenFase4]);
 
   React.useEffect(() => {
     if (!loaded) return;
@@ -792,7 +792,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
         resumenFase1: resumenFase1,
         resumenFase2: resumenFase2,
         resumenFase3: resumenFase3,
-        resumenFase5: resumenFase5,
+        resumenFase4: resumenFase4,
         convocatoriaYaSugerido: convocatoriaYaSugerido,
         entornoYaSugerido: entornoYaSugerido,
         capacidadYaSugerido: capacidadYaSugerido,
@@ -812,7 +812,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
     resumenFase1,
     resumenFase2,
     resumenFase3,
-    resumenFase5,
+    resumenFase4,
     convocatoriaYaSugerido,
     entornoYaSugerido,
     capacidadYaSugerido,
@@ -1275,7 +1275,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
           language: lang,
           resumenFase2: resumen,
           objetivos: objetivosParaIA,
-          resumenFase5: resumenFase5.trim(),
+          resumenFase4: resumenFase4.trim(),
         }),
       });
       const data = await res.json().catch(() => null);
@@ -1350,19 +1350,19 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
     setResumenFase2(babelFase2Summary);
   };
 
-  const usarResumenBabelFase5 = () => {
-    if (!babelFase5Summary) return;
+  const usarResumenBabelFase4 = () => {
+    if (!babelFase4Summary) return;
     if (
-      resumenFase5.trim() &&
+      resumenFase4.trim() &&
       !window.confirm(
         lang === 'en'
-          ? 'Replace the current text with your Phase 5 summary from Babel?'
-          : 'Reemplazar el texto actual con tu resumen de la Fase 5 de Babel?'
+          ? 'Replace the current text with your Phase 4 summary from Babel?'
+          : 'Reemplazar el texto actual con tu resumen de la Fase 4 de Babel?'
       )
     ) {
       return;
     }
-    setResumenFase5(babelFase5Summary);
+    setResumenFase4(babelFase4Summary);
   };
 
   const agregarPerfilMadurez = () => {
@@ -1426,15 +1426,15 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
     setObjetivoBscGenerating(true);
     setObjetivoBscGenError('');
     try {
-      const resumen = resumenFase5.trim();
+      const resumen = resumenFase4.trim();
       if (!resumen) {
-        setObjetivoBscGenError(lang === 'en' ? 'Paste your Phase 5 summary first.' : 'Primero pega el resumen de tu Fase 5.');
+        setObjetivoBscGenError(lang === 'en' ? 'Paste your Phase 4 summary first.' : 'Primero pega el resumen de tu Fase 4.');
         return;
       }
       const res = await fetch('/api/babel/extractor-objetivos-bsc', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ language: lang, resumenFase5: resumen }),
+        body: JSON.stringify({ language: lang, resumenFase4: resumen }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data || !Array.isArray(data.sugerencias)) {
@@ -2181,20 +2181,20 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       <div className="mt-4 rounded-xl border border-violet-200 bg-violet-50 p-4">
         <h4 className="text-sm font-semibold text-violet-900">{t.objetivoBscIaTitle}</h4>
         <p className="mt-1 text-sm text-violet-900">{t.objetivoBscIaSubtitle}</p>
-        {babelFase5Summary ? (
+        {babelFase4Summary ? (
           <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-white/60 p-2 text-xs text-violet-900">
             <button
               type="button"
-              onClick={usarResumenBabelFase5}
+              onClick={usarResumenBabelFase4}
               className="rounded-full border border-violet-400 bg-white px-3 py-1 font-medium text-violet-700 hover:bg-violet-100"
             >
-              {lang === 'en' ? 'Use my Babel Phase 5 summary' : 'Usar mi resumen de la Fase 5 (Babel)'}
+              {lang === 'en' ? 'Use my Babel Phase 4 summary' : 'Usar mi resumen de la Fase 4 (Babel)'}
             </button>
           </div>
         ) : null}
         <textarea
-          value={tr(resumenFase5)}
-          onChange={(ev) => setResumenFase5(ev.target.value)}
+          value={tr(resumenFase4)}
+          onChange={(ev) => setResumenFase4(ev.target.value)}
           placeholder={t.objetivoBscIaPlaceholder}
           rows={5}
           className="mt-2 w-full rounded-lg border border-violet-300 px-3 py-2 text-sm"
@@ -2232,7 +2232,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
           </div>
         ) : null}
         <p className="mt-1 rounded-lg bg-white/60 p-2 text-xs text-teal-900">
-          {resumenFase5.trim() ? t.entornoStakeholderHint : t.entornoStakeholderMissingHint}
+          {resumenFase2.trim() ? t.entornoStakeholderHint : t.entornoStakeholderMissingHint}
         </p>
         <textarea
           value={tr(resumenFase2)}
