@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import FinancialGoalsBuilder from '@/components/babel/FinancialGoalsBuilder';
 
 type PlanLang = 'es' | 'en';
 type BSCPerspectiva = 'financiera' | 'clientes' | 'procesos_internos' | 'aprendizaje_crecimiento';
@@ -816,6 +817,10 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
     <div className="mx-auto max-w-4xl">
       <h3 className="text-xl font-bold text-slate-800">{t.title}</h3>
       <p className="mt-1 text-sm text-slate-500">{t.subtitle}</p>
+
+      <div className="mt-4">
+        <FinancialGoalsBuilder lang={lang} />
+      </div>
 
       {loaded && objetivos.length === 0 ? (
         <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">{t.noObjetivos}</div>
