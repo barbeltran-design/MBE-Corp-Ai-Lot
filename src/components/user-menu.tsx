@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, type Unsubscribe } from 'firebase/firestore';
 import { getFirebaseAuth, getFirebaseDb } from '@/lib/firebase';
 
 type ProfileDoc = {
@@ -29,20 +29,30 @@ export function UserMenu() {
 
   React.useEffect(() => {
     const auth = getFirebaseAuth();
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
+    let unsubscribeDoc: Unsubscribe | null = null;
+    const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
       setUser(u);
+      if (unsubscribeDoc) {
+        unsubscribeDoc();
+        unsubscribeDoc = null;
+      }
       if (!u) {
         setProfile(null);
         return;
       }
       const db = getFirebaseDb();
-      getDoc(doc(db, 'users', u.uid))
-        .then((snap) => {
+      unsubscribeDoc = onSnapshot(
+        doc(db, 'users', u.uid),
+        (snap) => {
           if (snap.exists()) setProfile(snap.data() as ProfileDoc);
-        })
-        .catch((err) => console.error('[UserMenu] failed to load profile', err));
+        },
+        (err) => console.error('[UserMenu] failed to watch profile', err)
+      );
     });
-    return unsubscribe;
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeDoc) unsubscribeDoc();
+    };
   }, []);
 
   if (!user) return null;

@@ -197,7 +197,11 @@
   .dark .bg-indigo-100 { background-color: hsl(240, 40%, 15%); }
   .dark .text-indigo-800 { color: hsl(240, 60%, 70%); }
   .dark .bg-emerald-100 { background-color: hsl(160, 40%, 12%); }
+  .dark .bg-emerald-50 { background-color: hsl(160, 40%, 10%); }
+  .dark .text-emerald-600,
+  .dark .text-emerald-700,
   .dark .text-emerald-800 { color: hsl(160, 60%, 65%); }
+  .dark .border-emerald-200 { border-color: hsl(160, 40%, 25%); }
   .dark .bg-sky-100 { background-color: hsl(200, 40%, 14%); }
   .dark .text-sky-800 { color: hsl(200, 60%, 70%); }
   .dark .bg-blue-100 { background-color: hsl(220, 40%, 14%); }
