@@ -21,8 +21,24 @@ import { Card } from '@/components/ui/card';
 import { getFirebaseAuth, getFirebaseDb } from '@/lib/firebase';
 import { getMaturityDimensions } from '@/lib/maturity-dimensions';
 import { emptyAnswers, computeResults, type Answer, type DimensionAnswers } from '@/lib/maturity-scoring';
-import { saveAssessment } from '@/lib/assessment';
+import { saveAssessment, getLatestAssessmentAnswers } from '@/lib/assessment';
 import type { Language, UserDoc } from '@/types/firestore';
+
+// Rellena el objeto de respuestas con todas las llaves/posiciones válidas:
+// conserva yes/partial/no y convierte el resto a null (sin responder).
+function mergeAnswers(saved: Partial<DimensionAnswers>): DimensionAnswers {
+  const merged = emptyAnswers();
+  for (const id of Object.keys(merged) as (keyof DimensionAnswers)[]) {
+    const arr = saved[id];
+    if (Array.isArray(arr)) {
+      merged[id] = merged[id].map((_v, i) => {
+        const s = arr[i];
+        return s === 'yes' || s === 'partial' || s === 'no' ? s : null;
+      });
+    }
+  }
+  return merged;
+}
 
 export default function OnboardingPage() {
   const t = useTranslations('assessment');
@@ -58,18 +74,7 @@ function OnboardingInner() {
     try {
       const raw = window.localStorage.getItem('mbe-assessment-draft');
       if (!raw) return emptyAnswers();
-      const parsed = JSON.parse(raw) as Partial<DimensionAnswers>;
-      const merged = emptyAnswers();
-      for (const id of Object.keys(merged) as (keyof DimensionAnswers)[]) {
-        const saved = parsed[id];
-        if (Array.isArray(saved)) {
-          merged[id] = merged[id].map((_v, i) => {
-            const s = saved[i];
-            return s === 'yes' || s === 'partial' || s === 'no' ? s : null;
-          });
-        }
-      }
-      return merged;
+      return mergeAnswers(JSON.parse(raw) as Partial<DimensionAnswers>);
     } catch (err) {
       console.error('[MBE Assessment] failed to load draft', err);
       return emptyAnswers();
@@ -77,19 +82,20 @@ function OnboardingInner() {
   });
   const [finishing, setFinishing] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
-  const headerRef = React.useRef<HTMLDivElement>(null);
-  const contentRef = React.useRef<HTMLDivElement>(null);
-  const [headerHeight, setHeaderHeight] = React.useState(0);
 
+  // Al cambiar de tema (siguiente/anterior), sube suavemente a la primera
+  // pregunta. Corre en un efecto para que el DOM ya esté actualizado con el
+  // nuevo paso antes de calcular el scroll.
   React.useEffect(() => {
-    const el = headerRef.current;
-    if (!el) return;
-    const update = () => setHeaderHeight(el.offsetHeight);
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
+    const raf = requestAnimationFrame(() => {
+      try {
+        window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+      } catch {
+        window.scrollTo(0, 0);
+      }
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [step]);
 
   React.useEffect(() => {
     try {
@@ -113,24 +119,30 @@ function OnboardingInner() {
 
   React.useEffect(() => {
     if (!user) return;
-    if (isRetake) {
-      // Atajo sincrono del mismo flujo fetch-then-setState de este efecto
-      // (ver setGate('ready') en las ramas post-await de abajo, sin marcar).
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setGate('ready');
-      return;
-    }
     let cancelled = false;
     (async () => {
       try {
+        let hasDraft = false;
+        try {
+          hasDraft = !!window.localStorage.getItem(DRAFT_KEY);
+        } catch {
+          hasDraft = false;
+        }
         const snap = await getDoc(doc(getFirebaseDb(), 'users', user.uid));
         const data = snap.data() as UserDoc | undefined;
         if (cancelled) return;
-        if (data?.assessmentCompleted) {
+        if (!isRetake && data?.assessmentCompleted) {
           router.replace(`/${locale}/dashboard`);
-        } else {
-          setGate('ready');
+          return;
         }
+        // Sin borrador en curso: precarga el último diagnóstico guardado
+        // (así "repetir diagnóstico" conserva las respuestas previas).
+        if (!hasDraft) {
+          const saved = await getLatestAssessmentAnswers(user.uid);
+          if (cancelled) return;
+          if (saved) setAnswers(mergeAnswers(saved));
+        }
+        setGate('ready');
       } catch (err) {
         console.error('[MBE Assessment] failed to check completion status', err);
         // Fail open: let them take the assessment rather than get stuck on a spinner.
@@ -179,28 +191,16 @@ function OnboardingInner() {
     }
   }
 
-  function scrollToTop() {
-    if (contentRef.current) {
-      contentRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      return;
-    }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
   function handleNext() {
     if (step < totalSteps - 1) {
       setStep(step + 1);
-      scrollToTop();
       return;
     }
     void handleFinish();
   }
 
   function handleBack() {
-    if (step > 0) {
-      setStep(step - 1);
-      scrollToTop();
-    }
+    if (step > 0) setStep(step - 1);
   }
 
   if (user === undefined || gate !== 'ready') {
@@ -216,7 +216,7 @@ function OnboardingInner() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-emerald-50/40 to-white px-6 py-10">
       <div className="mx-auto max-w-3xl">
-        <div ref={headerRef} className="sticky top-14 z-10 -mx-6 border-b border-slate-200 bg-card/95 px-6 pb-4 pt-2 backdrop-blur-sm dark:border-slate-700">
+        <div className="sticky top-14 z-10 -mx-6 border-b border-slate-200 bg-card/95 px-6 pb-4 pt-2 backdrop-blur-sm dark:border-slate-700">
           <p className="text-xs font-medium uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
             {t('stepLabel', { current: step + 1, total: totalSteps })}
           </p>
@@ -230,8 +230,7 @@ function OnboardingInner() {
           <p className="mt-1 text-sm text-slate-500">{currentDimension.explicacion}</p>
         </div>
 
-        <div ref={contentRef} className="mt-6" style={{ scrollMarginTop: headerHeight + 56 + 12 }}>
-          <Card className="p-6 sm:p-8">
+        <Card className="mt-6 p-6 sm:p-8">
 
           <div className="mt-6 space-y-6">
             {currentDimension.levels.map((level, i) => (
@@ -285,8 +284,7 @@ function OnboardingInner() {
                   : t('next')}
             </Button>
           </div>
-          </Card>
-        </div>
+        </Card>
       </div>
     </main>
   );
