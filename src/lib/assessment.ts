@@ -1,4 +1,4 @@
-import { collection, doc, getDocs, limit, orderBy, query, serverTimestamp, setDoc } from 'firebase/firestore';
+import { collection, doc, getDocs, limit, orderBy, query, serverTimestamp, setDoc, Timestamp } from 'firebase/firestore';
 import { getFirebaseDb } from '@/lib/firebase';
 import type { AssessmentDoc } from '@/types/firestore';
 import { DIMENSION_IDS } from '@/lib/maturity-dimensions';
@@ -69,4 +69,27 @@ export async function getLatestAssessmentAnswers(uid: string): Promise<Dimension
     answers[id] = (raw.answers?.[id] ?? new Array(6).fill('no')) as Answer[];
   }
   return answers;
+}
+
+export interface AssessmentHistoryPoint {
+  timestamp: Date;
+  totalScore: number; // 0-120
+}
+
+/**
+ * Lee hasta `max` diagnósticos recientes (más reciente primero). Usado por el
+ * resumen ejecutivo para pintar la tendencia de madurez y el delta vs. el
+ * diagnóstico anterior.
+ */
+export async function getAssessmentHistory(uid: string, max = 8): Promise<AssessmentHistoryPoint[]> {
+  const db = getFirebaseDb();
+  const entriesQuery = query(collection(db, 'assessments', uid, 'entries'), orderBy('timestamp', 'desc'), limit(max));
+  const snap = await getDocs(entriesQuery);
+  return snap.docs.map((d) => {
+    const raw = d.data() as AssessmentDoc;
+    return {
+      timestamp: raw.timestamp instanceof Timestamp ? raw.timestamp.toDate() : new Date(),
+      totalScore: typeof raw.totalScore === 'number' ? raw.totalScore : 0,
+    };
+  });
 }
