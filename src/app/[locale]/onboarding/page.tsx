@@ -77,6 +77,19 @@ function OnboardingInner() {
   });
   const [finishing, setFinishing] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
+  const headerRef = React.useRef<HTMLDivElement>(null);
+  const contentRef = React.useRef<HTMLDivElement>(null);
+  const [headerHeight, setHeaderHeight] = React.useState(0);
+
+  React.useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const update = () => setHeaderHeight(el.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   React.useEffect(() => {
     try {
@@ -167,6 +180,10 @@ function OnboardingInner() {
   }
 
   function scrollToTop() {
+    if (contentRef.current) {
+      contentRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -199,7 +216,7 @@ function OnboardingInner() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-emerald-50/40 to-white px-6 py-10">
       <div className="mx-auto max-w-3xl">
-        <div className="sticky top-0 z-10 -mx-6 border-b border-slate-200 bg-card/95 px-6 pb-4 pt-2 backdrop-blur-sm dark:border-slate-700">
+        <div ref={headerRef} className="sticky top-14 z-10 -mx-6 border-b border-slate-200 bg-card/95 px-6 pb-4 pt-2 backdrop-blur-sm dark:border-slate-700">
           <p className="text-xs font-medium uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
             {t('stepLabel', { current: step + 1, total: totalSteps })}
           </p>
@@ -213,7 +230,8 @@ function OnboardingInner() {
           <p className="mt-1 text-sm text-slate-500">{currentDimension.explicacion}</p>
         </div>
 
-        <Card className="mt-6 p-6 sm:p-8">
+        <div ref={contentRef} className="mt-6" style={{ scrollMarginTop: headerHeight + 56 + 12 }}>
+          <Card className="p-6 sm:p-8">
 
           <div className="mt-6 space-y-6">
             {currentDimension.levels.map((level, i) => (
@@ -267,7 +285,8 @@ function OnboardingInner() {
                   : t('next')}
             </Button>
           </div>
-        </Card>
+          </Card>
+        </div>
       </div>
     </main>
   );
