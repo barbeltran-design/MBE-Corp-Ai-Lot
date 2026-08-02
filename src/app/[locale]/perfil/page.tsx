@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useDisplayLang } from '@/components/display-lang-provider';
+import { AVATAR_COLORS, avatarBgClass, initialsOf } from '@/lib/avatar';
 import type { CompanySize, Industry, Language, UserDoc } from '@/types/firestore';
 
 const COUNTRIES = ['MX', 'CO', 'AR', 'CL', 'PE', 'US', 'ES', 'OTHER'] as const;
@@ -40,13 +41,6 @@ const COUNTRY_NAMES: Record<string, string> = {
   OTHER: 'Otro',
 };
 
-function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  const first = parts[0] ? parts[0][0] : '';
-  const second = parts.length > 1 ? parts[1][0] : '';
-  return (first + second).toUpperCase() || '?';
-}
-
 function ProfilePageInner() {
   const locale = useLocale() as 'es' | 'en';
   const router = useRouter();
@@ -63,6 +57,8 @@ function ProfilePageInner() {
   const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [photoURL, setPhotoURL] = React.useState('');
+  const [photoBroken, setPhotoBroken] = React.useState(false);
+  const [avatarColor, setAvatarColor] = React.useState<number | undefined>(undefined);
   const [companyName, setCompanyName] = React.useState('');
   const [industry, setIndustry] = React.useState<Industry>('services');
   const [size, setSize] = React.useState<CompanySize>('1-5');
@@ -111,6 +107,8 @@ function ProfilePageInner() {
           setName(data.name || '');
           setEmail(data.email || user.email || '');
           setPhotoURL(data.photoURL || user.photoURL || '');
+          setPhotoBroken(false);
+          if (typeof data.avatarColor === 'number') setAvatarColor(data.avatarColor);
           setCountry(data.country || 'MX');
           setLanguage(data.language || 'es');
           setSubscription(data.subscription || 'free');
@@ -190,6 +188,22 @@ function ProfilePageInner() {
     } finally {
       setUploading(false);
       if (e.target) e.target.value = '';
+    }
+  }
+
+  async function handleSelectAvatarColor(index: number) {
+    if (!user) return;
+    setAvatarColor(index);
+    setPhotoURL('');
+    setPhotoBroken(false);
+    try {
+      await updateProfile(user, { photoURL: '' }).catch(() => {});
+      const db = getFirebaseDb();
+      await setDoc(doc(db, 'users', user.uid), { photoURL: '', avatarColor: index }, { merge: true });
+      setSavedMsg(t('Avatar actualizado.', 'Avatar updated.'));
+    } catch (err) {
+      console.error('[perfil] avatar color failed', err);
+      setUploadError(t('No se pudo guardar el color del avatar.', 'Could not save the avatar color.'));
     }
   }
 
@@ -320,10 +334,15 @@ function ProfilePageInner() {
 
       <Card className="p-6">
         <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-xl font-bold text-primary-foreground">
-            {photoURL ? (
+          <div
+            className={
+              'flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full text-xl font-bold text-white ' +
+              avatarBgClass(avatarColor)
+            }
+          >
+            {photoURL && !photoBroken ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={photoURL} alt={name} className="h-full w-full object-cover" />
+              <img src={photoURL} alt={name} className="h-full w-full object-cover" onError={() => setPhotoBroken(true)} />
             ) : (
               initialsOf(name)
             )}
@@ -362,6 +381,24 @@ function ProfilePageInner() {
               <Button type="button" variant="outline" size="sm" onClick={handleApplyPhotoUrl} disabled={uploading}>
                 {t('Usar enlace', 'Use link')}
               </Button>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-muted-foreground">
+                {t('Color del avatar (si no hay foto):', 'Avatar color (when there is no photo):')}
+              </span>
+              {AVATAR_COLORS.map((bg, i) => (
+                <button
+                  key={bg}
+                  type="button"
+                  title={bg}
+                  onClick={() => handleSelectAvatarColor(i)}
+                  className={
+                    'h-6 w-6 rounded-full transition-transform hover:scale-110 ' +
+                    bg +
+                    (avatarColor === i ? ' ring-2 ring-offset-2 ring-primary' : '')
+                  }
+                />
+              ))}
             </div>
             {uploadError && <p className="text-sm text-red-600">{uploadError}</p>}
           </div>

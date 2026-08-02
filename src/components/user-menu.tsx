@@ -6,26 +6,22 @@ import { useLocale } from 'next-intl';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { doc, onSnapshot, type Unsubscribe } from 'firebase/firestore';
 import { getFirebaseAuth, getFirebaseDb } from '@/lib/firebase';
+import { avatarBgClass, initialsOf } from '@/lib/avatar';
 
 type ProfileDoc = {
   name?: string;
   photoURL?: string;
+  avatarColor?: number;
   subscription?: string;
   planStatus?: string;
 };
-
-function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  const first = parts[0] ? parts[0][0] : '';
-  const second = parts.length > 1 ? parts[1][0] : '';
-  return (first + second).toUpperCase() || '?';
-}
 
 export function UserMenu() {
   const locale = useLocale() as 'es' | 'en';
   const router = useRouter();
   const [user, setUser] = React.useState<User | null | undefined>(undefined);
   const [profile, setProfile] = React.useState<ProfileDoc | null>(null);
+  const [photoBroken, setPhotoBroken] = React.useState(false);
 
   React.useEffect(() => {
     const auth = getFirebaseAuth();
@@ -44,7 +40,11 @@ export function UserMenu() {
       unsubscribeDoc = onSnapshot(
         doc(db, 'users', u.uid),
         (snap) => {
-          if (snap.exists()) setProfile(snap.data() as ProfileDoc);
+          if (snap.exists()) {
+            const data = snap.data() as ProfileDoc;
+            setProfile(data);
+            setPhotoBroken(false);
+          }
         },
         (err) => console.error('[UserMenu] failed to watch profile', err)
       );
@@ -59,6 +59,7 @@ export function UserMenu() {
 
   const name = profile?.name || user.displayName || '';
   const photoURL = profile?.photoURL || user.photoURL || '';
+  const showPhoto = photoURL && !photoBroken;
   const isPro = profile?.subscription === 'pro' && profile?.planStatus === 'active';
   const planLabel = isPro
     ? (locale === 'en' ? 'Pro plan' : 'Plan Pro')
@@ -71,10 +72,15 @@ export function UserMenu() {
       title={locale === 'en' ? 'My profile' : 'Mi perfil'}
       className="flex shrink-0 items-center gap-2 rounded-full border border-glass-border bg-glass p-1 pl-1.5 pr-2.5 transition-colors duration-150 hover:bg-accent"
     >
-      <span className="relative flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-        {photoURL ? (
+      <span
+        className={
+          'relative flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full text-[10px] font-bold text-white ' +
+          avatarBgClass(profile?.avatarColor)
+        }
+      >
+        {showPhoto ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={photoURL} alt={name} className="h-full w-full object-cover" />
+          <img src={photoURL} alt={name} className="h-full w-full object-cover" onError={() => setPhotoBroken(true)} />
         ) : (
           initialsOf(name)
         )}

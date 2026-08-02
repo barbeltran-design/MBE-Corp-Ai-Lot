@@ -21,6 +21,7 @@ export interface UserDoc {
   language: Language;
   country: string;
   photoURL?: string;
+  avatarColor?: number;
   createdAt: Timestamp;
   subscription: SubscriptionStatus;
   subscriptionStart?: Timestamp;
