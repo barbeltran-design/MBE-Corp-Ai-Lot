@@ -104,7 +104,7 @@ const PHASE_BODY_ES: Record<number, string> = {
 Cuando ya tengas las 5 respuestas de calibración, presenta un resumen usando "###" y "-", y cierra preguntando explícitamente: "¿Apruebas este resumen de la Fase 0 para continuar a la Fase 1?". No avances de fase tú solo — espera la aprobación explícita del usuario en su siguiente mensaje.
 
 Si todavía faltan respuestas, pregunta solo por lo que falta, con tono cercano y profesional, sin tablas.`,
-  1: `Ya tienes en el historial de esta conversación las respuestas de la Fase 0 (Lugar de operación, Giro, mercado objetivo, Resultado al cliente, Etapa actual, Recursos disponibles, Misión, visión y valores). Úsalas y asúmete como experto en el giro que indique el usuario — no vuelvas a preguntar lo que ya sabes. Si para esta fase específica falta un dato verdaderamente crítico que no se pueda asumir con criterio profesional, pregúntalo brevemente antes de redactar. Si ya tienes lo suficiente, redacta directamente el entregable completo de esta fase.
+  1: `Ya tienes en el historial de esta conversación las respuestas de la Fase 0 (Lugar de operación, Giro, mercado objetivo, Resultado al cliente, Etapa actual, Recursos disponibles). Úsalas y asúmete como experto en el giro que indique el usuario — no vuelvas a preguntar lo que ya sabes. Si para esta fase específica falta un dato verdaderamente crítico que no se pueda asumir con criterio profesional, pregúntalo brevemente antes de redactar. Si ya tienes lo suficiente, redacta directamente el entregable completo de esta fase.
 
 ${COVER_ALL_ES}
 
@@ -220,7 +220,7 @@ const PHASE_BODY_EN: Record<number, string> = {
 Once you have all 5 calibration answers (even if some are "I don't know"), present a summary using "###" and "-", and close by explicitly asking: "Do you approve this Phase 0 summary to move on to Phase 1?". Do not advance the phase yourself — wait for explicit approval in the user's next message.
 
 If answers are still missing, ask only about what's missing, in a warm, professional tone, with no tables.`,
-  1: `You already have the Phase 0 answers in this conversation's history (Location of operations, Business sector, Target market, Customer outcome, Current stage, Available resources, Mission, vision, and values). Use them — do not ask again for what you already know. If a truly critical piece of information for this specific phase is missing and cannot be reasonably assumed, ask about it briefly before drafting. If you already have enough, draft the complete deliverable for this phase directly.
+  1: `You already have the Phase 0 answers in this conversation's history (Location of operations, Business sector, Target market, Customer outcome, Current stage, Available resources). Use them — do not ask again for what you already know. If a truly critical piece of information for this specific phase is missing and cannot be reasonably assumed, ask about it briefly before drafting. If you already have enough, draft the complete deliverable for this phase directly.
 
 ${COVER_ALL_EN}
 

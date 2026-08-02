@@ -22,32 +22,23 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useDisplayLang } from '@/components/display-lang-provider';
 import type { BabelPhaseRecord, ChatMessage, SessionDoc } from '@/types/firestore';
-// Preguntas de la Fase 0 (una por una)
+// Preguntas de la Fase 0 (una por una) — alineadas con las 5 respuestas que
+// pide el prompt de Fase 0 en src/app/api/babel/route.ts.
 const PHASE_0_QUESTIONS = {
   es: [
-    { key: 'giro', question: '### 1. Giro y nicho especifico\n\nQue vendes exactamente y a quien va dirigido?' },
-    { key: 'ubicacion', question: '### 2. Ubicacion operativa\n\nEn que ciudad, estado y pais operara el negocio?' },
-    { key: 'madurez', question: '### 3. Madurez actual\n\nEs una idea en papel, un producto o servicio ya validado, o un negocio en marcha buscando escalar?' },
-    { key: 'recursos', question: '### 4. Recursos disponibles\n\nCon que recursos materiales, humanos, intelectuales (marca, procesos, patentes) y financieros cuentas actualmente?' },
-    { key: 'ambicion', question: '### 5. Nivel de ambicion financiera\n\nBuscas crear un autoempleo sostenible o una estructura escalable para levantar capital de inversionistas?' },
-    { key: 'mision_vision', question: '### 6. Proposito Comun, Mision y vision\n\nYa las tienes definidas o prefieres que las disenemos desde cero?' },
-    { key: 'utilidad_deseada', question: '### 7. Utilidad mensual deseada\n\nCuanto dinero neto quisieras que sobrara de ganancias mensualmente para vivir? (en tu moneda local)' },
-    { key: 'sueldo_founder', question: '### 8. Sueldo del fundador\n\nSi vas a operar el negocio, que sueldo te asignarias para cubrir hasta 3 roles, que seria el mismo que le pagarias a otra persona por hacer cada rol? (Administracion, Comercial, Operacion)' },
-    { key: 'gastos_fijos', question: '### 9. Gastos fijos\n\nQue gastos fijos tienes que pagar aunque no vendas (renta, servicios, software)?' },
-    { key: 'gastos_variables', question: '### 10. Gastos variables\n\nQue % de tus ingresos pagas de gastos variables paraa entregar tu producto o servicio (materia prima, comisiones, impuestos)?' }
+    { key: 'ubicacion', question: '### 1. Lugar de operación\n\n¿En qué ciudad, estado y país operará el negocio?' },
+    { key: 'giro', question: '### 2. Giro y mercado objetivo\n\n¿Qué productos o servicios ofreces y a quién van dirigidos?' },
+    { key: 'resultado_cliente', question: '### 3. Resultado al cliente\n\n¿Qué resultado obtienen tus clientes y qué necesidad les satisface tu producto o servicio?' },
+    { key: 'madurez', question: '### 4. Etapa actual\n\n¿Es una idea en papel, un producto o servicio ya validado, o un negocio en escalamiento?' },
+    { key: 'recursos', question: '### 5. Recursos disponibles\n\n¿Con qué recursos humanos, materiales, intelectuales y financieros cuentas actualmente?' },
   ],
   en: [
-    { key: 'giro', question: '### 1. Business Type and Niche\n\nWhat exactly do you sell and who is it for?' },
-    { key: 'ubicacion', question: '### 2. Operational Location\n\nIn which city, state and country will the business operate?' },
-    { key: 'madurez', question: '### 3. Current Maturity\n\nIs it an idea on paper, a validated product or service, or an ongoing business seeking to scale?' },
-    { key: 'recursos', question: '### 4. Available Resources\n\nWhat material, human, intelectual and financial resources do you currently have?' },
-    { key: 'ambicion', question: '### 5. Financial Ambition Level\n\nAre you looking to create sustainable self-employment or a scalable structure to raise capital from investors?' },
-    { key: 'mision_vision', question: '### 6. Shared Goal, Mission and Vision\n\nDo you already have them defined or would you prefer us to design them from scratch?' },
-    { key: 'utilidad_deseada', question: '### 7. Desired Monthly Profit\n\nHow much net profit would you like to have left over each month to live on? (in your local currency)' },
-    { key: 'sueldo_founder', question: '### 8. Founder Salary\n\nIf you are going to run the business, what salary would you assign yourself to cover up to 3 roles, which would be the same as what you would pay another person to perform each role? (Administration, Commercial, Operations)' },
-    { key: 'gastos_fijos', question: '### 9. Fixed Costs\n\nWhat fixed costs (rent, services, software) do you pay even if you dont sale anything?' },
-    { key: 'gastos_variables', question: '### 10. Variable Costs\n\nWhat percentage of your revenue goes toward variable costs (raw materials, commissions, taxes) to deliver your product or service?' }
-  ]
+    { key: 'ubicacion', question: '### 1. Location\n\nIn which city, state and country will the business operate?' },
+    { key: 'giro', question: '### 2. Business Type and Target Market\n\nWhat products or services do you offer, and who are they for?' },
+    { key: 'resultado_cliente', question: '### 3. Client Outcome\n\nWhat outcome do your clients get, and what need does your product or service satisfy?' },
+    { key: 'madurez', question: '### 4. Current Stage\n\nIs it a paper idea, an already validated product or service, or a business scaling up?' },
+    { key: 'recursos', question: '### 5. Available Resources\n\nWhat human, material, intellectual and financial resources do you currently have?' },
+  ],
 };
 // Textos de interfaz que normalmente vienen de next-intl (t()), pero que
 // necesitamos poder mostrar en el idioma que el usuario elija con el
@@ -86,16 +77,16 @@ const UI_FALLBACK: Record<'es' | 'en', {
     placeholder: 'Type your message...',
   },
 };
-const FASE0_ORDERED_KEYS = ['giro', 'ubicacion', 'madurez', 'recursos', 'ambicion', 'mision_vision', 'utilidad_deseada', 'sueldo_founder', 'gastos_fijos', 'gastos_variables'];
+const FASE0_ORDERED_KEYS = ['ubicacion', 'giro', 'resultado_cliente', 'madurez', 'recursos'];
 function fase0IntroText(lang: 'es' | 'en'): string {
   return lang === 'en'
-    ? 'Hi! I\'m **Babel**, MBE Corp\'s Strategic Business Architect & Sustainability Lead.\n\nTo get started on the right foot, I\'ll ask you **10 key questions**, one at a time. Take your time.\n\n**Note:** Use Enter to add a new line. The message is only sent when you press the "Send" button.\n\n---\n\n'
-    : 'Hola! Soy **Babel**, Strategic Business Architect & Sustainability Lead de MBE Corp.\n\nPara iniciar con el pie derecho, te hare **10 preguntas clave** una por una. Responde con calma.\n\n**Nota:** Usa la tecla Enter para bajar de renglon. El mensaje solo se envia cuando presionas el boton "Enviar".\n\n---\n\n';
+    ? 'Hi! I\'m **Babel**, MBE Corp\'s Strategic Business Architect & Sustainability Lead.\n\nTo get started on the right foot, I\'ll ask you **5 key questions**, one at a time. Take your time.\n\n**Note:** Use Enter to add a new line. The message is only sent when you press the "Send" button.\n\n---\n\n'
+    : 'Hola! Soy **Babel**, Strategic Business Architect & Sustainability Lead de MBE Corp.\n\nPara iniciar con el pie derecho, te hare **5 preguntas clave** una por una. Responde con calma.\n\n**Nota:** Usa la tecla Enter para bajar de renglon. El mensaje solo se envia cuando presionas el boton "Enviar".\n\n---\n\n';
 }
 function fase0LabelsFor(lang: 'es' | 'en'): Record<string, string> {
   return lang === 'en'
-    ? { giro: 'Business Type', ubicacion: 'Location', madurez: 'Maturity', recursos: 'Resources', ambicion: 'Ambition', mision_vision: 'Mission & Vision', utilidad_deseada: 'Desired Monthly Profit', sueldo_founder: 'Founder Salary', gastos_fijos: 'Fixed Costs', gastos_variables: 'Variable Costs' }
-    : { giro: 'Giro y nicho', ubicacion: 'Ubicación', madurez: 'Madurez', recursos: 'Recursos', ambicion: 'Ambición', mision_vision: 'Misión y Visión', utilidad_deseada: 'Utilidad mensual deseada', sueldo_founder: 'Sueldo del fundador', gastos_fijos: 'Gastos fijos', gastos_variables: 'Gastos variables' };
+    ? { ubicacion: 'Location', giro: 'Business Type and Target Market', resultado_cliente: 'Client Outcome', madurez: 'Current Stage', recursos: 'Available Resources' }
+    : { ubicacion: 'Lugar de operación', giro: 'Giro y mercado objetivo', resultado_cliente: 'Resultado al cliente', madurez: 'Etapa actual', recursos: 'Recursos disponibles' };
 }
 function buildFase0Summary(answers: Record<string, string>, lang: 'es' | 'en'): { userContent: string; assistantContent: string } {
   const labels = fase0LabelsFor(lang);
