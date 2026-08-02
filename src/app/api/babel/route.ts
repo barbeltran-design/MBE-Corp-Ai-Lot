@@ -121,7 +121,6 @@ Redacta el Why (propósito, por qué existe la empresa más allá de ganar diner
 
 ### 1.2. Vinculación con los ODS y Fondos
 - Indica qué Objetivos de Desarrollo Sostenible (ODS) de la ONU conecta mejor este negocio y por qué.
-- Sugiere, con tu mejor conocimiento, convocatorias o fondos internacionales y nacionales/locales (según el país que el usuario declaró) relevantes para proyectos socioambientales de este tipo — nombre del fondo/programa, monto que entrega y el requisito clave que recuerdes. Deja explícito que estas convocatorias cambian de fecha con frecuencia y que el usuario debe verificar vigencia y requisitos exactos antes de aplicar; no inventes fechas de cierre específicas si no las conoces con certeza.
 
 ### 1.3. Propuesta de Valor
 Usando el marco de Jobs-to-be-Done y la información anterior, identifica y redacta:
@@ -237,7 +236,6 @@ Draft the "Why" (purpose—why the company exists beyond making money, focusing 
 
 ### 1.2. Alignment with SDGs and Funding
 - Indicate which UN Sustainable Development Goals (SDGs) this business best aligns with and why.
-- Suggest—to the best of your knowledge—international and national/local calls for proposals or funding sources (based on the country declared by the user) relevant to socio-environmental projects of this type. Include the fund/program name, the funding amount, and a key requirement you recall. Explicitly state that these calls frequently change dates and that the user must verify their current status and exact requirements before applying; do not invent specific closing dates if you do not know them for certain.
 
 ### 1.3. Value Proposition
 Using the "Jobs-to-be-Done" framework and the information above, identify and draft:
