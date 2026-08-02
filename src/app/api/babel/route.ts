@@ -80,9 +80,13 @@ FORMATTING RULES (mandatory, no exceptions):
 
 // Instrucción estándar (idéntica en las fases 1-4) para no saltarse
 // subsecciones y anotar supuestos cuando falte información.
-const COVER_ALL_ES = `Cubre TODAS las subsecciones enumeradas abajo, en el mismo orden, sin omitir ninguna. Si para alguna subsección específica la información disponible es insuficiente para desarrollarla con solidez, no la omitas ni la saltes: escríbela de todas formas y anota explícitamente, en una línea aparte, qué supuesto usaste y qué dato haría falta para afinarla.`;
+const COVER_ALL_ES = `Cubre TODAS las subsecciones enumeradas abajo, en el mismo orden, sin omitir ninguna. Si para alguna subsección específica la información disponible es insuficiente para desarrollarla con solidez, no la omitas ni la saltes: escríbela de todas formas y anota explícitamente, en una línea aparte, qué supuesto usaste y qué dato haría falta para afinarla.
 
-const COVER_ALL_EN = `Cover ALL the subsections listed below, in the same order, without skipping any. If for a specific subsection the available information is insufficient to develop it soundly, do not omit or skip it: write it anyway and explicitly note, on a separate line, what assumption you used and what information would be needed to refine it.`;
+NO inventes ni agregues subsecciones, secciones adicionales, resúmenes ejecutivos, planes de implementación, monitoreo, contingencia o cierre, ni propongas empezar a implementar o continuar trabajando juntos: tu entregable es EXCLUSIVAMENTE lo que enumera la fase y termina exactamente con la pregunta de cierre que se te indica.`;
+
+const COVER_ALL_EN = `Cover ALL the subsections listed below, in the same order, without skipping any. If for a specific subsection the available information is insufficient to develop it soundly, do not omit or skip it: write it anyway and explicitly note, on a separate line, what assumption you used and what information would be needed to refine it.
+
+Do NOT invent or add subsections, additional sections, executive summaries, implementation, monitoring, contingency or closure plans, and do not propose starting to implement or keep working together: your deliverable is EXCLUSIVELY what the phase lists, and it ends exactly with the closing question you are told to ask.`;
 
 // Etiqueta "Punto ciego" (solo la usan las fases 1-3).
 const BLIND_SPOT_ES = `Además, en el punto de este entregable que consideres más relevante, señala explícitamente, con la etiqueta "💡 Punto ciego:", un riesgo, supuesto o implicación que el usuario probablemente no había considerado por sí mismo. No lo incluyas si ya es obvio a partir del contexto que él mismo dio — solo cuando aporte algo genuinamente nuevo.`;
@@ -456,11 +460,16 @@ async function tryOpenAICompatible(
     let result = await tryFetch([systemMsg, ...chatMessages]);
     if (result) return result;
 
-    // Intento 2: reintentar con solo los mensajes de chat (sin system prompt)
+    // Intento 2: si el historial completo excede el contexto del modelo,
+    // reintentar con SOLO la conversación reciente — pero SIEMPRE conservando
+    // el system prompt. Nunca responder sin instrucciones: sin ellas el modelo
+    // inventa secciones y cierres que no están en el prompt (análisis de
+    // competencia, planes de implementación, resúmenes ejecutivos, etc.).
     if (diagnostics.length > 0 && diagnostics[diagnostics.length - 1]?.status === 400) {
-      console.error(`[babel] ${label} falló con 400, reintentando sin system prompt...`);
+      console.error(`[babel] ${label} falló con 400, reintentando con historial corto...`);
       const prevDiagLen = diagnostics.length;
-      result = await tryFetch(chatMessages);
+      const shortHistory = chatMessages.slice(-6);
+      result = await tryFetch([systemMsg, ...shortHistory]);
       if (result) {
         diagnostics.splice(prevDiagLen - 1, diagnostics.length - prevDiagLen + 1);
         return result;
@@ -517,13 +526,31 @@ export async function POST(req: NextRequest) {
       compactMessages = [
         { role: 'user', content: `${intro}\n\n${summary}` },
       ];
-    } else if (currentPhase >= 1 && messages.length > 10) {
+    } else if (currentPhase >= 1 && messages.length > 2) {
+      // Compactación por TAMAÑO aproximado (no solo por número de mensajes):
+      // cada entregable de fase puede pesar decenas de miles de caracteres y
+      // un tope de mensajes no basta para caber en el contexto del modelo.
+      // Se conservan SIEMPRE los primeros HEAD_KEEP mensajes (donde vive la
+      // calibración inicial) más la conversación reciente, hasta ~75k
+      // caracteres (~20k tokens), dejando margen para el system prompt.
       const HEAD_KEEP = 6;
-      const TAIL_KEEP = 12;
-      if (messages.length > HEAD_KEEP + TAIL_KEEP) {
-        compactMessages = [...messages.slice(0, HEAD_KEEP), ...messages.slice(-TAIL_KEEP)];
-      } else {
+      const MAX_TOTAL_CHARS = 75_000;
+      const head = messages.slice(0, HEAD_KEEP);
+      const headChars = head.reduce(function (sum, m) { return sum + m.content.length; }, 0);
+      const tail: IncomingMessage[] = [];
+      let used = headChars;
+      for (let i = messages.length - 1; i >= HEAD_KEEP; i--) {
+        const size = messages[i].content.length;
+        if (used + size > MAX_TOTAL_CHARS) break;
+        tail.unshift(messages[i]);
+        used += size;
+      }
+      if (tail.length >= messages.length - HEAD_KEEP) {
         compactMessages = messages;
+      } else if (tail.length > 0) {
+        compactMessages = [...head, ...tail];
+      } else {
+        compactMessages = messages.slice(-6);
       }
     }
 

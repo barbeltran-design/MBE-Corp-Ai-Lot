@@ -513,7 +513,7 @@ export default function BabelPage() {
         timestamp: Timestamp.now(),
       };
       const finalMessages = [...refreshed.messages, assistantMsg];
-      setSession(function (prev) { return prev ? { ...prev, messages: finalMessages } : { ...refreshed, messages: finalMessages }; });
+      setSession({ ...refreshed, messages: finalMessages });
       await saveBabelMessages(uid, finalMessages);
       if ((refreshed.currentPhase ?? 0) >= BABEL_IMPLEMENTED_PHASES) {
       await upsertCompiledPlan(finalMessages, refreshed.phases);
@@ -575,7 +575,7 @@ export default function BabelPage() {
         timestamp: Timestamp.now(),
       };
       const finalMessages = [...refreshed.messages, assistantMsg];
-      setSession(function (prev) { return prev ? { ...prev, messages: finalMessages } : { ...refreshed, messages: finalMessages }; });
+      setSession({ ...refreshed, messages: finalMessages });
       await saveBabelMessages(uid, finalMessages);
       setManualContent('');
       if (isLastPhase) {
