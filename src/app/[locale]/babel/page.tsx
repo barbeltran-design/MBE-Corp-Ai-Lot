@@ -15,7 +15,7 @@ import {
   resetBabelSession,
   updateBabelPhaseSummary,
 } from '@/lib/babel-session';
-import { BABEL_IMPLEMENTED_PHASES, babelApprovalMarker } from '@/lib/babel-constants';
+import { BABEL_IMPLEMENTED_PHASES, babelApprovalMarker, babelPhaseTopics } from '@/lib/babel-constants';
 import { downloadCompiledPlanPdf, downloadFinancialGoalsExcel, computeFinancialGoals } from '@/lib/deliverables';
 import type { FinancialGoalsInput, FinancialGoalsResult } from '@/lib/deliverables';
 import { Button } from '@/components/ui/button';
@@ -113,6 +113,43 @@ function toAmountPct(value: number, mode: '$' | '%', unitPrice: number): number 
   if (mode === '%') return value / 100;
   return unitPrice > 0 ? value / unitPrice : 0;
 }
+/** Indicador compacto de las 5 fases de Babel (0-4): aprobada / actual / pendiente. */
+function PhaseStepper({
+  currentPhase,
+  approved,
+  lang,
+}: {
+  currentPhase: number;
+  approved: BabelPhaseRecord[];
+  lang: 'es' | 'en';
+}) {
+  const topics = babelPhaseTopics(lang);
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {topics.map((topic, phase) => {
+        const isApproved = approved.some(function (p) { return p.phase === phase; });
+        const isCurrent = !isApproved && phase === currentPhase;
+        const label = topic.split(':')[1]?.trim() ?? topic;
+        return (
+          <span
+            key={phase}
+            className={
+              'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium ' +
+              (isApproved
+                ? 'border-green-200 bg-green-50 text-green-700'
+                : isCurrent
+                  ? 'border-blue-600 bg-blue-600 text-white'
+                  : 'border-slate-200 bg-white text-slate-400')
+            }
+          >
+            {isApproved ? '✓ ' : ''}
+            {phase}. {label}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
 export default function BabelPage() {
   const locale = useLocale() as 'es' | 'en';
   const t = useTranslations('babel');
@@ -195,6 +232,8 @@ export default function BabelPage() {
   }, [session, currentQuestionIndex, isPhase0Complete, questions, dispLang]);
   const currentPhase = session?.currentPhase ?? 0;
   const allPhasesDone = currentPhase >= BABEL_IMPLEMENTED_PHASES;
+  const phaseTopics = babelPhaseTopics(dispLang);
+  const currentPhaseTopic = currentPhase < BABEL_IMPLEMENTED_PHASES ? phaseTopics[currentPhase] : null;
   const lastMessage = session?.messages[session.messages.length - 1];
   const awaitingApproval =
     !allPhasesDone &&
@@ -834,14 +873,15 @@ export default function BabelPage() {
             <h1 className="text-xl font-semibold text-slate-900">{dispLang === locale ? t('title') : UI_FALLBACK[dispLang].title}</h1>
             <p className="text-sm text-slate-500">{dispLang === 'en' ? 'Phase 0: Initial Calibration' : 'Fase 0: Calibración Inicial'}</p>
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <div className="flex gap-2">
-              <Button onClick={handleReset} disabled={sending} variant="outline" size="sm">{dispLang === 'en' ? 'Start over' : 'Empezar de nuevo'}</Button>
-              <Button onClick={handleLogout} variant="outline" size="sm">{dispLang === 'en' ? 'Log out' : 'Cerrar sesión'}</Button>
-            </div>
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex gap-2">
+            <Button onClick={handleReset} disabled={sending} variant="outline" size="sm">{dispLang === 'en' ? 'Start over' : 'Empezar de nuevo'}</Button>
+            <Button onClick={handleLogout} variant="outline" size="sm">{dispLang === 'en' ? 'Log out' : 'Cerrar sesión'}</Button>
           </div>
         </div>
-        {currentQuestionIndex > 0 && (
+      </div>
+      <PhaseStepper currentPhase={currentPhase} approved={session.phases ?? []} lang={dispLang} />
+      {currentQuestionIndex > 0 && (
           <Card className="flex-1 space-y-3 overflow-y-auto p-4 max-h-[40vh]">
             {Array.from({ length: currentQuestionIndex }).map(function (_unused, k) {
               const qText = (k === 0 ? fase0IntroText(dispLang) : '') + questions[k].question;
@@ -985,7 +1025,12 @@ export default function BabelPage() {
       <div className="flex items-center justify-between border-b pb-4">
         <div>
           <h1 className="text-xl font-semibold text-slate-900">{dispLang === locale ? t('title') : UI_FALLBACK[dispLang].title}</h1>
-          <p className="text-sm text-slate-500">{(session as any).phaseData?.topic || (dispLang === locale ? t('subtitle') : UI_FALLBACK[dispLang].subtitle)}</p>
+          <p className="text-sm text-slate-500">
+            {currentPhaseTopic ??
+              (dispLang === 'en'
+                ? 'All phases completed — compile your full plan with /compilar'
+                : 'Todas las fases completadas — compila tu plan completo con /compilar')}
+          </p>
         </div>
         <div className="flex flex-col items-end gap-2">
           <div className="flex gap-2">
@@ -1000,6 +1045,7 @@ export default function BabelPage() {
           </div>
         </div>
       </div>
+      <PhaseStepper currentPhase={currentPhase} approved={session.phases ?? []} lang={dispLang} />
       <Card className="flex-1 space-y-3 overflow-y-auto p-4 min-h-[60vh]">
         {session.messages.map(function (m, i) {
           const isFase0SummaryPair = currentPhase === 0 && i <= 1 && Object.keys(phase0Answers).length > 0;
