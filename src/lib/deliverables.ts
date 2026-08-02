@@ -2,39 +2,379 @@ import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
 
 // ==========================================================================
-// PDF DEL PLAN COMPILADO
+// PDF DEL PLAN COMPILADO — presentación ejecutiva con iconos
 // ==========================================================================
 
-function renderTextToPdf(title: string, body: string): jsPDF {
-  const doc = new jsPDF({ unit: 'pt', format: 'letter' });
-  const marginX = 48;
-  const marginTop = 56;
-  const marginBottom = 56;
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const usableWidth = pageWidth - marginX * 2;
+type Rgb = [number, number, number];
 
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  doc.text(title, marginX, marginTop);
+const COLOR_PRIMARY: Rgb = [79, 70, 229]; // indigo-600
+const COLOR_DARK: Rgb = [30, 41, 59]; // slate-800
+const COLOR_MUTED: Rgb = [107, 114, 128]; // slate-500
+const COLOR_GREEN: Rgb = [22, 163, 74]; // green-600
+const COLOR_AMBER: Rgb = [180, 83, 9]; // amber-700
+const COLOR_LINE: Rgb = [226, 232, 240]; // slate-200
+const COLOR_HEADER_BG: Rgb = [238, 242, 255]; // indigo-50
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(11);
+interface InlineSegment {
+  text: string;
+  bold: boolean;
+}
 
-  const lines = doc.splitTextToSize(body, usableWidth);
-  let cursorY = marginTop + 28;
-  const lineHeight = 15;
+function sanitizePdfText(text: string): string {
+  // Los PDF estándar usan WinAnsi: cualquier carácter fuera de ese rango
+  // (emojis, etc.) se elimina para no imprimir basura.
+  return text.replace(/[^\u0020-\u00FF]/g, '');
+}
 
-  for (const line of lines) {
-    if (cursorY > pageHeight - marginBottom) {
-      doc.addPage();
-      cursorY = marginTop;
-    }
-    doc.text(line, marginX, cursorY);
-    cursorY += lineHeight;
+function parseInline(text: string): InlineSegment[] {
+  const segments: InlineSegment[] = [];
+  sanitizePdfText(text)
+    .split('**')
+    .forEach(function (part, i) {
+      if (!part) return;
+      segments.push({ text: part, bold: i % 2 === 1 });
+    });
+  return segments;
+}
+
+function plainText(text: string): string {
+  return sanitizePdfText(text).replace(/\*\*/g, '');
+}
+
+function isTableLine(line: string): boolean {
+  const t = line.trim();
+  return t.startsWith('|') && t.endsWith('|');
+}
+
+function isTableSeparator(line: string): boolean {
+  return /^\|[\s:|-]+\|$/.test(line.trim());
+}
+
+function parseTableRow(line: string): string[] {
+  return line
+    .split('|')
+    .slice(1, -1)
+    .map(function (c) { return c.trim(); });
+}
+
+const DINGBAT_CHECK = 'B'; // ✓
+const DINGBAT_DOT = 'U'; // ●
+const DINGBAT_BOX = 'W'; // ■
+
+class CompiledPlanRenderer {
+  doc: jsPDF;
+  lang: 'es' | 'en';
+  marginX: number;
+  marginTop: number;
+  marginBottom: number;
+  pageWidth: number;
+  pageHeight: number;
+  usableWidth: number;
+  cursorY: number;
+
+  constructor(doc: jsPDF, lang: 'es' | 'en') {
+    this.doc = doc;
+    this.lang = lang;
+    this.marginX = 48;
+    this.marginTop = 56;
+    this.marginBottom = 56;
+    this.pageWidth = doc.internal.pageSize.getWidth();
+    this.pageHeight = doc.internal.pageSize.getHeight();
+    this.usableWidth = this.pageWidth - this.marginX * 2;
+    this.cursorY = this.marginTop;
   }
 
-  return doc;
+  ensureSpace(needed: number): void {
+    if (this.cursorY + needed > this.pageHeight - this.marginBottom) {
+      this.doc.addPage();
+      this.cursorY = this.marginTop;
+    }
+  }
+
+  setColor(color: Rgb): void {
+    this.doc.setTextColor(color[0], color[1], color[2]);
+  }
+
+  inlineWidth(segments: InlineSegment[], size: number): number {
+    let width = 0;
+    for (let i = 0; i < segments.length; i++) {
+      const seg = segments[i];
+      this.doc.setFont('helvetica', seg.bold ? 'bold' : 'normal');
+      this.doc.setFontSize(size);
+      width += this.doc.getTextWidth(seg.text);
+    }
+    return width;
+  }
+
+  writeInline(x: number, y: number, segments: InlineSegment[], size: number): void {
+    let xCursor = x;
+    for (let i = 0; i < segments.length; i++) {
+      const seg = segments[i];
+      this.doc.setFont('helvetica', seg.bold ? 'bold' : 'normal');
+      this.doc.setFontSize(size);
+      this.doc.text(seg.text, xCursor, y);
+      xCursor += this.doc.getTextWidth(seg.text);
+    }
+  }
+
+  icon(glyph: string, x: number, y: number, size: number, color: Rgb): void {
+    this.doc.setFont('zapfdingbats', 'normal');
+    this.doc.setFontSize(size);
+    this.setColor(color);
+    this.doc.text(glyph, x, y);
+  }
+
+  heading(text: string, size: number): void {
+    const segments = parseInline(text);
+    const lineHeight = size + 8;
+    this.ensureSpace(lineHeight + 10);
+    const isBlindSpot = text.includes('Punto ciego') || text.includes('Blind spot');
+    const color = isBlindSpot ? COLOR_AMBER : COLOR_PRIMARY;
+    this.icon(isBlindSpot ? DINGBAT_BOX : DINGBAT_DOT, this.marginX, this.cursorY + size * 0.75, size * 0.8, color);
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(size);
+    this.setColor(color);
+    this.writeInline(this.marginX + 16, this.cursorY + size * 0.75, segments, size);
+    this.doc.setDrawColor(COLOR_LINE[0], COLOR_LINE[1], COLOR_LINE[2]);
+    this.doc.line(this.marginX, this.cursorY + size + 4, this.pageWidth - this.marginX, this.cursorY + size + 4);
+    this.cursorY += lineHeight + 10;
+  }
+
+  paragraph(text: string, size = 11, indent = 0): void {
+    const segments = parseInline(text);
+    const isBlindSpot = text.includes('Punto ciego') || text.includes('Blind spot');
+    const color = isBlindSpot ? COLOR_AMBER : COLOR_DARK;
+    const width = this.usableWidth - indent;
+    const rawLines = this.doc.splitTextToSize(plainText(text), width);
+    const lines = Array.isArray(rawLines) ? rawLines : [rawLines];
+    const lineHeight = size + 4;
+    for (let i = 0; i < lines.length; i++) {
+      this.ensureSpace(lineHeight);
+      this.doc.setFont('helvetica', 'normal');
+      this.doc.setFontSize(size);
+      this.setColor(color);
+      if (i === 0) {
+        this.writeInline(this.marginX + indent, this.cursorY, segments, size);
+      } else {
+        this.doc.text(lines[i], this.marginX + indent, this.cursorY);
+      }
+      this.cursorY += lineHeight;
+    }
+    this.cursorY += 3;
+  }
+
+  bullet(text: string): void {
+    const segments = parseInline(text);
+    const indent = 18;
+    const width = this.usableWidth - indent;
+    const rawLines = this.doc.splitTextToSize(plainText(text), width);
+    const lines = Array.isArray(rawLines) ? rawLines : [rawLines];
+    const lineHeight = 15;
+    for (let i = 0; i < lines.length; i++) {
+      this.ensureSpace(lineHeight);
+      if (i === 0) {
+        this.icon(DINGBAT_CHECK, this.marginX + 2, this.cursorY - 1, 10, COLOR_GREEN);
+        this.doc.setFont('helvetica', 'normal');
+        this.doc.setFontSize(11);
+        this.setColor(COLOR_DARK);
+        this.writeInline(this.marginX + indent, this.cursorY, segments, 11);
+      } else {
+        this.doc.setFont('helvetica', 'normal');
+        this.doc.setFontSize(11);
+        this.setColor(COLOR_DARK);
+        this.doc.text(lines[i], this.marginX + indent, this.cursorY);
+      }
+      this.cursorY += lineHeight;
+    }
+    this.cursorY += 2;
+  }
+
+  numbered(number: string, text: string): void {
+    const segments = parseInline(text);
+    const indent = 20;
+    const width = this.usableWidth - indent;
+    const rawLines = this.doc.splitTextToSize(plainText(text), width);
+    const lines = Array.isArray(rawLines) ? rawLines : [rawLines];
+    const lineHeight = 15;
+    for (let i = 0; i < lines.length; i++) {
+      this.ensureSpace(lineHeight);
+      if (i === 0) {
+        this.doc.setFont('helvetica', 'bold');
+        this.doc.setFontSize(11);
+        this.setColor(COLOR_PRIMARY);
+        this.doc.text(number + '.', this.marginX + 2, this.cursorY);
+        this.doc.setFont('helvetica', 'normal');
+        this.setColor(COLOR_DARK);
+        this.writeInline(this.marginX + indent, this.cursorY, segments, 11);
+      } else {
+        this.doc.setFont('helvetica', 'normal');
+        this.doc.setFontSize(11);
+        this.setColor(COLOR_DARK);
+        this.doc.text(lines[i], this.marginX + indent, this.cursorY);
+      }
+      this.cursorY += lineHeight;
+    }
+    this.cursorY += 2;
+  }
+
+  divider(): void {
+    this.ensureSpace(20);
+    this.cursorY += 6;
+    this.doc.setDrawColor(COLOR_LINE[0], COLOR_LINE[1], COLOR_LINE[2]);
+    this.doc.setLineWidth(0.8);
+    this.doc.line(this.marginX, this.cursorY, this.pageWidth - this.marginX, this.cursorY);
+    this.cursorY += 12;
+  }
+
+  table(rows: string[][]): void {
+    if (rows.length === 0) return;
+    const colCount = Math.max.apply(
+      null,
+      rows.map(function (r) { return r.length; })
+    );
+    const cellFont = 9.5;
+    const paddX = 6;
+    const headerH = 18;
+    const rowH = 15;
+
+    const colWidths: number[] = [];
+    for (let c = 0; c < colCount; c++) {
+      let maxLen = 0;
+      for (const r of rows) {
+        const cell = (r[c] ?? '').replace(/\*\*/g, '');
+        if (cell.length > maxLen) maxLen = cell.length;
+      }
+      colWidths.push(Math.max(34, Math.min(maxLen * 5.2 + paddX * 2, 220)));
+    }
+    const totalWidth = colWidths.reduce(function (s, w) { return s + w; }, 0);
+    const scale = totalWidth > this.usableWidth ? this.usableWidth / totalWidth : 1;
+    const widths = colWidths.map(function (w) { return w * scale; });
+
+    const rowCount = rows.length;
+    const tableHeight = headerH + (rowCount - 1) * rowH;
+    this.ensureSpace(tableHeight);
+
+    let x = this.marginX;
+    let y = this.cursorY;
+    this.doc.setDrawColor(COLOR_LINE[0], COLOR_LINE[1], COLOR_LINE[2]);
+    this.doc.setLineWidth(0.6);
+
+    rows.forEach((r, ri) => {
+      const isHeader = ri === 0;
+      const rowHReal = isHeader ? headerH : rowH;
+      if (isHeader) {
+        this.doc.setFillColor(COLOR_HEADER_BG[0], COLOR_HEADER_BG[1], COLOR_HEADER_BG[2]);
+        this.doc.rect(x, y, widths.reduce(function (s, w) { return s + w; }, 0), rowHReal, 'F');
+      }
+      let cellX = x;
+      for (let c = 0; c < colCount; c++) {
+        this.doc.rect(cellX, y, widths[c], rowHReal, 'S');
+        const text = sanitizePdfText(r[c] ?? '').replace(/\*\*/g, '');
+        const wrapped = this.doc.splitTextToSize(text, widths[c] - paddX * 2);
+        const lines = Array.isArray(wrapped) ? wrapped : [wrapped];
+        const linesToDraw = lines.slice(0, 2);
+        linesToDraw.forEach((l, li) => {
+          this.doc.setFont('helvetica', isHeader ? 'bold' : 'normal');
+          this.doc.setFontSize(cellFont);
+          this.doc.setTextColor(
+            isHeader ? COLOR_PRIMARY[0] : COLOR_DARK[0],
+            isHeader ? COLOR_PRIMARY[1] : COLOR_DARK[1],
+            isHeader ? COLOR_PRIMARY[2] : COLOR_DARK[2]
+          );
+          this.doc.text(String(l), cellX + paddX, y + rowHReal / 2 + (li - (linesToDraw.length - 1) / 2) * 11);
+        });
+        cellX += widths[c];
+      }
+      y += rowHReal;
+    });
+
+    this.cursorY = y + 10;
+  }
+
+  cover(title: string, topic: string): void {
+    const isEn = this.lang === 'en';
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(11);
+    this.setColor(COLOR_PRIMARY);
+    this.doc.text('MBE CORPILOT AI', this.marginX, 150);
+
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(34);
+    this.setColor(COLOR_DARK);
+    this.doc.text(title, this.marginX, 210);
+
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(18);
+    this.setColor(COLOR_PRIMARY);
+    this.doc.text(
+      isEn ? 'Strategic Business Plan' : 'Plan de Negocio Estratégico Socioambiental',
+      this.marginX,
+      240
+    );
+
+    this.doc.setDrawColor(COLOR_PRIMARY[0], COLOR_PRIMARY[1], COLOR_PRIMARY[2]);
+    this.doc.setLineWidth(1.5);
+    this.doc.line(this.marginX, 262, this.marginX + 120, 262);
+
+    this.doc.setFont('helvetica', 'normal');
+    this.doc.setFontSize(13);
+    this.setColor(COLOR_MUTED);
+    const topicLines = this.doc.splitTextToSize(topic, this.usableWidth);
+    const topicArr = Array.isArray(topicLines) ? topicLines : [topicLines];
+    let ty = 300;
+    for (const line of topicArr) {
+      this.doc.text(line, this.marginX, ty);
+      ty += 19;
+    }
+
+    const meta: [string, string][] = isEn
+      ? [
+          [DINGBAT_CHECK, '5 phases of the Babel diagnostic (0 to 4)'],
+          [DINGBAT_BOX, 'Generated by Babel AI — MBE Corpilot'],
+          [DINGBAT_DOT, new Date().toLocaleDateString('en-US', { day: '2-digit', month: 'long', year: 'numeric' })],
+        ]
+      : [
+          [DINGBAT_CHECK, '5 fases del diagnóstico Babel (0 a 4)'],
+          [DINGBAT_BOX, 'Generado por Babel AI — MBE Corpilot'],
+          [DINGBAT_DOT, new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })],
+        ];
+
+    let my = 400;
+    for (let m = 0; m < meta.length; m++) {
+      const item = meta[m];
+      this.icon(item[0], this.marginX, my, 10, COLOR_PRIMARY);
+      this.doc.setFont('helvetica', 'normal');
+      this.doc.setFontSize(11);
+      this.setColor(COLOR_MUTED);
+      this.doc.text(item[1], this.marginX + 18, my);
+      my += 22;
+    }
+
+    this.doc.addPage();
+    this.cursorY = this.marginTop;
+  }
+
+  addFooters(): void {
+    const total = this.doc.getNumberOfPages();
+    for (let p = 1; p <= total; p++) {
+      this.doc.setPage(p);
+      const footerY = this.pageHeight - 36;
+      this.doc.setDrawColor(COLOR_LINE[0], COLOR_LINE[1], COLOR_LINE[2]);
+      this.doc.setLineWidth(0.6);
+      this.doc.line(this.marginX, footerY - 8, this.pageWidth - this.marginX, footerY - 8);
+      this.doc.setFont('helvetica', 'normal');
+      this.doc.setFontSize(8.5);
+      this.setColor(COLOR_MUTED);
+      const brand = this.lang === 'en' ? 'MBE Corpilot AI — Babel' : 'MBE Corpilot AI — Babel';
+      this.doc.text(brand, this.marginX, footerY);
+      this.doc.text(
+        (this.lang === 'en' ? 'Page ' : 'Página ') + p + ' ' + (this.lang === 'en' ? 'of' : 'de') + ' ' + total,
+        this.pageWidth - this.marginX,
+        footerY,
+        { align: 'right' }
+      );
+    }
+  }
 }
 
 export interface DownloadCompiledPlanParams {
@@ -43,13 +383,77 @@ export interface DownloadCompiledPlanParams {
   language: 'es' | 'en';
 }
 
-export function downloadCompiledPlanPdf(params: DownloadCompiledPlanParams): void {
-  const title =
-    params.language === 'en'
-      ? 'Business Plan: ' + params.sessionTopic
-      : 'Plan de Negocio: ' + params.sessionTopic;
+function renderCompiledPlanPdf(params: DownloadCompiledPlanParams): jsPDF {
+  const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+  const renderer = new CompiledPlanRenderer(doc, params.language);
+  const isEn = params.language === 'en';
+  const title = isEn ? 'Business Plan' : 'Plan de Negocio';
 
-  const doc = renderTextToPdf(title, params.compiledText);
+  renderer.cover(title, params.sessionTopic);
+
+  const lines = params.compiledText.split('\n');
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i].trim();
+    if (!line) {
+      i++;
+      continue;
+    }
+    if (isTableLine(line)) {
+      const rows: string[][] = [];
+      while (i < lines.length && isTableLine(lines[i])) {
+        if (!isTableSeparator(lines[i])) rows.push(parseTableRow(lines[i]));
+        i++;
+      }
+      renderer.table(rows);
+      continue;
+    }
+    if (/^---+$/.test(line)) {
+      renderer.divider();
+      i++;
+      continue;
+    }
+    if (line.startsWith('### ')) {
+      renderer.heading(line.slice(4), 12.5);
+      i++;
+      continue;
+    }
+    if (line.startsWith('## ')) {
+      renderer.heading(line.slice(3), 14);
+      i++;
+      continue;
+    }
+    if (line.startsWith('# ')) {
+      renderer.heading(line.slice(2), 15);
+      i++;
+      continue;
+    }
+    if (line.startsWith('- ')) {
+      renderer.bullet(line.slice(2));
+      i++;
+      continue;
+    }
+    if (line.startsWith('* ')) {
+      renderer.bullet(line.slice(2));
+      i++;
+      continue;
+    }
+    const numberedMatch = line.match(/^(\d+)\.\s+(.*)$/);
+    if (numberedMatch) {
+      renderer.numbered(numberedMatch[1], numberedMatch[2]);
+      i++;
+      continue;
+    }
+    renderer.paragraph(line);
+    i++;
+  }
+
+  renderer.addFooters();
+  return doc;
+}
+
+export function downloadCompiledPlanPdf(params: DownloadCompiledPlanParams): void {
+  const doc = renderCompiledPlanPdf(params);
   const fileName =
     params.language === 'en' ? 'business-plan.pdf' : 'plan-de-negocio.pdf';
   doc.save(fileName);
