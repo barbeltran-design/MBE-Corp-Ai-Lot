@@ -40,6 +40,7 @@ export interface CompanyDoc {
   industry: Industry;
   size: CompanySize;
   country: string;
+  website?: string;
   createdAt: Timestamp;
 }
 

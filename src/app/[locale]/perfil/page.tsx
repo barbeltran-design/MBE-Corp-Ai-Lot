@@ -51,7 +51,7 @@ function ProfilePageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pagoParam = searchParams.get('pago');
-  const { lang: ctxLang } = useDisplayLang();
+  const { lang: ctxLang, setLang } = useDisplayLang();
   const [dispLang, setDispLang] = React.useState<'es' | 'en'>(locale);
   React.useEffect(() => { setDispLang(ctxLang); }, [ctxLang]);
   const t = (es: string, en: string) => (dispLang === 'en' ? en : es);
@@ -66,6 +66,7 @@ function ProfilePageInner() {
   const [industry, setIndustry] = React.useState<Industry>('services');
   const [size, setSize] = React.useState<CompanySize>('1-5');
   const [country, setCountry] = React.useState<string>('MX');
+  const [website, setWebsite] = React.useState('');
   const [language, setLanguage] = React.useState<Language>('es');
 
   const [saving, setSaving] = React.useState(false);
@@ -116,11 +117,12 @@ function ProfilePageInner() {
         }
         const companySnap = await getDoc(doc(db, 'companies', user.uid));
         if (!cancelled && companySnap.exists()) {
-          const data = companySnap.data() as { name?: string; industry?: Industry; size?: CompanySize; country?: string };
+          const data = companySnap.data() as { name?: string; industry?: Industry; size?: CompanySize; country?: string; website?: string };
           setCompanyName(data.name || '');
           if (data.industry) setIndustry(data.industry);
           if (data.size) setSize(data.size);
           if (data.country) setCountry(data.country);
+          setWebsite(data.website || '');
         }
       } catch (err) {
         console.error('[perfil] failed to load', err);
@@ -148,7 +150,7 @@ function ProfilePageInner() {
         ),
         setDoc(
           doc(db, 'companies', user.uid),
-          { name: companyName.trim(), industry, size, country },
+          { name: companyName.trim(), industry, size, country, website: website.trim() },
           { merge: true }
         ),
       ]);
@@ -198,6 +200,20 @@ function ProfilePageInner() {
     } catch (err) {
       console.error('[perfil] photo remove failed', err);
     }
+  }
+
+  async function handleLanguageChange(newLang: Language) {
+    setLanguage(newLang);
+    setLang(newLang);
+    if (user) {
+      try {
+        const db = getFirebaseDb();
+        await setDoc(doc(db, 'users', user.uid), { language: newLang }, { merge: true });
+      } catch (err) {
+        console.error('[perfil] failed to save language', err);
+      }
+    }
+    router.replace('/' + newLang + '/perfil');
   }
 
   async function handlePagar() {
@@ -334,7 +350,7 @@ function ProfilePageInner() {
               </div>
               <div className="space-y-1">
                 <Label htmlFor="perfil-language">{t('Idioma de la plataforma', 'Platform language')}</Label>
-                <Select id="perfil-language" value={language} onChange={(e) => setLanguage(e.target.value as Language)}>
+                <Select id="perfil-language" value={language} onChange={(e) => handleLanguageChange(e.target.value as Language)}>
                   <option value="es">Español</option>
                   <option value="en">English</option>
                 </Select>
@@ -348,6 +364,10 @@ function ProfilePageInner() {
               <div className="space-y-1">
                 <Label htmlFor="perfil-company">{t('Nombre de la empresa', 'Company name')}</Label>
                 <Input id="perfil-company" value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="perfil-website">{t('Sitio web', 'Website')}</Label>
+                <Input id="perfil-website" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://tusitio.com" />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="perfil-industry">{t('Giro / industria', 'Industry')}</Label>
