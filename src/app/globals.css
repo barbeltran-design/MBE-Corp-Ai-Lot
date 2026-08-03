@@ -162,60 +162,72 @@
     background-image: linear-gradient(to bottom, hsl(220, 9%, 11%), hsl(200, 18%, 22%));
   }
 
-  /* --- restore dark text inside colored badges (still have their own bg) --- */
-  .dark .bg-slate-50.text-slate-900, .dark .bg-slate-50 .text-slate-900,
-  .dark .bg-slate-50.text-slate-800, .dark .bg-slate-50 .text-slate-800,
-  .dark .bg-slate-50.text-slate-700, .dark .bg-slate-50 .text-slate-700,
-  .dark .bg-slate-50.text-slate-600, .dark .bg-slate-50 .text-slate-600,
-  .dark .bg-slate-50.text-slate-500, .dark .bg-slate-50 .text-slate-500 {
-    color: hsl(215, 25%, 27%);
-  }
-  .dark .bg-slate-100.text-slate-900, .dark .bg-slate-100 .text-slate-900,
-  .dark .bg-slate-100.text-slate-800, .dark .bg-slate-100 .text-slate-800,
-  .dark .bg-slate-100.text-slate-700, .dark .bg-slate-100 .text-slate-700,
-  .dark .bg-slate-100.text-slate-600, .dark .bg-slate-100 .text-slate-600,
-  .dark .bg-slate-100.text-slate-500, .dark .bg-slate-100 .text-slate-500 {
-    color: hsl(222, 47%, 11%);
-  }
+  /* --- todas las superficies claras (bg-*-50/100) → gris oscuro --- */
+  .dark .bg-slate-50 { background-color: hsl(220, 9%, 13%); }
+  .dark .bg-slate-100 { background-color: hsl(220, 9%, 16%); }
 
-  /* --- amber / yellow: surfaces oscuras, texto claro --- */
-  .dark .bg-amber-50 { background-color: hsl(39, 50%, 10%); }
+  /* --- amber / yellow: superficies oscuras, texto claro --- */
+  .dark .bg-amber-50 { background-color: hsl(39, 50%, 9%); }
   .dark .bg-amber-100 { background-color: hsl(39, 50%, 15%); }
   .dark .bg-amber-200 { background-color: hsl(39, 40%, 20%); }
+  .dark .text-amber-600,
   .dark .text-amber-700,
   .dark .text-amber-800 { color: hsl(39, 80%, 70%); }
   .dark .border-amber-200 { border-color: hsl(39, 40%, 25%); }
   .dark .bg-yellow-100 { background-color: hsl(50, 50%, 15%); }
   .dark .text-yellow-800 { color: hsl(50, 80%, 70%); }
 
-  /* --- otros colores de badge: oscuros con texto claro --- */
-  .dark .bg-green-100 { background-color: hsl(150, 40%, 12%); }
+  /* --- verde / rojo --- */
+  .dark .bg-green-50 { background-color: hsl(150, 40%, 10%); }
+  .dark .bg-green-100 { background-color: hsl(150, 40%, 14%); }
+  .dark .text-green-600,
+  .dark .text-green-700,
   .dark .text-green-800 { color: hsl(150, 60%, 65%); }
+  .dark .bg-red-50 { background-color: hsl(0, 50%, 12%); }
   .dark .bg-red-100 { background-color: hsl(0, 50%, 15%); }
+  .dark .text-red-600,
+  .dark .text-red-700,
   .dark .text-red-800,
-  .dark .text-red-600 { color: hsl(0, 70%, 70%); }
+  .dark .text-red-900 { color: hsl(0, 70%, 70%); }
+
+  /* --- indigo / violeta / púrpura / naranja --- */
+  .dark .bg-indigo-50 { background-color: hsl(240, 40%, 12%); }
   .dark .bg-indigo-100 { background-color: hsl(240, 40%, 15%); }
-  .dark .text-indigo-800 { color: hsl(240, 60%, 70%); }
+  .dark .text-indigo-800,
+  .dark .text-indigo-900 { color: hsl(240, 60%, 70%); }
+  .dark .bg-purple-100 { background-color: hsl(270, 40%, 15%); }
+  .dark .text-violet-700,
+  .dark .text-violet-900 { color: hsl(260, 60%, 70%); }
+  .dark .bg-orange-100 { background-color: hsl(25, 60%, 14%); }
+
+  /* --- esmeralda --- */
   .dark .bg-emerald-100 { background-color: hsl(160, 40%, 12%); }
   .dark .bg-emerald-50 { background-color: hsl(160, 40%, 10%); }
   .dark .text-emerald-600,
   .dark .text-emerald-700,
   .dark .text-emerald-800 { color: hsl(160, 60%, 65%); }
   .dark .border-emerald-200 { border-color: hsl(160, 40%, 25%); }
+
+  /* --- sky / azul --- */
   .dark .bg-sky-100 { background-color: hsl(200, 40%, 14%); }
   .dark .text-sky-800 { color: hsl(200, 60%, 70%); }
+  .dark .bg-blue-50 { background-color: hsl(220, 40%, 11%); }
   .dark .bg-blue-100 { background-color: hsl(220, 40%, 14%); }
   .dark .text-blue-700,
-  .dark .text-blue-800 { color: hsl(220, 60%, 70%); }
-  .dark .text-violet-700,
-  .dark .text-violet-900 { color: hsl(260, 60%, 70%); }
+  .dark .text-blue-800,
+  .dark .text-blue-900 { color: hsl(220, 60%, 70%); }
+
+  /* --- teal / cyan --- */
+  .dark .bg-teal-50 { background-color: hsl(170, 40%, 11%); }
+  .dark .bg-cyan-50 { background-color: hsl(190, 40%, 11%); }
   .dark .text-teal-700,
+  .dark .text-teal-800,
   .dark .text-teal-900 { color: hsl(170, 60%, 65%); }
   .dark .text-cyan-700,
+  .dark .text-cyan-800,
   .dark .text-cyan-900 { color: hsl(190, 60%, 65%); }
-  .dark .text-emerald-900 { color: hsl(160, 60%, 65%); }
 
-  /* --- input / textarea: keep white bg & dark text in dark mode --- */
+  /* --- input / textarea: fondo oscuro y letras claras (blancas) en dark mode --- */
   .dark textarea,
   .dark input[type='text'],
   .dark input[type='email'],
@@ -226,8 +238,8 @@
   .dark input[type='search'],
   .dark input[type='password'],
   .dark select {
-    background-color: hsl(0, 0%, 100%) !important;
-    color: hsl(222, 47%, 11%) !important;
-    color-scheme: light;
+    background-color: hsl(222, 20%, 15%) !important;
+    color: hsl(220, 9%, 94%) !important;
+    color-scheme: dark;
   }
 }
