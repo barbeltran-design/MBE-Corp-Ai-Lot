@@ -12,6 +12,103 @@ function toAmountPct(value: number, mode: '$' | '%', unitPrice: number): number 
   return unitPrice > 0 ? value / unitPrice : 0;
 }
 
+interface FinSavedForm {
+  unitPrice: number;
+  desiredProfit: number;
+  fixedItems: { name: string; amount: number }[];
+  varItems: { name: string; value: number; mode: '$' | '%' }[];
+  channels: { name: string; pct: number }[];
+  marketingPct: number;
+}
+
+interface FinGoalsSaved {
+  id: string;
+  input: FinancialGoalsInput;
+  result: FinancialGoalsResult;
+  savedAt: string;
+  form: FinSavedForm;
+}
+
+const FIN_GOALS_HISTORY_KEY = 'babel_financial_goals_history_v1';
+const FIN_GOALS_LAST_KEY = 'babel_financial_goals_v1';
+const FIN_HISTORY_MAX = 10;
+
+function formFromInput(inp: FinancialGoalsInput): FinSavedForm {
+  return {
+    unitPrice: typeof inp.unitPrice === 'number' ? inp.unitPrice : 0,
+    desiredProfit: typeof inp.desiredProfit === 'number' ? inp.desiredProfit : 0,
+    fixedItems: Array.isArray(inp.fixedItems)
+      ? inp.fixedItems.map(function (f) { return { name: f.name ?? '', amount: f.amount ?? 0 }; })
+      : [],
+    varItems: Array.isArray(inp.varItems)
+      ? inp.varItems.map(function (v) { return { name: v.name ?? '', value: (v.pct ?? 0) * 100, mode: '%' as '$' | '%' }; })
+      : [],
+    channels: Array.isArray(inp.channels)
+      ? inp.channels.map(function (c) { return { name: c.name ?? '', pct: Math.round((c.pct ?? 0) * 100) }; })
+      : [],
+    marketingPct: Math.round((inp.marketingPct ?? 0) * 100),
+  };
+}
+
+function readFinHistory(): FinGoalsSaved[] {
+  try {
+    const raw = window.localStorage.getItem(FIN_GOALS_HISTORY_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+    const rawOld = window.localStorage.getItem(FIN_GOALS_LAST_KEY);
+    if (rawOld) {
+      const parsedOld = JSON.parse(rawOld);
+      if (parsedOld && parsedOld.input && parsedOld.result) {
+        const migrated: FinGoalsSaved = {
+          id: String(parsedOld.savedAt ?? Date.now()),
+          input: parsedOld.input,
+          result: parsedOld.result,
+          savedAt: parsedOld.savedAt ?? new Date().toISOString(),
+          form: formFromInput(parsedOld.input),
+        };
+        writeFinHistory([migrated]);
+        return [migrated];
+      }
+    }
+  } catch {
+    // sin acceso a localStorage o datos corruptos
+  }
+  return [];
+}
+
+function writeFinHistory(list: FinGoalsSaved[]): void {
+  try {
+    window.localStorage.setItem(FIN_GOALS_HISTORY_KEY, JSON.stringify(list));
+    const latest = list[0];
+    if (latest) {
+      window.localStorage.setItem(
+        FIN_GOALS_LAST_KEY,
+        JSON.stringify({ input: latest.input, result: latest.result, savedAt: latest.savedAt })
+      );
+    } else {
+      window.localStorage.removeItem(FIN_GOALS_LAST_KEY);
+    }
+  } catch {
+    // sin acceso a localStorage
+  }
+}
+
+function formatFinDate(savedAt: string, lang: FinLang): string {
+  try {
+    return new Date(savedAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'es-MX', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return savedAt;
+  }
+}
+
 export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
   const [finActive, setFinActive] = React.useState(false);
   const [finStage, setFinStage] = React.useState(1);
@@ -25,6 +122,9 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
   const [finChannels, setFinChannels] = React.useState<{ name: string; pct: number }[]>([]);
   const [finMarketingPct, setFinMarketingPct] = React.useState(0);
   const [finDone, setFinDone] = React.useState(false);
+  const [finHistory, setFinHistory] = React.useState<FinGoalsSaved[]>([]);
+  const [finMenu, setFinMenu] = React.useState(false);
+  const [finEditingId, setFinEditingId] = React.useState<string | null>(null);
 
   function resetFin() {
     setFinStage(1);
@@ -38,11 +138,39 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
     setFinChannels([]);
     setFinMarketingPct(0);
     setFinDone(false);
+    setFinMenu(false);
+    setFinEditingId(null);
   }
 
   function handleStartFinancialGoals() {
     resetFin();
+    const list = readFinHistory();
+    setFinHistory(list);
     setFinActive(true);
+    setFinMenu(list.length > 0);
+  }
+  function handleNewFinGoals() {
+    resetFin();
+    setFinActive(true);
+  }
+  function handleEditSaved(entry: FinGoalsSaved) {
+    const f = entry.form ?? formFromInput(entry.input);
+    setFinUnitPrice(f.unitPrice);
+    setFinDesiredProfit(f.desiredProfit);
+    setFinFixedItems(f.fixedItems.map(function (item) { return { name: item.name, amount: item.amount }; }));
+    setFinVarItems(f.varItems.map(function (item) { return { name: item.name, value: item.value, mode: item.mode }; }));
+    setFinChannels(f.channels.map(function (c) { return { name: c.name, pct: c.pct }; }));
+    setFinMarketingPct(f.marketingPct);
+    setFinEditingId(entry.id);
+    setFinStage(1);
+    setFinReviewing(false);
+    setFinError(null);
+    setFinMenu(false);
+  }
+  function handleDeleteSaved(id: string) {
+    const next = finHistory.filter(function (h) { return h.id !== id; });
+    setFinHistory(next);
+    writeFinHistory(next);
   }
   function handleCloseFinancialGoals() {
     resetFin();
@@ -166,10 +294,26 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
       };
       try {
         const resultForSave = computeFinancialGoals(goalsInput);
-        window.localStorage.setItem(
-          'babel_financial_goals_v1',
-          JSON.stringify({ input: goalsInput, result: resultForSave, savedAt: new Date().toISOString() })
-        );
+        const savedEntry: FinGoalsSaved = {
+          id: finEditingId ?? String(Date.now()),
+          input: goalsInput,
+          result: resultForSave,
+          savedAt: new Date().toISOString(),
+          form: {
+            unitPrice: finUnitPrice,
+            desiredProfit: finDesiredProfit,
+            fixedItems: finFixedItems.map(function (item) { return { name: item.name, amount: item.amount }; }),
+            varItems: finVarItems.map(function (item) { return { name: item.name, value: item.value, mode: item.mode }; }),
+            channels: finChannels.map(function (c) { return { name: c.name, pct: c.pct }; }),
+            marketingPct: finMarketingPct,
+          },
+        };
+        setFinHistory(function (prev) {
+          const without = prev.filter(function (h) { return h.id !== savedEntry.id; });
+          const next = [savedEntry, ...without].slice(0, FIN_HISTORY_MAX);
+          writeFinHistory(next);
+          return next;
+        });
       } catch (saveErr) {
         console.error(saveErr);
       }
@@ -234,6 +378,48 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
               <Button onClick={handleCloseFinancialGoals} variant="outline" size="sm">
                 {lang === 'en' ? 'Close' : 'Cerrar'}
               </Button>
+            </div>
+          ) : finMenu ? (
+            <div className="space-y-3 text-sm text-slate-800">
+              <p className="font-semibold">{lang === 'en' ? 'Saved financial goals' : 'Objetivos financieros guardados'}</p>
+              {finHistory.length === 0 && (
+                <p className="text-slate-500">{lang === 'en' ? 'You have no saved goals yet.' : 'Aún no tienes objetivos guardados.'}</p>
+              )}
+              {finHistory.map(function (entry) {
+                return (
+                  <div key={entry.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-semibold text-slate-900">{formatFinDate(entry.savedAt, lang)}</p>
+                      <span className="text-xs text-slate-500">
+                        {lang === 'en' ? 'Break-even' : 'Punto de equilibrio'}: {(entry.result.breakEvenWithMarketing ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600">
+                      {lang === 'en' ? 'Goal revenue' : 'Ingreso meta'}: {(entry.result.targetRevenueWithMarketing ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      {' · '}
+                      {lang === 'en' ? '% Variable costs' : '% Costos variables'}: {((entry.result.totalVariablePctWithMarketing ?? 0) * 100).toFixed(1)}%
+                    </p>
+                    <div className="flex gap-2 pt-1">
+                      <Button size="sm" onClick={function () { handleEditSaved(entry); }}>
+                        {lang === 'en' ? 'Edit' : 'Editar'}
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={function () { handleDeleteSaved(entry.id); }}>
+                        {lang === 'en' ? 'Delete' : 'Eliminar'}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+              <Button onClick={handleNewFinGoals} className="w-full">
+                {lang === 'en' ? '+ Add new financial goals' : '+ Añadir nuevos objetivos financieros'}
+              </Button>
+              <button
+                type="button"
+                onClick={handleCloseFinancialGoals}
+                className="text-xs font-medium text-slate-500 underline underline-offset-2 hover:text-slate-700"
+              >
+                {lang === 'en' ? 'Close' : 'Cerrar'}
+              </button>
             </div>
           ) : (
             <>
