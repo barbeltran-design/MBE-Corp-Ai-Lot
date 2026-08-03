@@ -31,36 +31,107 @@ interface Diagnostic {
 
 interface IndicadoresRequestBody {
   language?: 'es' | 'en';
-  planContext?: string;
-  roleKeys?: string;
+  financialContext?: string;
 }
 
-function buildSystemPrompt(language: 'es' | 'en', roleKeys: string): string {
+// ---------------------------------------------------------------------------
+// CATALOGO OBLIGATORIO DE OBJETIVOS BALANCED SCORECARD. Babel SOLO sustituye
+// el contenido de los corchetes [ ] por valores concretos (financieros cuando
+// se proporcionan); el "nombre" y el resto de la redaccion quedan verbatim.
+// ---------------------------------------------------------------------------
+const CATALOGO_ES = `CATALOGO OBLIGATORIO DE OBJETIVOS BALANCED SCORECARD (5 perspectivas):
+Para cada objetivo usa EXACTAMENTE el "nombre" de la lista y la "redaccion" tal como aparece: tu UNICA intervencion es sustituir SOLO el contenido de los corchetes [ ] por valores concretos y realistas, usando los datos financieros del contexto cuando existan. No cambies ninguna otra palabra del texto.
+
+FINANCIERA (Dinero del negocio):
+- "Ingresos (Ventas)": "Aumentar las ventas de [punto de equilibrio definido] a [ingreso meta] pesos mensuales en 12 meses."
+- "Gastos Fijos": "Reducir los gastos fijos en x% [meta para acelerar la utilidad deseada] con relación a los ingresos en 12 meses."
+- "Gastos Variables": "Reducir los gastos variables en x% [% realista de los ya calculados] con relación a los ingresos en 12 meses."
+- "Utilidad (Ganancia real)": "Lograr [utilidad deseada definida] mensuales en 12 meses."
+
+CLIENTES:
+- "Satisfacción de clientes": "Mantener al 95% de clientes satisfechos mensual en los siguientes 12 meses."
+- "Quejas de clientes": "Menos de 2 quejas de clientes mensuales en los siguientes 12 meses"
+- "Número de Clientes al Mes": "Captar [número de clientes necesarios al mes para alcanzar la meta en 12 meses por canal de ingresos] clientes nuevos cada mes en los siguientes 12 meses."
+- "Cartera Vencida (Cuentas por cobrar)": "Reducir a menos del 10% la cartera vencida de clientes mensual en los siguientes 12 meses."
+
+PROCESOS INTERNOS (Cómo trabajamos):
+- "Tiempo de Entrega": "Cumplir al 95% las entregas mensuales al cliente comprometidas en los siguientes 12 meses."
+- "Calidad del Producto": "Disminuir a menos del 5% los rechazos por parte del cliente del [producto y/o servicio dependiendo del giro y productos o servicios declarados] mensuales en los siguientes 12 meses."
+- "Atención a requerimientos y problemas": "Cumplir mensualmente al 95% en tiempo y forma la solución de los requerimientos y problemas reportados por el cliente que no estén contemplados en [el producto y/o servicio declarados en las etapas anteriores] en los siguientes 12 meses."
+
+APRENDIZAJE Y CONOCIMIENTO (Nuestro equipo):
+- "Retención de Personal": "Reducir al 3% mensual la rotación del personal en los siguientes 12 meses."
+- "Desempeño": "Incrementar a 95% de cumplimiento mensual del personal en sus objetivos individuales en los siguientes 12 meses."
+- "Capacitación": "Lograr que el 100% del personal cumpla su plan de capacitación en los siguientes 12 meses."
+- "Clima Laboral": "Incrementar a 95% de personal satisfecho en los siguientes 12 meses."
+
+SOCIOAMBIENTAL:
+- "Descarbonización (NIIF S2 - Reducción de contaminación)": "Disminuir la huella de carbono en un 50% en emisiones alcance 1 (combustión propia, flotillas) y Alcance 2 (electricidad consumida) en los siguientes 12 meses."
+- "Gobernanza y Transparencia (NIIF S1 - Reglas y registros claros)": "Registrar el 100% de los impactos a los grupos de interés mensualmente en los siguientes 12 meses."
+- "Economía Circular e Impacto Financiero (NIIF S1/S2)": "Separar y vender o reusar el x% de [proponer el porcentaje y los residuos o productos de acuerdo al giro] mensualmente en los siguientes 12 meses."`;
+
+const CATALOGO_EN = `MANDATORY BALANCED SCORECARD OBJECTIVE CATALOG (5 perspectives):
+For each objective use EXACTLY the "name" from the list and the "wording" as it appears: your ONLY intervention is to substitute ONLY the content of the square brackets [ ] with concrete, realistic values, using the financial data from the context when available. Do not change any other word of the text.
+
+FINANCIAL (Business money):
+- "Income (Sales)": "Increase sales from [defined break-even point] to [goal revenue] pesos per month in 12 months."
+- "Fixed Expenses": "Reduce fixed expenses by x% [target to accelerate the desired profit] relative to income in 12 months."
+- "Variable Expenses": "Reduce variable expenses by x% [realistic percentage of the already calculated ones] relative to income in 12 months."
+- "Profit (Real Earnings)": "Achieve [defined desired profit] per month in 12 months."
+
+CUSTOMERS:
+- "Customer Satisfaction": "Keep 95% of customers satisfied monthly over the next 12 months."
+- "Customer Complaints": "Fewer than 2 customer complaints per month over the next 12 months."
+- "Number of Customers per Month": "Attract [number of new customers needed per month to reach the goal in 12 months per income channel] new customers each month over the next 12 months."
+- "Overdue Portfolio (Accounts Receivable)": "Reduce the overdue customer portfolio to under 10% monthly over the next 12 months."
+
+INTERNAL PROCESSES (How we work):
+- "Delivery Time": "Meet 95% of the monthly deliveries committed to the customer over the next 12 months."
+- "Product Quality": "Reduce customer rejections of [product and/or service depending on the business type and the declared products or services] to under 5% monthly over the next 12 months."
+- "Requirements and Issues Response": "Monthly, resolve 95% of customer requirements and reported issues on time and properly that are not covered by [the product and/or service declared in the previous stages] over the next 12 months."
+
+LEARNING AND GROWTH (Our team):
+- "Staff Retention": "Reduce monthly staff turnover to 3% over the next 12 months."
+- "Performance": "Increase monthly staff compliance with their individual objectives to 95% over the next 12 months."
+- "Training": "Ensure that 100% of staff complete their training plan over the next 12 months."
+- "Work Climate": "Increase satisfied staff to 95% over the next 12 months."
+
+SOCIAL-ENVIRONMENTAL:
+- "Decarbonization (IFRS S2 - Pollution reduction)": "Reduce the carbon footprint by 50% in scope 1 emissions (own combustion, fleets) and Scope 2 (consumed electricity) over the next 12 months."
+- "Governance and Transparency (IFRS S1 - Clear rules and records)": "Record 100% of stakeholder impacts monthly over the next 12 months."
+- "Circular Economy and Financial Impact (IFRS S1/S2)": "Separate and sell or reuse x% of [propose the percentage and the waste or products according to the business type] monthly over the next 12 months."`;
+
+function buildSystemPrompt(language: 'es' | 'en'): string {
+  const catalog = language === 'en' ? CATALOGO_EN : CATALOGO_ES;
   if (language === 'en') {
     return (
-      'You are Babel, a strategic business architect. The user gave you the full context of their Strategic Action Plan below: ' +
-      'business objectives (each tagged with a Balanced Scorecard perspective: financiera, clientes, procesos_internos or aprendizaje_crecimiento), ' +
-      'their threats and opportunities, and the actions already assigned to each project with their owners.\n\n' +
-      'Your task: propose between 6 and 12 SMART indicators (Specific, Measurable, Achievable, Relevant, Time-bound) that will let the business ' +
-      'track progress on those objectives, aligned to the Balanced Scorecard perspectives, and linked whenever possible to the threats/opportunities ' +
-      'and to the actions already defined.\n\n' +
+      'You are Babel, a strategic business architect. The user defines Balanced Scorecard strategic objectives from a standard catalog ' +
+      'and gives you their saved financial goals as context.\n\n' +
+      'Your task: propose between 10 and 18 strategic objectives from the catalog below, covering ALL 5 perspectives ' +
+      '(at least 2 per perspective, and ALWAYS all 4 financial ones when financial data exists). For each one, ' +
+      'copy the exact "name" and the exact "wording", replacing ONLY the [bracketed] parts with concrete, realistic values ' +
+      '(use the financial context values for the financial perspective; otherwise propose plausible values for the declared income channels). ' +
+      'Do NOT add, remove or reword any other part of the wording.\n\n' +
+      'For each objective add: a concrete "formula" (with units), a concrete "meta" (target value), a "unidadMedida" ' +
+      '(e.g. "$", "%", "customers/month", "complaints/month") and "frecuencia" ("mensual" for these objectives).\n\n' +
       'Respond with ONLY a raw JSON array (no markdown fences, no prose before or after) where each item has EXACTLY this shape:\n' +
-      '{"objetivoTexto":"copy the exact text of one objective from the list below","entornoTexto":"copy the exact text of a threat/opportunity of that objective, or empty string if none applies","accionesTexto":["copy the exact text of one or more related actions from the list, or empty array"],"nombre":"indicator name","formula":"calculation formula","especifico":"what exactly is measured and why","medible":"unit of measure","alcanzable":"why the target is realistic","relevante":"why it matters for this objective","temporal":"over what period it is evaluated","lineaBase":"current/starting value","meta":"target value","fechaLimiteSugerida":"YYYY-MM-DD","frecuencia":"one of: semanal, mensual, trimestral, semestral, anual","responsableRoleKey":"one of these exact keys: ' +
-      roleKeys +
-      '"}\n\nAlways copy objetivoTexto/entornoTexto/accionesTexto VERBATIM from the context provided — do not paraphrase them.'
+      '{"perspectiva":"financiera or clientes or procesos_internos or aprendizaje_crecimiento or socioambiental","nombre":"objective name from the catalog","objetivo":"exact catalog wording with only the bracketed parts filled in","formula":"calculation formula","meta":"target value","unidadMedida":"unit of measure","frecuencia":"mensual"}\n\n' +
+      catalog
     );
   }
   return (
-    'Eres Babel, un arquitecto estrategico de negocios. El usuario te dio el contexto completo de su Plan de Accion Estrategico a continuacion: ' +
-    'objetivos de negocio (cada uno etiquetado con una perspectiva de Balanced Scorecard: financiera, clientes, procesos_internos o aprendizaje_crecimiento), ' +
-    'sus amenazas y oportunidades, y las acciones ya asignadas a cada proyecto con sus responsables.\n\n' +
-    'Tu tarea: propone entre 6 y 12 indicadores SMART (Especifico, Medible, Alcanzable, Relevante, con plazo Temporal) que permitan a la empresa dar ' +
-    'seguimiento a esos objetivos, alineados a las perspectivas del Balanced Scorecard, y vinculados siempre que sea posible a las amenazas/oportunidades ' +
-    'y a las acciones ya definidas.\n\n' +
+    'Eres Babel, un arquitecto estrategico de negocios. El usuario define objetivos estrategicos Balanced Scorecard a partir de un catalogo ' +
+    'estandar y te da sus objetivos financieros guardados como contexto.\n\n' +
+    'Tu tarea: propone entre 10 y 18 objetivos estrategicos del catalogo de abajo, cubriendo TODAS las 5 perspectivas ' +
+    '(al menos 2 por perspectiva, y SIEMPRE los 4 de la financiera cuando existan datos financieros). Para cada uno, ' +
+    'copia el "nombre" y la "redaccion" exactos, sustituyendo SOLO las partes entre corchetes [ ] por valores concretos y realistas ' +
+    '(usa los valores del contexto financiero para la perspectiva financiera; si no hay datos, propone valores plausibles para los canales declarados). ' +
+    'NO agregues, quites ni reformules ninguna otra parte de la redaccion.\n\n' +
+    'Para cada objetivo agrega: una "formula" concreta (con unidades), una "meta" concreta (valor objetivo), una "unidadMedida" ' +
+    '(p.ej. "$", "%", "clientes/mes", "quejas/mes") y "frecuencia" ("mensual" para estos objetivos).\n\n' +
     'Responde UNICAMENTE con un arreglo JSON puro (sin marcadores de markdown, sin texto antes ni despues) donde cada elemento tenga EXACTAMENTE esta forma:\n' +
-    '{"objetivoTexto":"copia el texto exacto de un objetivo de la lista de abajo","entornoTexto":"copia el texto exacto de una amenaza/oportunidad de ese objetivo, o cadena vacia si no aplica","accionesTexto":["copia el texto exacto de una o mas acciones relacionadas de la lista, o arreglo vacio"],"nombre":"nombre del indicador","formula":"formula de calculo","especifico":"que se mide exactamente y por que","medible":"unidad de medida","alcanzable":"por que la meta es realista","relevante":"por que importa para este objetivo","temporal":"en que plazo se evalua","lineaBase":"valor actual/de partida","meta":"valor objetivo","fechaLimiteSugerida":"YYYY-MM-DD","frecuencia":"una de: semanal, mensual, trimestral, semestral, anual","responsableRoleKey":"una de estas claves exactas: ' +
-    roleKeys +
-    '"}\n\nSiempre copia objetivoTexto/entornoTexto/accionesTexto TEXTUALMENTE del contexto proporcionado — no los parafrasees.'
+    '{"perspectiva":"financiera o clientes o procesos_internos o aprendizaje_crecimiento o socioambiental","nombre":"nombre del objetivo del catalogo","objetivo":"redaccion exacta del catalogo con solo las partes entre corchetes completadas","formula":"formula de calculo","meta":"valor objetivo","unidadMedida":"unidad de medida","frecuencia":"mensual"}\n\n' +
+    catalog
   );
 }
 
@@ -165,7 +236,7 @@ async function tryOpenAICompatible(
 }
 
 export async function GET() {
-  return NextResponse.json({ status: 'ok', route: '/api/babel/indicadores', note: 'Propuesta de indicadores SMART + Balanced Scorecard' });
+  return NextResponse.json({ status: 'ok', route: '/api/babel/indicadores', note: 'Propuesta de objetivos Balanced Scorecard' });
 }
 
 export async function POST(req: NextRequest) {
@@ -177,19 +248,18 @@ export async function POST(req: NextRequest) {
   }
 
   const language = body.language === 'en' ? 'en' : 'es';
-  const planContext = (body.planContext || '').slice(0, 6000);
-  const roleKeys = body.roleKeys || '';
+  const financialContext = (body.financialContext || '').slice(0, 4000);
 
-  if (!planContext.trim()) {
-    return NextResponse.json(
-      { error: language === 'en' ? 'No action plan data was provided.' : 'No se recibio informacion del plan de accion.' },
-      { status: 400 },
-    );
-  }
-
-  const systemPrompt = buildSystemPrompt(language, roleKeys);
+  const systemPrompt = buildSystemPrompt(language);
   const userMessage =
-    (language === 'en' ? 'Action plan context:\n\n' : 'Contexto del plan de accion:\n\n') + planContext;
+    (language === 'en'
+      ? 'Financial goals context (use these values for the [bracketed] parts of the financial perspective):\n\n'
+      : 'Contexto de objetivos financieros (usa estos valores para las partes entre [corchetes] de la perspectiva financiera):\n\n') +
+    (financialContext.trim()
+      ? financialContext
+      : language === 'en'
+        ? 'No financial goals have been saved yet. Propose realistic values for the business (income channels, ticket size, etc.).'
+        : 'Aun no hay objetivos financieros guardados. Propone valores realistas para el negocio (canales de ingreso, ticket promedio, etc.).');
 
   const diagnostics: Diagnostic[] = [];
 
@@ -248,5 +318,5 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  return NextResponse.json({ indicadores: result.slice(0, 14) });
+  return NextResponse.json({ indicadores: result.slice(0, 18) });
 }

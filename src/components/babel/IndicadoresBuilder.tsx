@@ -3,87 +3,31 @@ import React from 'react';
 import FinancialGoalsBuilder from '@/components/babel/FinancialGoalsBuilder';
 
 type PlanLang = 'es' | 'en';
-type BSCPerspectiva = 'financiera' | 'clientes' | 'procesos_internos' | 'aprendizaje_crecimiento';
+type BSCPerspectiva = 'financiera' | 'clientes' | 'procesos_internos' | 'aprendizaje_crecimiento' | 'socioambiental';
 type Frecuencia = 'semanal' | 'mensual' | 'trimestral' | 'semestral' | 'anual';
-
-type RoleOption = { key: string; nameEs: string; nameEn: string };
-
-// ---------------------------------------------------------------------------
-// Estos tipos son un espejo de solo lectura de los datos que guarda
-// PlanAccionBuilder.tsx en localStorage (clave babel_plan_accion_v2). Este
-// componente NUNCA escribe de vuelta en esa clave — solo la lee para poder
-// alinear los indicadores con los objetivos, amenazas/oportunidades y
-// acciones que el usuario ya definio ahi.
-// ---------------------------------------------------------------------------
-type PlanObjetivo = { id: string; perspectiva: BSCPerspectiva; texto: string };
-type PlanEntorno = { id: string; objetivoId: string; tipo: 'amenaza' | 'oportunidad'; descripcion: string };
-type PlanFD = { id: string; entornoId: string; tipo: 'fortaleza' | 'debilidad'; descripcion: string };
-type PlanProyecto = { id: string; fdId: string; nombre: string };
-type PlanAccion = {
-  id: string;
-  proyectoId: string;
-  descripcion: string;
-  responsableRoleKey: string;
-  responsableNombre: string;
-};
 
 type Indicador = {
   id: string;
-  objetivoId: string;
-  entornoId: string;
-  accionesIds: string[];
+  perspectiva: BSCPerspectiva | '';
   nombre: string;
   formula: string;
-  especifico: string;
-  medible: string;
-  alcanzable: string;
-  relevante: string;
-  temporal: string;
-  lineaBase: string;
+  objetivo: string;
   meta: string;
-  fechaLimite: string;
+  unidadMedida: string;
   frecuencia: Frecuencia;
-  responsableRoleKey: string;
-  responsableNombre: string;
   origen: 'ia' | 'manual';
   validado: boolean;
-  notaIA: string;
 };
 
-type OrgAssignments = Record<string, { person: string }>;
-
-const PLAN_STORAGE_KEY = 'babel_plan_accion_v2';
-const ORG_KEY = 'babel_orgchart_v1';
-const BOARD_KEY = 'babel_orgchart_board_v1';
+const FIN_GOALS_LAST_KEY = 'babel_financial_goals_v1';
 const INDICADORES_KEY = 'babel_indicadores_v1';
-
-const ROLE_OPTIONS: RoleOption[] = [
-  { key: 'consejo_administrativo', nameEs: 'Consejo Administrativo', nameEn: 'Board of Directors' },
-  { key: 'planeacion_estrategica', nameEs: 'Planeacion Estrategica', nameEn: 'Strategic Planning' },
-  { key: 'finanzas', nameEs: 'Finanzas', nameEn: 'Finance' },
-  { key: 'cobranza', nameEs: 'Cobranza', nameEn: 'Collections' },
-  { key: 'facturacion', nameEs: 'Facturacion', nameEn: 'Invoicing' },
-  { key: 'contabilidad', nameEs: 'Contabilidad', nameEn: 'Accounting' },
-  { key: 'pago_proveedores', nameEs: 'Pago a Proveedores', nameEn: 'Vendor Payments' },
-  { key: 'administracion', nameEs: 'Administracion', nameEn: 'Administration' },
-  { key: 'recursos_humanos', nameEs: 'Recursos Humanos', nameEn: 'Human Resources' },
-  { key: 'legal', nameEs: 'Legal', nameEn: 'Legal' },
-  { key: 'comercial', nameEs: 'Comercial', nameEn: 'Commercial' },
-  { key: 'mercadotecnia', nameEs: 'Mercadotecnia', nameEn: 'Marketing' },
-  { key: 'relaciones_publicas', nameEs: 'Relaciones Publicas', nameEn: 'Public Relations' },
-  { key: 'servicio_clientes', nameEs: 'Servicio a Clientes', nameEn: 'Customer Service' },
-  { key: 'ventas', nameEs: 'Ventas', nameEn: 'Sales' },
-  { key: 'operacion', nameEs: 'Operacion', nameEn: 'Operations' },
-  { key: 'procesos', nameEs: 'Procesos', nameEn: 'Processes' },
-  { key: 'sistemas', nameEs: 'Sistemas', nameEn: 'Systems' },
-  { key: 'desarrollo_proveedores', nameEs: 'Desarrollo de Proveedores', nameEn: 'Vendor Development' },
-];
 
 const PERSPECTIVA_OPTIONS: { value: BSCPerspectiva; labelEs: string; labelEn: string }[] = [
   { value: 'financiera', labelEs: 'Financiera', labelEn: 'Financial' },
   { value: 'clientes', labelEs: 'Clientes', labelEn: 'Customer' },
   { value: 'procesos_internos', labelEs: 'Procesos Internos', labelEn: 'Internal Processes' },
   { value: 'aprendizaje_crecimiento', labelEs: 'Aprendizaje y Crecimiento', labelEn: 'Learning and Growth' },
+  { value: 'socioambiental', labelEs: 'Socioambiental', labelEn: 'Social-Environmental' },
 ];
 
 const FRECUENCIA_OPTIONS: { value: Frecuencia; labelEs: string; labelEn: string }[] = [
@@ -98,18 +42,6 @@ function generateId(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
-function roleLabel(roleKey: string, lang: PlanLang): string {
-  let found: RoleOption | null = null;
-  for (let i = 0; i < ROLE_OPTIONS.length; i++) {
-    if (ROLE_OPTIONS[i].key === roleKey) {
-      found = ROLE_OPTIONS[i];
-      break;
-    }
-  }
-  if (!found) return '';
-  return lang === 'en' ? found.nameEn : found.nameEs;
-}
-
 function perspectivaLabel(value: BSCPerspectiva | '', lang: PlanLang): string {
   for (let i = 0; i < PERSPECTIVA_OPTIONS.length; i++) {
     if (PERSPECTIVA_OPTIONS[i].value === value) {
@@ -119,103 +51,77 @@ function perspectivaLabel(value: BSCPerspectiva | '', lang: PlanLang): string {
   return '';
 }
 
-// Empareja un texto que devolvio la IA contra una lista de objetos con
-// descripcion, por igualdad exacta primero y si no por coincidencia parcial.
-// Devuelve el id encontrado o '' si no hubo match razonable.
-function matchTextToId<T extends { id: string }>(text: string, list: T[], getText: (item: T) => string): string {
-  const clean = (text || '').trim().toLowerCase();
-  if (!clean) return '';
-  for (let i = 0; i < list.length; i++) {
-    if (getText(list[i]).trim().toLowerCase() === clean) return list[i].id;
-  }
-  for (let i = 0; i < list.length; i++) {
-    const itemText = getText(list[i]).trim().toLowerCase();
-    if (itemText.length > 0 && (itemText.indexOf(clean) !== -1 || clean.indexOf(itemText) !== -1)) {
-      return list[i].id;
-    }
-  }
-  return '';
-}
-
 const LABELS = {
   es: {
-    title: 'Objetivos Estratégicos (SMART + Balanced Scorecard)',
+    title: 'Objetivos Estratégicos (Balanced Scorecard)',
     subtitle:
-      'Babel propone indicadores con metodologia SMART, alineados a las 4 perspectivas del Balanced Scorecard. La vinculacion con objetivos, amenazas/oportunidades, acciones y responsables se define en el Plan de Accion Estrategico. Puedes modificar cualquier campo y validar cada indicador.',
-    noObjetivos:
-      'Todavia no hay objetivos de negocio registrados en tu Plan de Accion. Ve primero a "Plan de Accion Estrategico" y captura al menos un objetivo, sus amenazas u oportunidades y algunas acciones — despues regresa aqui para generar la propuesta de indicadores.',
+      'Babel propone los objetivos del Balanced Scorecard: el nombre y la redaccion del objetivo vienen del catalogo estandar y Babel solo completa los valores entre corchetes [] usando tus objetivos financieros y el giro de tu negocio. Puedes modificar cualquier campo y validar cada objetivo.',
     generar: 'Generar propuesta con Babel',
     generando: 'Generando propuesta...',
-    agregarManual: 'Agregar indicador manualmente',
+    agregarManual: 'Agregar objetivo manualmente',
     errorTitle: 'No se pudo generar la propuesta automatica',
-    errorHint: 'Puedes seguir agregando indicadores de forma manual mientras tanto.',
-    summaryTotal: 'Indicadores totales',
+    errorHint: 'Puedes seguir agregando objetivos de forma manual mientras tanto.',
+    summaryTotal: 'Objetivos totales',
     summaryValidados: 'Validados',
     summaryPendientes: 'Pendientes de validar',
     summaryFinanciera: 'Perspectiva financiera',
     summaryClientes: 'Perspectiva clientes',
     summaryProcesos: 'Perspectiva procesos internos',
     summaryAprendizaje: 'Perspectiva aprendizaje y crecimiento',
+    summarySocioambiental: 'Perspectiva socioambiental',
     perspectivaLabel: 'Perspectiva (Balanced Scorecard)',
-    nombreLabel: 'Nombre del indicador',
-    nombrePlaceholder: 'Ej. Tasa de conversion de cotizacion a venta',
+    nombreLabel: 'Nombre del objetivo',
+    nombrePlaceholder: 'Ej. Ingresos (Ventas)',
     formulaLabel: 'Formula de calculo',
-    formulaPlaceholder: 'Ej. (Ventas cerradas / Cotizaciones enviadas) x 100',
-    especificoLabel: 'S - Especifico: que se mide exactamente y por que',
-    medibleLabel: 'M - Medible: unidad de medida',
-    alcanzableLabel: 'A - Alcanzable: por que la meta es realista',
-    relevanteLabel: 'R - Relevante: por que importa para este objetivo',
-    temporalLabel: 'T - Temporal: en que plazo se evalua',
-    lineaBaseLabel: 'Linea base (valor actual)',
-    metaLabel: 'Meta (valor objetivo)',
-    fechaLimiteLabel: 'Fecha limite para alcanzar la meta',
-    frecuenciaLabel: 'Frecuencia de medicion',
+    formulaPlaceholder: 'Ej. (Ventas del mes / Ingreso meta) x 100',
+    objetivoRedaccionLabel: 'Objetivo',
+    objetivoRedaccionPlaceholder: 'Redaccion del objetivo con los valores entre corchetes completados por Babel.',
+    metaLabel: 'Meta',
+    metaPlaceholder: 'Ej. $50,000 mensuales',
+    unidadMedidaLabel: 'Unidad de Medida',
+    unidadMedidaPlaceholder: 'Ej. $, %, numero de clientes',
+    frecuenciaLabel: 'Frecuencia de medida',
     validado: 'Validado',
     pendienteValidar: 'Pendiente de validar',
     eliminar: 'Eliminar',
     origenIA: 'Propuesto por Babel',
     origenManual: 'Agregado manualmente',
-    notaIALabel: 'Nota de Babel (texto original no vinculado automaticamente)',
     savedNote: 'Los cambios se guardan automaticamente en este navegador.',
   },
   en: {
-    title: 'Strategic Objectives (SMART + Balanced Scorecard)',
+    title: 'Strategic Objectives (Balanced Scorecard)',
     subtitle:
-      'Babel proposes indicators using the SMART methodology, aligned to the 4 Balanced Scorecard perspectives. Linking to objectives, threats/opportunities, actions and owners is defined in the Strategic Action Plan. You can edit any field and validate each indicator.',
-    noObjetivos:
-      'There are no business objectives registered in your Action Plan yet. Go to "Strategic Action Plan" first and capture at least one objective, its threats or opportunities, and some actions — then come back here to generate the indicator proposal.',
+      'Babel proposes the Balanced Scorecard objectives: the name and the objective wording come from the standard catalog and Babel only completes the values in square brackets [] using your financial goals and your business type. You can edit any field and validate each objective.',
     generar: 'Generate proposal with Babel',
     generando: 'Generating proposal...',
-    agregarManual: 'Add indicator manually',
+    agregarManual: 'Add objective manually',
     errorTitle: 'The automatic proposal could not be generated',
-    errorHint: 'You can keep adding indicators manually in the meantime.',
-    summaryTotal: 'Total indicators',
+    errorHint: 'You can keep adding objectives manually in the meantime.',
+    summaryTotal: 'Total objectives',
     summaryValidados: 'Validated',
     summaryPendientes: 'Pending validation',
     summaryFinanciera: 'Financial perspective',
     summaryClientes: 'Customer perspective',
     summaryProcesos: 'Internal processes perspective',
     summaryAprendizaje: 'Learning and growth perspective',
+    summarySocioambiental: 'Social-environmental perspective',
     perspectivaLabel: 'Perspective (Balanced Scorecard)',
-    nombreLabel: 'Indicator name',
-    nombrePlaceholder: 'E.g. Quote-to-sale conversion rate',
+    nombreLabel: 'Objective name',
+    nombrePlaceholder: 'E.g. Income (Sales)',
     formulaLabel: 'Calculation formula',
-    formulaPlaceholder: 'E.g. (Closed sales / Quotes sent) x 100',
-    especificoLabel: 'S - Specific: what exactly is measured and why',
-    medibleLabel: 'M - Measurable: unit of measure',
-    alcanzableLabel: 'A - Achievable: why the target is realistic',
-    relevanteLabel: 'R - Relevant: why it matters for this objective',
-    temporalLabel: 'T - Time-bound: over what period it is evaluated',
-    lineaBaseLabel: 'Baseline (current value)',
-    metaLabel: 'Target value',
-    fechaLimiteLabel: 'Deadline to reach the target',
+    formulaPlaceholder: 'E.g. (Monthly sales / Goal revenue) x 100',
+    objetivoRedaccionLabel: 'Objective',
+    objetivoRedaccionPlaceholder: 'Objective wording with the bracketed values completed by Babel.',
+    metaLabel: 'Target',
+    metaPlaceholder: 'E.g. $50,000 monthly',
+    unidadMedidaLabel: 'Unit of measure',
+    unidadMedidaPlaceholder: 'E.g. $, %, number of customers',
     frecuenciaLabel: 'Measurement frequency',
     validado: 'Validated',
     pendienteValidar: 'Pending validation',
     eliminar: 'Remove',
     origenIA: 'Proposed by Babel',
     origenManual: 'Added manually',
-    notaIALabel: "Note from Babel (original text not automatically linked)",
     savedNote: 'Changes are saved automatically in this browser.',
   },
 };
@@ -223,48 +129,66 @@ const LABELS = {
 function blankIndicador(): Indicador {
   return {
     id: generateId(),
-    objetivoId: '',
-    entornoId: '',
-    accionesIds: [],
+    perspectiva: '',
     nombre: '',
     formula: '',
-    especifico: '',
-    medible: '',
-    alcanzable: '',
-    relevante: '',
-    temporal: '',
-    lineaBase: '',
+    objetivo: '',
     meta: '',
-    fechaLimite: '',
+    unidadMedida: '',
     frecuencia: 'mensual',
-    responsableRoleKey: '',
-    responsableNombre: '',
     origen: 'manual',
     validado: false,
-    notaIA: '',
   };
 }
 
 interface RawIndicadorIA {
-  objetivoTexto?: string;
-  entornoTexto?: string;
-  accionesTexto?: string[];
+  perspectiva?: string;
   nombre?: string;
+  objetivo?: string;
   formula?: string;
-  especifico?: string;
-  medible?: string;
-  alcanzable?: string;
-  relevante?: string;
-  temporal?: string;
-  lineaBase?: string;
   meta?: string;
-  fechaLimiteSugerida?: string;
+  unidadMedida?: string;
   frecuencia?: string;
-  responsableRoleKey?: string;
 }
 
 function isFrecuencia(value: string): value is Frecuencia {
   return value === 'semanal' || value === 'mensual' || value === 'trimestral' || value === 'semestral' || value === 'anual';
+}
+
+function isPerspectiva(value: string): value is BSCPerspectiva {
+  return PERSPECTIVA_OPTIONS.some((p) => p.value === value);
+}
+
+// Construye el contexto financiero compacto que Babel usa para llenar los
+// [corchetes] de la perspectiva financiera, leyendo el ultimo guardado de
+// FinancialGoalsBuilder (clave babel_financial_goals_v1).
+function buildFinancialContext(lang: PlanLang): string {
+  try {
+    const raw = window.localStorage.getItem(FIN_GOALS_LAST_KEY);
+    if (!raw) return '';
+    const parsed = JSON.parse(raw);
+    const i = parsed && parsed.input;
+    const r = parsed && parsed.result;
+    if (!i || !r) return '';
+    const money = (v: number): string => '$' + Math.round(v).toLocaleString(lang === 'en' ? 'en-US' : 'es-MX');
+    const monthly = lang === 'en' ? 'monthly' : 'mensuales';
+    const channels =
+      Array.isArray(i.channels) && i.channels.length > 0
+        ? i.channels.map((c: { name: string; pct: number }) => c.name + ' (' + Math.round(c.pct) + '%)').join(', ')
+        : lang === 'en'
+          ? 'not declared'
+          : 'no declarados';
+    return [
+      (lang === 'en' ? 'Break-even point: ' : 'Punto de equilibrio: ') + money(r.breakEvenWithMarketing) + ' ' + monthly,
+      (lang === 'en' ? 'Goal revenue: ' : 'Ingreso meta: ') + money(r.targetRevenueWithMarketing) + ' ' + monthly,
+      (lang === 'en' ? 'Desired profit: ' : 'Utilidad deseada: ') + money(i.desiredProfit) + ' ' + monthly,
+      (lang === 'en' ? 'Fixed expenses: ' : 'Gastos fijos: ') + money(r.fixedTotal) + ' ' + monthly,
+      (lang === 'en' ? 'Variable expenses: ' : '% Gastos variables: ') + (r.totalVariablePctWithMarketing * 100).toFixed(1) + '%',
+      (lang === 'en' ? 'Income channels: ' : 'Canales de ingreso: ') + channels,
+    ].join(' | ');
+  } catch {
+    return '';
+  }
 }
 
 export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
@@ -275,51 +199,12 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
     return translationCache[text] ?? text;
   }, [lang, translationCache]);
 
-  const [objetivos, setObjetivos] = React.useState<PlanObjetivo[]>([]);
-  const [entornos, setEntornos] = React.useState<PlanEntorno[]>([]);
-  const [fds, setFds] = React.useState<PlanFD[]>([]);
-  const [proyectos, setProyectos] = React.useState<PlanProyecto[]>([]);
-  const [acciones, setAcciones] = React.useState<PlanAccion[]>([]);
-  const [orgAssignments, setOrgAssignments] = React.useState<OrgAssignments>({});
-  const [boardPresidente, setBoardPresidente] = React.useState('');
-
   const [indicadores, setIndicadores] = React.useState<Indicador[]>([]);
   const [loaded, setLoaded] = React.useState(false);
   const [generating, setGenerating] = React.useState(false);
   const [genError, setGenError] = React.useState('');
 
   React.useEffect(() => {
-    try {
-      const rawPlan = window.localStorage.getItem(PLAN_STORAGE_KEY);
-      if (rawPlan) {
-        const parsed = JSON.parse(rawPlan);
-        if (parsed && Array.isArray(parsed.objetivos)) setObjetivos(parsed.objetivos);
-        if (parsed && Array.isArray(parsed.entornos)) setEntornos(parsed.entornos);
-        if (parsed && Array.isArray(parsed.fds)) setFds(parsed.fds);
-        if (parsed && Array.isArray(parsed.proyectos)) setProyectos(parsed.proyectos);
-        if (parsed && Array.isArray(parsed.acciones)) setAcciones(parsed.acciones);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-    try {
-      const rawOrg = window.localStorage.getItem(ORG_KEY);
-      if (rawOrg) {
-        const parsedOrg = JSON.parse(rawOrg);
-        if (parsedOrg && typeof parsedOrg === 'object') setOrgAssignments(parsedOrg);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-    try {
-      const rawBoard = window.localStorage.getItem(BOARD_KEY);
-      if (rawBoard) {
-        const parsedBoard = JSON.parse(rawBoard);
-        if (parsedBoard && typeof parsedBoard.presidente === 'string') setBoardPresidente(parsedBoard.presidente);
-      }
-    } catch (err) {
-      console.error(err);
-    }
     try {
       const rawInd = window.localStorage.getItem(INDICADORES_KEY);
       if (rawInd) {
@@ -338,19 +223,10 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
     indicadores.forEach(function (ind) {
       if (ind.nombre) texts.add(ind.nombre);
       if (ind.formula) texts.add(ind.formula);
-      if (ind.especifico) texts.add(ind.especifico);
-      if (ind.medible) texts.add(ind.medible);
-      if (ind.alcanzable) texts.add(ind.alcanzable);
-      if (ind.relevante) texts.add(ind.relevante);
-      if (ind.temporal) texts.add(ind.temporal);
-      if (ind.lineaBase) texts.add(ind.lineaBase);
+      if (ind.objetivo) texts.add(ind.objetivo);
       if (ind.meta) texts.add(ind.meta);
-      if (ind.notaIA) texts.add(ind.notaIA);
+      if (ind.unidadMedida) texts.add(ind.unidadMedida);
     });
-    objetivos.forEach(function (o) { if (o.texto) texts.add(o.texto); });
-    entornos.forEach(function (e) { if (e.descripcion) texts.add(e.descripcion); });
-    proyectos.forEach(function (p) { if (p.nombre) texts.add(p.nombre); });
-    acciones.forEach(function (a) { if (a.descripcion) texts.add(a.descripcion); });
     texts.forEach(function (text) {
       fetch('/api/translate', {
         method: 'POST',
@@ -366,7 +242,7 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
           setTranslationCache(function (prev) { return { ...prev, [text]: text }; });
         });
     });
-  }, [loaded, lang, indicadores, objetivos, entornos, proyectos, acciones]);
+  }, [loaded, lang, indicadores]);
 
   React.useEffect(() => {
     if (!loaded) return;
@@ -377,105 +253,40 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
     }
   }, [indicadores, loaded]);
 
-  const resolvePersonForRole = (roleKey: string): string => {
-    if (!roleKey) return '';
-    if (roleKey === 'consejo_administrativo') return boardPresidente;
-    const a = orgAssignments[roleKey];
-    return a && a.person ? a.person : '';
-  };
-
-  const objetivoPerspectivaById = (id: string): BSCPerspectiva | '' => {
-    for (let i = 0; i < objetivos.length; i++) {
-      if (objetivos[i].id === id) return objetivos[i].perspectiva;
-    }
-    return '';
-  };
-
   const addIndicador = () => setIndicadores((prev) => prev.concat([blankIndicador()]));
   const updateIndicador = (id: string, patch: Partial<Indicador>) =>
     setIndicadores((prev) => prev.map((it) => (it.id === id ? Object.assign({}, it, patch) : it)));
   const removeIndicador = (id: string) => setIndicadores((prev) => prev.filter((it) => it.id !== id));
 
-  const buildPlanContextText = (): string => {
-    const lines: string[] = [];
-    objetivos.forEach((o) => {
-      lines.push('OBJETIVO [' + o.perspectiva + ']: ' + o.texto);
-      const entornosDeO = entornos.filter((e) => e.objetivoId === o.id);
-      entornosDeO.forEach((e) => {
-        lines.push('  ' + (e.tipo === 'amenaza' ? 'AMENAZA' : 'OPORTUNIDAD') + ': ' + e.descripcion);
-        const fdsDeE = fds.filter((f) => f.entornoId === e.id);
-        fdsDeE.forEach((f) => {
-          const proyectosDeF = proyectos.filter((p) => p.fdId === f.id);
-          proyectosDeF.forEach((p) => {
-            const accionesDeP = acciones.filter((a) => a.proyectoId === p.id);
-            accionesDeP.forEach((a) => {
-              const persona = a.responsableNombre || resolvePersonForRole(a.responsableRoleKey) || roleLabel(a.responsableRoleKey, lang);
-              lines.push('    ACCION (proyecto "' + p.nombre + '"): ' + a.descripcion + ' | responsable: ' + persona);
-            });
-          });
-        });
-      });
-    });
-    return lines.join('\n');
-  };
-
   const generarPropuesta = async () => {
     setGenerating(true);
     setGenError('');
     try {
-      const planContext = buildPlanContextText();
-      const roleKeysList = ROLE_OPTIONS.map((r) => r.key).join(', ');
+      const financialContext = buildFinancialContext(lang);
       const res = await fetch('/api/babel/indicadores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ language: lang, planContext: planContext, roleKeys: roleKeysList }),
+        body: JSON.stringify({ language: lang, financialContext }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data || !Array.isArray(data.indicadores)) {
         setGenError((data && data.error) || (lang === 'en' ? 'Unknown error contacting Babel.' : 'Error desconocido al contactar a Babel.'));
         return;
       }
-      const nuevos: Indicador[] = (data.indicadores as RawIndicadorIA[]).slice(0, 14).map((raw) => {
-        const objetivoId = matchTextToId(raw.objetivoTexto || '', objetivos, (o) => o.texto);
-        const entornoId = matchTextToId(raw.entornoTexto || '', entornos, (e) => e.descripcion);
-        const accionesTexto = Array.isArray(raw.accionesTexto) ? raw.accionesTexto : [];
-        const accionesIds: string[] = [];
-        accionesTexto.forEach((txt) => {
-          const matched = matchTextToId(txt, acciones, (a) => a.descripcion);
-          if (matched) accionesIds.push(matched);
-        });
-        const notasSinVincular: string[] = [];
-        if (raw.objetivoTexto && !objetivoId) notasSinVincular.push('Objetivo (IA): ' + raw.objetivoTexto);
-        if (raw.entornoTexto && !entornoId) notasSinVincular.push('Amenaza/oportunidad (IA): ' + raw.entornoTexto);
-        accionesTexto.forEach((txt) => {
-          const matched = matchTextToId(txt, acciones, (a) => a.descripcion);
-          if (!matched && txt) notasSinVincular.push('Accion (IA): ' + txt);
-        });
-        const roleKeyRaw = (raw.responsableRoleKey || '').trim();
-        const roleKeyValido = ROLE_OPTIONS.some((r) => r.key === roleKeyRaw) ? roleKeyRaw : '';
+      const nuevos: Indicador[] = (data.indicadores as RawIndicadorIA[]).slice(0, 18).map((raw) => {
+        const perspectivaRaw = (raw.perspectiva || '').trim().toLowerCase();
         const frecuenciaRaw = (raw.frecuencia || 'mensual').trim().toLowerCase();
-        const frecuencia: Frecuencia = isFrecuencia(frecuenciaRaw) ? frecuenciaRaw : 'mensual';
         return {
           id: generateId(),
-          objetivoId: objetivoId,
-          entornoId: entornoId,
-          accionesIds: accionesIds,
-          nombre: raw.nombre || '',
-          formula: raw.formula || '',
-          especifico: raw.especifico || '',
-          medible: raw.medible || '',
-          alcanzable: raw.alcanzable || '',
-          relevante: raw.relevante || '',
-          temporal: raw.temporal || '',
-          lineaBase: raw.lineaBase || '',
-          meta: raw.meta || '',
-          fechaLimite: raw.fechaLimiteSugerida || '',
-          frecuencia: frecuencia,
-          responsableRoleKey: roleKeyValido,
-          responsableNombre: roleKeyValido ? resolvePersonForRole(roleKeyValido) : '',
+          perspectiva: isPerspectiva(perspectivaRaw) ? perspectivaRaw : '',
+          nombre: (raw.nombre || '').trim(),
+          formula: (raw.formula || '').trim(),
+          objetivo: (raw.objetivo || '').trim(),
+          meta: (raw.meta || '').trim(),
+          unidadMedida: (raw.unidadMedida || '').trim(),
+          frecuencia: isFrecuencia(frecuenciaRaw) ? frecuenciaRaw : 'mensual',
           origen: 'ia',
           validado: false,
-          notaIA: notasSinVincular.join(' | '),
         };
       });
       setIndicadores((prev) => prev.concat(nuevos));
@@ -490,7 +301,7 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
   const perspectivaCount = (value: BSCPerspectiva): number => {
     let count = 0;
     indicadores.forEach((ind) => {
-      if (objetivoPerspectivaById(ind.objetivoId) === value) count = count + 1;
+      if (ind.perspectiva === value) count = count + 1;
     });
     return count;
   };
@@ -517,7 +328,6 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
   };
 
   const renderIndicador = (ind: Indicador) => {
-    const perspectiva = objetivoPerspectivaById(ind.objetivoId);
     return (
       <div key={ind.id} className="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -529,9 +339,9 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
           >
             {ind.origen === 'ia' ? t.origenIA : t.origenManual}
           </span>
-          {perspectiva ? (
+          {ind.perspectiva ? (
             <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-800">
-              {perspectivaLabel(perspectiva, lang)}
+              {perspectivaLabel(ind.perspectiva, lang)}
             </span>
           ) : null}
         </div>
@@ -559,79 +369,35 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
           </div>
         </div>
 
-        <div className="mt-2 grid gap-2 sm:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">{t.especificoLabel}</label>
-            <textarea
-              value={tr(ind.especifico)}
-              onChange={(ev) => updateIndicador(ind.id, { especifico: ev.target.value })}
-              rows={2}
-              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">{t.medibleLabel}</label>
-            <input
-              type="text"
-              value={tr(ind.medible)}
-              onChange={(ev) => updateIndicador(ind.id, { medible: ev.target.value })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">{t.alcanzableLabel}</label>
-            <textarea
-              value={tr(ind.alcanzable)}
-              onChange={(ev) => updateIndicador(ind.id, { alcanzable: ev.target.value })}
-              rows={2}
-              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">{t.relevanteLabel}</label>
-            <textarea
-              value={tr(ind.relevante)}
-              onChange={(ev) => updateIndicador(ind.id, { relevante: ev.target.value })}
-              rows={2}
-              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <label className="mb-1 block text-xs font-medium text-slate-500">{t.temporalLabel}</label>
-            <input
-              type="text"
-              value={tr(ind.temporal)}
-              onChange={(ev) => updateIndicador(ind.id, { temporal: ev.target.value })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-            />
-          </div>
+        <div className="mt-2">
+          <label className="mb-1 block text-xs font-medium text-slate-500">{t.objetivoRedaccionLabel}</label>
+          <textarea
+            value={tr(ind.objetivo)}
+            onChange={(ev) => updateIndicador(ind.id, { objetivo: ev.target.value })}
+            rows={3}
+            placeholder={t.objetivoRedaccionPlaceholder}
+            className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+          />
         </div>
 
-        <div className="mt-2 grid gap-2 sm:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">{t.lineaBaseLabel}</label>
-            <input
-              type="text"
-              value={tr(ind.lineaBase)}
-              onChange={(ev) => updateIndicador(ind.id, { lineaBase: ev.target.value })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-            />
-          </div>
+        <div className="mt-2 grid gap-2 sm:grid-cols-3">
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-500">{t.metaLabel}</label>
             <input
               type="text"
               value={tr(ind.meta)}
               onChange={(ev) => updateIndicador(ind.id, { meta: ev.target.value })}
+              placeholder={t.metaPlaceholder}
               className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">{t.fechaLimiteLabel}</label>
+            <label className="mb-1 block text-xs font-medium text-slate-500">{t.unidadMedidaLabel}</label>
             <input
-              type="date"
-              value={ind.fechaLimite}
-              onChange={(ev) => updateIndicador(ind.id, { fechaLimite: ev.target.value })}
+              type="text"
+              value={tr(ind.unidadMedida)}
+              onChange={(ev) => updateIndicador(ind.id, { unidadMedida: ev.target.value })}
+              placeholder={t.unidadMedidaPlaceholder}
               className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
             />
           </div>
@@ -650,13 +416,6 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
             </select>
           </div>
         </div>
-
-        {ind.notaIA ? (
-          <div className="mt-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-700">
-            <span className="font-medium">{t.notaIALabel}: </span>
-            {tr(ind.notaIA)}
-          </div>
-        ) : null}
 
         <div className="mt-3 flex items-center justify-between">
           <ValidateBadge validado={ind.validado} onToggle={() => updateIndicador(ind.id, { validado: !ind.validado })} />
@@ -677,66 +436,68 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
         <FinancialGoalsBuilder lang={lang} />
       </div>
 
-      {loaded && objetivos.length === 0 ? (
-        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">{t.noObjetivos}</div>
-      ) : (
-        <React.Fragment>
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <div className="rounded-lg border border-slate-200 bg-white p-3 text-center">
-              <div className="text-lg font-bold text-slate-800">{indicadores.length}</div>
-              <div className="text-xs text-slate-500">{t.summaryTotal}</div>
-            </div>
-            <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-center">
-              <div className="text-lg font-bold text-green-700">{validados}</div>
-              <div className="text-xs text-green-600">{t.summaryValidados}</div>
-            </div>
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-center">
-              <div className="text-lg font-bold text-amber-700">{pendientes}</div>
-              <div className="text-xs text-amber-600">{t.summaryPendientes}</div>
-            </div>
-            <div className="rounded-lg border border-slate-200 bg-white p-3 text-center">
-              <div className="text-lg font-bold text-slate-800">{perspectivaCount('financiera')}</div>
-              <div className="text-xs text-slate-500">{t.summaryFinanciera}</div>
-            </div>
-            <div className="rounded-lg border border-slate-200 bg-white p-3 text-center">
-              <div className="text-lg font-bold text-slate-800">{perspectivaCount('clientes')}</div>
-              <div className="text-xs text-slate-500">{t.summaryClientes}</div>
-            </div>
-            <div className="rounded-lg border border-slate-200 bg-white p-3 text-center">
-              <div className="text-lg font-bold text-slate-800">{perspectivaCount('procesos_internos')}</div>
-              <div className="text-xs text-slate-500">{t.summaryProcesos}</div>
-            </div>
-          </div>
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="rounded-lg border border-slate-200 bg-white p-3 text-center">
+          <div className="text-lg font-bold text-slate-800">{indicadores.length}</div>
+          <div className="text-xs text-slate-500">{t.summaryTotal}</div>
+        </div>
+        <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-center">
+          <div className="text-lg font-bold text-green-700">{validados}</div>
+          <div className="text-xs text-green-600">{t.summaryValidados}</div>
+        </div>
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-center">
+          <div className="text-lg font-bold text-amber-700">{pendientes}</div>
+          <div className="text-xs text-amber-600">{t.summaryPendientes}</div>
+        </div>
+        <div className="rounded-lg border border-slate-200 bg-white p-3 text-center">
+          <div className="text-lg font-bold text-slate-800">{perspectivaCount('financiera')}</div>
+          <div className="text-xs text-slate-500">{t.summaryFinanciera}</div>
+        </div>
+        <div className="rounded-lg border border-slate-200 bg-white p-3 text-center">
+          <div className="text-lg font-bold text-slate-800">{perspectivaCount('clientes')}</div>
+          <div className="text-xs text-slate-500">{t.summaryClientes}</div>
+        </div>
+        <div className="rounded-lg border border-slate-200 bg-white p-3 text-center">
+          <div className="text-lg font-bold text-slate-800">{perspectivaCount('procesos_internos')}</div>
+          <div className="text-xs text-slate-500">{t.summaryProcesos}</div>
+        </div>
+        <div className="rounded-lg border border-slate-200 bg-white p-3 text-center">
+          <div className="text-lg font-bold text-slate-800">{perspectivaCount('aprendizaje_crecimiento')}</div>
+          <div className="text-xs text-slate-500">{t.summaryAprendizaje}</div>
+        </div>
+        <div className="rounded-lg border border-slate-200 bg-white p-3 text-center">
+          <div className="text-lg font-bold text-slate-800">{perspectivaCount('socioambiental')}</div>
+          <div className="text-xs text-slate-500">{t.summarySocioambiental}</div>
+        </div>
+      </div>
 
-          <div className="mt-4 flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={generarPropuesta}
-              disabled={generating}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-            >
-              {generating ? t.generando : t.generar}
-            </button>
-            <button
-              type="button"
-              onClick={addIndicador}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            >
-              {t.agregarManual}
-            </button>
-          </div>
+      <div className="mt-4 flex flex-wrap gap-3">
+        <button
+          type="button"
+          onClick={generarPropuesta}
+          disabled={generating}
+          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+        >
+          {generating ? t.generando : t.generar}
+        </button>
+        <button
+          type="button"
+          onClick={addIndicador}
+          className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        >
+          {t.agregarManual}
+        </button>
+      </div>
 
-          {genError ? (
-            <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-              <p className="font-medium">{t.errorTitle}</p>
-              <p className="mt-0.5">{genError}</p>
-              <p className="mt-0.5 text-xs text-red-500">{t.errorHint}</p>
-            </div>
-          ) : null}
+      {genError ? (
+        <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <p className="font-medium">{t.errorTitle}</p>
+          <p className="mt-0.5">{genError}</p>
+          <p className="mt-0.5 text-xs text-red-500">{t.errorHint}</p>
+        </div>
+      ) : null}
 
-          <div className="mt-6">{indicadores.map((ind) => renderIndicador(ind))}</div>
-        </React.Fragment>
-      )}
+      <div className="mt-6">{indicadores.map((ind) => renderIndicador(ind))}</div>
 
       <p className="mt-4 text-xs text-slate-400">{t.savedNote}</p>
     </div>
