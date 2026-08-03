@@ -141,7 +141,7 @@ const LABELS = {
   es: {
     title: 'Objetivos Estratégicos (SMART + Balanced Scorecard)',
     subtitle:
-      'Babel propone indicadores con metodologia SMART, alineados a las 4 perspectivas del Balanced Scorecard, vinculados a tus amenazas/oportunidades y a las acciones ya asignadas en tu Plan de Accion. Puedes modificar cualquier campo y validar cada indicador.',
+      'Babel propone indicadores con metodologia SMART, alineados a las 4 perspectivas del Balanced Scorecard. La vinculacion con objetivos, amenazas/oportunidades, acciones y responsables se define en el Plan de Accion Estrategico. Puedes modificar cualquier campo y validar cada indicador.',
     noObjetivos:
       'Todavia no hay objetivos de negocio registrados en tu Plan de Accion. Ve primero a "Plan de Accion Estrategico" y captura al menos un objetivo, sus amenazas u oportunidades y algunas acciones — despues regresa aqui para generar la propuesta de indicadores.',
     generar: 'Generar propuesta con Babel',
@@ -156,13 +156,7 @@ const LABELS = {
     summaryClientes: 'Perspectiva clientes',
     summaryProcesos: 'Perspectiva procesos internos',
     summaryAprendizaje: 'Perspectiva aprendizaje y crecimiento',
-    objetivoLabel: 'Objetivo de negocio vinculado',
-    objetivoPlaceholder: 'Selecciona un objetivo',
     perspectivaLabel: 'Perspectiva (Balanced Scorecard)',
-    sinVincular: 'Sin vincular',
-    entornoLabel: 'Amenaza u oportunidad relacionada',
-    entornoPlaceholder: 'Ninguna en particular',
-    accionesLabel: 'Acciones del Plan Estratégico relacionadas',
     nombreLabel: 'Nombre del indicador',
     nombrePlaceholder: 'Ej. Tasa de conversion de cotizacion a venta',
     formulaLabel: 'Formula de calculo',
@@ -176,8 +170,6 @@ const LABELS = {
     metaLabel: 'Meta (valor objetivo)',
     fechaLimiteLabel: 'Fecha limite para alcanzar la meta',
     frecuenciaLabel: 'Frecuencia de medicion',
-    responsableLabel: 'Responsable (rol del organigrama)',
-    responsableNombreLabel: 'Nombre del responsable',
     validado: 'Validado',
     pendienteValidar: 'Pendiente de validar',
     eliminar: 'Eliminar',
@@ -189,7 +181,7 @@ const LABELS = {
   en: {
     title: 'Strategic Objectives (SMART + Balanced Scorecard)',
     subtitle:
-      'Babel proposes indicators using the SMART methodology, aligned to the 4 Balanced Scorecard perspectives, linked to your threats/opportunities and to the actions already assigned in your Action Plan. You can edit any field and validate each indicator.',
+      'Babel proposes indicators using the SMART methodology, aligned to the 4 Balanced Scorecard perspectives. Linking to objectives, threats/opportunities, actions and owners is defined in the Strategic Action Plan. You can edit any field and validate each indicator.',
     noObjetivos:
       'There are no business objectives registered in your Action Plan yet. Go to "Strategic Action Plan" first and capture at least one objective, its threats or opportunities, and some actions — then come back here to generate the indicator proposal.',
     generar: 'Generate proposal with Babel',
@@ -204,13 +196,7 @@ const LABELS = {
     summaryClientes: 'Customer perspective',
     summaryProcesos: 'Internal processes perspective',
     summaryAprendizaje: 'Learning and growth perspective',
-    objetivoLabel: 'Linked business objective',
-    objetivoPlaceholder: 'Select an objective',
     perspectivaLabel: 'Perspective (Balanced Scorecard)',
-    sinVincular: 'Not linked',
-    entornoLabel: 'Related threat or opportunity',
-    entornoPlaceholder: 'None in particular',
-    accionesLabel: 'Related Strategic Plan actions',
     nombreLabel: 'Indicator name',
     nombrePlaceholder: 'E.g. Quote-to-sale conversion rate',
     formulaLabel: 'Calculation formula',
@@ -224,8 +210,6 @@ const LABELS = {
     metaLabel: 'Target value',
     fechaLimiteLabel: 'Deadline to reach the target',
     frecuenciaLabel: 'Measurement frequency',
-    responsableLabel: 'Owner (org chart role)',
-    responsableNombreLabel: 'Owner name',
     validado: 'Validated',
     pendienteValidar: 'Pending validation',
     eliminar: 'Remove',
@@ -407,41 +391,10 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
     return '';
   };
 
-  const entornosDeObjetivo = (objetivoId: string): PlanEntorno[] => {
-    if (!objetivoId) return [];
-    return entornos.filter((e) => e.objetivoId === objetivoId);
-  };
-
-  const proyectoNombreById = (id: string): string => {
-    for (let i = 0; i < proyectos.length; i++) {
-      if (proyectos[i].id === id) return proyectos[i].nombre;
-    }
-    return '';
-  };
-
-  const accionesDisponibles: { id: string; label: string }[] = acciones.map((a) => {
-    const proyectoNombre = proyectoNombreById(a.proyectoId);
-    const base = a.descripcion || (lang === 'en' ? '(untitled action)' : '(accion sin titulo)');
-    const translatedBase = tr(base);
-    const translatedProyecto = proyectoNombre ? tr(proyectoNombre) : '';
-    return { id: a.id, label: translatedProyecto ? translatedBase + ' — ' + translatedProyecto : translatedBase };
-  });
-
   const addIndicador = () => setIndicadores((prev) => prev.concat([blankIndicador()]));
   const updateIndicador = (id: string, patch: Partial<Indicador>) =>
     setIndicadores((prev) => prev.map((it) => (it.id === id ? Object.assign({}, it, patch) : it)));
   const removeIndicador = (id: string) => setIndicadores((prev) => prev.filter((it) => it.id !== id));
-
-  const toggleAccionVinculada = (indicadorId: string, accionId: string) => {
-    setIndicadores((prev) =>
-      prev.map((it) => {
-        if (it.id !== indicadorId) return it;
-        const active = it.accionesIds.indexOf(accionId) !== -1;
-        const next = active ? it.accionesIds.filter((a) => a !== accionId) : it.accionesIds.concat([accionId]);
-        return Object.assign({}, it, { accionesIds: next });
-      }),
-    );
-  };
 
   const buildPlanContextText = (): string => {
     const lines: string[] = [];
@@ -565,7 +518,6 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
 
   const renderIndicador = (ind: Indicador) => {
     const perspectiva = objetivoPerspectivaById(ind.objetivoId);
-    const entornosDisponibles = entornosDeObjetivo(ind.objetivoId);
     return (
       <div key={ind.id} className="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -581,72 +533,10 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
             <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-800">
               {perspectivaLabel(perspectiva, lang)}
             </span>
-          ) : (
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">{t.sinVincular}</span>
-          )}
+          ) : null}
         </div>
 
         <div className="grid gap-2 sm:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">{t.objetivoLabel}</label>
-            <select
-              value={ind.objetivoId}
-              onChange={(ev) => updateIndicador(ind.id, { objetivoId: ev.target.value, entornoId: '' })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-            >
-              <option value="">{t.objetivoPlaceholder}</option>
-              {objetivos.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {tr(o.texto) || t.objetivoPlaceholder}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">{t.entornoLabel}</label>
-            <select
-              value={ind.entornoId}
-              onChange={(ev) => updateIndicador(ind.id, { entornoId: ev.target.value })}
-              disabled={!ind.objetivoId}
-              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm disabled:bg-slate-100"
-            >
-              <option value="">{t.entornoPlaceholder}</option>
-              {entornosDisponibles.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {(e.tipo === 'amenaza' ? '⚠ ' : '✦ ') + tr(e.descripcion)}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="mt-2">
-          <label className="mb-1 block text-xs font-medium text-slate-500">{t.accionesLabel}</label>
-          <div className="flex max-h-28 flex-wrap gap-1 overflow-y-auto rounded-lg border border-slate-200 p-1.5">
-            {accionesDisponibles.length === 0 ? (
-              <span className="text-xs text-slate-400">—</span>
-            ) : (
-              accionesDisponibles.map((opt) => {
-                const active = ind.accionesIds.indexOf(opt.id) !== -1;
-                return (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => toggleAccionVinculada(ind.id, opt.id)}
-                    className={
-                      'rounded-full px-2 py-0.5 text-xs font-medium ' +
-                      (active ? 'bg-indigo-100 text-indigo-800 ring-1 ring-indigo-400' : 'bg-slate-100 text-slate-600')
-                    }
-                  >
-                    {tr(opt.label)}
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        <div className="mt-2 grid gap-2 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-500">{t.nombreLabel}</label>
             <input
@@ -758,41 +648,6 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
                 </option>
               ))}
             </select>
-          </div>
-        </div>
-
-        <div className="mt-2 grid gap-2 sm:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">{t.responsableLabel}</label>
-            <select
-              value={ind.responsableRoleKey}
-              onChange={(ev) => {
-                const roleKey = ev.target.value;
-                const person = resolvePersonForRole(roleKey);
-                updateIndicador(ind.id, { responsableRoleKey: roleKey, responsableNombre: person ? person : ind.responsableNombre });
-              }}
-              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-            >
-              <option value="">{t.responsableLabel}</option>
-              {ROLE_OPTIONS.map((opt) => {
-                const person = resolvePersonForRole(opt.key);
-                const label = roleLabel(opt.key, lang) + (person ? ' - ' + person : '');
-                return (
-                  <option key={opt.key} value={opt.key}>
-                    {label}
-                  </option>
-                );
-              })}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">{t.responsableNombreLabel}</label>
-            <input
-              type="text"
-              value={ind.responsableNombre}
-              onChange={(ev) => updateIndicador(ind.id, { responsableNombre: ev.target.value })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-            />
           </div>
         </div>
 
