@@ -127,20 +127,47 @@ class CompiledPlanRenderer {
         lineW = 0;
       }
     };
+    // Un token mas ancho que la linea (URL larga sin espacios, palabra
+    // enorme, etc.) no cabe en ninguna linea: se parte por caracteres para
+    // que NUNCA desborde el margen derecho.
+    const chunkToken = (text: string): string[] => {
+      const out: string[] = [];
+      let cur = '';
+      let curW = 0;
+      for (let ci = 0; ci < text.length; ci++) {
+        const ch = text.charAt(ci);
+        const chW = this.doc.getTextWidth(ch);
+        if (cur && curW + chW > width) {
+          out.push(cur);
+          cur = '';
+          curW = 0;
+        }
+        cur += ch;
+        curW += chW;
+      }
+      if (cur) out.push(cur);
+      return out;
+    };
     for (let i = 0; i < segments.length; i++) {
       const seg = segments[i];
       this.doc.setFont('helvetica', seg.bold ? 'bold' : 'normal');
       this.doc.setFontSize(size);
-      const tokens = seg.text.split(' ');
+      // Normaliza cualquier espacio (tabs, NBSP, espacios unicode) a un
+      // espacio regular, para que los tokens partan por ahi.
+      const tokens = seg.text.replace(/\s+/g, ' ').split(' ');
       for (let ti = 0; ti < tokens.length; ti++) {
         const token = tokens[ti];
         if (token === '') continue;
         const isLast = ti === tokens.length - 1;
         const tokenText = isLast ? token : token + ' ';
-        const tokenW = this.doc.getTextWidth(tokenText);
-        if (line.length > 0 && lineW + tokenW > width) flush();
-        line.push({ text: tokenText, bold: seg.bold });
-        lineW += tokenW;
+        const chunks = chunkToken(tokenText);
+        for (let ci = 0; ci < chunks.length; ci++) {
+          const chunk = chunks[ci];
+          const chunkW = this.doc.getTextWidth(chunk);
+          if (line.length > 0 && lineW + chunkW > width) flush();
+          line.push({ text: chunk, bold: seg.bold });
+          lineW += chunkW;
+        }
       }
     }
     flush();
