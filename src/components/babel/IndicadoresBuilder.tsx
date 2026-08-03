@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { ChevronDown } from 'lucide-react';
 import FinancialGoalsBuilder from '@/components/babel/FinancialGoalsBuilder';
 
 type PlanLang = 'es' | 'en';
@@ -69,6 +70,9 @@ const LABELS = {
     summaryProcesos: 'Perspectiva procesos internos',
     summaryAprendizaje: 'Perspectiva aprendizaje y crecimiento',
     summarySocioambiental: 'Perspectiva socioambiental',
+    sinPerspectiva: 'Sin perspectiva',
+    expandirTodo: 'Expandir todo',
+    contraerTodo: 'Contraer todo',
     perspectivaLabel: 'Perspectiva (Balanced Scorecard)',
     nombreLabel: 'Nombre del objetivo',
     nombrePlaceholder: 'Ej. Ingresos (Ventas)',
@@ -105,6 +109,9 @@ const LABELS = {
     summaryProcesos: 'Internal processes perspective',
     summaryAprendizaje: 'Learning and growth perspective',
     summarySocioambiental: 'Social-environmental perspective',
+    sinPerspectiva: 'No perspective',
+    expandirTodo: 'Expand all',
+    contraerTodo: 'Collapse all',
     perspectivaLabel: 'Perspective (Balanced Scorecard)',
     nombreLabel: 'Objective name',
     nombrePlaceholder: 'E.g. Income (Sales)',
@@ -159,6 +166,19 @@ function isPerspectiva(value: string): value is BSCPerspectiva {
   return PERSPECTIVA_OPTIONS.some((p) => p.value === value);
 }
 
+// Normaliza el valor de "meta" que devuelve la IA para que se lea mejor:
+// numeros con separador de miles (10,000) y porcentajes con su valor real
+// (0.1 => 10, 1 => 100) en vez de fracciones.
+function formatMetaValue(meta: string, unidadMedida: string, lang: PlanLang): string {
+  const trimmed = (meta || '').trim();
+  if (!trimmed) return trimmed;
+  const numeric = Number(trimmed.replace(/,/g, ''));
+  if (!Number.isFinite(numeric)) return trimmed;
+  const isPercent = /%/.test(unidadMedida || '');
+  const value = isPercent && Math.abs(numeric) <= 1 ? numeric * 100 : numeric;
+  return value.toLocaleString(lang === 'en' ? 'en-US' : 'es-MX', { maximumFractionDigits: 2 });
+}
+
 // Construye el contexto financiero compacto que Babel usa para llenar los
 // [corchetes] de la perspectiva financiera, leyendo el ultimo guardado de
 // FinancialGoalsBuilder (clave babel_financial_goals_v1).
@@ -203,13 +223,21 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
   const [loaded, setLoaded] = React.useState(false);
   const [generating, setGenerating] = React.useState(false);
   const [genError, setGenError] = React.useState('');
+  const [collapsed, setCollapsed] = React.useState<Record<string, boolean>>({});
 
   React.useEffect(() => {
     try {
       const rawInd = window.localStorage.getItem(INDICADORES_KEY);
       if (rawInd) {
         const parsedInd = JSON.parse(rawInd);
-        if (Array.isArray(parsedInd)) setIndicadores(parsedInd);
+        if (Array.isArray(parsedInd)) {
+          const normalizados = parsedInd.map((ind: Indicador) =>
+            ind && typeof ind.meta === 'string'
+              ? Object.assign({}, ind, { meta: formatMetaValue(ind.meta, ind.unidadMedida || '', lang) })
+              : ind,
+          );
+          setIndicadores(normalizados);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -282,7 +310,7 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
           nombre: (raw.nombre || '').trim(),
           formula: (raw.formula || '').trim(),
           objetivo: (raw.objetivo || '').trim(),
-          meta: (raw.meta || '').trim(),
+          meta: formatMetaValue(raw.meta || '', raw.unidadMedida || '', lang),
           unidadMedida: (raw.unidadMedida || '').trim(),
           frecuencia: isFrecuencia(frecuenciaRaw) ? frecuenciaRaw : 'mensual',
           origen: 'ia',
@@ -311,6 +339,24 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
     if (ind.validado) validados = validados + 1;
   });
   const pendientes = indicadores.length - validados;
+
+  const GRUPO_KEYS: (BSCPerspectiva | 'sin_perspectiva')[] = [
+    'financiera',
+    'clientes',
+    'procesos_internos',
+    'aprendizaje_crecimiento',
+    'socioambiental',
+    'sin_perspectiva',
+  ];
+
+  const grupos = GRUPO_KEYS.map((key) => ({
+    key,
+    items: indicadores.filter((ind) => (key === 'sin_perspectiva' ? !ind.perspectiva : ind.perspectiva === key)),
+  })).filter((g) => g.items.length > 0);
+
+  const toggleSeccion = (key: string) => setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
+  const expandirTodo = () => setCollapsed({});
+  const contraerTodo = () => setCollapsed(Object.fromEntries(grupos.map((g) => [g.key, true])));
 
   const ValidateBadge = (props: { validado: boolean; onToggle: () => void }) => {
     return (
@@ -497,7 +543,51 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
         </div>
       ) : null}
 
-      <div className="mt-6">{indicadores.map((ind) => renderIndicador(ind))}</div>
+      {grupos.length > 0 ? (
+        <div className="mt-6 space-y-5">
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={expandirTodo}
+              className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            >
+              {t.expandirTodo}
+            </button>
+            <button
+              type="button"
+              onClick={contraerTodo}
+              className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            >
+              {t.contraerTodo}
+            </button>
+          </div>
+          {grupos.map((g) => {
+            const estaColapsado = Boolean(collapsed[g.key]);
+            return (
+              <div key={g.key}>
+                <button
+                  type="button"
+                  onClick={() => toggleSeccion(g.key)}
+                  className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 transition-colors hover:bg-slate-100"
+                >
+                  <span className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                    {g.key === 'sin_perspectiva'
+                      ? t.sinPerspectiva
+                      : perspectivaLabel(g.key, lang)}
+                    <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
+                      {g.items.length}
+                    </span>
+                  </span>
+                  <ChevronDown
+                    className={'h-4 w-4 text-slate-500 transition-transform ' + (estaColapsado ? '-rotate-90' : '')}
+                  />
+                </button>
+                {!estaColapsado ? <div className="mt-3">{g.items.map((ind) => renderIndicador(ind))}</div> : null}
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
 
       <p className="mt-4 text-xs text-slate-400">{t.savedNote}</p>
     </div>
