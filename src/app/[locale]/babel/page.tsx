@@ -54,7 +54,7 @@ const UI_FALLBACK: Record<'es' | 'en', {
   placeholder: string;
 }> = {
   es: {
-    title: 'Babel AI',
+    title: 'Reflexión Estratégica',
     subtitle: 'Tu Strategic Business Architect. Vamos a construir juntos tu Plan de Negocio Estratégico Socioambiental, fase por fase.',
     loading: 'Cargando...',
     send: 'Enviar',
@@ -65,7 +65,7 @@ const UI_FALLBACK: Record<'es' | 'en', {
     placeholder: 'Escribe tu mensaje...',
   },
   en: {
-    title: 'Babel AI',
+    title: 'Strategic Reflection',
     subtitle: "Your Strategic Business Architect. Let's build your Socio-Environmental Strategic Business Plan together, phase by phase.",
     loading: 'Loading...',
     send: 'Send',

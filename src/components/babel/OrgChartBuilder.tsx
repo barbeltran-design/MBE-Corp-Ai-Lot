@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { ChevronDown } from 'lucide-react';
 type OrgLang = 'es' | 'en';
 type OrgStatus = 'green' | 'yellow' | 'orange' | 'red';
 type ConsejeroTipo = 'permanente' | 'tema';
@@ -43,6 +44,11 @@ type OrgAssignment = {
 };
 const STORAGE_KEY = 'babel_orgchart_v1';
 const BOARD_STORAGE_KEY = 'babel_orgchart_board_v1';
+const CONTACTS_KEY = 'babel_plan_accion_contactos_v1';
+const BOARD_PRESIDENTE_KEY = '__board_presidente';
+const BOARD_SECRETARIO_KEY = '__board_secretario';
+const BOARD_CONSEJERO_PREFIX = '__board_consejero_';
+type Contacto = { id: string; nombre: string; celular: string; correo: string; roleKeys: string[] };
 const ORG_ROLES: OrgRoleDef[] = [
   {
     key: 'consejo_administrativo',
@@ -441,6 +447,34 @@ const ESPECIALIDAD_OPTIONS: { value: EspecialidadNegocio; labelEs: string; label
   { value: 'sustentabilidad', labelEs: 'Sustentabilidad / Impacto Social', labelEn: 'Sustainability / Social Impact' },
   { value: 'otra', labelEs: 'Otra', labelEn: 'Other' },
 ];
+// Lista corta de codigos de pais para el pulldown del Directorio de Contactos.
+const COUNTRY_CODES: { code: string; flag: string; nameEs: string; nameEn: string }[] = [
+  { code: '52', flag: '🇲🇽', nameEs: 'Mexico', nameEn: 'Mexico' },
+  { code: '1', flag: '🇺🇸', nameEs: 'EEUU / Canada', nameEn: 'US / Canada' },
+  { code: '34', flag: '🇪🇸', nameEs: 'Espana', nameEn: 'Spain' },
+  { code: '54', flag: '🇦🇷', nameEs: 'Argentina', nameEn: 'Argentina' },
+  { code: '56', flag: '🇨🇱', nameEs: 'Chile', nameEn: 'Chile' },
+  { code: '57', flag: '🇨🇴', nameEs: 'Colombia', nameEn: 'Colombia' },
+  { code: '51', flag: '🇵🇪', nameEs: 'Peru', nameEn: 'Peru' },
+  { code: '502', flag: '🇬🇹', nameEs: 'Guatemala', nameEn: 'Guatemala' },
+  { code: '503', flag: '🇸🇻', nameEs: 'El Salvador', nameEn: 'El Salvador' },
+  { code: '504', flag: '🇭🇳', nameEs: 'Honduras', nameEn: 'Honduras' },
+  { code: '505', flag: '🇳🇮', nameEs: 'Nicaragua', nameEn: 'Nicaragua' },
+  { code: '506', flag: '🇨🇷', nameEs: 'Costa Rica', nameEn: 'Costa Rica' },
+  { code: '507', flag: '🇵🇦', nameEs: 'Panama', nameEn: 'Panama' },
+  { code: '591', flag: '🇧🇴', nameEs: 'Bolivia', nameEn: 'Bolivia' },
+  { code: '593', flag: '🇪🇨', nameEs: 'Ecuador', nameEn: 'Ecuador' },
+  { code: '595', flag: '🇵🇾', nameEs: 'Paraguay', nameEn: 'Paraguay' },
+  { code: '598', flag: '🇺🇾', nameEs: 'Uruguay', nameEn: 'Uruguay' },
+];
+// Antepone el codigo de pais elegido al numero que ya este escrito, sin
+// duplicarlo si ya empieza con ese mismo codigo.
+function applyCountryCode(currentCelular: string, code: string): string {
+  const digits = currentCelular.replace(/[^0-9]/g, '');
+  if (!digits) return code;
+  if (digits.indexOf(code) === 0) return digits;
+  return code + digits;
+}
 function onDemandNote(status: OrgStatus | null, lang: OrgLang): string | null {
   if (status === 'red') {
     return lang === 'en'
@@ -498,6 +532,16 @@ const T = {
     temaPlaceholder: 'Para que tema participa',
     especialidadLabel: 'Area de especialidad de negocio',
     especialidadOtraPlaceholder: 'Especifica la especialidad',
+    contactsTitle: 'Directorio de Contactos',
+    contactsSubtitle: 'Nombre y celular de cada responsable, para poder enviar recordatorios por WhatsApp.',
+    addContact: 'Agregar contacto',
+    contactName: 'Nombre',
+    contactPhone: 'Celular (con codigo de pais, ej. 52...)',
+    contactEmail: 'Correo electronico',
+    contactsShow: 'Mostrar directorio',
+    contactsHide: 'Ocultar directorio',
+    collapseLevel: 'Contraer subniveles',
+    expandLevel: 'Expandir subniveles',
   },
   en: {
     title: 'Org Chart and Roles',
@@ -537,6 +581,16 @@ const T = {
     temaPlaceholder: 'Which topic do they participate on',
     especialidadLabel: 'Business area of expertise',
     especialidadOtraPlaceholder: 'Specify the area of expertise',
+    contactsTitle: 'Contact Directory',
+    contactsSubtitle: 'Name and phone number for each owner, so reminders can be sent over WhatsApp.',
+    addContact: 'Add contact',
+    contactName: 'Name',
+    contactPhone: 'Phone (with country code, e.g. 52...)',
+    contactEmail: 'Email',
+    contactsShow: 'Show directory',
+    contactsHide: 'Hide directory',
+    collapseLevel: 'Collapse sub-levels',
+    expandLevel: 'Expand sub-levels',
   },
 } as const;
 function generateId(): string {
@@ -549,6 +603,10 @@ export default function OrgChartBuilder({ lang }: { lang: OrgLang }) {
   const [loaded, setLoaded] = React.useState(false);
   const [boardData, setBoardData] = React.useState<BoardData>({ presidente: '', secretario: '', consejeros: [] });
   const [boardLoaded, setBoardLoaded] = React.useState(false);
+  const [contactos, setContactos] = React.useState<Contacto[]>([]);
+  const [contactosLoaded, setContactosLoaded] = React.useState(false);
+  const [contactosOpen, setContactosOpen] = React.useState(true);
+  const [collapsedLevels, setCollapsedLevels] = React.useState<Record<string, boolean>>({});
   React.useEffect(function () {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -603,6 +661,69 @@ export default function OrgChartBuilder({ lang }: { lang: OrgLang }) {
     },
     [boardData, boardLoaded]
   );
+  React.useEffect(function () {
+    try {
+      const raw = window.localStorage.getItem(CONTACTS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) setContactos(parsed);
+      }
+    } catch {
+      // ignore corrupt storage
+    }
+    setContactosLoaded(true);
+  }, []);
+  React.useEffect(
+    function () {
+      if (!contactosLoaded) return;
+      try {
+        window.localStorage.setItem(CONTACTS_KEY, JSON.stringify(contactos));
+      } catch {
+        // storage full or unavailable, ignore
+      }
+    },
+    [contactos, contactosLoaded]
+  );
+  // Mantiene el directorio sincronizado con el organigrama: cada rol con
+  // persona asignada que no tenga contacto reclamado se agrega como fila.
+  React.useEffect(function () {
+    if (!loaded || !boardLoaded) return;
+    const roster = orgRosterEntries();
+    const claimedKeys: Record<string, boolean> = {};
+    contactos.forEach(function (c) {
+      (Array.isArray(c.roleKeys) ? c.roleKeys : []).forEach(function (k) {
+        claimedKeys[k] = true;
+      });
+    });
+    const toAdd = roster.filter(function (e) {
+      return !claimedKeys[e.key];
+    });
+    if (toAdd.length === 0) return;
+    setContactos(function (prev) {
+      let next = prev;
+      let changed = false;
+      toAdd.forEach(function (e) {
+        const nombreNorm = e.nombre.trim().toLowerCase();
+        const matchIdx = next.findIndex(function (c) {
+          return c.nombre.trim().toLowerCase() === nombreNorm && nombreNorm !== '';
+        });
+        if (matchIdx !== -1) {
+          const existente = next[matchIdx];
+          const keysExistentes = Array.isArray(existente.roleKeys) ? existente.roleKeys : [];
+          if (keysExistentes.indexOf(e.key) === -1) {
+            const copia = next.slice();
+            copia[matchIdx] = Object.assign({}, existente, { roleKeys: keysExistentes.concat([e.key]) });
+            next = copia;
+            changed = true;
+          }
+        } else {
+          next = next.concat([{ id: generateId(), nombre: e.nombre, celular: '', correo: '', roleKeys: [e.key] }]);
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [loaded, boardLoaded, assignments, boardData, contactos]);
   function updatePerson(key: string, person: string) {
     setAssignments(function (prev) {
       const next = { ...prev };
@@ -669,6 +790,116 @@ export default function OrgChartBuilder({ lang }: { lang: OrgLang }) {
       };
     });
   }
+  function toggleCollapse(key: string) {
+    setCollapsedLevels(function (prev) {
+      const next = { ...prev };
+      next[key] = !prev[key];
+      return next;
+    });
+  }
+  function roleLabelFor(roleKey: string): string {
+    if (roleKey === BOARD_PRESIDENTE_KEY) return lang === 'en' ? 'Board President' : 'Presidente del Consejo';
+    if (roleKey === BOARD_SECRETARIO_KEY) return lang === 'en' ? 'Board Secretary' : 'Secretario del Consejo';
+    if (roleKey.indexOf(BOARD_CONSEJERO_PREFIX) === 0) return lang === 'en' ? 'Board Member' : 'Consejero';
+    for (let i = 0; i < ORG_ROLES.length; i++) {
+      if (ORG_ROLES[i].key === roleKey) return lang === 'en' ? ORG_ROLES[i].nameEn : ORG_ROLES[i].nameEs;
+    }
+    return roleKey;
+  }
+  function orgRosterEntries(): { key: string; nombre: string }[] {
+    const list: { key: string; nombre: string }[] = [];
+    if (boardData.presidente.trim()) list.push({ key: BOARD_PRESIDENTE_KEY, nombre: boardData.presidente });
+    if (boardData.secretario.trim()) list.push({ key: BOARD_SECRETARIO_KEY, nombre: boardData.secretario });
+    boardData.consejeros.forEach(function (c) {
+      if (c.nombre.trim()) list.push({ key: BOARD_CONSEJERO_PREFIX + c.id, nombre: c.nombre });
+    });
+    ORG_ROLES.forEach(function (r) {
+      if (r.key === 'consejo_administrativo') return;
+      const a = assignments[r.key];
+      if (a && a.person && a.person.trim()) list.push({ key: r.key, nombre: a.person });
+    });
+    return list;
+  }
+  // Cuando se edita el nombre de un contacto ligado a roles, actualiza el
+  // organigrama (asignaciones y consejo) para que el cambio se refleje ahi.
+  function syncNameToOrgChart(roleKeys: string[], nombre: string) {
+    if (!Array.isArray(roleKeys) || roleKeys.length === 0) return;
+    let boardChanged = false;
+    let nextPresidente = boardData.presidente;
+    let nextSecretario = boardData.secretario;
+    let nextConsejeros = boardData.consejeros;
+    let consejerosChanged = false;
+    let nextAssignments = assignments;
+    let assignmentsChanged = false;
+    roleKeys.forEach(function (rk) {
+      if (rk === BOARD_PRESIDENTE_KEY) {
+        nextPresidente = nombre;
+        boardChanged = true;
+      } else if (rk === BOARD_SECRETARIO_KEY) {
+        nextSecretario = nombre;
+        boardChanged = true;
+      } else if (rk.indexOf(BOARD_CONSEJERO_PREFIX) === 0) {
+        const consejeroId = rk.slice(BOARD_CONSEJERO_PREFIX.length);
+        nextConsejeros = nextConsejeros.map(function (c) {
+          return c.id === consejeroId ? Object.assign({}, c, { nombre: nombre }) : c;
+        });
+        consejerosChanged = true;
+      } else {
+        if (!assignmentsChanged) nextAssignments = Object.assign({}, assignments);
+        const current = assignments[rk] || { person: '', status: null };
+        nextAssignments[rk] = { person: nombre, status: current.status };
+        assignmentsChanged = true;
+      }
+    });
+    if (boardChanged) {
+      setBoardData(function (prev) {
+        return { ...prev, presidente: nextPresidente, secretario: nextSecretario };
+      });
+    } else if (consejerosChanged) {
+      setBoardData(function (prev) {
+        return { ...prev, consejeros: nextConsejeros };
+      });
+    }
+    if (assignmentsChanged) setAssignments(nextAssignments);
+  }
+  function addRoleToContacto(contactoId: string, roleKey: string) {
+    setContactos(function (prev) {
+      const idsQueSePuedenQuedarVacios: Record<string, boolean> = {};
+      const mapped = prev.map(function (c) {
+        if (c.id === contactoId) {
+          const existing = Array.isArray(c.roleKeys) ? c.roleKeys : [];
+          if (existing.indexOf(roleKey) !== -1) return c;
+          return Object.assign({}, c, { roleKeys: existing.concat([roleKey]) });
+        }
+        const otherKeys = Array.isArray(c.roleKeys) ? c.roleKeys : [];
+        if (otherKeys.indexOf(roleKey) !== -1) {
+          idsQueSePuedenQuedarVacios[c.id] = true;
+          return Object.assign({}, c, { roleKeys: otherKeys.filter(function (k) { return k !== roleKey; }) });
+        }
+        return c;
+      });
+      return mapped.filter(function (c) {
+        if (!idsQueSePuedenQuedarVacios[c.id]) return true;
+        const sinRoles = !Array.isArray(c.roleKeys) || c.roleKeys.length === 0;
+        const sinCelular = c.celular.trim() === '';
+        const sinCorreo = (c.correo || '').trim() === '';
+        return !(sinRoles && sinCelular && sinCorreo);
+      });
+    });
+  }
+  function removeRoleFromContacto(contactoId: string, roleKey: string) {
+    setContactos(function (prev) {
+      return prev.map(function (c) {
+        return c.id === contactoId
+          ? Object.assign({}, c, { roleKeys: (Array.isArray(c.roleKeys) ? c.roleKeys : []).filter(function (k) { return k !== roleKey; }) })
+          : c;
+      });
+    });
+  }
+  const addContacto = () => setContactos((prev) => prev.concat([{ id: generateId(), nombre: '', celular: '', correo: '', roleKeys: [] }]));
+  const updateContacto = (id: string, patch: Partial<Contacto>) =>
+    setContactos((prev) => prev.map((c) => (c.id === id ? Object.assign({}, c, patch) : c)));
+  const removeContacto = (id: string) => setContactos((prev) => prev.filter((c) => c.id !== id));
   const topLevel = ORG_ROLES.filter(function (r) {
     return r.parent === null;
   });
@@ -692,6 +923,7 @@ export default function OrgChartBuilder({ lang }: { lang: OrgLang }) {
     const isBoard = role.key === 'consejo_administrativo';
     const a = assignments[role.key] || { person: '', status: null };
     const isExpanded = !!expanded[role.key];
+    const isCollapsed = !!collapsedLevels[role.key];
     const note = isBoard ? null : onDemandNote(a.status, lang);
     const kids = childrenOf(role.key);
     return (
@@ -704,15 +936,31 @@ export default function OrgChartBuilder({ lang }: { lang: OrgLang }) {
               </h4>
               <p className="text-sm text-slate-500">{lang === 'en' ? role.funcEn : role.funcEs}</p>
             </div>
-            <button
-              type="button"
-              onClick={function () {
-                toggleExpanded(role.key);
-              }}
-              className="text-xs font-medium text-blue-600 hover:underline"
-            >
-              {isExpanded ? t.hideResp : t.showResp}
-            </button>
+            <div className="flex flex-wrap items-center gap-3">
+              {kids.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={function () {
+                    toggleCollapse(role.key);
+                  }}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline"
+                >
+                  <ChevronDown
+                    className={'h-3.5 w-3.5 text-slate-500 transition-transform ' + (isCollapsed ? '-rotate-90' : '')}
+                  />
+                  {isCollapsed ? t.expandLevel : t.collapseLevel}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={function () {
+                  toggleExpanded(role.key);
+                }}
+                className="text-xs font-medium text-blue-600 hover:underline"
+              >
+                {isExpanded ? t.hideResp : t.showResp}
+              </button>
+            </div>
           </div>
           {isExpanded ? (
             <ul className="mt-2 list-disc pl-5 text-sm text-slate-600">
@@ -944,7 +1192,7 @@ export default function OrgChartBuilder({ lang }: { lang: OrgLang }) {
             </>
           )}
         </div>
-        {kids.length > 0
+        {kids.length > 0 && !isCollapsed
           ? kids.map(function (kid) {
               return renderRoleCard(kid, depth + 1);
             })
@@ -984,6 +1232,115 @@ export default function OrgChartBuilder({ lang }: { lang: OrgLang }) {
           return renderRoleCard(role, 0);
         })}
       </div>
+
+      <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <button
+          type="button"
+          onClick={() => setContactosOpen(!contactosOpen)}
+          className="flex w-full items-center justify-between gap-2 text-left"
+        >
+          <div>
+            <h4 className="mb-1 text-sm font-semibold text-slate-700">{t.contactsTitle}</h4>
+            <p className="text-xs text-slate-400">{t.contactsSubtitle}</p>
+          </div>
+          <span className="shrink-0 text-xs font-medium text-blue-600">
+            {contactosOpen ? t.contactsHide : t.contactsShow}
+          </span>
+        </button>
+        {contactosOpen ? (
+          <div className="mt-3">
+            {contactos.map((c) => {
+              const roleKeys = Array.isArray(c.roleKeys) ? c.roleKeys : [];
+              const disponibles = orgRosterEntries().filter((e) => roleKeys.indexOf(e.key) === -1);
+              return (
+                <div key={c.id} className="mb-2 rounded-lg border border-slate-100 p-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      type="text"
+                      value={c.nombre}
+                      onChange={(ev) => {
+                        updateContacto(c.id, { nombre: ev.target.value });
+                        if (roleKeys.length > 0) syncNameToOrgChart(roleKeys, ev.target.value);
+                      }}
+                      placeholder={t.contactName}
+                      className="min-w-[140px] flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+                    />
+                    <select
+                      value=""
+                      onChange={(ev) => {
+                        if (ev.target.value) updateContacto(c.id, { celular: applyCountryCode(c.celular, ev.target.value) });
+                      }}
+                      className="rounded-lg border border-slate-300 px-1.5 py-1.5 text-xs text-slate-500"
+                    >
+                      <option value="">{lang === 'en' ? 'Code' : 'Cod.'}</option>
+                      {COUNTRY_CODES.map((cc) => (
+                        <option key={cc.code} value={cc.code}>
+                          {cc.flag + ' +' + cc.code + ' ' + (lang === 'en' ? cc.nameEn : cc.nameEs)}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      value={c.celular}
+                      onChange={(ev) => updateContacto(c.id, { celular: ev.target.value })}
+                      placeholder={t.contactPhone}
+                      className="min-w-[140px] flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+                    />
+                    <input
+                      type="email"
+                      value={c.correo || ''}
+                      onChange={(ev) => updateContacto(c.id, { correo: ev.target.value })}
+                      placeholder={t.contactEmail}
+                      className="min-w-[140px] flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+                    />
+                    <button type="button" onClick={() => removeContacto(c.id)} className="text-xs font-medium text-red-600 hover:underline">
+                      {lang === 'en' ? 'Remove' : 'Quitar'}
+                    </button>
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    {roleKeys.length === 0 ? (
+                      <span className="text-xs italic text-slate-400">
+                        {lang === 'en' ? '(manually added, not linked to the org chart)' : '(agregado manualmente, no ligado al organigrama)'}
+                      </span>
+                    ) : (
+                      roleKeys.map((rk) => (
+                        <span key={rk} className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700">
+                          {roleLabelFor(rk)}
+                          <button type="button" onClick={() => removeRoleFromContacto(c.id, rk)} className="font-bold text-blue-400 hover:text-blue-700">
+                            ×
+                          </button>
+                        </span>
+                      ))
+                    )}
+                    {disponibles.length > 0 ? (
+                      <select
+                        value=""
+                        onChange={(ev) => {
+                          if (ev.target.value) addRoleToContacto(c.id, ev.target.value);
+                        }}
+                        className="rounded-lg border border-slate-300 px-2 py-0.5 text-xs text-slate-500"
+                      >
+                        <option value="">
+                          {lang === 'en' ? '+ same person as...' : '+ es la misma persona que...'}
+                        </option>
+                        {disponibles.map((e) => (
+                          <option key={e.key} value={e.key}>
+                            {roleLabelFor(e.key) + ' (' + e.nombre + ')'}
+                          </option>
+                        ))}
+                      </select>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })}
+            <button type="button" onClick={addContacto} className="text-xs font-medium text-blue-600 hover:underline">
+              {t.addContact}
+            </button>
+          </div>
+        ) : null}
+      </div>
+
       <p className="mt-4 text-xs text-slate-400">{t.savedNote}</p>
     </div>
   );
