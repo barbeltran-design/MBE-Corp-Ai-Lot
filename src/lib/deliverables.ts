@@ -1,4 +1,4 @@
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 
 // ==========================================================================
 // PDF DEL PLAN COMPILADO — presentación ejecutiva con iconos
@@ -136,9 +136,10 @@ class CompiledPlanRenderer {
         const token = tokens[ti];
         if (token === '') continue;
         const isLast = ti === tokens.length - 1;
-        const tokenW = this.doc.getTextWidth(token);
+        const tokenText = isLast ? token : token + ' ';
+        const tokenW = this.doc.getTextWidth(tokenText);
         if (line.length > 0 && lineW + tokenW > width) flush();
-        line.push({ text: isLast ? token : token + ' ', bold: seg.bold });
+        line.push({ text: tokenText, bold: seg.bold });
         lineW += tokenW;
       }
     }
@@ -253,33 +254,51 @@ class CompiledPlanRenderer {
       null,
       rows.map(function (r) { return r.length; })
     );
-    const cellFont = 9.5;
+    let cellFont = 9.5;
     const paddX = 6;
     const headerH = 18;
     const rowH = 15;
     const lineSpacing = 11;
 
-    const colWidths: number[] = [];
-    for (let c = 0; c < colCount; c++) {
-      let maxLen = 0;
-      for (const r of rows) {
-        const cell = (r[c] ?? '').replace(/\*\*/g, '');
-        if (cell.length > maxLen) maxLen = cell.length;
+    // Ancho por columna para que la palabra mas larga quepa en una linea
+    // (evita que se partan las palabras). Se mide con la fuente real de celda.
+    const computeWidths = (font: number): { widths: number[]; total: number } => {
+      // Se mide en bold: es el peor caso (el header es bold, el cuerpo normal)
+      this.doc.setFont('helvetica', 'bold');
+      this.doc.setFontSize(font);
+      const colWidths: number[] = [];
+      for (let c = 0; c < colCount; c++) {
+        let maxWordW = 0;
+        for (const r of rows) {
+          const cell = sanitizePdfText(r[c] ?? '').replace(/\*\*/g, '');
+          for (const w of cell.split(/\s+/)) {
+            const ww = this.doc.getTextWidth(w);
+            if (ww > maxWordW) maxWordW = ww;
+          }
+        }
+        colWidths.push(Math.max(34, Math.min(maxWordW + paddX * 2 + 2, 220)));
       }
-      colWidths.push(Math.max(34, Math.min(maxLen * 5.2 + paddX * 2, 220)));
+      return { widths: colWidths, total: colWidths.reduce(function (s, w) { return s + w; }, 0) };
+    };
+    let widthsCalc = computeWidths(cellFont);
+    if (widthsCalc.total > this.usableWidth && cellFont > 8) {
+      cellFont = 8;
+      widthsCalc = computeWidths(8);
     }
-    const totalWidth = colWidths.reduce(function (s, w) { return s + w; }, 0);
-    const scale = totalWidth > this.usableWidth ? this.usableWidth / totalWidth : 1;
-    const widths = colWidths.map(function (w) { return w * scale; });
+    const scale = widthsCalc.total > this.usableWidth ? this.usableWidth / widthsCalc.total : 1;
+    const widths = widthsCalc.widths.map(function (w) { return w * scale; });
 
     // Wrap real de cada celda y altura dinámica por fila (las celdas expanden)
     const cellLines: string[][][] = [];
     const rowHeights: number[] = [];
     for (let ri = 0; ri < rows.length; ri++) {
       const r = rows[ri];
+      const isHeaderRow = ri === 0;
       const perCell: string[][] = [];
       let maxN = 1;
       for (let c = 0; c < colCount; c++) {
+        this.doc.setFont('helvetica', isHeaderRow ? 'bold' : 'normal');
+        this.doc.setFontSize(cellFont);
         const text = sanitizePdfText(r[c] ?? '').replace(/\*\*/g, '');
         const wrapped = this.doc.splitTextToSize(text, widths[c] - paddX * 2);
         const lines = Array.isArray(wrapped) ? wrapped : [wrapped];
@@ -435,7 +454,7 @@ function logoDimensions(dataUrl: string): Promise<{ w: number; h: number }> {
   });
 }
 
-function renderCompiledPlanPdf(params: DownloadCompiledPlanParams & { logo?: { dataUrl: string; w: number; h: number } }): jsPDF {
+export function renderCompiledPlanPdf(params: DownloadCompiledPlanParams & { logo?: { dataUrl: string; w: number; h: number } }): jsPDF {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
   const renderer = new CompiledPlanRenderer(doc, params.language);
   const isEn = params.language === 'en';
