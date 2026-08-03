@@ -35,6 +35,7 @@ import {
 import { babelPhaseTopics } from '@/lib/babel-constants';
 import { cn } from '@/lib/utils';
 import { DisplayLangProvider, useDisplayLang } from '@/components/display-lang-provider';
+import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 import { getFirebaseAuth, getFirebaseDb } from '@/lib/firebase';
 import { getMaturityDimensions } from '@/lib/maturity-dimensions';
 import { computeResults, type AssessmentResult, type DimensionAnswers } from '@/lib/maturity-scoring';
@@ -160,6 +161,49 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
 
   const t = (es: string, en: string) => (lang === 'en' ? en : es);
   const locale = lang === 'en' ? 'en' : 'es';
+
+  const pasosTour: TourStep[] = [
+    {
+      selector: '#resumen-titulo',
+      title: t('Resumen ejecutivo', 'Executive Summary'),
+      description: t(
+        'Vista general de tu avance: madurez, fases aprobadas y conversaciones con Babel.',
+        'Overview of your progress: maturity, approved phases and conversations with Babel.'
+      ),
+    },
+    {
+      selector: '#resumen-metricas',
+      title: t('Métricas clave', 'Key metrics'),
+      description: t(
+        'Tu madurez global, la fase actual, las fases aprobadas y los mensajes intercambiados con Babel.',
+        'Your overall maturity, current phase, approved phases and messages exchanged with Babel.'
+      ),
+    },
+    {
+      selector: '#resumen-fases',
+      title: t('Avance por fase', 'Progress by phase'),
+      description: t(
+        'Las 5 fases del diagnóstico Babel y su estado. La tabla debajo muestra entregables de cada fase.',
+        'The 5 phases of the Babel diagnostic and their status. The table below shows deliverables per phase.'
+      ),
+    },
+    {
+      selector: '#resumen-madurez',
+      title: t('Diagnóstico de madurez', 'Maturity assessment'),
+      description: t(
+        'Puntaje por tema y tus fortalezas y áreas de oportunidad para priorizar mejoras.',
+        'Score per topic plus your strengths and areas of opportunity to prioritize improvements.'
+      ),
+    },
+    {
+      selector: '#resumen-plan',
+      title: t('Tu plan de negocio', 'Your business plan'),
+      description: t(
+        'Resumen de tu plan, fases aprobadas y plan de acción, con accesos directos para editarlos.',
+        'Summary of your plan, approved phases and action plan, with shortcuts to edit them.'
+      ),
+    },
+  ];
 
   const navItems: ExecutiveNavItem[] = [
     { href: `/${routeLocale}/executive-preview`, label: t('Resumen ejecutivo', 'Executive Summary'), icon: NAV_ICON_MAP.LayoutDashboard },
@@ -372,7 +416,7 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
     <ExecutiveShell navItems={navItems} commandItems={commandItems} brandLabel="MBE Corpilot AI" logoSrc="/logo-mbe.png">
       <BackgroundBlobs />
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
-        <div className="animate-fade-in">
+        <div id="resumen-titulo" className="animate-fade-in">
           <h1 className="text-xl font-semibold tracking-tight text-foreground">
             {t('Resumen ejecutivo', 'Executive Summary')}
           </h1>
@@ -452,7 +496,7 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
               </div>
               <TrendingUp className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
             </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div id="resumen-metricas" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <MetricCard
                 label={t('Utilidad deseada', 'Desired profit')}
                 value={fmtMoney(finGoals.input.desiredProfit)}
@@ -487,7 +531,7 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
           </GlassCard>
         ) : null}
 
-        <GlassCard className="animate-slide-up" style={{ animationDelay: '260ms' }}>
+        <GlassCard id="resumen-fases" className="animate-slide-up" style={{ animationDelay: '260ms' }}>
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="text-sm font-semibold text-foreground">{t('Avance por fase', 'Progress by phase')}</h2>
@@ -555,7 +599,7 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
           />
         </div>
 
-        <GlassCard className="animate-slide-up" style={{ animationDelay: '340ms' }}>
+        <GlassCard id="resumen-madurez" className="animate-slide-up" style={{ animationDelay: '340ms' }}>
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="text-sm font-semibold text-foreground">{t('Diagnóstico de madurez', 'Maturity assessment')}</h2>
@@ -636,7 +680,7 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
           )}
         </GlassCard>
 
-        <GlassCard className="animate-slide-up" style={{ animationDelay: '380ms' }}>
+        <GlassCard id="resumen-plan" className="animate-slide-up" style={{ animationDelay: '380ms' }}>
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="text-sm font-semibold text-foreground">{t('Tu plan de negocio', 'Your business plan')}</h2>
@@ -717,6 +761,7 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
           </div>
         </GlassCard>
       </div>
+      <PageTour pageId="resumen-ejecutivo" steps={pasosTour} lang={locale} />
     </ExecutiveShell>
   );
 }

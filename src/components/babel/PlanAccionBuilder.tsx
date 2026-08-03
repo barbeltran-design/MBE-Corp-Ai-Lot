@@ -6,6 +6,8 @@ import { getLatestAssessmentAnswers } from '@/lib/assessment';
 import { getMaturityDimensions } from '@/lib/maturity-dimensions';
 import { computeResults, type AssessmentResult } from '@/lib/maturity-scoring';
 import { getBabelSessionIfExists } from '@/lib/babel-session';
+import BabelAvatar from '@/components/babel/BabelAvatar';
+import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 
 const MATURITY_LEVEL_LABEL: Record<string, { es: string; en: string }> = {
   execution: { es: 'Ejecucion', en: 'Execution' },
@@ -251,6 +253,27 @@ function reminderMessage(lang: PlanLang, nombre: string, tarea: string, proyecto
   }
   return 'Hola ' + nombre + ', tu tarea "' + tarea + '"' + proyectoClauseEs + ' tiene fecha compromiso ' + fecha + '. Entregable esperado: ' + entregableTxt + '. Por favor confirma como vas.';
 }
+
+const PASOS_TOUR: Record<'es' | 'en', TourStep[]> = {
+  es: [
+    { selector: '#plan-accion-title', title: 'Plan de Acción Estratégico', description: 'Aquí construyes tu plan paso a paso: Babel te acompaña con sugerencias de IA y todo se guarda automáticamente.' },
+    { selector: '#plan-accion-etapas', title: 'Cuatro etapas con Babel', description: 'Cada botón genera una capa del plan: Amenazas y Oportunidades, Fortalezas y Debilidades, Acciones, y Factibilidad e Impacto. Se procesan en orden.' },
+    { selector: '#plan-paso-entornos', title: '1. Amenazas y Oportunidades', description: 'Babel analiza las fases aprobadas de tu sesión y detecta riesgos y oportunidades para cada objetivo estratégico. Una amenaza puede impactar varios objetivos.' },
+    { selector: '#plan-paso-fds', title: '2. Fortalezas y Debilidades', description: 'Revisa tus capacidades internas y tu nivel de madurez para sustentar cada amenaza u oportunidad detectada.' },
+    { selector: '#plan-paso-acciones', title: '3. Sugiere Acciones', description: 'Propone acciones concretas a partir de las fases, las pendientes de madurez y las buenas prácticas del catálogo.' },
+    { selector: '#plan-paso-prioridad', title: '4. Factibilidad e Impacto', description: 'Asigna la factibilidad, el impacto y el responsable según tu organigrama para cada acción.' },
+    { selector: '#plan-accion-lista', title: 'Tu plan en detalle', description: 'Cada objetivo despliega sus amenazas, fortalezas, acciones y proyectos. Valida con la palomita, edita los textos y elimina lo que no aplique.' },
+  ],
+  en: [
+    { selector: '#plan-accion-title', title: 'Strategic Action Plan', description: 'Build your plan step by step: Babel accompanies you with AI suggestions and everything is saved automatically.' },
+    { selector: '#plan-accion-etapas', title: 'Four stages with Babel', description: 'Each button generates a layer of the plan: Threats and Opportunities, Strengths and Weaknesses, Actions, and Feasibility and Impact. They run in order.' },
+    { selector: '#plan-paso-entornos', title: '1. Threats and Opportunities', description: 'Babel analyzes the approved phases of your session and detects risks and opportunities for each strategic objective. One threat can impact several objectives.' },
+    { selector: '#plan-paso-fds', title: '2. Strengths and Weaknesses', description: 'Review your internal capabilities and maturity level to support each detected threat or opportunity.' },
+    { selector: '#plan-paso-acciones', title: '3. Suggest Actions', description: 'Proposes concrete actions from the phases, maturity pending items and the best practices catalog.' },
+    { selector: '#plan-paso-prioridad', title: '4. Feasibility and Impact', description: 'Assigns feasibility, impact and the responsible role from your org chart for each action.' },
+    { selector: '#plan-accion-lista', title: 'Your plan in detail', description: 'Each objective unfolds its threats, strengths, actions and projects. Validate with the checkmark, edit texts and remove what does not apply.' },
+  ],
+};
 
 const LABELS = {
   es: {
@@ -1531,8 +1554,17 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <h3 className="text-xl font-bold text-slate-800">{t.title}</h3>
-      <p className="mt-1 text-sm text-slate-500">{t.subtitle}</p>
+      <div className="flex items-center gap-3">
+        <BabelAvatar
+          state={pasoGenerando !== null || prioGenerating ? 'thinking' : 'idle'}
+          size={56}
+          className="shrink-0"
+        />
+        <div>
+          <h3 id="plan-accion-title" className="text-xl font-bold text-slate-800">{t.title}</h3>
+          <p className="mt-1 text-sm text-slate-500">{t.subtitle}</p>
+        </div>
+      </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
         <div className="rounded-lg border border-slate-200 bg-white p-3 text-center">
@@ -1557,7 +1589,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
         </div>
       </div>
 
-      <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div id="plan-accion-etapas" className="mt-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <h4 className="text-sm font-semibold text-slate-800">{t.planIaTitle}</h4>
         <p className="mt-1 text-sm text-slate-500">{t.planIaSubtitle}</p>
         <div className="mt-3 grid gap-3 md:grid-cols-2">
@@ -1566,6 +1598,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
             <p className="mt-1 text-xs text-teal-800">{t.detectaEntornosSubtitle}</p>
             <button
               type="button"
+              id="plan-paso-entornos"
               onClick={sugerirEntornosConIA}
               disabled={pasoGenerando !== null}
               className="mt-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
@@ -1578,6 +1611,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
             <p className="mt-1 text-xs text-cyan-800">{t.fdsSubtitle}</p>
             <button
               type="button"
+              id="plan-paso-fds"
               onClick={sugerirFdsConIA}
               disabled={pasoGenerando !== null}
               className="mt-2 rounded-lg bg-cyan-600 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-700 disabled:opacity-50"
@@ -1590,6 +1624,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
             <p className="mt-1 text-xs text-blue-900">{t.accionesSubtitle}</p>
             <button
               type="button"
+              id="plan-paso-acciones"
               onClick={sugerirAccionesPlanConIA}
               disabled={pasoGenerando !== null}
               className="mt-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
@@ -1602,6 +1637,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
             <p className="mt-1 text-xs text-indigo-900">{t.sugerirPrioridadSubtitle}</p>
             <button
               type="button"
+              id="plan-paso-prioridad"
               onClick={sugerirPrioridadConIA}
               disabled={prioGenerating}
               className="mt-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
@@ -1624,7 +1660,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
         ) : null}
       </div>
 
-      <div className="mt-6">
+      <div id="plan-accion-lista" className="mt-6">
         {objetivos.map((o) => renderObjetivo(o))}
         <button type="button" onClick={addObjetivo} className="mt-2 text-sm font-medium text-blue-600 hover:underline">
           {t.addObjetivo}
@@ -1632,6 +1668,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       </div>
 
       <p className="mt-4 text-xs text-slate-400">{t.savedNote}</p>
+      <PageTour pageId="plan-accion" steps={lang === 'en' ? PASOS_TOUR.en : PASOS_TOUR.es} lang={lang} />
     </div>
   );
 }

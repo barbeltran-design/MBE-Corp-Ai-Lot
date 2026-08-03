@@ -20,6 +20,7 @@ import { downloadCompiledPlanPdf } from '@/lib/deliverables';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useDisplayLang } from '@/components/display-lang-provider';
+import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 import type { BabelPhaseRecord, ChatMessage, SessionDoc } from '@/types/firestore';
 // Preguntas de la Fase 0 (una por una) — alineadas con las 5 respuestas que
 // pide el prompt de Fase 0 en src/app/api/babel/route.ts.
@@ -635,14 +636,38 @@ export default function BabelPage() {
       setSending(false);
     }
   }
+  const pasosTour: TourStep[] = [
+    {
+      selector: '#babel-titulo',
+      title: dispLang === 'en' ? 'Strategic Reflection' : 'Reflexión Estratégica',
+      description: dispLang === 'en'
+        ? 'Talk to Babel, your strategic agent: each approved phase becomes input for your business plan.'
+        : 'Conversa con Babel, tu agente estratégico: cada fase aprobada se convierte en insumos de tu plan de negocio.',
+    },
+    {
+      selector: '#babel-chat',
+      title: dispLang === 'en' ? 'The conversation' : 'La conversación',
+      description: dispLang === 'en'
+        ? 'Read Babel responses and edit any message with the pencil before approving the phase.'
+        : 'Lee las respuestas de Babel y edita cualquier mensaje con el lápiz antes de aprobar la fase.',
+    },
+    {
+      selector: '#babel-entrada',
+      title: dispLang === 'en' ? 'Answer Babel' : 'Responde a Babel',
+      description: dispLang === 'en'
+        ? 'Type your answer here. Once you complete the 5 phases, use /compilar to build the full plan as PDF.'
+        : 'Escribe tu respuesta aquí. Cuando completes las 5 fases, usa /compilar para armar el plan completo en PDF.',
+    },
+  ];
   if (!session) {
     return <div className="flex min-h-[60vh] items-center justify-center text-slate-500">{dispLang === locale ? t('loading') : UI_FALLBACK[dispLang].loading}</div>;
   }
   const isPhase0Active = currentPhase === 0 && currentQuestionIndex < questions.length && !isPhase0Complete;
   if (isPhase0Active) {
     return (
+      <React.Fragment>
       <div className="mx-auto flex max-w-2xl flex-col gap-4 p-4 sm:p-6">
-        <div className="flex items-center justify-between border-b pb-4">
+        <div id="babel-titulo" className="flex items-center justify-between border-b pb-4">
           <div>
             <h1 className="text-xl font-semibold text-slate-900">{dispLang === locale ? t('title') : UI_FALLBACK[dispLang].title}</h1>
             <p className="text-sm text-slate-500">{dispLang === 'en' ? 'Phase 0: Initial Calibration' : 'Fase 0: Calibración Inicial'}</p>
@@ -655,7 +680,7 @@ export default function BabelPage() {
       </div>
       <PhaseStepper currentPhase={currentPhase} approved={session.phases ?? []} lang={dispLang} />
       {currentQuestionIndex > 0 && (
-          <Card className="flex-1 space-y-3 overflow-y-auto p-4 max-h-[40vh]">
+          <Card id="babel-chat" className="flex-1 space-y-3 overflow-y-auto p-4 max-h-[40vh]">
             {Array.from({ length: currentQuestionIndex }).map(function (_unused, k) {
               const qText = (k === 0 ? fase0IntroText(dispLang) : '') + questions[k].question;
               const answerText = phase0Answers[questions[k].key] ?? '';
@@ -722,7 +747,7 @@ export default function BabelPage() {
             </div>
           </Card>
         )}
-        <Card className="p-6">
+        <Card id="babel-entrada" className="p-6">
           <div className="whitespace-pre-wrap text-slate-900 mb-4 font-medium">
             {questions[currentQuestionIndex].question}
           </div>
@@ -752,11 +777,14 @@ export default function BabelPage() {
           </form>
         </Card>
       </div>
+      <PageTour pageId="babel-reflexion" steps={pasosTour} lang={dispLang} />
+      </React.Fragment>
     );
   }
   return (
+    <React.Fragment>
     <div className="mx-auto flex max-w-4xl flex-col gap-4 p-4 sm:p-6">
-      <div className="flex items-center justify-between border-b pb-4">
+      <div id="babel-titulo" className="flex items-center justify-between border-b pb-4">
         <div>
           <h1 className="text-xl font-semibold text-slate-900">{dispLang === locale ? t('title') : UI_FALLBACK[dispLang].title}</h1>
           <p className="text-sm text-slate-500">
@@ -773,7 +801,7 @@ export default function BabelPage() {
         </div>
       </div>
       <PhaseStepper currentPhase={currentPhase} approved={session.phases ?? []} lang={dispLang} />
-      <Card className="flex-1 space-y-3 overflow-y-auto p-4 min-h-[60vh]">
+      <Card id="babel-chat" className="flex-1 space-y-3 overflow-y-auto p-4 min-h-[60vh]">
         {session.messages.map(function (m, i) {
           const isStoredPhase0SummaryUser =
             m.role === 'user' && (m.content.startsWith('Fase 0 completada:') || m.content.startsWith('Phase 0 completed:'));
@@ -957,6 +985,7 @@ export default function BabelPage() {
           </Button>
         )}
         <form
+          id="babel-entrada"
           onSubmit={function (e) {
             e.preventDefault();
             if (input.trim() === '/compilar' && allPhasesDone) {
@@ -985,7 +1014,9 @@ export default function BabelPage() {
           </Button>
         </form>
       </div>
+      <PageTour pageId="babel-reflexion" steps={pasosTour} lang={dispLang} />
     </div>
+    </React.Fragment>
   );
 }
 

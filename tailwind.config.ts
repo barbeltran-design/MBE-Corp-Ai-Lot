@@ -117,6 +117,22 @@ const config: Config = {
           from: { backgroundPosition: '-200% 0' },
           to: { backgroundPosition: '200% 0' },
         },
+        'avatar-float': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-4px)' },
+        },
+        'avatar-blink': {
+          '0%, 92%, 100%': { transform: 'scaleY(1)' },
+          '95%': { transform: 'scaleY(0.12)' },
+        },
+        'avatar-talk': {
+          '0%, 100%': { transform: 'scaleY(0.45)' },
+          '50%': { transform: 'scaleY(1)' },
+        },
+        'avatar-think-dot': {
+          '0%, 100%': { opacity: '0.2' },
+          '50%': { opacity: '1' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 200ms cubic-bezier(0.16, 1, 0.3, 1) both',
@@ -124,6 +140,10 @@ const config: Config = {
         'slide-up-modal': 'slide-up-modal 240ms cubic-bezier(0.16, 1, 0.3, 1) both',
         'pulse-subtle': 'pulse-subtle 2.4s ease-in-out infinite',
         shimmer: 'shimmer 1.6s linear infinite',
+        'avatar-float': 'avatar-float 3.6s ease-in-out infinite',
+        'avatar-blink': 'avatar-blink 4.8s ease-in-out infinite',
+        'avatar-talk': 'avatar-talk 420ms ease-in-out infinite',
+        'avatar-think-dot': 'avatar-think-dot 1s ease-in-out infinite',
       },
     },
   },

@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import { ChevronDown } from 'lucide-react';
+import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 type OrgLang = 'es' | 'en';
 type OrgStatus = 'green' | 'yellow' | 'orange' | 'red';
 type ConsejeroTipo = 'permanente' | 'tema';
@@ -596,6 +597,21 @@ const T = {
 function generateId(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
+const PASOS_TOUR: Record<OrgLang, TourStep[]> = {
+  es: [
+    { selector: '#organigrama-title', title: 'Organigrama y Roles', description: 'Define la estructura de tu empresa: roles, personas asignadas y el estado de cada posición.' },
+    { selector: '#organigrama-resumen', title: 'Resumen de roles', description: 'Ve cuántos roles están cubiertos, parciales o sin cubrir. El mismo resumen lo usan las demás secciones.' },
+    { selector: '#organigrama-niveles', title: 'Niveles del organigrama', description: 'Cada rol con subniveles se puede contraer con el chevron. Asigna una persona o déjalo vacío si aún no hay cubrimiento.' },
+    { selector: '#organigrama-contactos', title: 'Directorio de contactos', description: 'Registra los contactos de tu equipo: nombre, celular y roles. Se sincronizan automáticamente con el organigrama y sirven para los recordatorios de WhatsApp.' },
+  ],
+  en: [
+    { selector: '#organigrama-title', title: 'Org Chart and Roles', description: 'Define your company structure: roles, assigned people and the status of each position.' },
+    { selector: '#organigrama-resumen', title: 'Roles summary', description: 'See how many roles are covered, partial or empty. The other sections use the same summary.' },
+    { selector: '#organigrama-niveles', title: 'Org chart levels', description: 'Each role with sublevels can be collapsed with the chevron. Assign a person or leave it empty if not covered yet.' },
+    { selector: '#organigrama-contactos', title: 'Contacts directory', description: 'Register your team contacts: name, phone and roles. They sync automatically with the org chart and feed the WhatsApp reminders.' },
+  ],
+};
+
 export default function OrgChartBuilder({ lang }: { lang: OrgLang }) {
   const t = T[lang];
   const [assignments, setAssignments] = React.useState<Record<string, OrgAssignment>>({});
@@ -1202,10 +1218,10 @@ export default function OrgChartBuilder({ lang }: { lang: OrgLang }) {
   }
   return (
     <div className="mx-auto max-w-3xl">
-      <h3 className="text-xl font-bold text-slate-800">{t.title}</h3>
+      <h3 id="organigrama-title" className="text-xl font-bold text-slate-800">{t.title}</h3>
       <p className="mt-1 text-sm text-slate-500">{t.subtitle}</p>
       <p className="mt-3 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-800">{t.repeatNote}</p>
-      <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div id="organigrama-resumen" className="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <h4 className="mb-2 text-sm font-semibold text-slate-700">{t.summaryTitle}</h4>
         <p className="mb-2 text-xs text-slate-400">
           {t.counts(counts.green, counts.yellow, counts.orange, counts.red)}
@@ -1227,13 +1243,13 @@ export default function OrgChartBuilder({ lang }: { lang: OrgLang }) {
           </ul>
         )}
       </div>
-      <div className="mt-6">
+      <div id="organigrama-niveles" className="mt-6">
         {topLevel.map(function (role) {
           return renderRoleCard(role, 0);
         })}
       </div>
 
-      <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div id="organigrama-contactos" className="mt-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <button
           type="button"
           onClick={() => setContactosOpen(!contactosOpen)}
@@ -1342,6 +1358,7 @@ export default function OrgChartBuilder({ lang }: { lang: OrgLang }) {
       </div>
 
       <p className="mt-4 text-xs text-slate-400">{t.savedNote}</p>
+      <PageTour pageId="organigrama" steps={lang === 'en' ? PASOS_TOUR.en : PASOS_TOUR.es} lang={lang} />
     </div>
   );
 }

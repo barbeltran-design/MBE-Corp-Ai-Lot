@@ -2,6 +2,7 @@
 import React from 'react';
 import { ChevronDown } from 'lucide-react';
 import FinancialGoalsBuilder from '@/components/babel/FinancialGoalsBuilder';
+import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 
 type PlanLang = 'es' | 'en';
 type BSCPerspectiva = 'financiera' | 'clientes' | 'procesos_internos' | 'aprendizaje_crecimiento' | 'socioambiental';
@@ -210,6 +211,21 @@ function buildFinancialContext(lang: PlanLang): string {
     return '';
   }
 }
+
+const PASOS_TOUR: Record<PlanLang, TourStep[]> = {
+  es: [
+    { selector: '#indicadores-title', title: 'Objetivos Estratégicos', description: 'Aquí defines los indicadores que miden el logro de tus objetivos de negocio, agrupados por perspectiva del BSC.' },
+    { selector: '#indicadores-resumen', title: 'Resumen por perspectiva', description: 'Observa de un vistazo tus indicadores validados, pendientes y el conteo por cada perspectiva del Balanced Scorecard.' },
+    { selector: '#indicadores-acciones', title: 'Generar con Babel', description: 'Babel propone indicadores con nombre, fórmula, objetivo, meta, unidad de medida y frecuencia. También puedes agregarlos manualmente.' },
+    { selector: '#indicadores-lista', title: 'Secciones por perspectiva', description: 'Cada perspectiva se despliega en una sección colapsable. Valida cada indicador con la palomita y edítalo si lo necesitas.' },
+  ],
+  en: [
+    { selector: '#indicadores-title', title: 'Strategic Objectives', description: 'Here you define the indicators that measure the achievement of your business objectives, grouped by BSC perspective.' },
+    { selector: '#indicadores-resumen', title: 'Summary by perspective', description: 'See at a glance your validated indicators, pending ones and the count for each Balanced Scorecard perspective.' },
+    { selector: '#indicadores-acciones', title: 'Generate with Babel', description: 'Babel proposes indicators with name, formula, objective, target, unit of measure and frequency. You can also add them manually.' },
+    { selector: '#indicadores-lista', title: 'Sections by perspective', description: 'Each perspective unfolds into a collapsible section. Validate each indicator with the checkmark and edit it if needed.' },
+  ],
+};
 
 export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
   const t = LABELS[lang];
@@ -475,10 +491,10 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <h3 className="text-xl font-bold text-slate-800">{t.title}</h3>
+      <h3 id="indicadores-title" className="text-xl font-bold text-slate-800">{t.title}</h3>
       <p className="mt-1 text-sm text-slate-500">{t.subtitle}</p>
 
-      <div className="mt-4">
+      <div id="indicadores-resumen" className="mt-4">
         <FinancialGoalsBuilder lang={lang} />
       </div>
 
@@ -517,7 +533,7 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-3">
+      <div id="indicadores-acciones" className="mt-4 flex flex-wrap gap-3">
         <button
           type="button"
           onClick={generarPropuesta}
@@ -544,7 +560,7 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
       ) : null}
 
       {grupos.length > 0 ? (
-        <div className="mt-6 space-y-5">
+        <div id="indicadores-lista" className="mt-6 space-y-5">
           <div className="flex justify-end gap-2">
             <button
               type="button"
@@ -590,6 +606,7 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
       ) : null}
 
       <p className="mt-4 text-xs text-slate-400">{t.savedNote}</p>
+      <PageTour pageId="indicadores" steps={lang === 'en' ? PASOS_TOUR.en : PASOS_TOUR.es} lang={lang} />
     </div>
   );
 }

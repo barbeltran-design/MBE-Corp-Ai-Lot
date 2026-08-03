@@ -33,6 +33,7 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
+import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { getLatestAssessmentAnswers } from '@/lib/assessment';
 import {
@@ -138,10 +139,42 @@ function DashboardPageInner() {
   const radarData = result.dimensions.map((d) => ({ tema: d.tema, value: Math.round(d.score) }));
   const progressData = result.levelProgress.map((l) => ({ nivel: tLevel(l.key), avance: Math.round(l.percent) }));
 
+  const en = locale === 'en';
+  const pasosTour: TourStep[] = [
+    {
+      selector: '#dashboard-titulo',
+      title: en ? 'Maturity Assessment' : 'Evaluación de Madurez',
+      description: en
+        ? 'This is the result of your assessment: global score and level reached by topic.'
+        : 'Este es tu resultado del diagnóstico: puntaje global y nivel alcanzado por tema.',
+    },
+    {
+      selector: '#dashboard-resumen',
+      title: en ? 'Your overall result' : 'Tu resultado global',
+      description: en
+        ? 'Global score and maturity level of your business according to the assessment.'
+        : 'Puntaje global y nivel de madurez de tu empresa según el diagnóstico.',
+    },
+    {
+      selector: '#dashboard-graficas',
+      title: en ? 'Charts by topic' : 'Gráficas por tema',
+      description: en
+        ? 'Compare your maturity per topic with the radar and the progress by maturity level.'
+        : 'Compara tu madurez por tema con el radar y el avance por nivel de madurez.',
+    },
+    {
+      selector: '#dashboard-tabla',
+      title: en ? 'Table by topic' : 'Tabla por tema',
+      description: en
+        ? 'Review the score, level and next steps of each topic to improve.'
+        : 'Revisa el puntaje, nivel y los siguientes pasos de cada tema para mejorar.',
+    },
+  ];
+
   return (
     <main className="px-6 py-10">
       <div className="mx-auto max-w-5xl">
-        <div className="flex items-center justify-between">
+        <div id="dashboard-titulo" className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-slate-900">{t('welcomeTitle')}</h1>
           <button
             type="button"
@@ -152,7 +185,7 @@ function DashboardPageInner() {
           </button>
         </div>
 
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div id="dashboard-resumen" className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Card className="p-6">
             <p className="text-sm text-slate-500">{t('maturityScoreLabel')}</p>
             <p className="mt-1 text-4xl font-bold text-emerald-600">{Math.round(result.overallScore)}%</p>
@@ -163,7 +196,7 @@ function DashboardPageInner() {
           </Card>
         </div>
 
-        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div id="dashboard-graficas" className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
           <Card className="p-6">
             <h2 className="text-sm font-semibold text-slate-700">{t('radarTitle')}</h2>
             <div className="mt-4 h-80 w-full">
@@ -195,7 +228,7 @@ function DashboardPageInner() {
           </Card>
         </div>
 
-        <Card className="mt-8 overflow-x-auto p-6">
+        <Card id="dashboard-tabla" className="mt-8 overflow-x-auto p-6">
           <h2 className="text-sm font-semibold text-slate-700">{t('tableTitle')}</h2>
           <table className="mt-4 w-full min-w-[720px] text-left text-sm">
             <thead>
@@ -242,6 +275,7 @@ function DashboardPageInner() {
           </table>
         </Card>
       </div>
+      <PageTour pageId="dashboard" steps={pasosTour} lang={locale === 'en' ? 'en' : 'es'} />
     </main>
   );
 }
