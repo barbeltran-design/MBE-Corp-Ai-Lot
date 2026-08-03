@@ -38,10 +38,6 @@ function parseInline(text: string): InlineSegment[] {
   return segments;
 }
 
-function plainText(text: string): string {
-  return sanitizePdfText(text).replace(/\*\*/g, '');
-}
-
 function isTableLine(line: string): boolean {
   const t = line.trim();
   return t.startsWith('|') && t.endsWith('|');
@@ -118,6 +114,39 @@ class CompiledPlanRenderer {
     }
   }
 
+  // Divide los segmentos inline en lineas que caben en `width` (respeta el
+  // margen derecho; antes la primera linea se dibujaba completa y desbordaba).
+  wrapInline(segments: InlineSegment[], size: number, width: number): InlineSegment[][] {
+    const lines: InlineSegment[][] = [];
+    let line: InlineSegment[] = [];
+    let lineW = 0;
+    const flush = () => {
+      if (line.length > 0) {
+        lines.push(line);
+        line = [];
+        lineW = 0;
+      }
+    };
+    for (let i = 0; i < segments.length; i++) {
+      const seg = segments[i];
+      this.doc.setFont('helvetica', seg.bold ? 'bold' : 'normal');
+      this.doc.setFontSize(size);
+      const tokens = seg.text.split(' ');
+      for (let ti = 0; ti < tokens.length; ti++) {
+        const token = tokens[ti];
+        if (token === '') continue;
+        const isLast = ti === tokens.length - 1;
+        const tokenW = this.doc.getTextWidth(token);
+        if (line.length > 0 && lineW + tokenW > width) flush();
+        line.push({ text: isLast ? token : token + ' ', bold: seg.bold });
+        lineW += tokenW;
+      }
+    }
+    flush();
+    if (lines.length === 0) lines.push([]);
+    return lines;
+  }
+
   icon(glyph: string, x: number, y: number, size: number, color: Rgb): void {
     this.doc.setFont('zapfdingbats', 'normal');
     this.doc.setFontSize(size);
@@ -128,17 +157,24 @@ class CompiledPlanRenderer {
   heading(text: string, size: number): void {
     const segments = parseInline(text);
     const lineHeight = size + 8;
-    this.ensureSpace(lineHeight + 10);
+    const wrapped = this.wrapInline(segments, size, this.usableWidth - 16);
+    this.ensureSpace(lineHeight * wrapped.length + 10);
     const isBlindSpot = text.includes('Punto ciego') || text.includes('Blind spot');
     const color = isBlindSpot ? COLOR_AMBER : COLOR_PRIMARY;
-    this.icon(isBlindSpot ? DINGBAT_BOX : DINGBAT_DOT, this.marginX, this.cursorY + size * 0.75, size * 0.8, color);
-    this.doc.setFont('helvetica', 'bold');
-    this.doc.setFontSize(size);
-    this.setColor(color);
-    this.writeInline(this.marginX + 16, this.cursorY + size * 0.75, segments, size);
+    for (let li = 0; li < wrapped.length; li++) {
+      if (li === 0) {
+        this.icon(isBlindSpot ? DINGBAT_BOX : DINGBAT_DOT, this.marginX, this.cursorY + size * 0.75, size * 0.8, color);
+      }
+      this.doc.setFont('helvetica', 'bold');
+      this.doc.setFontSize(size);
+      this.setColor(color);
+      this.writeInline(this.marginX + 16, this.cursorY + size * 0.75, wrapped[li], size);
+      this.cursorY += lineHeight;
+    }
+    const lineY = this.cursorY - lineHeight + size + 4;
     this.doc.setDrawColor(COLOR_LINE[0], COLOR_LINE[1], COLOR_LINE[2]);
-    this.doc.line(this.marginX, this.cursorY + size + 4, this.pageWidth - this.marginX, this.cursorY + size + 4);
-    this.cursorY += lineHeight + 10;
+    this.doc.line(this.marginX, lineY, this.pageWidth - this.marginX, lineY);
+    this.cursorY += 10;
   }
 
   paragraph(text: string, size = 11, indent = 0): void {
@@ -146,19 +182,14 @@ class CompiledPlanRenderer {
     const isBlindSpot = text.includes('Punto ciego') || text.includes('Blind spot');
     const color = isBlindSpot ? COLOR_AMBER : COLOR_DARK;
     const width = this.usableWidth - indent;
-    const rawLines = this.doc.splitTextToSize(plainText(text), width);
-    const lines = Array.isArray(rawLines) ? rawLines : [rawLines];
+    const wrapped = this.wrapInline(segments, size, width);
     const lineHeight = size + 4;
-    for (let i = 0; i < lines.length; i++) {
+    for (let i = 0; i < wrapped.length; i++) {
       this.ensureSpace(lineHeight);
       this.doc.setFont('helvetica', 'normal');
       this.doc.setFontSize(size);
       this.setColor(color);
-      if (i === 0) {
-        this.writeInline(this.marginX + indent, this.cursorY, segments, size);
-      } else {
-        this.doc.text(lines[i], this.marginX + indent, this.cursorY);
-      }
+      this.writeInline(this.marginX + indent, this.cursorY, wrapped[i], size);
       this.cursorY += lineHeight;
     }
     this.cursorY += 3;
@@ -168,23 +199,17 @@ class CompiledPlanRenderer {
     const segments = parseInline(text);
     const indent = 18;
     const width = this.usableWidth - indent;
-    const rawLines = this.doc.splitTextToSize(plainText(text), width);
-    const lines = Array.isArray(rawLines) ? rawLines : [rawLines];
+    const wrapped = this.wrapInline(segments, 11, width);
     const lineHeight = 15;
-    for (let i = 0; i < lines.length; i++) {
+    for (let i = 0; i < wrapped.length; i++) {
       this.ensureSpace(lineHeight);
       if (i === 0) {
         this.icon(DINGBAT_CHECK, this.marginX + 2, this.cursorY - 1, 10, COLOR_GREEN);
-        this.doc.setFont('helvetica', 'normal');
-        this.doc.setFontSize(11);
-        this.setColor(COLOR_DARK);
-        this.writeInline(this.marginX + indent, this.cursorY, segments, 11);
-      } else {
-        this.doc.setFont('helvetica', 'normal');
-        this.doc.setFontSize(11);
-        this.setColor(COLOR_DARK);
-        this.doc.text(lines[i], this.marginX + indent, this.cursorY);
       }
+      this.doc.setFont('helvetica', 'normal');
+      this.doc.setFontSize(11);
+      this.setColor(COLOR_DARK);
+      this.writeInline(this.marginX + indent, this.cursorY, wrapped[i], 11);
       this.cursorY += lineHeight;
     }
     this.cursorY += 2;
@@ -194,25 +219,20 @@ class CompiledPlanRenderer {
     const segments = parseInline(text);
     const indent = 20;
     const width = this.usableWidth - indent;
-    const rawLines = this.doc.splitTextToSize(plainText(text), width);
-    const lines = Array.isArray(rawLines) ? rawLines : [rawLines];
+    const wrapped = this.wrapInline(segments, 11, width);
     const lineHeight = 15;
-    for (let i = 0; i < lines.length; i++) {
+    for (let i = 0; i < wrapped.length; i++) {
       this.ensureSpace(lineHeight);
       if (i === 0) {
         this.doc.setFont('helvetica', 'bold');
         this.doc.setFontSize(11);
         this.setColor(COLOR_PRIMARY);
         this.doc.text(number + '.', this.marginX + 2, this.cursorY);
-        this.doc.setFont('helvetica', 'normal');
-        this.setColor(COLOR_DARK);
-        this.writeInline(this.marginX + indent, this.cursorY, segments, 11);
-      } else {
-        this.doc.setFont('helvetica', 'normal');
-        this.doc.setFontSize(11);
-        this.setColor(COLOR_DARK);
-        this.doc.text(lines[i], this.marginX + indent, this.cursorY);
       }
+      this.doc.setFont('helvetica', 'normal');
+      this.doc.setFontSize(11);
+      this.setColor(COLOR_DARK);
+      this.writeInline(this.marginX + indent, this.cursorY, wrapped[i], 11);
       this.cursorY += lineHeight;
     }
     this.cursorY += 2;
@@ -237,6 +257,7 @@ class CompiledPlanRenderer {
     const paddX = 6;
     const headerH = 18;
     const rowH = 15;
+    const lineSpacing = 11;
 
     const colWidths: number[] = [];
     for (let c = 0; c < colCount; c++) {
@@ -251,30 +272,44 @@ class CompiledPlanRenderer {
     const scale = totalWidth > this.usableWidth ? this.usableWidth / totalWidth : 1;
     const widths = colWidths.map(function (w) { return w * scale; });
 
-    const rowCount = rows.length;
-    const tableHeight = headerH + (rowCount - 1) * rowH;
-    this.ensureSpace(tableHeight);
-
-    let x = this.marginX;
-    let y = this.cursorY;
-    this.doc.setDrawColor(COLOR_LINE[0], COLOR_LINE[1], COLOR_LINE[2]);
-    this.doc.setLineWidth(0.6);
-
-    rows.forEach((r, ri) => {
-      const isHeader = ri === 0;
-      const rowHReal = isHeader ? headerH : rowH;
-      if (isHeader) {
-        this.doc.setFillColor(COLOR_HEADER_BG[0], COLOR_HEADER_BG[1], COLOR_HEADER_BG[2]);
-        this.doc.rect(x, y, widths.reduce(function (s, w) { return s + w; }, 0), rowHReal, 'F');
-      }
-      let cellX = x;
+    // Wrap real de cada celda y altura dinámica por fila (las celdas expanden)
+    const cellLines: string[][][] = [];
+    const rowHeights: number[] = [];
+    for (let ri = 0; ri < rows.length; ri++) {
+      const r = rows[ri];
+      const perCell: string[][] = [];
+      let maxN = 1;
       for (let c = 0; c < colCount; c++) {
-        this.doc.rect(cellX, y, widths[c], rowHReal, 'S');
         const text = sanitizePdfText(r[c] ?? '').replace(/\*\*/g, '');
         const wrapped = this.doc.splitTextToSize(text, widths[c] - paddX * 2);
         const lines = Array.isArray(wrapped) ? wrapped : [wrapped];
-        const linesToDraw = lines.slice(0, 2);
-        linesToDraw.forEach((l, li) => {
+        perCell.push(lines);
+        if (lines.length > maxN) maxN = lines.length;
+      }
+      cellLines.push(perCell);
+      rowHeights.push(Math.max(ri === 0 ? headerH : rowH, maxN * lineSpacing + 4));
+    }
+
+    this.doc.setDrawColor(COLOR_LINE[0], COLOR_LINE[1], COLOR_LINE[2]);
+    this.doc.setLineWidth(0.6);
+
+    let y = this.cursorY;
+    for (let ri = 0; ri < rows.length; ri++) {
+      const isHeader = ri === 0;
+      const rowHReal = rowHeights[ri];
+      if (y + rowHReal > this.pageHeight - this.marginBottom) {
+        this.doc.addPage();
+        y = this.marginTop;
+      }
+      if (isHeader) {
+        this.doc.setFillColor(COLOR_HEADER_BG[0], COLOR_HEADER_BG[1], COLOR_HEADER_BG[2]);
+        this.doc.rect(this.marginX, y, widths.reduce(function (s, w) { return s + w; }, 0), rowHReal, 'F');
+      }
+      let cellX = this.marginX;
+      for (let c = 0; c < colCount; c++) {
+        this.doc.rect(cellX, y, widths[c], rowHReal, 'S');
+        const lines = cellLines[ri][c];
+        lines.forEach((l, li) => {
           this.doc.setFont('helvetica', isHeader ? 'bold' : 'normal');
           this.doc.setFontSize(cellFont);
           this.doc.setTextColor(
@@ -282,12 +317,12 @@ class CompiledPlanRenderer {
             isHeader ? COLOR_PRIMARY[1] : COLOR_DARK[1],
             isHeader ? COLOR_PRIMARY[2] : COLOR_DARK[2]
           );
-          this.doc.text(String(l), cellX + paddX, y + rowHReal / 2 + (li - (linesToDraw.length - 1) / 2) * 11);
+          this.doc.text(String(l), cellX + paddX, y + rowHReal / 2 + (li - (lines.length - 1) / 2) * lineSpacing);
         });
         cellX += widths[c];
       }
       y += rowHReal;
-    });
+    }
 
     this.cursorY = y + 10;
   }
