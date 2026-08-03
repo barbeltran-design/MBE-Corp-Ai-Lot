@@ -126,6 +126,15 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
   const [finMenu, setFinMenu] = React.useState(false);
   const [finEditingId, setFinEditingId] = React.useState<string | null>(null);
 
+  React.useEffect(function () {
+    const list = readFinHistory();
+    if (list.length > 0) {
+      setFinHistory(list);
+      setFinActive(true);
+      setFinMenu(true);
+    }
+  }, []);
+
   function resetFin() {
     setFinStage(1);
     setFinReviewing(false);
@@ -380,46 +389,82 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
               </Button>
             </div>
           ) : finMenu ? (
-            <div className="space-y-3 text-sm text-slate-800">
-              <p className="font-semibold">{lang === 'en' ? 'Saved financial goals' : 'Objetivos financieros guardados'}</p>
-              {finHistory.length === 0 && (
-                <p className="text-slate-500">{lang === 'en' ? 'You have no saved goals yet.' : 'Aún no tienes objetivos guardados.'}</p>
-              )}
-              {finHistory.map(function (entry) {
-                return (
-                  <div key={entry.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-semibold text-slate-900">{formatFinDate(entry.savedAt, lang)}</p>
-                      <span className="text-xs text-slate-500">
-                        {lang === 'en' ? 'Break-even' : 'Punto de equilibrio'}: {(entry.result.breakEvenWithMarketing ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                      </span>
+            <div className="overflow-hidden rounded-xl border border-slate-200">
+              <div className="flex items-center justify-between bg-[#32BAD0] px-4 py-3">
+                <p className="text-sm font-bold uppercase tracking-wide text-white">
+                  {lang === 'en' ? 'Saved financial goals' : 'Objetivos financieros guardados'}
+                </p>
+                <span className="rounded-full bg-white/25 px-2.5 py-0.5 text-xs font-semibold text-white">{finHistory.length}</span>
+              </div>
+              <div className="space-y-3 bg-white p-3">
+                {finHistory.length === 0 && (
+                  <p className="text-sm text-slate-500">{lang === 'en' ? 'You have no saved goals yet.' : 'Aún no tienes objetivos guardados.'}</p>
+                )}
+                {finHistory.map(function (entry, idx) {
+                  const isLatest = idx === 0;
+                  const fmtMoney = function (v: number) { return '$' + v.toLocaleString(undefined, { maximumFractionDigits: 0 }); };
+                  const marketingShown = entry.form?.marketingPct ?? Math.round((entry.input.marketingPct ?? 0) * 100);
+                  return (
+                    <div key={entry.id} className={'rounded-lg border p-3 ' + (isLatest ? 'border-[#32BAD0] bg-[#E1F6FA]/50' : 'border-slate-200 bg-slate-50/70')}>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-700">{formatFinDate(entry.savedAt, lang)}</p>
+                        {isLatest && (
+                          <span className="rounded-full bg-[#32BAD0] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+                            {lang === 'en' ? 'Latest' : 'Último guardado'}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-2 grid grid-cols-3 gap-2">
+                        <div>
+                          <p className="text-[10px] uppercase tracking-wide text-slate-500">{lang === 'en' ? 'Break-even' : 'Punto de equilibrio'}</p>
+                          <p className="text-base font-bold text-slate-900">{fmtMoney(entry.result.breakEvenWithMarketing ?? 0)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] uppercase tracking-wide text-slate-500">{lang === 'en' ? 'Goal revenue' : 'Ingreso meta'}</p>
+                          <p className="text-base font-bold text-slate-900">{fmtMoney(entry.result.targetRevenueWithMarketing ?? 0)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] uppercase tracking-wide text-slate-500">{lang === 'en' ? 'Variable costs' : 'Costos variables'}</p>
+                          <p className="text-base font-bold text-slate-900">{((entry.result.totalVariablePctWithMarketing ?? 0) * 100).toFixed(1)}%</p>
+                        </div>
+                      </div>
+                      <p className="mt-1.5 text-[11px] text-slate-500">
+                        {lang === 'en' ? 'Marketing investment' : 'Inversión en mercadotecnia'}: {marketingShown}%
+                      </p>
+                      <div className="mt-2.5 flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={function () { handleEditSaved(entry); }}
+                          className="rounded-md bg-[#32BAD0] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#2AA6BB]"
+                        >
+                          {lang === 'en' ? 'Edit' : 'Editar'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={function () { handleDeleteSaved(entry.id); }}
+                          className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50"
+                        >
+                          {lang === 'en' ? 'Delete' : 'Eliminar'}
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-xs text-slate-600">
-                      {lang === 'en' ? 'Goal revenue' : 'Ingreso meta'}: {(entry.result.targetRevenueWithMarketing ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                      {' · '}
-                      {lang === 'en' ? '% Variable costs' : '% Costos variables'}: {((entry.result.totalVariablePctWithMarketing ?? 0) * 100).toFixed(1)}%
-                    </p>
-                    <div className="flex gap-2 pt-1">
-                      <Button size="sm" onClick={function () { handleEditSaved(entry); }}>
-                        {lang === 'en' ? 'Edit' : 'Editar'}
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={function () { handleDeleteSaved(entry.id); }}>
-                        {lang === 'en' ? 'Delete' : 'Eliminar'}
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-              <Button onClick={handleNewFinGoals} className="w-full">
-                {lang === 'en' ? '+ Add new financial goals' : '+ Añadir nuevos objetivos financieros'}
-              </Button>
-              <button
-                type="button"
-                onClick={handleCloseFinancialGoals}
-                className="text-xs font-medium text-slate-500 underline underline-offset-2 hover:text-slate-700"
-              >
-                {lang === 'en' ? 'Close' : 'Cerrar'}
-              </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={handleNewFinGoals}
+                  className="w-full rounded-md bg-[#32BAD0] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#2AA6BB]"
+                >
+                  {lang === 'en' ? '+ Add new financial goals' : '+ Añadir nuevos objetivos financieros'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCloseFinancialGoals}
+                  className="w-full text-center text-xs font-medium text-slate-500 underline underline-offset-2 hover:text-slate-700"
+                >
+                  {lang === 'en' ? 'Close' : 'Cerrar'}
+                </button>
+              </div>
             </div>
           ) : (
             <>
