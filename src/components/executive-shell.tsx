@@ -113,6 +113,7 @@ export function ExecutiveShell({
     writeSidebarCollapsed(next);
   };
   const [commandOpen, setCommandOpen] = React.useState(false);
+  const [logoFailed, setLogoFailed] = React.useState(false);
 
   return (
       <div className="flex min-h-screen text-foreground">
@@ -123,8 +124,8 @@ export function ExecutiveShell({
           )}
         >
           <div className="flex h-14 items-center gap-2 border-b border-glass-border px-3">
-            {logoSrc ? (
-              <img src={logoSrc} alt={brandLabel} className="h-6 w-6 shrink-0 rounded" />
+            {logoSrc && !logoFailed ? (
+              <img src={logoSrc} alt={brandLabel} className="h-6 w-6 shrink-0 rounded" onError={() => setLogoFailed(true)} />
             ) : (
               <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-primary text-xs font-bold text-primary-foreground">
                 M

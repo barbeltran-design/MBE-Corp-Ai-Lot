@@ -13,7 +13,11 @@ export default function LandingPage({ params: { locale } }: { params: { locale: 
   return (
     <main className="min-h-screen bg-gradient-to-b from-emerald-50/40 to-white">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
-        <span className="text-lg font-semibold text-slate-900">{tCommon('appName')}</span>
+        <div className="flex items-center gap-2.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-mbe.png" alt={tCommon('appName')} className="h-8 w-8 object-contain" />
+          <span className="text-lg font-semibold text-slate-900">{tCommon('appName')}</span>
+        </div>
         <LanguageSwitcher />
       </header>
 

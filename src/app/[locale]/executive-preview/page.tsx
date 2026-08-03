@@ -295,7 +295,7 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
 
   if (user === null) {
     return (
-      <ExecutiveShell navItems={navItems} commandItems={commandItems} brandLabel="MBE Corpilot AI">
+      <ExecutiveShell navItems={navItems} commandItems={commandItems} brandLabel="MBE Corpilot AI" logoSrc="/logo-mbe.png">
         <BackgroundBlobs />
         <div className="mx-auto flex max-w-6xl flex-col gap-6">
           <GlassCard className="animate-fade-in">
@@ -338,7 +338,7 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
   })();
 
   return (
-    <ExecutiveShell navItems={navItems} commandItems={commandItems} brandLabel="MBE Corpilot AI">
+    <ExecutiveShell navItems={navItems} commandItems={commandItems} brandLabel="MBE Corpilot AI" logoSrc="/logo-mbe.png">
       <BackgroundBlobs />
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <div className="animate-fade-in">

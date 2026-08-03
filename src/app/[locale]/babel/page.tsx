@@ -579,7 +579,7 @@ export default function BabelPage() {
       }
       if (compiled) {
         try {
-          downloadCompiledPlanPdf({ sessionTopic: session.topic, compiledText: compiled, language: locale });
+          await downloadCompiledPlanPdf({ sessionTopic: session.topic, compiledText: compiled, language: locale });
         } catch (pdfErr) {
           console.error('[babel] No se pudo generar el PDF del plan compilado', pdfErr);
         }

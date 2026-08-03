@@ -26,7 +26,7 @@ function AppShellInner({
   ];
 
   return (
-    <ExecutiveShell navItems={navItems} brandLabel="MBE Corpilot AI">
+    <ExecutiveShell navItems={navItems} brandLabel="MBE Corpilot AI" logoSrc="/logo-mbe.png">
       <BackgroundBlobs />
       {children}
     </ExecutiveShell>

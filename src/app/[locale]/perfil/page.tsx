@@ -71,7 +71,6 @@ function ProfilePageInner() {
 
   const [uploading, setUploading] = React.useState(false);
   const [uploadError, setUploadError] = React.useState('');
-  const [photoUrlInput, setPhotoUrlInput] = React.useState('');
 
   const [subscription, setSubscription] = React.useState<string>('');
   const [planStatus, setPlanStatus] = React.useState<string>('');
@@ -221,34 +220,6 @@ function ProfilePageInner() {
     }
   }
 
-  async function handleApplyPhotoUrl() {
-    if (!user) return;
-    const url = photoUrlInput.trim();
-    if (!url) {
-      setUploadError(t('Pega primero el enlace de la foto.', 'Paste the photo link first.'));
-      return;
-    }
-    if (!/^https?:\/\//i.test(url)) {
-      setUploadError(t('El enlace debe empezar con http:// o https://.', 'The link must start with http:// or https://.'));
-      return;
-    }
-    setUploading(true);
-    setUploadError('');
-    try {
-      setPhotoURL(url);
-      setPhotoBroken(false);
-      await updateProfile(user, { photoURL: url }).catch(() => {});
-      const db = getFirebaseDb();
-      await setDoc(doc(db, 'users', user.uid), { photoURL: url }, { merge: true });
-      setSavedMsg(t('Foto actualizada.', 'Photo updated.'));
-    } catch (err) {
-      console.error('[perfil] photo link failed', err);
-      setUploadError(t('No se pudo guardar la foto.', 'Could not save the photo.'));
-    } finally {
-      setUploading(false);
-    }
-  }
-
   async function handleRemovePhoto() {
     if (!user) return;
     try {
@@ -385,17 +356,6 @@ function ProfilePageInner() {
                   {t('Quitar foto', 'Remove photo')}
                 </Button>
               )}
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Input
-                value={photoUrlInput}
-                onChange={(e) => setPhotoUrlInput(e.target.value)}
-                placeholder={t('O pega un enlace de imagen (http...), ej. Google Drive', 'Or paste an image link (http...), e.g. Google Drive')}
-                className="w-64"
-              />
-              <Button type="button" variant="outline" size="sm" onClick={handleApplyPhotoUrl} disabled={uploading}>
-                {t('Usar enlace', 'Use link')}
-              </Button>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs text-muted-foreground">

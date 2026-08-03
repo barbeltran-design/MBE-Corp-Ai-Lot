@@ -7,13 +7,15 @@ import * as XLSX from 'xlsx';
 
 type Rgb = [number, number, number];
 
-const COLOR_PRIMARY: Rgb = [79, 70, 229]; // indigo-600
-const COLOR_DARK: Rgb = [30, 41, 59]; // slate-800
-const COLOR_MUTED: Rgb = [107, 114, 128]; // slate-500
+// Paleta institucional MBE Corp (derivada del logo):
+//   ink #201818 · slate #788080 · teal #30B8D0
+const COLOR_PRIMARY: Rgb = [48, 184, 208]; // teal #30B8D0
+const COLOR_DARK: Rgb = [32, 24, 24]; // ink #201818
+const COLOR_MUTED: Rgb = [120, 128, 128]; // slate #788080
 const COLOR_GREEN: Rgb = [22, 163, 74]; // green-600
 const COLOR_AMBER: Rgb = [180, 83, 9]; // amber-700
 const COLOR_LINE: Rgb = [226, 232, 240]; // slate-200
-const COLOR_HEADER_BG: Rgb = [238, 242, 255]; // indigo-50
+const COLOR_HEADER_BG: Rgb = [225, 246, 250]; // teal-50 (#E1F6FA)
 
 interface InlineSegment {
   text: string;
@@ -291,8 +293,15 @@ class CompiledPlanRenderer {
     this.cursorY = y + 10;
   }
 
-  cover(title: string, topic: string): void {
+  cover(title: string, topic: string, logo?: { dataUrl: string; w: number; h: number }): void {
     const isEn = this.lang === 'en';
+    if (logo) {
+      try {
+        this.doc.addImage(logo.dataUrl, 'PNG', this.marginX, 88, logo.w, logo.h);
+      } catch {
+        // logo opcional: si falla, se continúa sin él
+      }
+    }
     this.doc.setFont('helvetica', 'bold');
     this.doc.setFontSize(11);
     this.setColor(COLOR_PRIMARY);
@@ -383,13 +392,22 @@ export interface DownloadCompiledPlanParams {
   language: 'es' | 'en';
 }
 
-function renderCompiledPlanPdf(params: DownloadCompiledPlanParams): jsPDF {
+function logoDimensions(dataUrl: string): Promise<{ w: number; h: number }> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+    img.onerror = () => resolve({ w: 0, h: 0 });
+    img.src = dataUrl;
+  });
+}
+
+function renderCompiledPlanPdf(params: DownloadCompiledPlanParams & { logo?: { dataUrl: string; w: number; h: number } }): jsPDF {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
   const renderer = new CompiledPlanRenderer(doc, params.language);
   const isEn = params.language === 'en';
   const title = isEn ? 'Business Plan' : 'Plan de Negocio';
 
-  renderer.cover(title, params.sessionTopic);
+  renderer.cover(title, params.sessionTopic, params.logo);
 
   const lines = params.compiledText.split('\n');
   let i = 0;
@@ -413,18 +431,19 @@ function renderCompiledPlanPdf(params: DownloadCompiledPlanParams): jsPDF {
       i++;
       continue;
     }
-    if (line.startsWith('### ')) {
-      renderer.heading(line.slice(4), 12.5);
+    const headingMatch = line.match(/^(#{1,6})\s*(.*)$/);
+    if (headingMatch) {
+      const headingText = headingMatch[2].replace(/\s*#+\s*$/, '').trim();
+      if (headingText) {
+        const level = headingMatch[1].length;
+        const size = level === 1 ? 15 : level === 2 ? 14 : 12.5;
+        renderer.heading(headingText, size);
+      }
       i++;
       continue;
     }
-    if (line.startsWith('## ')) {
-      renderer.heading(line.slice(3), 14);
-      i++;
-      continue;
-    }
-    if (line.startsWith('# ')) {
-      renderer.heading(line.slice(2), 15);
+    if (line.startsWith('>')) {
+      renderer.paragraph(line.replace(/^>\s?/, ''));
       i++;
       continue;
     }
@@ -452,8 +471,30 @@ function renderCompiledPlanPdf(params: DownloadCompiledPlanParams): jsPDF {
   return doc;
 }
 
-export function downloadCompiledPlanPdf(params: DownloadCompiledPlanParams): void {
-  const doc = renderCompiledPlanPdf(params);
+export async function downloadCompiledPlanPdf(params: DownloadCompiledPlanParams): Promise<void> {
+  let logo: { dataUrl: string; w: number; h: number } | undefined;
+  try {
+    const res = await fetch('/logo-mbe.png');
+    if (res.ok) {
+      const blob = await res.blob();
+      const dataUrl = await new Promise<string | undefined>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : undefined);
+        reader.onerror = () => resolve(undefined);
+        reader.readAsDataURL(blob);
+      });
+      if (dataUrl) {
+        const dims = await logoDimensions(dataUrl);
+        if (dims.w > 0 && dims.h > 0) {
+          const logoW = 56;
+          logo = { dataUrl, w: logoW, h: Math.max(8, Math.round((logoW * dims.h) / dims.w)) };
+        }
+      }
+    }
+  } catch {
+    // sin logo, sin problema
+  }
+  const doc = renderCompiledPlanPdf({ ...params, logo });
   const fileName =
     params.language === 'en' ? 'business-plan.pdf' : 'plan-de-negocio.pdf';
   doc.save(fileName);
