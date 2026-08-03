@@ -2,7 +2,7 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 import { Timestamp } from 'firebase/firestore';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -612,11 +612,6 @@ export default function BabelPage() {
       setCompiling(false);
     }
   }
-  async function handleLogout() {
-    const auth = getFirebaseAuth();
-    await signOut(auth);
-    router.push('/' + locale);
-  }
   async function handleReset() {
     if (!uid) return;
     const confirmMsg =
@@ -655,7 +650,6 @@ export default function BabelPage() {
         <div className="flex flex-col items-end gap-2">
           <div className="flex gap-2">
             <Button onClick={handleReset} disabled={sending} variant="outline" size="sm">{dispLang === 'en' ? 'Start over' : 'Empezar de nuevo'}</Button>
-            <Button onClick={handleLogout} variant="outline" size="sm">{dispLang === 'en' ? 'Log out' : 'Cerrar sesión'}</Button>
           </div>
         </div>
       </div>
@@ -774,20 +768,16 @@ export default function BabelPage() {
         </div>
         <div className="flex flex-col items-end gap-2">
           <div className="flex gap-2">
-            <Button onClick={function () { router.push('/' + locale + '/babel/organigrama'); }} variant="outline" size="sm">
-              {dispLang === 'en' ? 'Org Chart & Roles' : 'Organigrama y Roles'}
-            </Button>
-            <Button onClick={function () { router.push('/' + locale + '/babel/plan-accion'); }} variant="outline" size="sm">
-              {dispLang === 'en' ? 'Action Plan' : 'Plan de Acción'}
-            </Button>
             <Button onClick={handleReset} disabled={sending} variant="outline" size="sm">{dispLang === 'en' ? 'Start over' : 'Empezar de nuevo'}</Button>
-            <Button onClick={handleLogout} variant="outline" size="sm">{dispLang === 'en' ? 'Log out' : 'Cerrar sesión'}</Button>
           </div>
         </div>
       </div>
       <PhaseStepper currentPhase={currentPhase} approved={session.phases ?? []} lang={dispLang} />
       <Card className="flex-1 space-y-3 overflow-y-auto p-4 min-h-[60vh]">
         {session.messages.map(function (m, i) {
+          const isStoredPhase0SummaryUser =
+            m.role === 'user' && (m.content.startsWith('Fase 0 completada:') || m.content.startsWith('Phase 0 completed:'));
+          if (isStoredPhase0SummaryUser) return null;
           const isFase0SummaryPair = currentPhase === 0 && i <= 1 && Object.keys(phase0Answers).length > 0;
           if (isFase0SummaryPair && i === 0) return null;
           const translationKey = i + '::' + dispLang;
