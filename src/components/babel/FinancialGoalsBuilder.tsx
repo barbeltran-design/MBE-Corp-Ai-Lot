@@ -19,13 +19,6 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
   const [finSending, setFinSending] = React.useState(false);
   const [finError, setFinError] = React.useState<string | null>(null);
   const [finUnitPrice, setFinUnitPrice] = React.useState(0);
-  const [finMaterialsValue, setFinMaterialsValue] = React.useState(0);
-  const [finMaterialsMode, setFinMaterialsMode] = React.useState<'$' | '%'>('$');
-  const [finLaborValue, setFinLaborValue] = React.useState(0);
-  const [finLaborMode, setFinLaborMode] = React.useState<'$' | '%'>('$');
-  const [finOtherValue, setFinOtherValue] = React.useState(0);
-  const [finOtherMode, setFinOtherMode] = React.useState<'$' | '%'>('$');
-  const [finFixedTotalInput, setFinFixedTotalInput] = React.useState(0);
   const [finDesiredProfit, setFinDesiredProfit] = React.useState(0);
   const [finFixedItems, setFinFixedItems] = React.useState<{ name: string; amount: number }[]>([]);
   const [finVarItems, setFinVarItems] = React.useState<{ name: string; value: number; mode: '$' | '%' }[]>([]);
@@ -39,13 +32,6 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
     setFinSending(false);
     setFinError(null);
     setFinUnitPrice(0);
-    setFinMaterialsValue(0);
-    setFinMaterialsMode('$');
-    setFinLaborValue(0);
-    setFinLaborMode('$');
-    setFinOtherValue(0);
-    setFinOtherMode('$');
-    setFinFixedTotalInput(0);
     setFinDesiredProfit(0);
     setFinFixedItems([]);
     setFinVarItems([]);
@@ -96,11 +82,15 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
         setFinError(lang === 'en' ? 'Enter a sale price greater than zero.' : 'Ingresa un precio de venta mayor a cero.');
         return;
       }
-      const baseVarPct =
-        toAmountPct(finMaterialsValue, finMaterialsMode, finUnitPrice) +
-        toAmountPct(finLaborValue, finLaborMode, finUnitPrice) +
-        toAmountPct(finOtherValue, finOtherMode, finUnitPrice);
-      if (baseVarPct >= 1) {
+      if (finFixedItems.length === 0) {
+        setFinError(
+          lang === 'en'
+            ? 'Add at least one fixed expense (e.g. Rent, Utilities).'
+            : 'Agrega al menos un gasto fijo (ej. Renta, Luz).'
+        );
+        return;
+      }
+      if (finTotalVarPct >= 1) {
         setFinError(
           lang === 'en'
             ? 'Your variable costs already add up to 100% or more of your sale price. Adjust the numbers before continuing.'
@@ -112,23 +102,6 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
       return;
     }
     if (finStage === 2) {
-      const baseVarPct =
-        toAmountPct(finMaterialsValue, finMaterialsMode, finUnitPrice) +
-        toAmountPct(finLaborValue, finLaborMode, finUnitPrice) +
-        toAmountPct(finOtherValue, finOtherMode, finUnitPrice);
-      const extraVarPct = finVarItems.reduce(function (s, v) { return s + toAmountPct(v.value, v.mode, finUnitPrice); }, 0);
-      if (baseVarPct + extraVarPct >= 1) {
-        setFinError(
-          lang === 'en'
-            ? 'Adding your extra variable costs pushes the total to 100% or more of your price. Adjust the numbers before continuing.'
-            : 'Al sumar tus costos variables adicionales, el total llega a 100% o más de tu precio. Ajusta los montos antes de continuar.'
-        );
-        return;
-      }
-      setFinStage(3);
-      return;
-    }
-    if (finStage === 3) {
       if (finChannels.length === 0) {
         setFinError(
           lang === 'en'
@@ -146,10 +119,10 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
         );
         return;
       }
-      setFinStage(4);
+      setFinStage(3);
       return;
     }
-    if (finStage === 4) {
+    if (finStage === 3) {
       setFinReviewing(true);
     }
   }
@@ -167,9 +140,9 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
     setFinSending(true);
     setFinError(null);
     try {
-      const materialsPct = toAmountPct(finMaterialsValue, finMaterialsMode, finUnitPrice);
-      const laborPct = toAmountPct(finLaborValue, finLaborMode, finUnitPrice);
-      const otherVarPct = toAmountPct(finOtherValue, finOtherMode, finUnitPrice);
+      const materialsPct = 0;
+      const laborPct = 0;
+      const otherVarPct = 0;
       const varItemsForExcel = finVarItems.map(function (v) {
         return { name: v.name, pct: toAmountPct(v.value, v.mode, finUnitPrice) };
       });
@@ -185,7 +158,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
         laborPct: laborPct,
         otherVarPct: otherVarPct,
         fixedItems: finFixedItems,
-        fixedTotalFallback: finFixedTotalInput,
+        fixedTotalFallback: 0,
         varItems: varItemsForExcel,
         desiredProfit: finDesiredProfit,
         channels: normalizedChannels,
@@ -209,20 +182,15 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
     }
   }
 
-  const finMaterialsPctLive = toAmountPct(finMaterialsValue, finMaterialsMode, finUnitPrice);
-  const finLaborPctLive = toAmountPct(finLaborValue, finLaborMode, finUnitPrice);
-  const finOtherPctLive = toAmountPct(finOtherValue, finOtherMode, finUnitPrice);
-  const finBaseVarPct = finMaterialsPctLive + finLaborPctLive + finOtherPctLive;
-  const finExtraVarPct = finVarItems.reduce(function (s, v) { return s + toAmountPct(v.value, v.mode, finUnitPrice); }, 0);
-  const finTotalVarPct = finBaseVarPct + finExtraVarPct;
-  const finStage1Invalid = finBaseVarPct >= 1;
-  const finStage1Denom = 1 - finBaseVarPct;
-  const finStage1BreakEven = finStage1Invalid ? null : finFixedTotalInput / finStage1Denom;
-  const finStage1Target = finStage1Invalid ? null : (finFixedTotalInput + finDesiredProfit) / finStage1Denom;
   const finItemizedFixedTotal =
     finFixedItems.length > 0
       ? finFixedItems.reduce(function (s, f) { return s + f.amount; }, 0)
-      : finFixedTotalInput;
+      : 0;
+  const finTotalVarPct = finVarItems.reduce(function (s, v) { return s + toAmountPct(v.value, v.mode, finUnitPrice); }, 0);
+  const finStage1Invalid = finTotalVarPct >= 1;
+  const finStage1Denom = 1 - finTotalVarPct;
+  const finStage1BreakEven = finStage1Invalid ? null : finItemizedFixedTotal / finStage1Denom;
+  const finStage1Target = finStage1Invalid ? null : (finItemizedFixedTotal + finDesiredProfit) / finStage1Denom;
   const finInvalid = finTotalVarPct >= 1;
   const finDenom = 1 - finTotalVarPct;
   const finBreakEven = finInvalid ? null : finItemizedFixedTotal / finDenom;
@@ -237,11 +205,11 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
       ? computeFinancialGoals({
           language: lang,
           unitPrice: finUnitPrice,
-          materialsPct: finMaterialsPctLive,
-          laborPct: finLaborPctLive,
-          otherVarPct: finOtherPctLive,
+          materialsPct: 0,
+          laborPct: 0,
+          otherVarPct: 0,
           fixedItems: finFixedItems,
-          fixedTotalFallback: finFixedTotalInput,
+          fixedTotalFallback: 0,
           varItems: finVarItems.map(function (v) { return { name: v.name, pct: toAmountPct(v.value, v.mode, finUnitPrice) }; }),
           desiredProfit: finDesiredProfit,
           channels: finChannelsNormalized,
@@ -270,10 +238,10 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
           ) : (
             <>
               <div className="w-full bg-slate-200 rounded-full h-2">
-                <div className="bg-blue-600 h-2 rounded-full transition-all" style={{ width: String((Math.min(finStage, 4) / 4) * 100) + '%' }} />
+                <div className="bg-blue-600 h-2 rounded-full transition-all" style={{ width: String((Math.min(finStage, 3) / 3) * 100) + '%' }} />
               </div>
               <p className="text-xs text-slate-500">
-                {lang === 'en' ? 'Stage' : 'Etapa'} {Math.min(finStage, 4)} {lang === 'en' ? 'of 4' : 'de 4'}
+                {lang === 'en' ? 'Stage' : 'Etapa'} {Math.min(finStage, 3)} {lang === 'en' ? 'of 3' : 'de 3'}
               </p>
               {finError && (
                 <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600 border border-red-200">
@@ -282,7 +250,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
               )}
               {!finReviewing && finStage === 1 && (
                 <div className="space-y-3 text-sm text-slate-800">
-                  <p className="font-semibold">{lang === 'en' ? 'Stage 1: Your product or service' : 'Etapa 1: Tu producto o servicio'}</p>
+                  <p className="font-semibold">{lang === 'en' ? 'Stage 1: Your product or service and your expenses' : 'Etapa 1: Tu producto o servicio y tus gastos'}</p>
                   <label className="block space-y-1">
                     <span className="text-xs text-slate-600">{lang === 'en' ? 'Sale price per unit' : 'Precio de venta por unidad'}</span>
                     <input
@@ -293,106 +261,14 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                       className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </label>
-                  <div className="space-y-1">
-                    <span className="text-xs text-slate-600">{lang === 'en' ? 'Materials cost' : 'Costo de materiales'}</span>
-                    <div className="flex gap-2">
-                      <input
-                        type="number"
-                        value={finMaterialsValue || ''}
-                        onChange={function (e) { setFinMaterialsValue(Number(e.target.value)); }}
-                        className="flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                      <select
-                        value={finMaterialsMode}
-                        onChange={function (e) { setFinMaterialsMode(e.target.value as '$' | '%'); }}
-                        className="rounded-md border border-slate-300 bg-white px-2 py-2 text-sm"
-                      >
-                        <option value="$">$</option>
-                        <option value="%">%</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-xs text-slate-600">{lang === 'en' ? 'Labor cost' : 'Costo de personal'}</span>
-                    <div className="flex gap-2">
-                      <input
-                        type="number"
-                        value={finLaborValue || ''}
-                        onChange={function (e) { setFinLaborValue(Number(e.target.value)); }}
-                        className="flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                      <select
-                        value={finLaborMode}
-                        onChange={function (e) { setFinLaborMode(e.target.value as '$' | '%'); }}
-                        className="rounded-md border border-slate-300 bg-white px-2 py-2 text-sm"
-                      >
-                        <option value="$">$</option>
-                        <option value="%">%</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-xs text-slate-600">{lang === 'en' ? 'Other variable costs' : 'Otros costos variables'}</span>
-                    <div className="flex gap-2">
-                      <input
-                        type="number"
-                        value={finOtherValue || ''}
-                        onChange={function (e) { setFinOtherValue(Number(e.target.value)); }}
-                        className="flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                      <select
-                        value={finOtherMode}
-                        onChange={function (e) { setFinOtherMode(e.target.value as '$' | '%'); }}
-                        className="rounded-md border border-slate-300 bg-white px-2 py-2 text-sm"
-                      >
-                        <option value="$">$</option>
-                        <option value="%">%</option>
-                      </select>
-                    </div>
-                  </div>
-                  <label className="block space-y-1">
-                    <span className="text-xs text-slate-600">{lang === 'en' ? 'Total monthly fixed costs' : 'Gastos fijos mensuales totales'}</span>
-                    <input
-                      type="number"
-                      value={finFixedTotalInput || ''}
-                      onChange={function (e) { setFinFixedTotalInput(Number(e.target.value)); }}
-                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </label>
-                  <label className="block space-y-1">
-                    <span className="text-xs text-slate-600">{lang === 'en' ? 'Desired monthly profit' : 'Utilidad mensual deseada'}</span>
-                    <input
-                      type="number"
-                      value={finDesiredProfit || ''}
-                      onChange={function (e) { setFinDesiredProfit(Number(e.target.value)); }}
-                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </label>
-                  <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 space-y-1">
-                    <p>{lang === 'en' ? '% Variable costs' : '% Costos variables'}: {(finBaseVarPct * 100).toFixed(1)}%</p>
-                    {finStage1Invalid ? (
-                      <p className="text-red-600 font-medium">
-                        {lang === 'en'
-                          ? 'Your variable costs already reach 100% or more of your price. Fix the numbers above before continuing.'
-                          : 'Tus costos variables ya llegan a 100% o más de tu precio. Corrige los montos antes de continuar.'}
-                      </p>
-                    ) : (
-                      <>
-                        <p>{lang === 'en' ? 'Break-even point' : 'Punto de equilibrio'}: {finStage1BreakEven !== null ? finStage1BreakEven.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—'}</p>
-                        <p>{lang === 'en' ? 'Revenue needed for your profit goal' : 'Ingreso necesario para tu meta de utilidad'}: {finStage1Target !== null ? finStage1Target.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—'}</p>
-                      </>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button onClick={handleFinNext} size="sm">{lang === 'en' ? 'Continue' : 'Continuar'}</Button>
-                  </div>
-                </div>
-              )}
-              {!finReviewing && finStage === 2 && (
-                <div className="space-y-3 text-sm text-slate-800">
-                  <p className="font-semibold">{lang === 'en' ? 'Stage 2: Break down your costs (optional)' : 'Etapa 2: Desglosa tus gastos (opcional)'}</p>
                   <div className="space-y-2">
-                    <p className="text-xs font-medium text-slate-600">{lang === 'en' ? 'Fixed costs' : 'Gastos fijos'}</p>
+                    <p className="text-xs font-medium text-slate-600">
+                      {lang === 'en' ? 'Break down your fixed expenses' : 'Desglosa tus gastos fijos'}
+                      <span className="text-slate-400">
+                        {' '}
+                        {lang === 'en' ? '(e.g. Rent, Utilities, Payroll, Advertising, Internet)' : '(ej. renta, luz, nómina, publicidad, internet)'}
+                      </span>
+                    </p>
                     {finFixedItems.map(function (item, i) {
                       return (
                         <div key={i} className="flex gap-2 items-center">
@@ -415,11 +291,17 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                       );
                     })}
                     <button type="button" onClick={addFixedItem} className="text-xs font-medium text-blue-600 hover:text-blue-800 underline underline-offset-2">
-                      {lang === 'en' ? '+ Add fixed cost' : '+ Agregar gasto fijo'}
+                      {lang === 'en' ? '+ Add fixed expense' : '+ Agregar gasto fijo'}
                     </button>
                   </div>
                   <div className="space-y-2">
-                    <p className="text-xs font-medium text-slate-600">{lang === 'en' ? 'Extra variable costs (besides materials, labor, other)' : 'Costos variables adicionales (además de materiales, personal, otros)'}</p>
+                    <p className="text-xs font-medium text-slate-600">
+                      {lang === 'en' ? 'Break down your variable expenses' : 'Desglosa tus gastos variables'}
+                      <span className="text-slate-400">
+                        {' '}
+                        {lang === 'en' ? '(e.g. Supplies, Provider, Commissions, Taxes)' : '(ej. insumos, proveedor, comisiones, impuestos)'}
+                      </span>
+                    </p>
                     {finVarItems.map(function (item, i) {
                       return (
                         <div key={i} className="flex gap-2 items-center">
@@ -427,7 +309,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                             type="text"
                             value={item.name}
                             onChange={function (e) { updateVarItem(i, { name: e.target.value }); }}
-                            placeholder={lang === 'en' ? 'Name (e.g. Commission)' : 'Nombre (ej. Comisión)'}
+                            placeholder={lang === 'en' ? 'Name (e.g. Supplies)' : 'Nombre (ej. Insumos)'}
                             className="flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
                           <input
@@ -449,34 +331,42 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                       );
                     })}
                     <button type="button" onClick={addVarItem} className="text-xs font-medium text-blue-600 hover:text-blue-800 underline underline-offset-2">
-                      {lang === 'en' ? '+ Add variable cost' : '+ Agregar costo variable'}
+                      {lang === 'en' ? '+ Add variable expense' : '+ Agregar gasto variable'}
                     </button>
                   </div>
-                  <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 space-y-1">
-                    <p>{lang === 'en' ? 'Total fixed costs' : 'Total gastos fijos'}: {finItemizedFixedTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                  <label className="block space-y-1">
+                    <span className="text-xs text-slate-600">{lang === 'en' ? 'Desired monthly profit' : 'Utilidad mensual deseada'}</span>
+                    <input
+                      type="number"
+                      value={finDesiredProfit || ''}
+                      onChange={function (e) { setFinDesiredProfit(Number(e.target.value)); }}
+                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </label>
+                  <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 space-y-1 text-slate-900">
+                    <p>{lang === 'en' ? 'Total fixed expenses' : 'Total gastos fijos'}: {finItemizedFixedTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
                     <p>{lang === 'en' ? '% Variable costs' : '% Costos variables'}: {(finTotalVarPct * 100).toFixed(1)}%</p>
-                    {finInvalid ? (
+                    {finStage1Invalid ? (
                       <p className="text-red-600 font-medium">
                         {lang === 'en'
-                          ? 'Adding these extra costs pushes your variable costs to 100% or more of your price. Fix the numbers before continuing.'
-                          : 'Al sumar estos costos, tus costos variables llegan a 100% o más de tu precio. Corrige los montos antes de continuar.'}
+                          ? 'Your variable costs already reach 100% or more of your price. Fix the numbers above before continuing.'
+                          : 'Tus costos variables ya llegan a 100% o más de tu precio. Corrige los montos antes de continuar.'}
                       </p>
                     ) : (
                       <>
-                        <p>{lang === 'en' ? 'Break-even point' : 'Punto de equilibrio'}: {finBreakEven !== null ? finBreakEven.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—'}</p>
-                        <p>{lang === 'en' ? 'Revenue needed for your profit goal' : 'Ingreso necesario para tu meta de utilidad'}: {finTarget !== null ? finTarget.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—'}</p>
+                        <p>{lang === 'en' ? 'Break-even point' : 'Punto de equilibrio'}: {finStage1BreakEven !== null ? finStage1BreakEven.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—'}</p>
+                        <p>{lang === 'en' ? 'Revenue needed for your profit goal' : 'Ingreso necesario para tu meta de utilidad'}: {finStage1Target !== null ? finStage1Target.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—'}</p>
                       </>
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <Button onClick={handleFinBack} variant="outline" size="sm">{lang === 'en' ? 'Back' : 'Atrás'}</Button>
                     <Button onClick={handleFinNext} size="sm">{lang === 'en' ? 'Continue' : 'Continuar'}</Button>
                   </div>
                 </div>
               )}
-              {!finReviewing && finStage === 3 && (
+              {!finReviewing && finStage === 2 && (
                 <div className="space-y-3 text-sm text-slate-800">
-                  <p className="font-semibold">{lang === 'en' ? 'Stage 3: Your revenue channels' : 'Etapa 3: Tus canales de ingreso'}</p>
+                  <p className="font-semibold">{lang === 'en' ? 'Stage 2: Your revenue channels' : 'Etapa 2: Tus canales de ingreso'}</p>
                   {finChannels.map(function (c, i) {
                     return (
                       <div key={i} className="flex gap-2 items-center">
@@ -502,7 +392,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                     {lang === 'en' ? '+ Add channel' : '+ Agregar canal'}
                   </button>
                   {finChannels.length > 0 && (
-                    <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 space-y-1">
+                    <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 space-y-1 text-slate-900">
                       {finChannelsNormalized.map(function (c, i) {
                         return <p key={i}>{c.name || (lang === 'en' ? '(unnamed)' : '(sin nombre)')}: {(c.pct * 100).toFixed(1)}%</p>;
                       })}
@@ -521,9 +411,9 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                   </div>
                 </div>
               )}
-              {!finReviewing && finStage === 4 && (
+              {!finReviewing && finStage === 3 && (
                 <div className="space-y-3 text-sm text-slate-800">
-                  <p className="font-semibold">{lang === 'en' ? 'Stage 4: Marketing investment' : 'Etapa 4: Inversión en mercadotecnia'}</p>
+                  <p className="font-semibold">{lang === 'en' ? 'Stage 3: Marketing investment' : 'Etapa 3: Inversión en mercadotecnia'}</p>
                   <label className="block space-y-1">
                     <span className="text-xs text-slate-600">{lang === 'en' ? '% of revenue invested in marketing' : '% de ingresos invertido en mercadotecnia'}</span>
                     <input
@@ -535,7 +425,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                     />
                   </label>
                   {finResultLive && (
-                    <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 space-y-1">
+                    <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 space-y-1 text-slate-900">
                       <p>{lang === 'en' ? 'Growth you can expect with that investment' : 'Crecimiento esperado con esa inversión'}: {(finResultLive.expectedGrowthRate * 100).toFixed(1)}% {lang === 'en' ? 'monthly' : 'mensual'}</p>
                       <p>{lang === 'en' ? 'Growth needed to reach your goal in 12 months' : 'Crecimiento necesario para llegar a tu meta en 12 meses'}: {(finResultLive.requiredGrowthRate * 100).toFixed(1)}% {lang === 'en' ? 'monthly' : 'mensual'}</p>
                       {finResultLive.isSufficient ? (
