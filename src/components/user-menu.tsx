@@ -6,7 +6,7 @@ import { useLocale } from 'next-intl';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { doc, onSnapshot, type Unsubscribe } from 'firebase/firestore';
 import { getFirebaseAuth, getFirebaseDb } from '@/lib/firebase';
-import { avatarBgClass, initialsOf } from '@/lib/avatar';
+import { avatarBgColor, initialsOf } from '@/lib/avatar';
 
 type ProfileDoc = {
   name?: string;
@@ -73,10 +73,8 @@ export function UserMenu() {
       className="flex shrink-0 items-center gap-2 rounded-full border border-glass-border bg-glass p-1 pl-1.5 pr-2.5 transition-colors duration-150 hover:bg-accent"
     >
       <span
-        className={
-          'relative flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full text-[10px] font-bold text-white ' +
-          avatarBgClass(profile?.avatarColor)
-        }
+        style={{ backgroundColor: avatarBgColor(profile?.avatarColor) }}
+        className={'relative flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full text-[10px] font-bold text-white'}
       >
         {showPhoto ? (
           // eslint-disable-next-line @next/next/no-img-element

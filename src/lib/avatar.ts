@@ -1,16 +1,18 @@
 // Utilidades compartidas para el avatar del usuario (iniciales + color).
 // El color se guarda en Firestore como un índice numérico (avatarColor),
-// así no depende de Storage ni de URLs externas.
+// así no depende de Storage ni de URLs externas. Se usan colores hex con
+// style inline para que siempre se rendericen (las clases de Tailwind
+// pueden no generarse si no aparecen en archivos escaneados).
 
 export const AVATAR_COLORS = [
-  'bg-indigo-600',
-  'bg-emerald-600',
-  'bg-amber-500',
-  'bg-rose-600',
-  'bg-sky-600',
-  'bg-violet-600',
-  'bg-teal-600',
-  'bg-slate-600',
+  '#4f46e5', // indigo
+  '#059669', // emerald
+  '#f59e0b', // amber
+  '#e11d48', // rose
+  '#0284c7', // sky
+  '#7c3aed', // violet
+  '#0d9488', // teal
+  '#475569', // slate
 ] as const;
 
 export function initialsOf(name: string): string {
@@ -20,7 +22,7 @@ export function initialsOf(name: string): string {
   return (first + second).toUpperCase() || '?';
 }
 
-export function avatarBgClass(colorIndex: number | undefined): string {
+export function avatarBgColor(colorIndex: number | undefined): string {
   const i = typeof colorIndex === 'number' && isFinite(colorIndex) ? colorIndex : 0;
   return AVATAR_COLORS[Math.abs(Math.trunc(i)) % AVATAR_COLORS.length];
 }
