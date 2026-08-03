@@ -7,15 +7,15 @@ import * as XLSX from 'xlsx';
 
 type Rgb = [number, number, number];
 
-// Paleta institucional MBE Corp (derivada del logo):
-//   ink #201818 · slate #788080 · teal #30B8D0
-const COLOR_PRIMARY: Rgb = [48, 184, 208]; // teal #30B8D0
-const COLOR_DARK: Rgb = [32, 24, 24]; // ink #201818
-const COLOR_MUTED: Rgb = [120, 128, 128]; // slate #788080
+// Paleta institucional MBE Corp (colores exactos del logo):
+//   ink #221F1F · slate #7F8184 · teal #32BAD0
+const COLOR_PRIMARY: Rgb = [50, 186, 208]; // teal #32BAD0
+const COLOR_DARK: Rgb = [34, 31, 31]; // ink #221F1F
+const COLOR_MUTED: Rgb = [127, 129, 132]; // slate #7F8184
 const COLOR_GREEN: Rgb = [22, 163, 74]; // green-600
 const COLOR_AMBER: Rgb = [180, 83, 9]; // amber-700
 const COLOR_LINE: Rgb = [226, 232, 240]; // slate-200
-const COLOR_HEADER_BG: Rgb = [225, 246, 250]; // teal-50 (#E1F6FA)
+const COLOR_HEADER_BG: Rgb = [225, 246, 250]; // teal claro (#E1F6FA)
 
 interface InlineSegment {
   text: string;
