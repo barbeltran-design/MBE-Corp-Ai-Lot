@@ -115,6 +115,18 @@ export function ExecutiveShell({
   const [commandOpen, setCommandOpen] = React.useState(false);
   const [logoFailed, setLogoFailed] = React.useState(false);
 
+  const router = useRouter();
+  const paletteItems: CommandPaletteItem[] = React.useMemo(() => {
+    if (commandItems.length > 0) return commandItems;
+    return navItems.map((item) => ({
+      id: item.href,
+      label: item.label,
+      group: 'Navegación',
+      icon: item.icon,
+      onSelect: () => router.push(item.href),
+    }));
+  }, [commandItems, navItems, router]);
+
   return (
       <div className="flex min-h-screen text-foreground">
         <aside
@@ -218,7 +230,7 @@ export function ExecutiveShell({
           <main className="flex-1 p-6">{children}</main>
         </div>
 
-        <CommandPalette items={commandItems} open={commandOpen} onOpenChange={setCommandOpen} />
+        <CommandPalette items={paletteItems} open={commandOpen} onOpenChange={setCommandOpen} />
       </div>
   );
 }
