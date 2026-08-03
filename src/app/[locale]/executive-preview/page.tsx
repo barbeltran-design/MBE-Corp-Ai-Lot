@@ -41,6 +41,7 @@ import { computeResults, type AssessmentResult, type DimensionAnswers } from '@/
 import { getAssessmentHistory, getLatestAssessmentAnswers, type AssessmentHistoryPoint } from '@/lib/assessment';
 import { getBabelSessionIfExists } from '@/lib/babel-session';
 import type { BabelPhaseRecord, MaturityLevel, SessionDoc, UserDoc } from '@/types/firestore';
+import type { FinancialGoalsInput, FinancialGoalsResult } from '@/lib/deliverables';
 
 type PhaseStatus = 'completado' | 'en_progreso' | 'pendiente';
 
@@ -77,6 +78,7 @@ const MATURITY_LEVEL_LABEL: Record<MaturityLevel, [string, string]> = {
 };
 
 const PLAN_STORAGE_KEY = 'babel_plan_accion_v2';
+const FIN_GOALS_LAST_KEY = 'babel_financial_goals_v1';
 
 function TopicCell({ topic }: { topic: string }) {
   return <span className="font-medium text-foreground">{topic}</span>;
@@ -174,6 +176,7 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
   const [userDoc, setUserDoc] = React.useState<UserDoc | null>(null);
   const [sessionDoc, setSessionDoc] = React.useState<SessionDoc | null>(null);
   const [planCounts, setPlanCounts] = React.useState<{ objetivos: number; acciones: number; entornos: number; convocatorias: number; metasFinancieras: number } | null>(null);
+  const [finGoals, setFinGoals] = React.useState<{ input: FinancialGoalsInput; result: FinancialGoalsResult; savedAt: string } | null>(null);
 
   React.useEffect(() => {
     const auth = getFirebaseAuth();
@@ -225,6 +228,17 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
       });
     } catch (err) {
       console.error('[MBE ExecutivePreview] failed to read plan from localStorage', err);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(FIN_GOALS_LAST_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.input && parsed.result) setFinGoals(parsed);
+    } catch (err) {
+      console.error('[MBE ExecutivePreview] failed to read financial goals from localStorage', err);
     }
   }, []);
 
@@ -336,6 +350,23 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
     if (s === 'cancelled') return t('Plan cancelado', 'Cancelled plan');
     return t('Plan gratuito', 'Free plan');
   })();
+
+  const fmtMoney = (v: number | undefined) => '$' + (v ?? 0).toLocaleString(locale, { maximumFractionDigits: 0 });
+  const finGoalsDateLabel = finGoals
+    ? (() => {
+        try {
+          return new Date(finGoals.savedAt).toLocaleDateString(locale === 'en' ? 'en-US' : 'es-MX', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+        } catch {
+          return '';
+        }
+      })()
+    : '';
 
   return (
     <ExecutiveShell navItems={navItems} commandItems={commandItems} brandLabel="MBE Corpilot AI" logoSrc="/logo-mbe.png">
@@ -634,6 +665,57 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
             </div>
           </div>
         </GlassCard>
+
+        {finGoals ? (
+          <GlassCard className="animate-slide-up" style={{ animationDelay: '380ms' }}>
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">
+                  {t('Objetivos financieros', 'Financial goals')}
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  {t(
+                    'Metas de tu punto de equilibrio y proyección (última versión guardada).',
+                    'Break-even and projection goals (last saved version).'
+                  )}
+                </p>
+              </div>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <MetricCard
+                label={t('Utilidad deseada', 'Desired profit')}
+                value={fmtMoney(finGoals.input.desiredProfit)}
+                icon={TrendingUp}
+                variant="default"
+              />
+              <MetricCard
+                label={t('Punto de equilibrio', 'Break-even point')}
+                value={fmtMoney(finGoals.result.breakEvenWithMarketing)}
+                icon={TrendingUp}
+                variant="default"
+              />
+              <MetricCard
+                label={t('Ingreso meta', 'Goal revenue')}
+                value={fmtMoney(finGoals.result.targetRevenueWithMarketing)}
+                icon={TrendingUp}
+                variant="success"
+              />
+              <MetricCard
+                label={t('% Costos variables', '% Variable costs')}
+                value={((finGoals.result.totalVariablePctWithMarketing ?? 0) * 100).toFixed(1)}
+                unit="%"
+                icon={TrendingUp}
+                variant="default"
+              />
+            </div>
+            {finGoalsDateLabel ? (
+              <p className="mt-3 text-xs text-muted-foreground">
+                {t('Última actualización', 'Last updated')}: {finGoalsDateLabel}
+              </p>
+            ) : null}
+          </GlassCard>
+        ) : null}
       </div>
     </ExecutiveShell>
   );

@@ -414,7 +414,11 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                           </span>
                         )}
                       </div>
-                      <div className="mt-2 grid grid-cols-3 gap-2">
+                      <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        <div>
+                          <p className="text-[10px] uppercase tracking-wide text-slate-500">{lang === 'en' ? 'Desired profit' : 'Utilidad deseada'}</p>
+                          <p className="text-base font-bold text-slate-900">{fmtMoney(entry.form?.desiredProfit ?? entry.input.desiredProfit ?? 0)}</p>
+                        </div>
                         <div>
                           <p className="text-[10px] uppercase tracking-wide text-slate-500">{lang === 'en' ? 'Break-even' : 'Punto de equilibrio'}</p>
                           <p className="text-base font-bold text-slate-900">{fmtMoney(entry.result.breakEvenWithMarketing ?? 0)}</p>
