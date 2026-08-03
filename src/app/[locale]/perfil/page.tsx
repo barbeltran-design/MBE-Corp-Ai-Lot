@@ -6,11 +6,12 @@ import { useLocale } from 'next-intl';
 import { onAuthStateChanged, signOut, updateProfile, type User } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { getFirebaseAuth, getFirebaseDb } from '@/lib/firebase';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import { useDisplayLang } from '@/components/display-lang-provider';
 import { AVATAR_COLORS, avatarBgColor, initialsOf } from '@/lib/avatar';
 import type { CompanySize, Industry, Language, UserDoc } from '@/types/firestore';
@@ -54,6 +55,8 @@ function ProfilePageInner() {
 
   const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
+  const [photoURL, setPhotoURL] = React.useState('');
+  const [photoBroken, setPhotoBroken] = React.useState(false);
   const [avatarColor, setAvatarColor] = React.useState<number | undefined>(undefined);
   const [companyName, setCompanyName] = React.useState('');
   const [industry, setIndustry] = React.useState<Industry>('services');
@@ -65,6 +68,10 @@ function ProfilePageInner() {
   const [saving, setSaving] = React.useState(false);
   const [savedMsg, setSavedMsg] = React.useState('');
   const [saveError, setSaveError] = React.useState('');
+
+  const [uploading, setUploading] = React.useState(false);
+  const [uploadError, setUploadError] = React.useState('');
+  const [photoUrlInput, setPhotoUrlInput] = React.useState('');
 
   const [subscription, setSubscription] = React.useState<string>('');
   const [planStatus, setPlanStatus] = React.useState<string>('');
@@ -98,6 +105,8 @@ function ProfilePageInner() {
           const data = snap.data() as UserDoc;
           setName(data.name || '');
           setEmail(data.email || user.email || '');
+          setPhotoURL(data.photoURL || user.photoURL || '');
+          setPhotoBroken(false);
           if (typeof data.avatarColor === 'number') setAvatarColor(data.avatarColor);
           setCountry(data.country || 'MX');
           setLanguage(data.language || 'es');
@@ -156,6 +165,49 @@ function ProfilePageInner() {
     }
   }
 
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!user) return;
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError(t('La imagen es muy pesada (máx. 5 MB).', 'The image is too large (max 5 MB).'));
+      if (e.target) e.target.value = '';
+      return;
+    }
+    setUploading(true);
+    setUploadError('');
+    try {
+      const idToken = await user.getIdToken();
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/perfil/foto', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${idToken}` },
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) {
+        throw new Error(data.error || 'upload failed');
+      }
+      const url: string = data.url;
+      setPhotoURL(url);
+      setPhotoBroken(false);
+      await updateProfile(user, { photoURL: url }).catch(() => {});
+      const db = getFirebaseDb();
+      await setDoc(doc(db, 'users', user.uid), { photoURL: url }, { merge: true });
+      setSavedMsg(t('Foto actualizada.', 'Photo updated.'));
+    } catch (err) {
+      console.error('[perfil] photo upload failed', err);
+      const msg = err instanceof Error ? err.message : '';
+      setUploadError(
+        t('No se pudo subir la foto: ' + msg, 'Could not upload the photo: ' + msg)
+      );
+    } finally {
+      setUploading(false);
+      if (e.target) e.target.value = '';
+    }
+  }
+
   async function handleSelectAvatarColor(index: number) {
     if (!user) return;
     setAvatarColor(index);
@@ -166,6 +218,48 @@ function ProfilePageInner() {
     } catch (err) {
       console.error('[perfil] avatar color failed', err);
       setSaveError(t('No se pudo guardar el color del avatar.', 'Could not save the avatar color.'));
+    }
+  }
+
+  async function handleApplyPhotoUrl() {
+    if (!user) return;
+    const url = photoUrlInput.trim();
+    if (!url) {
+      setUploadError(t('Pega primero el enlace de la foto.', 'Paste the photo link first.'));
+      return;
+    }
+    if (!/^https?:\/\//i.test(url)) {
+      setUploadError(t('El enlace debe empezar con http:// o https://.', 'The link must start with http:// or https://.'));
+      return;
+    }
+    setUploading(true);
+    setUploadError('');
+    try {
+      setPhotoURL(url);
+      setPhotoBroken(false);
+      await updateProfile(user, { photoURL: url }).catch(() => {});
+      const db = getFirebaseDb();
+      await setDoc(doc(db, 'users', user.uid), { photoURL: url }, { merge: true });
+      setSavedMsg(t('Foto actualizada.', 'Photo updated.'));
+    } catch (err) {
+      console.error('[perfil] photo link failed', err);
+      setUploadError(t('No se pudo guardar la foto.', 'Could not save the photo.'));
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleRemovePhoto() {
+    if (!user) return;
+    try {
+      setPhotoURL('');
+      setPhotoBroken(false);
+      await updateProfile(user, { photoURL: '' }).catch(() => {});
+      const db = getFirebaseDb();
+      await setDoc(doc(db, 'users', user.uid), { photoURL: '' }, { merge: true });
+      setSavedMsg(t('Foto eliminada.', 'Photo removed.'));
+    } catch (err) {
+      console.error('[perfil] photo remove failed', err);
     }
   }
 
@@ -261,12 +355,51 @@ function ProfilePageInner() {
             style={{ backgroundColor: avatarBgColor(avatarColor) }}
             className={'flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full text-xl font-bold text-white'}
           >
-            {initialsOf(name)}
+            {photoURL && !photoBroken ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={photoURL} alt={name} className="h-full w-full object-cover" onError={() => setPhotoBroken(true)} />
+            ) : (
+              initialsOf(name)
+            )}
           </div>
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-muted-foreground">
-                {t('Elige el color de tu avatar:', 'Choose your avatar color:')}
+              <label
+                htmlFor="profile-photo-input"
+                className={cn(
+                  buttonVariants({ variant: 'outline', size: 'sm' }),
+                  'cursor-pointer'
+                )}
+              >
+                {uploading ? t('Subiendo...', 'Uploading...') : t('Subir foto', 'Upload photo')}
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                id="profile-photo-input"
+                onChange={handlePhotoUpload}
+                className="hidden"
+              />
+              {photoURL && (
+                <Button type="button" variant="ghost" size="sm" onClick={handleRemovePhoto}>
+                  {t('Quitar foto', 'Remove photo')}
+                </Button>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                value={photoUrlInput}
+                onChange={(e) => setPhotoUrlInput(e.target.value)}
+                placeholder={t('O pega un enlace de imagen (http...), ej. Google Drive', 'Or paste an image link (http...), e.g. Google Drive')}
+                className="w-64"
+              />
+              <Button type="button" variant="outline" size="sm" onClick={handleApplyPhotoUrl} disabled={uploading}>
+                {t('Usar enlace', 'Use link')}
+              </Button>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-muted-foreground">
+                {t('Color del avatar (si no hay foto):', 'Avatar color (when there is no photo):')}
               </span>
               {AVATAR_COLORS.map((color, i) => (
                 <button
@@ -282,6 +415,7 @@ function ProfilePageInner() {
                 />
               ))}
             </div>
+            {uploadError && <p className="text-sm text-red-600">{uploadError}</p>}
           </div>
         </div>
       </Card>
