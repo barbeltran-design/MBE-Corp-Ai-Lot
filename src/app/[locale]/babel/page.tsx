@@ -166,6 +166,10 @@ export default function BabelPage() {
   const [translatedCache, setTranslatedCache] = React.useState<Record<string, string>>({});
   const [translatingSet, setTranslatingSet] = React.useState<Set<number>>(new Set());
   const bottomRef = React.useRef<HTMLDivElement>(null);
+  // Parte en false: al entrar nadie esta "cerca del fondo". Solo se activa
+  // cuando el usuario de verdad scrollea hasta el final del chat.
+  const nearBottomRef = React.useRef(false);
+  const scrolledTopRef = React.useRef(false);
   const questions = PHASE_0_QUESTIONS[dispLang];
   React.useEffect(() => {
     const auth = getFirebaseAuth();
@@ -180,7 +184,31 @@ export default function BabelPage() {
     });
     return unsubscribe;
   }, [locale, router]);
+  // Al entrar a la pagina la vista SIEMPRE inicia arriba (incluso al volver
+  // con el boton atras del navegador, que restaura el scroll previo).
   React.useEffect(() => {
+    window.scrollTo(0, 0);
+    const onScroll = () => {
+      const el = bottomRef.current;
+      if (!el) return;
+      nearBottomRef.current = el.getBoundingClientRect().bottom - window.innerHeight < 120;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+  // Cuando la sesion termina de cargar (el chat se monta tarde), se vuelve a
+  // forzar arriba por si la restauracion del navegador bajo la pagina.
+  React.useEffect(() => {
+    if (session && !scrolledTopRef.current) {
+      scrolledTopRef.current = true;
+      window.scrollTo(0, 0);
+    }
+  }, [session]);
+  // Solo auto-scroll al fondo del chat si el usuario ya estaba cerca del
+  // final (mientras Babel responde o al enviar un mensaje).
+  React.useEffect(() => {
+    if (!nearBottomRef.current) return;
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [session?.messages.length]);
   React.useEffect(() => {
