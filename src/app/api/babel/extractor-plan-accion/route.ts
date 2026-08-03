@@ -73,13 +73,19 @@ function buildSystemPrompt(paso: PlanPaso, language: PlanLang): string {
         '(each with a unique id and its text), and (2) selected sections of the user strategic reflection: Phase 1 ' +
         '(SDG alignment and funding calls), Phase 2 (Environment analysis: localized PESTEL, Market Forces and Stakeholder ' +
         'Impact Matrix), and Phase 4 (5-Year Strategic Foresight).\n\n' +
-        'Your task: detect CONCRETE (not generic) Threats and Opportunities for the business based ONLY on information ' +
-        'supported by the given text; do not invent facts.\n\n' +
-        'For each Threat or Opportunity indicate the EXACT id of the Strategic Objective it relates to most directly ' +
-        '(never invent new ids; if it does not relate to any, use the id of the first objective in the list).\n\n' +
+        'Your task: work OBJECTIVE BY OBJECTIVE. For EACH Strategic Objective in the list, read its text and identify the ' +
+        'CONCRETE Threats (that could prevent achieving it) and Opportunities (that could boost achieving it) supported by ' +
+        'the given sections. Do not invent facts, do not report generic business statements: every Threat/Opportunity must ' +
+        'name the specific factor from the reflection and must be explicitly tied to the objective whose achievement it ' +
+        'directly affects (for example: a threat that raises the cost of a key input, closes a channel or changes a ' +
+        'regulation that the objective depends on; an opportunity that opens a new market, funding, partnership or ' +
+        'efficiency gain that the objective can capture).\n\n' +
+        'Assignment rule: use the EXACT id of the objective you are working on for each of its Threats/Opportunities ' +
+        '(never invent ids, never leave the id empty, never relate an item to a different objective). Cover as many ' +
+        'objectives as possible: try to produce at least one Threat or Opportunity for every objective in the list.\n\n' +
         'Respond with ONLY a raw JSON array (no markdown fences, no prose before or after), between 3 and 12 items, ' +
         'where each item has EXACTLY this shape:\n' +
-        '{"objetivoId":"one of the given ids","tipo":"amenaza or oportunidad","descripcion":"one concrete, actionable sentence, max 200 characters"}'
+        '{"objetivoId":"one of the given ids, the objective this item directly affects","tipo":"amenaza or oportunidad","descripcion":"one concrete, actionable sentence, max 200 characters"}'
       );
     }
     if (paso === 'fds') {
@@ -117,13 +123,20 @@ function buildSystemPrompt(paso: PlanPaso, language: PlanLang): string {
       '(cada uno con un id unico y su texto), y (2) secciones seleccionadas de la reflexion estrategica del usuario: ' +
       'Fase 1 (Vinculacion con los ODS y Fondos), Fase 2 (Analisis del entorno: PESTEL Localizado, Fuerzas del Mercado y ' +
       'Matriz de Impacto en Stakeholders) y Fase 4 (Prospectiva a 5 Anos).\n\n' +
-      'Tu tarea: detectar Amenazas y Oportunidades CONCRETAS (no genericas) para el negocio con base SOLO en informacion ' +
-      'sustentada en el texto dado; no inventes hechos.\n\n' +
-      'Para cada Amenaza u Oportunidad indica el id EXACTO del Objetivo Estrategico con el que se relaciona mas ' +
-      'directamente (nunca inventes ids nuevos; si no se relaciona con ninguno, usa el id del primer objetivo de la lista).\n\n' +
+      'Tu tarea: trabaja OBJETIVO POR OBJETIVO. Para CADA Objetivo Estrategico de la lista, lee su texto e identifica ' +
+      'las Amenazas CONCRETAS (que podrian impedir su logro) y las Oportunidades CONCRETAS (que podrian impulsarlo) ' +
+      'sustentadas en las secciones dadas. No inventes hechos ni reportes frases genericas de negocio: cada Amenaza/' +
+      'Oportunidad debe nombrar el factor especifico de la reflexion y debe quedar explicitamente ligada al objetivo ' +
+      'cuyo logro afecta directamente (por ejemplo: una amenaza que encarece un insumo clave, cierra un canal o cambia ' +
+      'una regulacion de la que depende el objetivo; una oportunidad que abre un nuevo mercado, fondeo, alianza o ' +
+      'ahorro de eficiencia que el objetivo puede aprovechar).\n\n' +
+      'Regla de asignacion: usa el id EXACTO del objetivo que estas trabajando para cada una de sus Amenazas/' +
+      'Oportunidades (nunca inventes ids, nunca dejes el id vacio, nunca relaciones un elemento con otro objetivo). ' +
+      'Cubre la mayor cantidad de objetivos posible: procura al menos una Amenaza u Oportunidad por cada objetivo ' +
+      'de la lista.\n\n' +
       'Responde UNICAMENTE con un arreglo JSON puro (sin marcadores de markdown, sin texto antes ni despues), entre 3 y 12 ' +
       'elementos, donde cada elemento tenga EXACTAMENTE esta forma:\n' +
-      '{"objetivoId":"uno de los ids dados","tipo":"amenaza u oportunidad","descripcion":"una frase concreta y accionable, maximo 200 caracteres"}'
+      '{"objetivoId":"uno de los ids dados, el objetivo que este elemento afecta directamente","tipo":"amenaza u oportunidad","descripcion":"una frase concreta y accionable, maximo 200 caracteres"}'
     );
   }
   if (paso === 'fds') {

@@ -278,7 +278,7 @@ const LABELS = {
     fdsNeedEntornos: 'Primero detecta las Amenazas y Oportunidades, o agrega al menos una manualmente.',
     accionesBtn: 'Sugiere Acciones',
     accionesSubtitle:
-      'Disena acciones para blindar fortalezas y mejorar debilidades, apoyandose en las fases, la madurez pendiente y un catalogo de buenas practicas.',
+      'Diseña acciones para blindar fortalezas y mejorar debilidades, apoyandose en las fases, la madurez pendiente y un catalogo de buenas practicas.',
     accionesGenerando: 'Babel esta construyendo el plan de acciones...',
     accionesNeedFds: 'Primero sugiere las Fortalezas y Debilidades, o agrega al menos una manualmente.',
     planErrorHint: 'Puedes seguir editando manualmente mientras tanto.',
@@ -309,7 +309,6 @@ const LABELS = {
     addAccion: 'Agregar accion',
     accionDesc: 'Descripcion de la accion',
     accionPlaceholder: 'Ej. Cotizar 3 proveedores de ERP',
-    crossLabel: 'Areas de apoyo (crossfuncional)',
     entregableLabel: 'Entregable (evidencia de que se hizo)',
     entregablePlaceholder: 'Ej. Lista de asistencia, cotizacion firmada',
     inversionLabel: 'Inversion requerida',
@@ -384,7 +383,6 @@ const LABELS = {
     addAccion: 'Add action',
     accionDesc: 'Action description',
     accionPlaceholder: 'E.g. Get quotes from 3 ERP vendors',
-    crossLabel: 'Supporting areas (cross-functional)',
     entregableLabel: 'Deliverable (evidence the action happened)',
     entregablePlaceholder: 'E.g. Attendance list, signed quote',
     inversionLabel: 'Investment required',
@@ -1078,7 +1076,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       <div key={a.id} className="mb-3 rounded-lg border border-slate-200 bg-white p-3">
         <div className="grid gap-2 sm:grid-cols-2">
           <div className="sm:col-span-2">
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-300">{t.accionDesc}</label>
+            <label className="mb-1 block text-xs font-medium text-slate-600">{t.accionDesc}</label>
             <input
               type="text"
               value={tr(a.descripcion)}
@@ -1088,7 +1086,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-300">{t.responsableLabel}</label>
+            <label className="mb-1 block text-xs font-medium text-slate-600">{t.responsableLabel}</label>
             <select
               value={a.responsableRoleKey}
               onChange={(ev) => {
@@ -1118,31 +1116,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-300">{t.crossLabel}</label>
-            <div className="flex max-h-24 flex-wrap gap-1 overflow-y-auto rounded-lg border border-slate-200 p-1.5">
-              {ROLE_OPTIONS.map((opt) => {
-                const active = a.crossRoleKeys.indexOf(opt.key) !== -1;
-                return (
-                  <button
-                    key={opt.key}
-                    type="button"
-                    onClick={() => {
-                      const next = active ? a.crossRoleKeys.filter((k) => k !== opt.key) : a.crossRoleKeys.concat([opt.key]);
-                      updateAccion(a.id, { crossRoleKeys: next });
-                    }}
-                    className={
-                      'rounded-full px-2 py-0.5 text-xs font-medium ' +
-                      (active ? 'bg-indigo-100 text-indigo-800 ring-1 ring-indigo-400' : 'bg-slate-100 text-slate-600')
-                    }
-                  >
-                    {roleLabel(opt.key, lang)}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-300">{t.entregableLabel}</label>
+            <label className="mb-1 block text-xs font-medium text-slate-600">{t.entregableLabel}</label>
             <input
               type="text"
               value={tr(a.entregable)}
@@ -1152,7 +1126,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-300">{t.inversionLabel}</label>
+            <label className="mb-1 block text-xs font-medium text-slate-600">{t.inversionLabel}</label>
             <input
               type="text"
               value={a.inversion}
@@ -1162,7 +1136,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-300">{t.factibilidadLabel}</label>
+            <label className="mb-1 block text-xs font-medium text-slate-600">{t.factibilidadLabel}</label>
             <select
               value={a.factibilidad}
               onChange={(ev) => updateAccion(a.id, { factibilidad: ev.target.value as Factibilidad })}
@@ -1176,7 +1150,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-300">{t.impactoLabel}</label>
+            <label className="mb-1 block text-xs font-medium text-slate-600">{t.impactoLabel}</label>
             <select
               value={a.impacto}
               onChange={(ev) => updateAccion(a.id, { impacto: ev.target.value as Impacto })}
@@ -1190,13 +1164,13 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-300">{t.prioridadLabel}</label>
+            <label className="mb-1 block text-xs font-medium text-slate-600">{t.prioridadLabel}</label>
             <span className={'inline-block rounded-full px-2.5 py-1 text-xs font-medium ' + tier.classes}>
               {'#' + rank + ' - ' + tier.label}
             </span>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-300">{t.fechaLabel}</label>
+            <label className="mb-1 block text-xs font-medium text-slate-600">{t.fechaLabel}</label>
             <input
               type="date"
               value={a.fecha}
@@ -1215,7 +1189,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
             ) : null}
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-300">{t.estatusLabel}</label>
+            <label className="mb-1 block text-xs font-medium text-slate-600">{t.estatusLabel}</label>
             <select
               value={a.estatus}
               onChange={(ev) => updateAccion(a.id, { estatus: ev.target.value as Estatus })}
@@ -1287,7 +1261,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       <div key={f.id} className="mb-3 rounded-lg border border-slate-200 bg-white p-3">
         <div className="grid gap-2 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-300">{t.entornoTipo}</label>
+            <label className="mb-1 block text-xs font-medium text-slate-600">{t.entornoTipo}</label>
             <div className="flex gap-1.5">
               <button
                 type="button"
@@ -1312,7 +1286,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-300">{t.fdDesc}</label>
+            <label className="mb-1 block text-xs font-medium text-slate-600">{t.fdDesc}</label>
             <textarea
               value={tr(f.descripcion)}
               onChange={(ev) => updateFD(f.id, { descripcion: ev.target.value })}
@@ -1349,7 +1323,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       <div key={e.id} className="mb-3 rounded-lg border border-slate-300 bg-slate-50 p-3">
         <div className="grid gap-2 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-300">{t.entornoTipo}</label>
+            <label className="mb-1 block text-xs font-medium text-slate-600">{t.entornoTipo}</label>
             <div className="flex gap-1.5">
               <button
                 type="button"
@@ -1374,7 +1348,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-300">{t.entornoDesc}</label>
+            <label className="mb-1 block text-xs font-medium text-slate-600">{t.entornoDesc}</label>
             <textarea
               value={tr(e.descripcion)}
               onChange={(ev) => updateEntorno(e.id, { descripcion: ev.target.value })}
@@ -1419,7 +1393,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       <div key={o.id} className="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="grid gap-2">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-300">{t.objetivoLabel}</label>
+            <label className="mb-1 block text-xs font-medium text-slate-600">{t.objetivoLabel}</label>
             <textarea
               value={tr(o.texto)}
               onChange={(ev) => updateObjetivo(o.id, { texto: ev.target.value })}
@@ -1498,8 +1472,8 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
         <p className="mt-1 text-sm text-slate-500">{t.planIaSubtitle}</p>
         <div className="mt-3 grid gap-3 md:grid-cols-2">
           <div className="rounded-lg border border-teal-200 bg-teal-50 p-3">
-            <h5 className="text-sm font-semibold text-teal-900">{t.detectaEntornosBtn}</h5>
-            <p className="mt-1 text-xs text-teal-900">{t.detectaEntornosSubtitle}</p>
+            <h5 className="text-sm font-semibold text-teal-800">{t.detectaEntornosBtn}</h5>
+            <p className="mt-1 text-xs text-teal-800">{t.detectaEntornosSubtitle}</p>
             <button
               type="button"
               onClick={sugerirEntornosConIA}
@@ -1510,8 +1484,8 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
             </button>
           </div>
           <div className="rounded-lg border border-cyan-200 bg-cyan-50 p-3">
-            <h5 className="text-sm font-semibold text-cyan-900">{t.fdsBtn}</h5>
-            <p className="mt-1 text-xs text-cyan-900">{t.fdsSubtitle}</p>
+            <h5 className="text-sm font-semibold text-cyan-800">{t.fdsBtn}</h5>
+            <p className="mt-1 text-xs text-cyan-800">{t.fdsSubtitle}</p>
             <button
               type="button"
               onClick={sugerirFdsConIA}
