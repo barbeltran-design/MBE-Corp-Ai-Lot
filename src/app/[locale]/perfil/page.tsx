@@ -5,8 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import { onAuthStateChanged, signOut, updateProfile, type User } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { getFirebaseAuth, getFirebaseDb, getFirebaseStorage } from '@/lib/firebase';
+import { getFirebaseAuth, getFirebaseDb } from '@/lib/firebase';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -170,21 +169,36 @@ function ProfilePageInner() {
     if (!user) return;
     const file = e.target.files && e.target.files[0];
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError(t('La imagen es muy pesada (máx. 5 MB).', 'The image is too large (max 5 MB).'));
+      if (e.target) e.target.value = '';
+      return;
+    }
     setUploading(true);
     setUploadError('');
     try {
-      const storage = getFirebaseStorage();
-      const fileRef = ref(storage, 'profile-photos/' + user.uid + '/' + Date.now().toString(36) + '.' + (file.name.split('.').pop() || 'jpg'));
-      await uploadBytes(fileRef, file);
-      const url = await getDownloadURL(fileRef);
+      const idToken = await user.getIdToken();
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/perfil/foto', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${idToken}` },
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) {
+        throw new Error(data.error || 'upload failed');
+      }
+      const url: string = data.url;
       setPhotoURL(url);
+      setPhotoBroken(false);
       await updateProfile(user, { photoURL: url }).catch(() => {});
       const db = getFirebaseDb();
       await setDoc(doc(db, 'users', user.uid), { photoURL: url }, { merge: true });
       setSavedMsg(t('Foto actualizada.', 'Photo updated.'));
     } catch (err) {
       console.error('[perfil] photo upload failed', err);
-      setUploadError(t('No se pudo subir la foto. Revisa las reglas de Firebase Storage o usa un enlace de imagen.', 'Could not upload the photo. Check your Firebase Storage rules or use an image link instead.'));
+      setUploadError(t('No se pudo subir la foto. Intenta de nuevo o usa un enlace de imagen.', 'Could not upload the photo. Try again or use an image link instead.'));
     } finally {
       setUploading(false);
       if (e.target) e.target.value = '';
