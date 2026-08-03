@@ -168,6 +168,7 @@ interface RawPrioridadIA {
   id?: string;
   factibilidad?: string;
   impacto?: string;
+  responsableRoleKey?: string;
   justificacion?: string;
 }
 
@@ -259,7 +260,7 @@ const LABELS = {
     summaryPorVencer: 'Por vencer en 7 dias',
     summaryValidar: 'Elementos pendientes de validar',
     sugerirPrioridadSubtitle:
-      'Babel revisara cada accion de tu plan y propondra su Factibilidad e Impacto economico; podras validar o corregir cada una desde el menu correspondiente.',
+      'Babel revisara cada accion de tu plan y propondra su Factibilidad e Impacto economico, y asignara un Responsable segun tu organigrama; podras validar o corregir cada uno desde el menu correspondiente.',
     sugerirPrioridadBtn: 'Sugerir Factibilidad e Impacto con IA',
     sugerirPrioridadGenerando: 'Analizando acciones...',
     sugerirPrioridadErrorHint: 'Puedes seguir asignando Factibilidad e Impacto manualmente mientras tanto.',
@@ -333,7 +334,7 @@ const LABELS = {
     summaryPorVencer: 'Due within 7 days',
     summaryValidar: 'Items pending validation',
     sugerirPrioridadSubtitle:
-      'Babel will review every action in your plan and propose its Feasibility and Economic Impact; you can validate or correct each one from its dropdown.',
+      'Babel will review every action in your plan, propose its Feasibility and Economic Impact, and assign a Responsible based on your org chart; you can validate or correct each one from its dropdown.',
     sugerirPrioridadBtn: 'Suggest Feasibility & Impact with AI',
     sugerirPrioridadGenerando: 'Analyzing actions...',
     sugerirPrioridadErrorHint: 'You can keep assigning Feasibility and Impact manually in the meantime.',
@@ -749,8 +750,8 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
     );
   const removeAccion = (id: string) => setAcciones((prev) => prev.filter((a) => a.id !== id));
 
-  const buildAccionesParaIA = (): Array<{ id: string; descripcion: string; entregable: string; contexto: string }> => {
-    const out: Array<{ id: string; descripcion: string; entregable: string; contexto: string }> = [];
+  const buildAccionesParaIA = (): Array<{ id: string; descripcion: string; entregable: string; contexto: string; responsableRoleKey: string }> => {
+    const out: Array<{ id: string; descripcion: string; entregable: string; contexto: string; responsableRoleKey: string }> = [];
     objetivos.forEach((o) => {
       const entornosDeO = entornos.filter((e) => e.objetivoId === o.id);
       entornosDeO.forEach((e) => {
@@ -760,15 +761,23 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
           proyectosDeF.forEach((p) => {
             const accionesDeP = acciones.filter((a) => a.proyectoId === p.id && !a.validado);
             accionesDeP.forEach((a) => {
-              const contexto =
-                'Objetivo: ' + o.texto + ' | ' + (e.tipo === 'amenaza' ? 'Amenaza' : 'Oportunidad') + ': ' + e.descripcion;
-              out.push({ id: a.id, descripcion: a.descripcion, entregable: a.entregable, contexto: contexto });
+            const contexto =
+              'Objetivo: ' + o.texto + ' | ' + (e.tipo === 'amenaza' ? 'Amenaza' : 'Oportunidad') + ': ' + e.descripcion;
+              out.push({ id: a.id, descripcion: a.descripcion, entregable: a.entregable, contexto: contexto, responsableRoleKey: a.responsableRoleKey || '' });
             });
           });
         });
       });
     });
     return out;
+  };
+
+  const buildRolesParaIA = (): { key: string; name: string; person: string }[] => {
+    return ROLE_OPTIONS.map((opt) => ({
+      key: opt.key,
+      name: lang === 'en' ? opt.nameEn : opt.nameEs,
+      person: resolvePersonForRole(opt.key),
+    }));
   };
 
   const sugerirPrioridadConIA = async () => {
@@ -783,7 +792,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       const res = await fetch('/api/babel/indicadores/priorizacion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ language: lang, acciones: payload }),
+        body: JSON.stringify({ language: lang, acciones: payload, roles: buildRolesParaIA() }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data || !Array.isArray(data.sugerencias)) {
@@ -798,7 +807,14 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
         const factRaw = (raw.factibilidad || '').trim().toLowerCase();
         const impRaw = (raw.impacto || '').trim().toLowerCase();
         if (!isFactibilidad(factRaw) || !isImpacto(impRaw)) return;
-        updateAccion(id, { factibilidad: factRaw, impacto: impRaw, validado: false });
+        const patch: Partial<Accion> = { factibilidad: factRaw, impacto: impRaw, validado: false };
+        const roleRaw = (raw.responsableRoleKey || '').trim();
+        if (roleRaw && ROLE_OPTIONS.some((opt) => opt.key === roleRaw)) {
+          patch.responsableRoleKey = roleRaw;
+          const persona = resolvePersonForRole(roleRaw);
+          if (persona) patch.responsableNombre = persona;
+        }
+        updateAccion(id, patch);
       });
     } finally {
       setPrioGenerating(false);

@@ -35,11 +35,19 @@ interface AccionParaIA {
   descripcion: string;
   entregable: string;
   contexto: string;
+  responsableRoleKey?: string;
+}
+
+interface RoleParaIA {
+  key: string;
+  name: string;
+  person: string;
 }
 
 interface PriorizacionRequestBody {
   language?: 'es' | 'en';
   acciones?: AccionParaIA[];
+  roles?: RoleParaIA[];
 }
 
 function buildSystemPrompt(language: 'es' | 'en'): string {
@@ -48,9 +56,10 @@ function buildSystemPrompt(language: 'es' | 'en'): string {
       'You are Babel, a strategic business architect. The user gives you a list of concrete actions from their Strategic Action Plan, ' +
       'each with a unique id, its description, its expected deliverable, and the business context it belongs to (objective, threat/opportunity, project).\n\n' +
       'Your task: for EVERY action in the list, evaluate its Feasibility (how viable it is to execute with the resources and capabilities typical of a ' +
-      'micro or small business) and its expected economic Impact (how significant its effect on the business would be if executed well).\n\n' +
+      'micro or small business) and its expected economic Impact (how significant its effect on the business would be if executed well), and assign a ' +
+      'Responsible: choose the role from the user\'s org chart whose function naturally includes executing that action.\n\n' +
       'Respond with ONLY a raw JSON array (no markdown fences, no prose before or after) where each item has EXACTLY this shape:\n' +
-      '{"id":"copy the EXACT id of the action as given to you","factibilidad":"one of: alta, media, baja, nula","impacto":"one of: alto, medio, bajo, nulo","justificacion":"one short sentence explaining why"}\n\n' +
+      '{"id":"copy the EXACT id of the action as given to you","factibilidad":"one of: alta, media, baja, nula","impacto":"one of: alto, medio, bajo, nulo","responsableRoleKey":"copy the EXACT key of the org chart role that fits best, or an empty string if none fits","justificacion":"one short sentence explaining why"}\n\n' +
       'You must return exactly one item per action received, reusing the same id, without inventing new ids and without skipping any action.'
     );
   }
@@ -58,9 +67,10 @@ function buildSystemPrompt(language: 'es' | 'en'): string {
     'Eres Babel, un arquitecto estrategico de negocios. El usuario te da una lista de acciones concretas de su Plan de Accion Estrategico, ' +
     'cada una con un id unico, su descripcion, su entregable esperado y el contexto de negocio al que pertenece (objetivo, amenaza/oportunidad, proyecto).\n\n' +
     'Tu tarea: para CADA accion de la lista, evalua su Factibilidad (que tan viable es ejecutarla con los recursos y capacidades tipicos de una micro o ' +
-    'pequena empresa) y su Impacto economico esperado (que tan significativo seria su efecto en el negocio si se ejecuta bien).\n\n' +
+    'pequena empresa) y su Impacto economico esperado (que tan significativo seria su efecto en el negocio si se ejecuta bien), y asigna un Responsable: ' +
+    'elige el rol del organigrama del usuario cuya funcion naturalmente incluye ejecutar esa accion.\n\n' +
     'Responde UNICAMENTE con un arreglo JSON puro (sin marcadores de markdown, sin texto antes ni despues) donde cada elemento tenga EXACTAMENTE esta forma:\n' +
-    '{"id":"copia el id EXACTO de la accion tal como se te dio","factibilidad":"una de: alta, media, baja, nula","impacto":"uno de: alto, medio, bajo, nulo","justificacion":"una frase breve explicando por que"}\n\n' +
+    '{"id":"copia el id EXACTO de la accion tal como se te dio","factibilidad":"una de: alta, media, baja, nula","impacto":"uno de: alto, medio, bajo, nulo","responsableRoleKey":"copia la key EXACTA del rol del organigrama que mejor encaja, o cadena vacia si ninguno encaja","justificacion":"una frase breve explicando por que"}\n\n' +
     'Debes regresar exactamente un elemento por cada accion recibida, usando el mismo id, sin inventar ids nuevos y sin omitir ninguna accion.'
   );
 }
@@ -179,6 +189,7 @@ export async function POST(req: NextRequest) {
 
   const language = body.language === 'en' ? 'en' : 'es';
   const acciones = Array.isArray(body.acciones) ? body.acciones : [];
+  const roles = Array.isArray(body.roles) ? body.roles : [];
 
   if (acciones.length === 0) {
     return NextResponse.json(
@@ -189,8 +200,16 @@ export async function POST(req: NextRequest) {
 
   const systemPrompt = buildSystemPrompt(language);
   const accionesJson = JSON.stringify(acciones).slice(0, 14000);
-  const userMessage =
+  let userMessage =
     (language === 'en' ? 'Actions to evaluate (JSON array):\n\n' : 'Acciones a evaluar (arreglo JSON):\n\n') + accionesJson;
+  if (roles.length > 0) {
+    userMessage +=
+      '\n\n' +
+      (language === 'en'
+        ? 'User org chart roles to assign a Responsible from (JSON array: key, name, assigned person):\n\n'
+        : 'Roles del organigrama del usuario para asignar un Responsable (arreglo JSON: key, nombre, persona asignada):\n\n') +
+      JSON.stringify(roles).slice(0, 4000);
+  }
 
   const diagnostics: Diagnostic[] = [];
 
