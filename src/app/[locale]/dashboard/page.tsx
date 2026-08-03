@@ -34,6 +34,7 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
+import BabelAvatar from '@/components/babel/BabelAvatar';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { getLatestAssessmentAnswers } from '@/lib/assessment';
 import {
@@ -175,7 +176,10 @@ function DashboardPageInner() {
     <main className="px-6 py-10">
       <div className="mx-auto max-w-5xl">
         <div id="dashboard-titulo" className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-slate-900">{t('welcomeTitle')}</h1>
+          <div className="flex items-center gap-3">
+            <BabelAvatar size={56} className="shrink-0" />
+            <h1 className="text-2xl font-semibold text-slate-900">{t('welcomeTitle')}</h1>
+          </div>
           <button
             type="button"
             onClick={() => router.push(`/${locale}/onboarding?retake=true`)}

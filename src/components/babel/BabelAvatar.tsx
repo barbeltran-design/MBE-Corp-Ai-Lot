@@ -2,6 +2,8 @@ import React from 'react';
 
 export type BabelAvatarState = 'idle' | 'thinking' | 'talking';
 
+export const BABEL_AYUDA_EVENT = 'babel:abrir-ayuda';
+
 type BabelAvatarProps = {
   state?: BabelAvatarState;
   size?: number;
@@ -15,15 +17,24 @@ type BabelAvatarProps = {
 //   idle     -> flota suave y parpadea cada ~5s
 //   thinking -> antena en ambar + tres puntos con aparicion escalonada
 //   talking  -> la boca se abre y cierra con ondas de sonido
-// Interaccion: onClick opcional (boton de ayuda de secciones).
+// Interaccion: si no se pasa onClick, al tocar el avatar emite el evento
+// BABEL_AYUDA_EVENT (window) que PageTour escucha para abrir la ayuda por
+// seccion (toggle: cerrar si ya estaba abierta).
 export default function BabelAvatar({ state = 'idle', size = 64, className = '', onClick }: BabelAvatarProps) {
   const thinking = state === 'thinking';
   const talking = state === 'talking';
   return (
     <div
+      data-babel-avatar="true"
       aria-hidden={onClick ? undefined : 'true'}
       role={onClick ? 'button' : undefined}
-      onClick={onClick}
+      onClick={() => {
+        if (onClick) {
+          onClick();
+        } else {
+          window.dispatchEvent(new CustomEvent(BABEL_AYUDA_EVENT));
+        }
+      }}
       className={
         'relative inline-flex items-center justify-center rounded-2xl transition-shadow duration-300 ' +
         (thinking ? 'shadow-lg ring-2 ring-teal-400/60' : '') +

@@ -2,6 +2,7 @@
 import React from 'react';
 import { ChevronDown } from 'lucide-react';
 import FinancialGoalsBuilder from '@/components/babel/FinancialGoalsBuilder';
+import BabelAvatar from '@/components/babel/BabelAvatar';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 
 type PlanLang = 'es' | 'en';
@@ -491,8 +492,13 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <h3 id="indicadores-title" className="text-xl font-bold text-slate-800">{t.title}</h3>
-      <p className="mt-1 text-sm text-slate-500">{t.subtitle}</p>
+      <div className="flex items-center gap-3">
+        <BabelAvatar size={56} className="shrink-0" />
+        <div>
+          <h3 id="indicadores-title" className="text-xl font-bold text-slate-800">{t.title}</h3>
+          <p className="mt-1 text-sm text-slate-500">{t.subtitle}</p>
+        </div>
+      </div>
 
       <div id="indicadores-resumen" className="mt-4">
         <FinancialGoalsBuilder lang={lang} />

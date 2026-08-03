@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
-import BabelAvatar from '@/components/babel/BabelAvatar';
+import { BABEL_AYUDA_EVENT } from '@/components/babel/BabelAvatar';
 
 export type TourStep = {
   selector?: string;
@@ -11,17 +11,11 @@ export type TourStep = {
   placement?: 'bottom' | 'top';
 };
 
-export type PageTourHandle = {
-  openAyuda: () => void;
-  openTour: () => void;
-};
-
 type PageTourProps = {
   pageId: string;
   steps: TourStep[];
   lang: 'es' | 'en';
   autoOpen?: boolean;
-  showLauncher?: boolean;
 };
 
 const STORAGE_KEY = 'babel_tutorials_v1';
@@ -77,7 +71,6 @@ const T_ES = {
   done: 'Listo',
   step: (a: number, b: number) => 'Paso ' + a + ' de ' + b,
   close: 'Cerrar',
-  launcherAria: 'Ayuda de Babel',
   bubbleTitle: '¿Tienes duda de alguna sección?',
   bubbleDesc: 'Toca cualquier sección de la página y te la explico. También puedes volver a ver la guía paso a paso.',
   bubbleGuide: 'Ver guía paso a paso',
@@ -93,7 +86,6 @@ const T_EN = {
   done: 'Done',
   step: (a: number, b: number) => 'Step ' + a + ' of ' + b,
   close: 'Close',
-  launcherAria: 'Babel help',
   bubbleTitle: 'Any doubts about a section?',
   bubbleDesc: 'Tap any section on the page and I will explain it. You can also replay the step-by-step guide.',
   bubbleGuide: 'Show step-by-step guide',
@@ -102,10 +94,12 @@ const T_EN = {
   hint: 'Tap a section and I will explain it',
 };
 
-export default React.forwardRef<PageTourHandle, PageTourProps>(function PageTour(
-  { pageId, steps, lang, autoOpen = true, showLauncher = true },
-  ref
-) {
+// PageTour: tutorial guiado (una sola vez por pagina) + ayuda por seccion.
+// El avatar de Babel (colocado en el encabezado de cada pagina) es el boton
+// de ayuda: al tocarlo emite BABEL_AYUDA_EVENT y aqui se alterna la burbuja
+// "¿Tienes duda de alguna seccion?"; al senalar/tocar una seccion registrada
+// se muestra su explicacion.
+export default function PageTour({ pageId, steps, lang, autoOpen = true }: PageTourProps) {
   const [modo, setModo] = React.useState<'cerrado' | 'tour' | 'ayuda'>('cerrado');
   const [indice, setIndice] = React.useState(0);
   const [rect, setRect] = React.useState<Rect | null>(null);
@@ -116,20 +110,8 @@ export default React.forwardRef<PageTourHandle, PageTourProps>(function PageTour
   const autoOpenedRef = React.useRef(false);
   const stepsRef = React.useRef(steps);
   stepsRef.current = steps;
-  const launcherRef = React.useRef<HTMLButtonElement>(null);
   const bubbleRef = React.useRef<HTMLDivElement>(null);
   const cardRef = React.useRef<HTMLDivElement>(null);
-
-  React.useImperativeHandle(ref, () => ({
-    openAyuda: () => {
-      setAyuda(null);
-      setModo('ayuda');
-    },
-    openTour: () => {
-      setIndice(0);
-      setModo('tour');
-    },
-  }));
 
   React.useEffect(() => {
     setMontado(true);
@@ -140,6 +122,23 @@ export default React.forwardRef<PageTourHandle, PageTourProps>(function PageTour
     guardarProgreso(pageId);
     setDone(true);
   }, [pageId]);
+
+  // Cualquier avatar de Babel abre/cierra la ayuda (toggle).
+  React.useEffect(() => {
+    const onAbrir = () => {
+      setAyuda(null);
+      if (modo === 'tour') {
+        marcarVisto();
+        setModo('ayuda');
+      } else if (modo === 'ayuda') {
+        setModo('cerrado');
+      } else {
+        setModo('ayuda');
+      }
+    };
+    window.addEventListener(BABEL_AYUDA_EVENT, onAbrir);
+    return () => window.removeEventListener(BABEL_AYUDA_EVENT, onAbrir);
+  }, [modo, marcarVisto]);
 
   // Auto-open SOLO la primera vez (mientras no este marcado como visto y solo
   // una vez por montaje; cerrar no lo vuelve a abrir).
@@ -195,7 +194,7 @@ export default React.forwardRef<PageTourHandle, PageTourProps>(function PageTour
     };
   }, [modo, indice, marcarVisto]);
 
-  // Modo ayuda: el avatar pregunta y al tocar/señalar una seccion explica.
+  // Modo ayuda: al senalar/tocar una seccion registrada la explica.
   React.useEffect(() => {
     if (modo !== 'ayuda') return;
     const stepsActual = stepsRef.current;
@@ -210,10 +209,10 @@ export default React.forwardRef<PageTourHandle, PageTourProps>(function PageTour
       }
     };
     const onClick = (ev: MouseEvent) => {
-      const t = ev.target as Node | null;
-      if (launcherRef.current && launcherRef.current.contains(t)) return;
-      if (bubbleRef.current && bubbleRef.current.contains(t)) return;
-      if (cardRef.current && cardRef.current.contains(t)) return;
+      const t = ev.target as Element | null;
+      if (t && t.closest && t.closest('[data-babel-avatar]')) return;
+      if (bubbleRef.current && bubbleRef.current.contains(ev.target as Node)) return;
+      if (cardRef.current && cardRef.current.contains(ev.target as Node)) return;
       const s = findStep(ev.target, stepsActual);
       if (s) {
         setAyuda({ step: s, rect: medir(s.selector), pinned: true });
@@ -414,76 +413,49 @@ export default React.forwardRef<PageTourHandle, PageTourProps>(function PageTour
               </div>
             </div>
           ) : (
-            <div
-              ref={bubbleRef}
-              className={cardBase}
-              style={{
-                position: 'fixed',
-                bottom: 96,
-                right: 20,
-                width: 300,
-                maxWidth: 'calc(100vw - 2.5rem)',
-                zIndex: 62,
-                pointerEvents: 'auto',
-              }}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <span className="text-sm font-bold text-slate-800 dark:text-white">{texts.bubbleTitle}</span>
-                <button
-                  type="button"
-                  onClick={() => setModo('cerrado')}
-                  className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700"
-                  aria-label={texts.close}
-                >
-                  <X size={16} />
-                </button>
-              </div>
-              <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{texts.bubbleDesc}</p>
-              <p className="mt-2 text-xs font-medium text-teal-700 dark:text-teal-300">{texts.hint}</p>
-              <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIndice(0);
-                    setModo('tour');
-                  }}
-                  className="inline-flex items-center gap-1 rounded-lg border border-teal-600 px-3 py-1.5 text-xs font-medium text-teal-700 hover:bg-teal-50 dark:text-teal-300 dark:hover:bg-slate-700"
-                >
-                  {texts.bubbleGuide}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setModo('cerrado')}
-                  className="rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-teal-700"
-                >
-                  {texts.bubbleClose}
-                </button>
+            <div className="fixed inset-x-0 top-20 z-[62] flex justify-center px-4" style={{ pointerEvents: 'none' }}>
+              <div
+                ref={bubbleRef}
+                className={cardBase + ' w-[340px] max-w-full'}
+                style={{ pointerEvents: 'auto' }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-sm font-bold text-slate-800 dark:text-white">{texts.bubbleTitle}</span>
+                  <button
+                    type="button"
+                    onClick={() => setModo('cerrado')}
+                    className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700"
+                    aria-label={texts.close}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{texts.bubbleDesc}</p>
+                <p className="mt-2 text-xs font-medium text-teal-700 dark:text-teal-300">{texts.hint}</p>
+                <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIndice(0);
+                      setModo('tour');
+                    }}
+                    className="inline-flex items-center gap-1 rounded-lg border border-teal-600 px-3 py-1.5 text-xs font-medium text-teal-700 hover:bg-teal-50 dark:text-teal-300 dark:hover:bg-slate-700"
+                  >
+                    {texts.bubbleGuide}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setModo('cerrado')}
+                    className="rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-teal-700"
+                  >
+                    {texts.bubbleClose}
+                  </button>
+                </div>
               </div>
             </div>
           )}
         </div>
       ) : null}
-
-      {showLauncher ? (
-        <button
-          ref={launcherRef}
-          type="button"
-          onClick={() => {
-            if (modo === 'ayuda') {
-              setAyuda(null);
-              setModo('cerrado');
-            } else {
-              setAyuda(null);
-              setModo('ayuda');
-            }
-          }}
-          aria-label={texts.launcherAria}
-          title={texts.bubbleTitle}
-          className="fixed bottom-4 right-4 z-50 rounded-full p-1 transition-transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
-        >
-          <BabelAvatar state="idle" size={64} />
-        </button>
-      ) : null}
     </React.Fragment>
   );
-});
+}

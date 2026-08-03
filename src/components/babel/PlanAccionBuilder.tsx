@@ -7,7 +7,7 @@ import { getMaturityDimensions } from '@/lib/maturity-dimensions';
 import { computeResults, type AssessmentResult } from '@/lib/maturity-scoring';
 import { getBabelSessionIfExists } from '@/lib/babel-session';
 import BabelAvatar from '@/components/babel/BabelAvatar';
-import PageTour, { type PageTourHandle, type TourStep } from '@/components/ui/executive/PageTour';
+import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 
 const MATURITY_LEVEL_LABEL: Record<string, { es: string; en: string }> = {
   execution: { es: 'Ejecucion', en: 'Execution' },
@@ -466,7 +466,6 @@ function newAccion(proyectoId: string, rank: number): Accion {
 
 export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
   const t = LABELS[lang];
-  const tourRef = React.useRef<PageTourHandle>(null);
   const [translationCache, setTranslationCache] = React.useState<Record<string, string>>({});
   const tr = React.useCallback(function (text: string): string {
     if (lang === 'es' || !text) return text;
@@ -1560,9 +1559,6 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
           state={pasoGenerando !== null || prioGenerating ? 'thinking' : 'idle'}
           size={56}
           className="shrink-0"
-          onClick={() => {
-            if (tourRef.current) tourRef.current.openAyuda();
-          }}
         />
         <div>
           <h3 id="plan-accion-title" className="text-xl font-bold text-slate-800">{t.title}</h3>
@@ -1672,7 +1668,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       </div>
 
       <p className="mt-4 text-xs text-slate-400">{t.savedNote}</p>
-      <PageTour ref={tourRef} pageId="plan-accion" steps={lang === 'en' ? PASOS_TOUR.en : PASOS_TOUR.es} lang={lang} />
+      <PageTour pageId="plan-accion" steps={lang === 'en' ? PASOS_TOUR.en : PASOS_TOUR.es} lang={lang} />
     </div>
   );
 }
