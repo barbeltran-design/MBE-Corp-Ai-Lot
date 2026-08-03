@@ -26,8 +26,8 @@ type Estatus = 'pendiente' | 'en_proceso' | 'terminado';
 type RoleOption = { key: string; nameEs: string; nameEn: string };
 
 type Objetivo = { id: string; texto: string; validado: boolean };
-type AmenazaOportunidad = { id: string; objetivoId: string; tipo: EntornoTipo; descripcion: string; validado: boolean };
-type FortalezaDebilidad = { id: string; entornoId: string; tipo: FDTipo; descripcion: string; validado: boolean };
+type AmenazaOportunidad = { id: string; objetivoIds: string[]; tipo: EntornoTipo; descripcion: string; validado: boolean };
+type FortalezaDebilidad = { id: string; entornoIds: string[]; tipo: FDTipo; descripcion: string; validado: boolean };
 type Proyecto = { id: string; fdId: string; nombre: string; responsableRoleKey: string; responsableNombre: string; validado: boolean };
 type Accion = {
   id: string;
@@ -147,12 +147,14 @@ function isEntornoTipo(value: string): value is EntornoTipo {
 }
 
 interface RawEntornoIA {
+  objetivoIds?: string[];
   objetivoId?: string;
   tipo?: string;
   descripcion?: string;
 }
 
 interface RawCapacidadIA {
+  entornoIds?: string[];
   entornoId?: string;
   tipo?: string;
   descripcion?: string;
@@ -404,11 +406,19 @@ const LABELS = {
 function newObjetivo(): Objetivo {
   return { id: generateId(), texto: '', validado: false };
 }
-function newEntorno(objetivoId: string, tipo: EntornoTipo): AmenazaOportunidad {
-  return { id: generateId(), objetivoId: objetivoId, tipo: tipo, descripcion: '', validado: false };
+function objetivosDe(raw: { objetivoIds?: string[]; objetivoId?: unknown }): string[] {
+  if (Array.isArray(raw.objetivoIds)) return raw.objetivoIds;
+  return typeof raw.objetivoId === 'string' && raw.objetivoId ? [raw.objetivoId] : [];
 }
-function newFD(entornoId: string, tipo: FDTipo): FortalezaDebilidad {
-  return { id: generateId(), entornoId: entornoId, tipo: tipo, descripcion: '', validado: false };
+function entornosDe(raw: { entornoIds?: string[]; entornoId?: unknown }): string[] {
+  if (Array.isArray(raw.entornoIds)) return raw.entornoIds;
+  return typeof raw.entornoId === 'string' && raw.entornoId ? [raw.entornoId] : [];
+}
+function newEntorno(objetivoIds: string[], tipo: EntornoTipo): AmenazaOportunidad {
+  return { id: generateId(), objetivoIds: objetivoIds, tipo: tipo, descripcion: '', validado: false };
+}
+function newFD(entornoIds: string[], tipo: FDTipo): FortalezaDebilidad {
+  return { id: generateId(), entornoIds: entornoIds, tipo: tipo, descripcion: '', validado: false };
 }
 function newProyecto(fdId: string): Proyecto {
   return { id: generateId(), fdId: fdId, nombre: '', responsableRoleKey: '', responsableNombre: '', validado: false };
@@ -515,8 +525,20 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed && Array.isArray(parsed.objetivos)) setObjetivos(parsed.objetivos);
-        if (parsed && Array.isArray(parsed.entornos)) setEntornos(parsed.entornos);
-        if (parsed && Array.isArray(parsed.fds)) setFds(parsed.fds);
+        if (parsed && Array.isArray(parsed.entornos)) {
+          setEntornos(
+            parsed.entornos.map((e: { objetivoIds?: string[]; objetivoId?: unknown }) =>
+              Object.assign({}, e, { objetivoIds: objetivosDe(e) })
+            )
+          );
+        }
+        if (parsed && Array.isArray(parsed.fds)) {
+          setFds(
+            parsed.fds.map((f: { entornoIds?: string[]; entornoId?: unknown }) =>
+              Object.assign({}, f, { entornoIds: entornosDe(f) })
+            )
+          );
+        }
         if (parsed && Array.isArray(parsed.proyectos)) setProyectos(parsed.proyectos);
         if (parsed && Array.isArray(parsed.acciones)) setAcciones(parsed.acciones);
       }
@@ -691,30 +713,41 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
   const updateObjetivo = (id: string, patch: Partial<Objetivo>) =>
     setObjetivos((prev) => prev.map((o) => (o.id === id ? Object.assign({}, o, patch) : o)));
   const removeObjetivo = (id: string) => {
-    const entornosToRemove = entornos.filter((e) => e.objetivoId === id).map((e) => e.id);
-    const fdsToRemove = fds.filter((f) => entornosToRemove.indexOf(f.entornoId) !== -1).map((f) => f.id);
-    const proyectosToRemove = proyectos.filter((p) => fdsToRemove.indexOf(p.fdId) !== -1).map((p) => p.id);
+    const entornosNuevos = entornos
+      .map((e) =>
+        e.objetivoIds.indexOf(id) !== -1 ? Object.assign({}, e, { objetivoIds: e.objetivoIds.filter((x) => x !== id) }) : e
+      )
+      .filter((e) => e.objetivoIds.length > 0);
+    const entornosVivosIds = new Set(entornosNuevos.map((e) => e.id));
+    const fdsVivos = fds.filter((f) => f.entornoIds.length > 0 && f.entornoIds.some((eid) => entornosVivosIds.has(eid)));
+    const fdsVivosIds = new Set(fdsVivos.map((f) => f.id));
+    const proyectosToRemove = proyectos.filter((p) => !fdsVivosIds.has(p.fdId)).map((p) => p.id);
     setObjetivos((prev) => prev.filter((o) => o.id !== id));
-    setEntornos((prev) => prev.filter((e) => e.objetivoId !== id));
-    setFds((prev) => prev.filter((f) => entornosToRemove.indexOf(f.entornoId) === -1));
-    setProyectos((prev) => prev.filter((p) => fdsToRemove.indexOf(p.fdId) === -1));
+    setEntornos(entornosNuevos);
+    setFds(fdsVivos);
+    setProyectos((prev) => prev.filter((p) => fdsVivosIds.has(p.fdId)));
     setAcciones((prev) => prev.filter((a) => proyectosToRemove.indexOf(a.proyectoId) === -1));
   };
 
-  const addEntorno = (objetivoId: string, tipo: EntornoTipo) => setEntornos((prev) => prev.concat([newEntorno(objetivoId, tipo)]));
+  const addEntorno = (objetivoId: string, tipo: EntornoTipo) => setEntornos((prev) => prev.concat([newEntorno([objetivoId], tipo)]));
   const updateEntorno = (id: string, patch: Partial<AmenazaOportunidad>) =>
     setEntornos((prev) => prev.map((e) => (e.id === id ? Object.assign({}, e, patch) : e)));
   const removeEntorno = (id: string) => {
-    const fdsToRemove = fds.filter((f) => f.entornoId === id).map((f) => f.id);
-    const proyectosToRemove = proyectos.filter((p) => fdsToRemove.indexOf(p.fdId) !== -1).map((p) => p.id);
+    const fdsNuevos = fds
+      .map((f) =>
+        f.entornoIds.indexOf(id) !== -1 ? Object.assign({}, f, { entornoIds: f.entornoIds.filter((x) => x !== id) }) : f
+      )
+      .filter((f) => f.entornoIds.length > 0);
+    const fdsVivosIds = new Set(fdsNuevos.map((f) => f.id));
+    const proyectosToRemove = proyectos.filter((p) => !fdsVivosIds.has(p.fdId)).map((p) => p.id);
     setEntornos((prev) => prev.filter((e) => e.id !== id));
-    setFds((prev) => prev.filter((f) => f.entornoId !== id));
-    setProyectos((prev) => prev.filter((p) => fdsToRemove.indexOf(p.fdId) === -1));
+    setFds(fdsNuevos);
+    setProyectos((prev) => prev.filter((p) => fdsVivosIds.has(p.fdId)));
     setAcciones((prev) => prev.filter((a) => proyectosToRemove.indexOf(a.proyectoId) === -1));
   };
 
   const addFD = (entornoId: string, tipo: FDTipo) => {
-    const fd = newFD(entornoId, tipo);
+    const fd = newFD([entornoId], tipo);
     setFds((prev) => prev.concat([fd]));
     setProyectos((prev) => prev.concat([newProyecto(fd.id)]));
   };
@@ -752,17 +785,20 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
 
   const buildAccionesParaIA = (): Array<{ id: string; descripcion: string; entregable: string; contexto: string; responsableRoleKey: string }> => {
     const out: Array<{ id: string; descripcion: string; entregable: string; contexto: string; responsableRoleKey: string }> = [];
+    const vistos: Record<string, boolean> = {};
     objetivos.forEach((o) => {
-      const entornosDeO = entornos.filter((e) => e.objetivoId === o.id);
+      const entornosDeO = entornos.filter((e) => e.objetivoIds.indexOf(o.id) !== -1);
       entornosDeO.forEach((e) => {
-        const fdsDeE = fds.filter((f) => f.entornoId === e.id);
+        const fdsDeE = fds.filter((f) => f.entornoIds.indexOf(e.id) !== -1);
         fdsDeE.forEach((f) => {
           const proyectosDeF = proyectos.filter((p) => p.fdId === f.id);
           proyectosDeF.forEach((p) => {
             const accionesDeP = acciones.filter((a) => a.proyectoId === p.id && !a.validado);
             accionesDeP.forEach((a) => {
-            const contexto =
-              'Objetivo: ' + o.texto + ' | ' + (e.tipo === 'amenaza' ? 'Amenaza' : 'Oportunidad') + ': ' + e.descripcion;
+              if (vistos[a.id]) return;
+              vistos[a.id] = true;
+              const contexto =
+                'Objetivo: ' + o.texto + ' | ' + (e.tipo === 'amenaza' ? 'Amenaza' : 'Oportunidad') + ': ' + e.descripcion;
               out.push({ id: a.id, descripcion: a.descripcion, entregable: a.entregable, contexto: contexto, responsableRoleKey: a.responsableRoleKey || '' });
             });
           });
@@ -898,28 +934,47 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
         return;
       }
       const objetivoIds = objetivos.map((o) => o.id);
-      const existentes: Record<string, boolean> = {};
+      const trabajo: Record<string, AmenazaOportunidad> = {};
+      const esNuevo: Record<string, boolean> = {};
       entornos.forEach((e) => {
-        existentes[e.descripcion.trim().toLowerCase()] = true;
+        trabajo[e.descripcion.trim().toLowerCase()] = e;
       });
       const nuevos: AmenazaOportunidad[] = [];
+      const actualizaciones: { id: string; objetivoIds: string[] }[] = [];
       (data.sugerencias as RawEntornoIA[]).forEach((raw) => {
-        const objetivoId = (raw.objetivoId || '').trim();
         const tipoRaw = (raw.tipo || '').trim().toLowerCase();
         const descripcion = (raw.descripcion || '').trim();
-        if (!objetivoId || objetivoIds.indexOf(objetivoId) === -1) return;
         if (!isEntornoTipo(tipoRaw)) return;
         if (!descripcion) return;
+        const ids = objetivosDe(raw)
+          .map((x) => x.trim())
+          .filter((x) => x && objetivoIds.indexOf(x) !== -1);
+        if (ids.length === 0) return;
         const clave = descripcion.toLowerCase();
-        if (existentes[clave]) return;
-        existentes[clave] = true;
-        const eo = newEntorno(objetivoId, tipoRaw);
-        eo.descripcion = descripcion;
-        nuevos.push(eo);
+        const existente = trabajo[clave];
+        if (existente) {
+          if (existente.tipo !== tipoRaw) return;
+          const aAgregar = ids.filter((x) => existente.objetivoIds.indexOf(x) === -1);
+          if (aAgregar.length === 0) return;
+          const merged = existente.objetivoIds.concat(aAgregar);
+          if (esNuevo[clave]) {
+            existente.objetivoIds = merged;
+          } else {
+            actualizaciones.push({ id: existente.id, objetivoIds: merged });
+          }
+          trabajo[clave] = Object.assign({}, existente, { objetivoIds: merged });
+        } else {
+          const eo = newEntorno(ids, tipoRaw);
+          eo.descripcion = descripcion;
+          trabajo[clave] = eo;
+          esNuevo[clave] = true;
+          nuevos.push(eo);
+        }
       });
       if (nuevos.length > 0) {
         setEntornos((prev) => prev.concat(nuevos));
       }
+      actualizaciones.forEach((u) => updateEntorno(u.id, { objetivoIds: u.objetivoIds }));
     } finally {
       setPasoGenerando(null);
     }
@@ -954,28 +1009,47 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
         return;
       }
       const entornoIds = entornos.map((e) => e.id);
-      const existentes: Record<string, boolean> = {};
+      const trabajo: Record<string, FortalezaDebilidad> = {};
+      const esNuevo: Record<string, boolean> = {};
       fds.forEach((f) => {
-        existentes[f.entornoId + '|' + f.descripcion.trim().toLowerCase()] = true;
+        trabajo[f.descripcion.trim().toLowerCase()] = f;
       });
       const nuevos: FortalezaDebilidad[] = [];
+      const actualizaciones: { id: string; entornoIds: string[] }[] = [];
       (data.sugerencias as RawCapacidadIA[]).forEach((raw) => {
-        const entornoId = (raw.entornoId || '').trim();
         const tipoRaw = (raw.tipo || '').trim().toLowerCase();
         const descripcion = (raw.descripcion || '').trim();
-        if (!entornoId || entornoIds.indexOf(entornoId) === -1) return;
         if (tipoRaw !== 'fortaleza' && tipoRaw !== 'debilidad') return;
         if (!descripcion) return;
-        const clave = entornoId + '|' + descripcion.toLowerCase();
-        if (existentes[clave]) return;
-        existentes[clave] = true;
-        const fd = newFD(entornoId, tipoRaw);
-        fd.descripcion = descripcion;
-        nuevos.push(fd);
+        const ids = entornosDe(raw)
+          .map((x) => x.trim())
+          .filter((x) => x && entornoIds.indexOf(x) !== -1);
+        if (ids.length === 0) return;
+        const clave = descripcion.toLowerCase();
+        const existente = trabajo[clave];
+        if (existente) {
+          if (existente.tipo !== tipoRaw) return;
+          const aAgregar = ids.filter((x) => existente.entornoIds.indexOf(x) === -1);
+          if (aAgregar.length === 0) return;
+          const merged = existente.entornoIds.concat(aAgregar);
+          if (esNuevo[clave]) {
+            existente.entornoIds = merged;
+          } else {
+            actualizaciones.push({ id: existente.id, entornoIds: merged });
+          }
+          trabajo[clave] = Object.assign({}, existente, { entornoIds: merged });
+        } else {
+          const fd = newFD(ids, tipoRaw);
+          fd.descripcion = descripcion;
+          trabajo[clave] = fd;
+          esNuevo[clave] = true;
+          nuevos.push(fd);
+        }
       });
       if (nuevos.length > 0) {
         setFds((prev) => prev.concat(nuevos));
       }
+      actualizaciones.forEach((u) => updateFD(u.id, { entornoIds: u.entornoIds }));
     } finally {
       setPasoGenerando(null);
     }
@@ -1334,7 +1408,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
 
   const renderEntorno = (e: AmenazaOportunidad, o: Objetivo) => {
     const isExpanded = expanded[e.id] === true;
-    const fdsDeE = fds.filter((f) => f.entornoId === e.id);
+    const fdsDeE = fds.filter((f) => f.entornoIds.indexOf(e.id) !== -1);
     return (
       <div key={e.id} className="mb-3 rounded-lg border border-slate-300 bg-slate-50 p-3">
         <div className="grid gap-2 sm:grid-cols-2">
@@ -1404,7 +1478,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
 
   const renderObjetivo = (o: Objetivo) => {
     const isExpanded = expanded[o.id] === true;
-    const entornosDeO = entornos.filter((e) => e.objetivoId === o.id);
+    const entornosDeO = entornos.filter((e) => e.objetivoIds.indexOf(o.id) !== -1);
     return (
       <div key={o.id} className="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="grid gap-2">

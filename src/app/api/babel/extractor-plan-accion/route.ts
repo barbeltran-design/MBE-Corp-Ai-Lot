@@ -8,10 +8,13 @@ import { BUENAS_PRACTICAS } from '@/lib/buenas-practicas';
 //
 //   paso 'entornos' : Detecta Amenazas y Oportunidades para cada objetivo
 //                     (secciones 1.2, 1.4, 2.1, 2.2, 2.3 y 4.1 de la
-//                     reflexion estrategica).
+//                     reflexion estrategica). Una amenaza/oportunidad puede
+//                     impactar a VARIOS objetivos (respuesta con objetivoIds).
 //   paso 'fds'      : Sugiere Fortalezas y Debilidades por Amenaza/
 //                     Oportunidad (secciones 1.1, 1.3, 3.1, 3.2, 3.3 y 4.2)
-//                     + debilidades de los niveles bajos de madurez.
+//                     + debilidades de los niveles bajos de madurez. Una
+//                     fortaleza/debilidad puede ligarse a VARIAS
+//                     amenazas/oportunidades (respuesta con entornoIds).
 //   paso 'acciones' : Sugiere Acciones para blindar Fortalezas y mejorar
 //                     Debilidades (fases + siguientes pasos de madurez +
 //                     catalogo estatico de Buenas Practicas con Tema,
@@ -80,12 +83,15 @@ function buildSystemPrompt(paso: PlanPaso, language: PlanLang): string {
         'directly affects (for example: a threat that raises the cost of a key input, closes a channel or changes a ' +
         'regulation that the objective depends on; an opportunity that opens a new market, funding, partnership or ' +
         'efficiency gain that the objective can capture).\n\n' +
-        'Assignment rule: use the EXACT id of the objective you are working on for each of its Threats/Opportunities ' +
-        '(never invent ids, never leave the id empty, never relate an item to a different objective). Cover as many ' +
-        'objectives as possible: try to produce at least one Threat or Opportunity for every objective in the list.\n\n' +
+        'Assignment rule: use the EXACT ids of the objectives the item affects. A SINGLE threat or opportunity MAY ' +
+        'impact SEVERAL objectives (for example, a new regulation, a market change or an available funding call can ' +
+        'affect more than one objective): in that case include ALL their ids in "objetivoIds" and DO NOT split it into ' +
+        'repeated items. If it only impacts one objective, include only that id. Never invent ids, never leave the ' +
+        'list empty. Cover as many objectives as possible: try to produce at least one Threat or Opportunity for every ' +
+        'objective in the list.\n\n' +
         'Respond with ONLY a raw JSON array (no markdown fences, no prose before or after), between 3 and 12 items, ' +
         'where each item has EXACTLY this shape:\n' +
-        '{"objetivoId":"one of the given ids, the objective this item directly affects","tipo":"amenaza or oportunidad","descripcion":"one concrete, actionable sentence, max 200 characters"}'
+        '{"objetivoIds":["one or more of the given ids, ALL the objectives this item impacts; at least 1"],"tipo":"amenaza or oportunidad","descripcion":"one concrete, actionable sentence, max 200 characters"}'
       );
     }
     if (paso === 'fds') {
@@ -97,10 +103,13 @@ function buildSystemPrompt(paso: PlanPaso, language: PlanLang): string {
         'Your task: for each Threat or Opportunity propose ONE Strength of the company to exploit it (if it is an ' +
         'opportunity) or to mitigate it (if it is a threat). Additionally, using the maturity weaknesses list (if provided), ' +
         'propose relevant additional Weaknesses. Ground every item in the given text.\n\n' +
-        'Each item must reference the EXACT id of the Threat/Opportunity it links to, its type ("fortaleza" for a strength ' +
-        'or "debilidad" for a weakness) and its description.\n\n' +
+        'Each item must reference the EXACT ids of the Threats/Opportunities it links to, its type ("fortaleza" for a ' +
+        'strength or "debilidad" for a weakness) and its description. A SINGLE strength or weakness MAY be linked to ' +
+        'SEVERAL threats/opportunities (for example, one company capability can mitigate two threats or exploit two ' +
+        'opportunities): in that case include ALL their ids in "entornoIds" and DO NOT split it into repeated items. ' +
+        'If it only links to one, include only that id. Never invent ids, never leave the list empty.\n\n' +
         'Respond with ONLY a raw JSON array (no markdown fences), between 3 and 12 items, where each item has EXACTLY this shape:\n' +
-        '{"entornoId":"exact id of the threat or opportunity","tipo":"fortaleza or debilidad","descripcion":"max 200 characters"}'
+        '{"entornoIds":["one or more exact ids of the threats or opportunities it links to; at least 1"],"tipo":"fortaleza or debilidad","descripcion":"max 200 characters"}'
       );
     }
     return (
@@ -130,13 +139,15 @@ function buildSystemPrompt(paso: PlanPaso, language: PlanLang): string {
       'cuyo logro afecta directamente (por ejemplo: una amenaza que encarece un insumo clave, cierra un canal o cambia ' +
       'una regulacion de la que depende el objetivo; una oportunidad que abre un nuevo mercado, fondeo, alianza o ' +
       'ahorro de eficiencia que el objetivo puede aprovechar).\n\n' +
-      'Regla de asignacion: usa el id EXACTO del objetivo que estas trabajando para cada una de sus Amenazas/' +
-      'Oportunidades (nunca inventes ids, nunca dejes el id vacio, nunca relaciones un elemento con otro objetivo). ' +
-      'Cubre la mayor cantidad de objetivos posible: procura al menos una Amenaza u Oportunidad por cada objetivo ' +
-      'de la lista.\n\n' +
+      'Regla de asignacion: usa los ids EXACTOS de los objetivos impactados. UNA MISMA amenaza u oportunidad PUEDE ' +
+      'impactar a VARIOS objetivos (por ejemplo, una regulacion nueva, un cambio de mercado o una convocatoria de ' +
+      'fondos disponible pueden afectar a mas de uno): en ese caso incluye TODOS sus ids en "objetivoIds" y NO la ' +
+      'dividas en elementos repetidos. Si solo impacta a uno, incluye unicamente su id. Nunca inventes ids, nunca ' +
+      'dejes la lista vacia. Cubre la mayor cantidad de objetivos posible: procura al menos una Amenaza u Oportunidad ' +
+      'por cada objetivo de la lista.\n\n' +
       'Responde UNICAMENTE con un arreglo JSON puro (sin marcadores de markdown, sin texto antes ni despues), entre 3 y 12 ' +
       'elementos, donde cada elemento tenga EXACTAMENTE esta forma:\n' +
-      '{"objetivoId":"uno de los ids dados, el objetivo que este elemento afecta directamente","tipo":"amenaza u oportunidad","descripcion":"una frase concreta y accionable, maximo 200 caracteres"}'
+      '{"objetivoIds":["uno o mas de los ids dados, TODOS los objetivos que este elemento impacta; minimo 1"],"tipo":"amenaza u oportunidad","descripcion":"una frase concreta y accionable, maximo 200 caracteres"}'
     );
   }
   if (paso === 'fds') {
@@ -148,11 +159,14 @@ function buildSystemPrompt(paso: PlanPaso, language: PlanLang): string {
       'Tu tarea: por cada Amenaza u Oportunidad propone UNA Fortaleza de la empresa para aprovecharla (si es oportunidad) ' +
       'o mitigarla (si es amenaza). Ademas, usando la lista de debilidades de madurez (si se proporciona), propone ' +
       'Debilidades adicionales relevantes. Sustenta cada elemento en el texto dado.\n\n' +
-      'Cada elemento debe referenciar el id EXACTO de la Amenaza/Oportunidad a la que se vincula, su tipo ("fortaleza" o ' +
-      '"debilidad") y su descripcion.\n\n' +
+      'Cada elemento debe referenciar los ids EXACTOS de las Amenazas/Oportunidades a las que se vincula, su tipo ' +
+      '("fortaleza" o "debilidad") y su descripcion. UNA MISMA fortaleza o debilidad PUEDE estar ligada a VARIAS ' +
+      'amenazas u oportunidades (por ejemplo, una misma capacidad de la empresa puede mitigar dos amenazas o ' +
+      'aprovechar dos oportunidades): en ese caso incluye TODOS sus ids en "entornoIds" y NO la dividas en elementos ' +
+      'repetidos. Si solo se vincula a una, incluye unicamente su id. Nunca inventes ids, nunca dejes la lista vacia.\n\n' +
       'Responde UNICAMENTE con un arreglo JSON puro (sin marcadores de markdown), entre 3 y 12 elementos, donde cada ' +
       'elemento tenga EXACTAMENTE esta forma:\n' +
-      '{"entornoId":"id exacto de la amenaza u oportunidad","tipo":"fortaleza o debilidad","descripcion":"maximo 200 caracteres"}'
+      '{"entornoIds":["uno o mas ids exactos de las amenazas u oportunidades a las que se vincula; minimo 1"],"tipo":"fortaleza o debilidad","descripcion":"maximo 200 caracteres"}'
     );
   }
   return (
