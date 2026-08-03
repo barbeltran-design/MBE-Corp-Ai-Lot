@@ -136,7 +136,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
       setFinStage(finStage - 1);
     }
   }
-  function handleFinGenerate() {
+  async function handleFinGenerate() {
     setFinSending(true);
     setFinError(null);
     try {
@@ -173,7 +173,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
       } catch (saveErr) {
         console.error(saveErr);
       }
-      downloadFinancialGoalsExcel(goalsInput);
+      await downloadFinancialGoalsExcel(goalsInput);
       setFinDone(true);
     } catch (err) {
       setFinError(err instanceof Error ? err.message : (lang === 'en' ? 'Error generating file' : 'Error al generar el archivo'));

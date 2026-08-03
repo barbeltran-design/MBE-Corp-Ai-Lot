@@ -1,5 +1,4 @@
 import jsPDF from 'jspdf';
-import * as XLSX from 'xlsx';
 
 // ==========================================================================
 // PDF DEL PLAN COMPILADO — presentación ejecutiva con iconos
@@ -471,28 +470,31 @@ function renderCompiledPlanPdf(params: DownloadCompiledPlanParams & { logo?: { d
   return doc;
 }
 
-export async function downloadCompiledPlanPdf(params: DownloadCompiledPlanParams): Promise<void> {
-  let logo: { dataUrl: string; w: number; h: number } | undefined;
+async function loadLogoDataUrl(): Promise<string | null> {
   try {
     const res = await fetch('/logo-mbe.png');
-    if (res.ok) {
-      const blob = await res.blob();
-      const dataUrl = await new Promise<string | undefined>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : undefined);
-        reader.onerror = () => resolve(undefined);
-        reader.readAsDataURL(blob);
-      });
-      if (dataUrl) {
-        const dims = await logoDimensions(dataUrl);
-        if (dims.w > 0 && dims.h > 0) {
-          const logoW = 56;
-          logo = { dataUrl, w: logoW, h: Math.max(8, Math.round((logoW * dims.h) / dims.w)) };
-        }
-      }
-    }
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await new Promise<string | null>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : null);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
   } catch {
-    // sin logo, sin problema
+    return null;
+  }
+}
+
+export async function downloadCompiledPlanPdf(params: DownloadCompiledPlanParams): Promise<void> {
+  let logo: { dataUrl: string; w: number; h: number } | undefined;
+  const logoDataUrl = await loadLogoDataUrl();
+  if (logoDataUrl) {
+    const dims = await logoDimensions(logoDataUrl);
+    if (dims.w > 0 && dims.h > 0) {
+      const logoW = 56;
+      logo = { dataUrl: logoDataUrl, w: logoW, h: Math.max(8, Math.round((logoW * dims.h) / dims.w)) };
+    }
   }
   const doc = renderCompiledPlanPdf({ ...params, logo });
   const fileName =
@@ -501,14 +503,8 @@ export async function downloadCompiledPlanPdf(params: DownloadCompiledPlanParams
 }
 
 // ==========================================================================
-// HELPERS COMPARTIDOS PARA EXCEL (SheetJS)
+// HELPERS COMPARTIDOS PARA EXCEL
 // ==========================================================================
-
-type Row = (string | number)[];
-
-function row(...items: Row): Row {
-  return items;
-}
 
 function colLetter(n: number): string {
   let s = '';
@@ -519,18 +515,6 @@ function colLetter(n: number): string {
     num = Math.floor((num - 1) / 26);
   }
   return s;
-}
-
-function patchCell(ws: any, addr: string, patch: { f?: string; z?: string }): void {
-  if (!ws[addr]) {
-    ws[addr] = { t: 'n', v: 0 };
-  }
-  if (patch.f !== undefined) {
-    ws[addr].f = patch.f;
-  }
-  if (patch.z !== undefined) {
-    ws[addr].z = patch.z;
-  }
 }
 
 // ==========================================================================
@@ -685,7 +669,10 @@ export function computeFinancialGoals(input: FinancialGoalsInput): FinancialGoal
 // OBJETIVOS FINANCIEROS: EXCEL DE 2 PESTAÑAS
 // ==========================================================================
 
-export function downloadFinancialGoalsExcel(input: FinancialGoalsInput): void {
+export async function downloadFinancialGoalsExcel(input: FinancialGoalsInput): Promise<void> {
+  const exjsMod: any = await import('exceljs/dist/exceljs.min.js' as any);
+  const ExcelJS = exjsMod.default ?? exjsMod;
+  const logoDataUrl = await loadLogoDataUrl();
   const lang = input.language;
   const result = computeFinancialGoals(input);
 
@@ -695,6 +682,9 @@ export function downloadFinancialGoalsExcel(input: FinancialGoalsInput): void {
           sheet1: 'Break-even Goals',
           sheet2: '12-Month Projection',
           title1: 'Break-even Goals',
+          docBy: 'Executive document generated with MBE Corpilot AI',
+          businessData: 'Business Data',
+          breakEvenSection: 'Break-even',
           unitPrice: 'Unit Price',
           materialsPct: '% Materials',
           laborPct: '% Labor',
@@ -738,6 +728,9 @@ export function downloadFinancialGoalsExcel(input: FinancialGoalsInput): void {
           sheet1: 'Metas al Punto de Equilibrio',
           sheet2: 'Proyeccion 12 Meses',
           title1: 'Metas al Punto de Equilibrio',
+          docBy: 'Documento ejecutivo generado con MBE Corpilot AI',
+          businessData: 'Datos de tu Negocio',
+          breakEvenSection: 'Punto de Equilibrio',
           unitPrice: 'Precio Unitario',
           materialsPct: '% Materiales',
           laborPct: '% Personal',
@@ -779,106 +772,197 @@ export function downloadFinancialGoalsExcel(input: FinancialGoalsInput): void {
         };
 
   // -------------------- HOJA 1: Metas al Punto de Equilibrio --------------------
-  const rows1: Row[] = [];
-  function pushRow1(r: Row): number {
-    rows1.push(r);
-    return rows1.length;
+  const ARGB_TEAL = 'FF32BAD0';
+  const ARGB_INK = 'FF221F1F';
+  const ARGB_SLATE = 'FF7F8184';
+  const ARGB_LIGHT = 'FFE1F6FA';
+  const ARGB_WHITE = 'FFFFFFFF';
+  const ARGB_LINE = 'FFC9D1D9';
+  const ARGB_GREEN = 'FF16A34A';
+  const ARGB_RED = 'FFDC2626';
+  const ARGB_AMBER = 'FFB45309';
+  const ARGB_EDITABLE = 'FFFFF3CD';
+
+  function borderAll() {
+    return {
+      top: { style: 'thin', color: { argb: ARGB_LINE } },
+      left: { style: 'thin', color: { argb: ARGB_LINE } },
+      bottom: { style: 'thin', color: { argb: ARGB_LINE } },
+      right: { style: 'thin', color: { argb: ARGB_LINE } },
+    };
+  }
+  function nextRow(ws: any, values: (string | number)[] = []): number {
+    return ws.addRow(values).number;
+  }
+  function sectionHeader(ws: any, text: string, cols: number): number {
+    const r = nextRow(ws, [text]);
+    ws.mergeCells(r, 1, r, cols);
+    const c = ws.getCell(r, 1);
+    c.font = { name: 'Calibri', size: 11, bold: true, color: { argb: ARGB_WHITE } };
+    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ARGB_TEAL } };
+    c.alignment = { vertical: 'middle', horizontal: 'left' };
+    ws.getRow(r).height = 20;
+    return r;
+  }
+  function dataRow(ws: any, label: string, value: number, opts?: { fmt?: string; f?: string; result?: number; bold?: boolean; fill?: string }): number {
+    const r = nextRow(ws, [label, value]);
+    const lc = ws.getCell(r, 1);
+    lc.font = { name: 'Calibri', size: 11, bold: true, color: { argb: ARGB_INK } };
+    lc.alignment = { vertical: 'middle', horizontal: 'left' };
+    lc.border = borderAll();
+    const vc = ws.getCell(r, 2);
+    vc.border = borderAll();
+    if (opts?.f !== undefined) {
+      vc.value = { formula: opts.f, result: opts.result ?? value };
+    } else {
+      vc.value = value;
+    }
+    vc.alignment = { vertical: 'middle', horizontal: 'right' };
+    vc.font = { name: 'Calibri', size: 11, bold: !!opts?.bold, color: { argb: ARGB_INK } };
+    if (opts?.fmt) vc.numFmt = opts.fmt;
+    if (opts?.fill) vc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: opts.fill } };
+    return r;
   }
 
-  pushRow1(row(L.title1));
-  pushRow1([]);
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'MBE Corpilot AI';
+  wb.created = new Date();
 
-  pushRow1(row(L.unitPrice, input.unitPrice));
-  pushRow1(row(L.materialsPct, input.materialsPct));
-  pushRow1(row(L.laborPct, input.laborPct));
-  pushRow1(row(L.otherPct, input.otherVarPct));
-  const totalVarPctRowNum = pushRow1(row(L.totalVarPct, result.totalVariablePctWithMarketing));
-  pushRow1([]);
+  const ws1 = wb.addWorksheet(L.sheet1, { views: [{ showGridLines: false }] });
+  ws1.columns = [{ width: 36 }, { width: 18 }, { width: 18 }, { width: 18 }];
 
-  pushRow1(row(L.fixedCostsHeader));
+  let logoId: number | null = null;
+  if (logoDataUrl) {
+    logoId = wb.addImage({ base64: logoDataUrl.split(',')[1], extension: 'png' });
+    ws1.addImage(logoId, { tl: { col: 0, row: 0 }, ext: { width: 130, height: 71 } });
+    for (let i = 1; i <= 4; i++) ws1.getRow(i).height = 18;
+  }
+
+  const titleRow1 = nextRow(ws1, [L.title1]);
+  ws1.mergeCells(titleRow1, 1, titleRow1, 4);
+  ws1.getCell(titleRow1, 1).font = { name: 'Calibri', size: 15, bold: true, color: { argb: ARGB_INK } };
+  const subRow1 = nextRow(ws1, [L.docBy]);
+  ws1.mergeCells(subRow1, 1, subRow1, 4);
+  ws1.getCell(subRow1, 1).font = { name: 'Calibri', size: 10, color: { argb: ARGB_SLATE } };
+  nextRow(ws1);
+
+  sectionHeader(ws1, L.businessData, 4);
+  dataRow(ws1, L.unitPrice, input.unitPrice, { fmt: '#,##0.00' });
+  const totalVarPctRowNum = dataRow(ws1, L.totalVarPct, result.totalVariablePctWithMarketing, { fmt: '0.0%' });
+  const desiredProfitRowNum = dataRow(ws1, L.desiredProfit, input.desiredProfit, { fmt: '#,##0.00' });
+
+  sectionHeader(ws1, L.fixedCostsHeader, 4);
   let fixedStartRow = 0;
   let fixedEndRow = 0;
   if (input.fixedItems.length > 0) {
-    pushRow1(row(L.item, L.amount));
-    fixedStartRow = rows1.length + 1;
-    for (const f of input.fixedItems) {
-      pushRow1(row(f.name, f.amount));
+    const hdr = nextRow(ws1, [L.item, L.amount]);
+    for (let cc = 1; cc <= 2; cc++) {
+      const c = ws1.getCell(hdr, cc);
+      c.font = { name: 'Calibri', size: 11, bold: true, color: { argb: ARGB_INK } };
+      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ARGB_LIGHT } };
+      c.border = borderAll();
+      c.alignment = { vertical: 'middle', horizontal: cc === 1 ? 'left' : 'right' };
     }
-    fixedEndRow = rows1.length;
+    fixedStartRow = hdr + 1;
+    for (const f of input.fixedItems) {
+      const r = nextRow(ws1, [f.name, f.amount]);
+      const lc = ws1.getCell(r, 1);
+      lc.font = { name: 'Calibri', size: 11, color: { argb: ARGB_INK } };
+      lc.border = borderAll();
+      lc.alignment = { vertical: 'middle', horizontal: 'left' };
+      const vc = ws1.getCell(r, 2);
+      vc.font = { name: 'Calibri', size: 11, color: { argb: ARGB_INK } };
+      vc.border = borderAll();
+      vc.numFmt = '#,##0.00';
+      vc.alignment = { vertical: 'middle', horizontal: 'right' };
+    }
+    fixedEndRow = fixedStartRow + input.fixedItems.length - 1;
   }
-  const fixedTotalRowNum = pushRow1(row(L.fixedTotal, result.fixedTotal));
-  pushRow1([]);
+  const fixedTotalRowNum = dataRow(ws1, L.fixedTotal, result.fixedTotal, {
+    f: input.fixedItems.length > 0 ? 'SUM(B' + fixedStartRow + ':B' + fixedEndRow + ')' : undefined,
+    result: result.fixedTotal,
+    fmt: '#,##0.00',
+    bold: true,
+    fill: ARGB_LIGHT,
+  });
 
-  const desiredProfitRowNum = pushRow1(row(L.desiredProfit, input.desiredProfit));
-  const breakEvenRowNum = pushRow1(row(L.breakEven, result.breakEvenWithMarketing));
-  const targetRevenueRowNum = pushRow1(row(L.targetRevenue, result.targetRevenueWithMarketing));
-  pushRow1([]);
+  sectionHeader(ws1, L.breakEvenSection, 4);
+  const breakEvenRowNum = dataRow(ws1, L.breakEven, result.breakEvenWithMarketing, {
+    f: '(B' + fixedTotalRowNum + ')/(1-B' + totalVarPctRowNum + ')',
+    result: result.breakEvenWithMarketing,
+    fmt: '#,##0.00',
+    fill: ARGB_LIGHT,
+  });
+  const targetRevenueRowNum = dataRow(ws1, L.targetRevenue, result.targetRevenueWithMarketing, {
+    f: '(B' + fixedTotalRowNum + '+B' + desiredProfitRowNum + ')/(1-B' + totalVarPctRowNum + ')',
+    result: result.targetRevenueWithMarketing,
+    fmt: '#,##0.00',
+    bold: true,
+    fill: ARGB_LIGHT,
+  });
 
-  pushRow1(row(L.channelsHeader));
-  pushRow1(row(L.channel, L.channelPct, L.atBreakEven, L.atTarget));
-  const channelDataStartRow = rows1.length + 1;
-  for (const ch of input.channels) {
-    pushRow1(
-      row(ch.name, ch.pct, result.breakEvenWithMarketing * ch.pct, result.targetRevenueWithMarketing * ch.pct)
-    );
+  sectionHeader(ws1, L.channelsHeader, 4);
+  const chHdr = nextRow(ws1, [L.channel, L.channelPct, L.atBreakEven, L.atTarget]);
+  for (let cc = 1; cc <= 4; cc++) {
+    const c = ws1.getCell(chHdr, cc);
+    c.font = { name: 'Calibri', size: 11, bold: true, color: { argb: ARGB_WHITE } };
+    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ARGB_TEAL } };
+    c.border = borderAll();
+    c.alignment = { vertical: 'middle', horizontal: cc === 1 ? 'left' : 'right' };
   }
-  pushRow1([]);
+  for (let i = 0; i < input.channels.length; i++) {
+    const ch = input.channels[i];
+    const r = nextRow(ws1, [ch.name]);
+    const lc = ws1.getCell(r, 1);
+    lc.font = { name: 'Calibri', size: 11, bold: true, color: { argb: ARGB_INK } };
+    lc.border = borderAll();
+    lc.alignment = { vertical: 'middle', horizontal: 'left' };
+    const bp = ws1.getCell(r, 2);
+    bp.border = borderAll();
+    bp.numFmt = '0.0%';
+    bp.alignment = { vertical: 'middle', horizontal: 'right' };
+    const bc = ws1.getCell(r, 3);
+    bc.border = borderAll();
+    bc.value = { formula: 'B' + breakEvenRowNum + '*B' + r, result: result.breakEvenWithMarketing * ch.pct };
+    bc.numFmt = '#,##0.00';
+    bc.alignment = { vertical: 'middle', horizontal: 'right' };
+    const tc = ws1.getCell(r, 4);
+    tc.border = borderAll();
+    tc.value = { formula: 'B' + targetRevenueRowNum + '*B' + r, result: result.targetRevenueWithMarketing * ch.pct };
+    tc.numFmt = '#,##0.00';
+    tc.alignment = { vertical: 'middle', horizontal: 'right' };
+  }
 
-  pushRow1(row(L.marketingHeader));
-  const marketingPctRowNum = pushRow1(row(L.marketingPct, input.marketingPct));
-  const expectedGrowthRowNum = pushRow1(row(L.expectedGrowth, result.expectedGrowthRate));
-  const requiredGrowthRowNum = pushRow1(row(L.requiredGrowth, result.requiredGrowthRate));
-  pushRow1(row(L.sufficient, result.isSufficient ? L.yes : L.no));
+  sectionHeader(ws1, L.marketingHeader, 4);
+  dataRow(ws1, L.marketingPct, input.marketingPct, { fmt: '0.0%' });
+  dataRow(ws1, L.expectedGrowth, result.expectedGrowthRate, { fmt: '0.0%' });
+  dataRow(ws1, L.requiredGrowth, result.requiredGrowthRate, { fmt: '0.0%' });
+  const suffRow = nextRow(ws1, [L.sufficient, result.isSufficient ? L.yes : L.no]);
+  const sL = ws1.getCell(suffRow, 1);
+  sL.font = { name: 'Calibri', size: 11, bold: true, color: { argb: ARGB_INK } };
+  sL.border = borderAll();
+  sL.alignment = { vertical: 'middle', horizontal: 'left' };
+  const sV = ws1.getCell(suffRow, 2);
+  sV.border = borderAll();
+  sV.alignment = { vertical: 'middle', horizontal: 'right' };
+  sV.font = { name: 'Calibri', size: 11, bold: true, color: { argb: result.isSufficient ? ARGB_GREEN : ARGB_RED } };
   if (!result.isSufficient) {
     const recoText =
       result.recommendedMarketingPct !== null
         ? (result.recommendedMarketingPct * 100).toFixed(0) + '%'
         : L.recommendationNone;
-    pushRow1(row(L.recommendation, recoText));
+    const recRow = nextRow(ws1, [L.recommendation]);
+    const rL = ws1.getCell(recRow, 1);
+    rL.font = { name: 'Calibri', size: 11, bold: true, color: { argb: ARGB_INK } };
+    rL.border = borderAll();
+    rL.alignment = { vertical: 'middle', horizontal: 'left' };
+    ws1.mergeCells(recRow, 2, recRow, 4);
+    const rV = ws1.getCell(recRow, 2);
+    rV.value = recoText;
+    rV.border = borderAll();
+    rV.font = { name: 'Calibri', size: 11, color: { argb: ARGB_AMBER } };
+    rV.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
   }
-
-  const ws1: any = XLSX.utils.aoa_to_sheet(rows1);
-
-  patchCell(ws1, 'B3', { z: '#,##0.00' });
-  patchCell(ws1, 'B4', { z: '0.0%' });
-  patchCell(ws1, 'B5', { z: '0.0%' });
-  patchCell(ws1, 'B6', { z: '0.0%' });
-  patchCell(ws1, 'B' + totalVarPctRowNum, { z: '0.0%' });
-
-  if (fixedEndRow >= fixedStartRow && fixedStartRow > 0) {
-    patchCell(ws1, 'B' + fixedTotalRowNum, {
-      f: 'SUM(B' + fixedStartRow + ':B' + fixedEndRow + ')',
-      z: '#,##0.00',
-    });
-    for (let r = fixedStartRow; r <= fixedEndRow; r++) {
-      patchCell(ws1, 'B' + r, { z: '#,##0.00' });
-    }
-  } else {
-    patchCell(ws1, 'B' + fixedTotalRowNum, { z: '#,##0.00' });
-  }
-
-  patchCell(ws1, 'B' + desiredProfitRowNum, { z: '#,##0.00' });
-  patchCell(ws1, 'B' + breakEvenRowNum, {
-    f: '(B' + fixedTotalRowNum + ')/(1-B' + totalVarPctRowNum + ')',
-    z: '#,##0.00',
-  });
-  patchCell(ws1, 'B' + targetRevenueRowNum, {
-    f: '(B' + fixedTotalRowNum + '+B' + desiredProfitRowNum + ')/(1-B' + totalVarPctRowNum + ')',
-    z: '#,##0.00',
-  });
-
-  for (let i = 0; i < input.channels.length; i++) {
-    const r = channelDataStartRow + i;
-    patchCell(ws1, 'B' + r, { z: '0.0%' });
-    patchCell(ws1, 'C' + r, { f: 'B' + breakEvenRowNum + '*B' + r, z: '#,##0.00' });
-    patchCell(ws1, 'D' + r, { f: 'B' + targetRevenueRowNum + '*B' + r, z: '#,##0.00' });
-  }
-
-  patchCell(ws1, 'B' + marketingPctRowNum, { z: '0.0%' });
-  patchCell(ws1, 'B' + expectedGrowthRowNum, { z: '0.0%' });
-  patchCell(ws1, 'B' + requiredGrowthRowNum, { z: '0.0%' });
-
-  ws1['!cols'] = [{ wch: 34 }, { wch: 18 }, { wch: 18 }, { wch: 18 }];
 
   // -------------------- HOJA 2: Proyeccion 12 Meses --------------------
   const monthCount = 12;
@@ -917,82 +1001,119 @@ export function downloadFinancialGoalsExcel(input: FinancialGoalsInput): void {
     prevRevenue = monthRevenue;
   }
 
-  const rows2: Row[] = [];
-  function pushRow2(r: Row): number {
-    rows2.push(r);
-    return rows2.length;
+  const ws2 = wb.addWorksheet(L.sheet2, { views: [{ showGridLines: false }] });
+  const cols2: { width: number }[] = [{ width: 30 }];
+  for (let m = 0; m < monthCount; m++) cols2.push({ width: 13 });
+  ws2.columns = cols2;
+
+  if (logoId !== null) {
+    ws2.addImage(logoId, { tl: { col: 0, row: 0 }, ext: { width: 110, height: 60 } });
+    for (let i = 1; i <= 4; i++) ws2.getRow(i).height = 15;
   }
 
-  pushRow2(row(L.growthAssumption));
-  const growthRateRowNum = pushRow2(row(L.growthLabel, result.expectedGrowthRate));
-  const requiredNoteRowNum = pushRow2(row(L.requiredNote, result.requiredGrowthRate));
-  const varPctRowNum2 = pushRow2(row(L.totalVarPct, result.totalVariablePct));
-  const mktPctRowNum2 = pushRow2(row(L.marketingPct, input.marketingPct));
-  pushRow2(row(L.growthNote));
-  pushRow2([]);
+  const titleRow2 = nextRow(ws2, [L.sheet2]);
+  ws2.mergeCells(titleRow2, 1, titleRow2, 13);
+  ws2.getCell(titleRow2, 1).font = { name: 'Calibri', size: 15, bold: true, color: { argb: ARGB_INK } };
+  const subRow2 = nextRow(ws2, [L.docBy]);
+  ws2.mergeCells(subRow2, 1, subRow2, 13);
+  ws2.getCell(subRow2, 1).font = { name: 'Calibri', size: 10, color: { argb: ARGB_SLATE } };
+  nextRow(ws2);
 
-  pushRow2(row(L.item, ...monthHeaders));
-  const revenueRowNum = pushRow2(row(L.totalIncome, ...revenueVals));
-  const variableRowNum = pushRow2(row(L.variableCosts, ...variableVals));
-  const marketingRowNum = pushRow2(row(L.marketingRow, ...marketingVals));
-  const fixedRowNum = pushRow2(row(L.fixedCostsRow, ...fixedVals));
-  const costRowNum = pushRow2(row(L.totalCost, ...costVals));
-  const profitRowNum2 = pushRow2(row(L.monthlyProfit, ...profitVals));
-  const accumRowNum = pushRow2(row(L.accumulatedProfit, ...accumVals));
+  sectionHeader(ws2, L.growthAssumption, 13);
+  const growthRateRowNum = dataRow(ws2, L.growthLabel, result.expectedGrowthRate, { fmt: '0.0%', fill: ARGB_EDITABLE });
+  const requiredNoteRowNum = dataRow(ws2, L.requiredNote, result.requiredGrowthRate, { fmt: '0.0%' });
+  const varPctRowNum2 = dataRow(ws2, L.totalVarPct, result.totalVariablePct, { fmt: '0.0%' });
+  const mktPctRowNum2 = dataRow(ws2, L.marketingPct, input.marketingPct, { fmt: '0.0%' });
+  const noteRow = nextRow(ws2, [L.growthNote]);
+  ws2.mergeCells(noteRow, 1, noteRow, 13);
+  const noteCell = ws2.getCell(noteRow, 1);
+  noteCell.font = { name: 'Calibri', size: 9, italic: true, color: { argb: ARGB_SLATE } };
+  nextRow(ws2);
 
-  const ws2: any = XLSX.utils.aoa_to_sheet(rows2);
-  patchCell(ws2, 'B' + growthRateRowNum, { z: '0.0%' });
-  patchCell(ws2, 'B' + requiredNoteRowNum, { z: '0.0%' });
-  patchCell(ws2, 'B' + varPctRowNum2, { z: '0.0%' });
-  patchCell(ws2, 'B' + mktPctRowNum2, { z: '0.0%' });
+  const tableHeaderRow = nextRow(ws2, [L.item, ...monthHeaders]);
+  for (let cc = 1; cc <= 13; cc++) {
+    const c = ws2.getCell(tableHeaderRow, cc);
+    c.font = { name: 'Calibri', size: 10, bold: true, color: { argb: ARGB_WHITE } };
+    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ARGB_TEAL } };
+    c.border = borderAll();
+    c.alignment = { vertical: 'middle', horizontal: cc === 1 ? 'left' : 'center' };
+  }
+  ws2.getRow(tableHeaderRow).height = 18;
+
+  function tableDataRow(label: string, values: number[], opts?: { bold?: boolean; fill?: string }): number {
+    const r = nextRow(ws2, [label, ...values]);
+    const lc = ws2.getCell(r, 1);
+    lc.font = { name: 'Calibri', size: 11, bold: true, color: { argb: ARGB_INK } };
+    lc.border = borderAll();
+    lc.alignment = { vertical: 'middle', horizontal: 'left' };
+    for (let m = 1; m <= monthCount; m++) {
+      const c = ws2.getCell(r, m + 1);
+      c.font = { name: 'Calibri', size: 11, bold: !!opts?.bold, color: { argb: ARGB_INK } };
+      c.border = borderAll();
+      c.numFmt = '#,##0.00';
+      c.alignment = { vertical: 'middle', horizontal: 'right' };
+      if (opts?.fill) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: opts.fill } };
+    }
+    return r;
+  }
+
+  const revenueRowNum = tableDataRow(L.totalIncome, revenueVals);
+  const variableRowNum = tableDataRow(L.variableCosts, variableVals);
+  const marketingRowNum = tableDataRow(L.marketingRow, marketingVals);
+  const fixedRowNum = tableDataRow(L.fixedCostsRow, fixedVals);
+  const costRowNum = tableDataRow(L.totalCost, costVals);
+  const profitRowNum2 = tableDataRow(L.monthlyProfit, profitVals, { bold: true });
+  const accumRowNum = tableDataRow(L.accumulatedProfit, accumVals, { bold: true, fill: ARGB_LIGHT });
 
   for (let m = 1; m <= monthCount; m++) {
     const col = colLetter(m + 1);
     const prevCol = colLetter(m);
-
     if (m === 1) {
-      patchCell(ws2, col + revenueRowNum, { z: '#,##0.00' });
+      ws2.getCell(revenueRowNum, m + 1).value = revenueVals[0];
     } else {
-      patchCell(ws2, col + revenueRowNum, {
-        f: prevCol + revenueRowNum + '*(1+$B$' + growthRateRowNum + ')',
-        z: '#,##0.00',
-      });
+      ws2.getCell(revenueRowNum, m + 1).value = {
+        formula: prevCol + revenueRowNum + '*(1+$B$' + growthRateRowNum + ')',
+        result: revenueVals[m - 1],
+      };
     }
-    patchCell(ws2, col + variableRowNum, {
-      f: col + revenueRowNum + '*$B$' + varPctRowNum2,
-      z: '#,##0.00',
-    });
-    patchCell(ws2, col + marketingRowNum, {
-      f: col + revenueRowNum + '*$B$' + mktPctRowNum2,
-      z: '#,##0.00',
-    });
-    patchCell(ws2, col + fixedRowNum, { z: '#,##0.00' });
-    patchCell(ws2, col + costRowNum, {
-      f: col + variableRowNum + '+' + col + marketingRowNum + '+' + col + fixedRowNum,
-      z: '#,##0.00',
-    });
-    patchCell(ws2, col + profitRowNum2, {
-      f: col + revenueRowNum + '-' + col + costRowNum,
-      z: '#,##0.00',
-    });
-    if (m === 1) {
-      patchCell(ws2, col + accumRowNum, { f: col + profitRowNum2, z: '#,##0.00' });
-    } else {
-      patchCell(ws2, col + accumRowNum, {
-        f: prevCol + accumRowNum + '+' + col + profitRowNum2,
-        z: '#,##0.00',
-      });
-    }
+    ws2.getCell(variableRowNum, m + 1).value = {
+      formula: col + revenueRowNum + '*$B$' + varPctRowNum2,
+      result: variableVals[m - 1],
+    };
+    ws2.getCell(marketingRowNum, m + 1).value = {
+      formula: col + revenueRowNum + '*$B$' + mktPctRowNum2,
+      result: marketingVals[m - 1],
+    };
+    ws2.getCell(costRowNum, m + 1).value = {
+      formula: col + variableRowNum + '+' + col + marketingRowNum + '+' + col + fixedRowNum,
+      result: costVals[m - 1],
+    };
+    ws2.getCell(profitRowNum2, m + 1).value = {
+      formula: col + revenueRowNum + '-' + col + costRowNum,
+      result: profitVals[m - 1],
+    };
+    ws2.getCell(accumRowNum, m + 1).value = {
+      formula: m === 1 ? col + profitRowNum2 : prevCol + accumRowNum + '+' + col + profitRowNum2,
+      result: accumVals[m - 1],
+    };
   }
 
-  const cols2: { wch: number }[] = [{ wch: 26 }];
-  for (let m = 0; m < monthCount; m++) cols2.push({ wch: 13 });
-  ws2['!cols'] = cols2;
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws1, L.sheet1);
-  XLSX.utils.book_append_sheet(wb, ws2, L.sheet2);
+  ws2.views = [{ state: 'frozen', xSplit: 1, ySplit: tableHeaderRow - 1, showGridLines: false }];
 
   const fileName = lang === 'en' ? 'break-even-goals.xlsx' : 'metas-punto-equilibrio.xlsx';
-  XLSX.writeFile(wb, fileName);
+
+  const wbBuffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([wbBuffer as any], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.setTimeout(function () {
+    URL.revokeObjectURL(url);
+  }, 10000);
 }
