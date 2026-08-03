@@ -351,7 +351,7 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
     return t('Plan gratuito', 'Free plan');
   })();
 
-  const fmtMoney = (v: number | undefined) => '$' + (v ?? 0).toLocaleString(locale, { maximumFractionDigits: 0 });
+  const fmtMoney = (v: number | undefined) => '$' + (v ?? 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
   const finGoalsDateLabel = finGoals
     ? (() => {
         try {
@@ -473,7 +473,7 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
               />
               <MetricCard
                 label={t('% Costos variables', '% Variable costs')}
-                value={((finGoals.result.totalVariablePctWithMarketing ?? 0) * 100).toFixed(1)}
+                value={((finGoals.result.totalVariablePctWithMarketing ?? 0) * 100).toFixed(1).replace('.', ',')}
                 unit="%"
                 icon={TrendingUp}
                 variant="default"
