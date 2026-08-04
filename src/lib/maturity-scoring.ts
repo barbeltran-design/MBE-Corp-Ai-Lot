@@ -62,7 +62,7 @@ export interface DimensionResult {
   score: number; // 0-120
   level: MaturityLevel;
   superados: MaturityLevel[]; // niveles con respuesta "Sí" (columna Q) — traducir con common.maturityLevel
-  enProgreso: MaturityLevel[]; // "Parcialmente" (columna R)
+  enProgreso: { levelKey: MaturityLevel; description: string; deliverable: string }[]; // "Parcialmente" (columna R), con el texto REAL del tema (las claves de nivel se repiten entre temas)
   pendientes: MaturityLevel[]; // "No" (columna S)
   // Próximo paso recomendado: el primer nivel (en orden Ejecución->Influencer)
   // que NO quedó en "Sí". null si el tema ya está al máximo (los 6 niveles en "Sí").
@@ -81,7 +81,7 @@ export function computeResults(dimensions: MaturityDimensionDef[], answers: Dime
     const dimAnswers = answers[dim.id];
     const score = dimensionScore(dim, dimAnswers);
     const superados: MaturityLevel[] = [];
-    const enProgreso: MaturityLevel[] = [];
+    const enProgreso: { levelKey: MaturityLevel; description: string; deliverable: string }[] = [];
     const pendientes: MaturityLevel[] = [];
     let nextStep: DimensionResult['nextStep'] = null;
 
@@ -90,8 +90,11 @@ export function computeResults(dimensions: MaturityDimensionDef[], answers: Dime
       if (a === 'yes') {
         superados.push(level.key);
       } else {
-        if (a === 'partial') enProgreso.push(level.key);
-        else pendientes.push(level.key);
+        if (a === 'partial') {
+          enProgreso.push({ levelKey: level.key, description: level.description, deliverable: level.deliverable });
+        } else {
+          pendientes.push(level.key);
+        }
         if (!nextStep) {
           nextStep = { levelKey: level.key, description: level.description, deliverable: level.deliverable };
         }

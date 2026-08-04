@@ -72,18 +72,6 @@ function DashboardPageInner() {
 
   const dimensions = React.useMemo(() => getMaturityDimensions(locale), [locale]);
 
-  // key del nivel (execution, standard, ...) -> definición con descripción y
-  // evidencia, para redactar los pasos parcialmente trabajados en la tabla.
-  const levelsByKey = React.useMemo(() => {
-    const map = new Map<string, { key: string; description: string; deliverable: string }>();
-    for (const dim of dimensions) {
-      for (const level of dim.levels) {
-        map.set(level.key, level);
-      }
-    }
-    return map;
-  }, [dimensions]);
-
   // ── Estado nuevo para Fase 5 ─────────────────────────────────────────
 
   React.useEffect(() => {
@@ -252,14 +240,11 @@ function DashboardPageInner() {
                   <td className="py-2 pr-4">{tLevel(d.level)}</td>
                   <td className="py-2 pr-4 text-slate-500">
                     {d.enProgreso.length > 0 ? (
-                      d.enProgreso.map((k, ki) => {
-                        const def = levelsByKey.get(k);
-                        return (
-                          <div key={k} className={ki > 0 ? 'mt-1.5' : undefined}>
-                            {def ? `${def.description} — ${def.deliverable}` : k}
-                          </div>
-                        );
-                      })
+                      d.enProgreso.map((p, ki) => (
+                        <div key={p.levelKey} className={ki > 0 ? 'mt-1.5' : undefined}>
+                          {`${p.description} — ${p.deliverable}`}
+                        </div>
+                      ))
                     ) : (
                       '—'
                     )}
