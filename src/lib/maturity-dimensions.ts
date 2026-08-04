@@ -27,17 +27,17 @@ export type DimensionId =
   | 'culture';
 
 export const DIMENSION_IDS: DimensionId[] = [
-  'strategic',
-  'finance',
-  'hr',
-  'sales',
-  'operations',
-  'esg',
-  'compliance',
-  'knowledge',
-  'alliances',
-  'customerService',
-  'culture',
+  'strategic', // 1. Rumbo Estratégico
+  'finance', // 2. Finanzas
+  'sales', // 3. Marketing y Ventas
+  'customerService', // 4. Atención al Cliente
+  'compliance', // 5. Cumplimiento Normativo
+  'operations', // 6. Operación
+  'knowledge', // 7. Conocimiento
+  'alliances', // 8. Alianzas
+  'esg', // 9. Enfoque SocioAmbiental Congruente
+  'hr', // 10. Capital Humano
+  'culture', // 11. Cultura Organizacional
 ];
 
 export interface MaturityLevelDef {
