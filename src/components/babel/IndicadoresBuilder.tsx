@@ -2,7 +2,6 @@
 import React from 'react';
 import { ChevronDown } from 'lucide-react';
 import FinancialGoalsBuilder from '@/components/babel/FinancialGoalsBuilder';
-import MaturityPlanBuilder from '@/components/babel/MaturityPlanBuilder';
 import BabelAvatar from '@/components/babel/BabelAvatar';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 
@@ -220,14 +219,12 @@ const PASOS_TOUR: Record<PlanLang, TourStep[]> = {
     { selector: '#indicadores-resumen', title: 'Resumen por perspectiva', description: 'Observa de un vistazo tus indicadores validados, pendientes y el conteo por cada perspectiva del Balanced Scorecard.' },
     { selector: '#indicadores-acciones', title: 'Generar con Babel', description: 'Babel propone indicadores con nombre, fórmula, objetivo, meta, unidad de medida y frecuencia. También puedes agregarlos manualmente.' },
     { selector: '#indicadores-lista', title: 'Secciones por perspectiva', description: 'Cada perspectiva se despliega en una sección colapsable. Valida cada indicador con la palomita y edítalo si lo necesitas.' },
-    { selector: '#madurez-plan-title', title: 'Plan de Madurez', description: 'Define acciones para mejorar la madurez de la organización: una práctica con cada agente por mes (en el orden de los temas de la evaluación) y decide semana a semana qué acción realizar.' },
   ],
   en: [
     { selector: '#indicadores-title', title: 'Strategic Objectives', description: 'Here you define the indicators that measure the achievement of your business objectives, grouped by BSC perspective.' },
     { selector: '#indicadores-resumen', title: 'Summary by perspective', description: 'See at a glance your validated indicators, pending ones and the count for each Balanced Scorecard perspective.' },
     { selector: '#indicadores-acciones', title: 'Generate with Babel', description: 'Babel proposes indicators with name, formula, objective, target, unit of measure and frequency. You can also add them manually.' },
     { selector: '#indicadores-lista', title: 'Sections by perspective', description: 'Each perspective unfolds into a collapsible section. Validate each indicator with the checkmark and edit it if needed.' },
-    { selector: '#madurez-plan-title', title: 'Maturity Plan', description: 'Define actions to improve the organization\'s maturity: one practice with each agent per month (following the assessment topic order) and decide week by week which action to take.' },
   ],
 };
 
@@ -613,10 +610,6 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
           })}
         </div>
       ) : null}
-
-      <div className="mt-10">
-        <MaturityPlanBuilder lang={lang} />
-      </div>
 
       <p className="mt-4 text-xs text-slate-400">{t.savedNote}</p>
       <PageTour pageId="indicadores" steps={lang === 'en' ? PASOS_TOUR.en : PASOS_TOUR.es} lang={lang} />

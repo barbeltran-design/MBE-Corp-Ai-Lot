@@ -2,6 +2,8 @@
 import * as React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
+import BabelAvatar from '@/components/babel/BabelAvatar';
+import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 import { getFirebaseAuth } from '@/lib/firebase';
 import { getLatestAssessmentAnswers } from '@/lib/assessment';
 import { DIMENSION_IDS, getMaturityDimensions, type DimensionId } from '@/lib/maturity-dimensions';
@@ -187,6 +189,23 @@ function weekKeyOf(monday: Date): string {
 function fmtDay(date: Date, lang: PlanLang): string {
   return date.getDate() + ' ' + MESES[lang][date.getMonth()];
 }
+
+const PASOS_TOUR: Record<PlanLang, TourStep[]> = {
+  es: [
+    { selector: '#madurez-plan-title', title: 'Mejora del Nivel de Madurez', description: 'Aquí defines las acciones para mejorar la madurez de tu organización: cada mes una práctica con cada agente, en el orden de los temas de la evaluación.' },
+    { selector: '#madurez-agentes', title: 'Siguiente práctica por agente', description: 'Cada agente (Babel, Fisnando, Karmetin, Normau y Atech) tiene asignada la siguiente práctica sugerida, partiendo del nivel más bajo no completado de tu evaluación.' },
+    { selector: '#madurez-mensual', title: 'Plan del mes', description: 'Cada mes se agenda una práctica con cada agente. Actualiza el estatus a Completada para avanzar automáticamente al siguiente nivel del tema.' },
+    { selector: '#madurez-temas', title: 'Prácticas por tema', description: 'El detalle de los 11 temas: la siguiente práctica a trabajar y, si ya la dominas, márcala completada.' },
+    { selector: '#madurez-scrum', title: 'Scrum semanal', description: 'Semana a semana se elige UNA acción y se divide en tareas. Toca una tarjeta para moverla entre columnas.' },
+  ],
+  en: [
+    { selector: '#madurez-plan-title', title: 'Maturity Level Improvement', description: 'This is where you define the actions to improve your organization\'s maturity: one practice with each agent per month, following the assessment topic order.' },
+    { selector: '#madurez-agentes', title: 'Next practice per agent', description: 'Each agent (Babel, Fisnando, Karmetin, Normau and Atech) has its next suggested practice, starting from the lowest incomplete level of your assessment.' },
+    { selector: '#madurez-mensual', title: 'Monthly plan', description: 'Each month schedules one practice per agent. Update the status to Completed to automatically advance to the next level of the topic.' },
+    { selector: '#madurez-temas', title: 'Practices by topic', description: 'The detail of the 11 topics: the next practice to work on and, if you already master it, mark it as completed.' },
+    { selector: '#madurez-scrum', title: 'Weekly scrum', description: 'Week by week you choose ONE action and break it into tasks. Tap a card to move it across columns.' },
+  ],
+};
 
 export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
   const t = LABELS[lang];
@@ -536,11 +555,14 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
   return (
     <div>
       <div className="flex items-center gap-3">
-        <h3 id="madurez-plan-title" className="text-lg font-bold text-slate-800">
-          {t.title}
-        </h3>
+        <BabelAvatar size={56} className="shrink-0" />
+        <div>
+          <h3 id="madurez-plan-title" className="text-xl font-bold text-slate-800">
+            {t.title}
+          </h3>
+          <p className="mt-1 text-sm text-slate-500">{t.subtitle}</p>
+        </div>
       </div>
-      <p className="mt-1 text-sm text-slate-500">{t.subtitle}</p>
 
       {sinEvaluacion ? (
         <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
@@ -549,7 +571,7 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
       ) : null}
 
       {/* Siguiente practica por agente */}
-      <div className="mt-5">
+      <div id="madurez-agentes" className="mt-5">
         <h4 className="text-sm font-semibold text-slate-700">{t.agentesTitle}</h4>
         <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
           {MENTORES.map((mentor) => {
@@ -576,7 +598,7 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
       </div>
 
       {/* Plan mensual */}
-      <div className="mt-6">
+      <div id="madurez-mensual" className="mt-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <h4 className="text-sm font-semibold text-slate-700">{t.planMensualTitle}</h4>
@@ -672,7 +694,7 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
       </div>
 
       {/* Practicas por tema */}
-      <div className="mt-6">
+      <div id="madurez-temas" className="mt-6">
         <h4 className="text-sm font-semibold text-slate-700">{t.temasTitle}</h4>
         <div className="mt-2 space-y-2">
           {DIMENSION_IDS.map((id) => {
@@ -705,7 +727,7 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
       </div>
 
       {/* Scrum semanal */}
-      <div className="mt-6">
+      <div id="madurez-scrum" className="mt-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <h4 className="text-sm font-semibold text-slate-700">{t.scrumTitle}</h4>
@@ -816,6 +838,7 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
       </div>
 
       <p className="mt-4 text-xs text-slate-400">{t.guardado}</p>
+      <PageTour pageId="madurez" steps={lang === 'en' ? PASOS_TOUR.en : PASOS_TOUR.es} lang={lang} />
     </div>
   );
 }
