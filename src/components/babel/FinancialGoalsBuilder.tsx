@@ -3,7 +3,7 @@ import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { downloadFinancialGoalsExcel, computeFinancialGoals } from '@/lib/deliverables';
-import type { FinancialGoalsInput, FinancialGoalsResult } from '@/lib/deliverables';
+import type { FinancialGoalsInput, FinancialGoalsResult, FinancialGoalsChannel } from '@/lib/deliverables';
 
 type FinLang = 'es' | 'en';
 
@@ -12,12 +12,29 @@ function toAmountPct(value: number, mode: '$' | '%', unitPrice: number): number 
   return unitPrice > 0 ? value / unitPrice : 0;
 }
 
+interface FinVarItemForm {
+  name: string;
+  value: number;
+  mode: '$' | '%';
+}
+
+interface FinProductoForm {
+  nombre: string;
+  unidades: number;
+  unidadMedida: string;
+  precio: number;
+  gastosVariables: FinVarItemForm[];
+}
+
+interface FinCanalForm {
+  nombre: string;
+  productos: FinProductoForm[];
+}
+
 interface FinSavedForm {
-  unitPrice: number;
-  desiredProfit: number;
+  canales: FinCanalForm[];
   fixedItems: { name: string; amount: number }[];
-  varItems: { name: string; value: number; mode: '$' | '%' }[];
-  channels: { name: string; pct: number }[];
+  desiredProfit: number;
   marketingPct: number;
 }
 
@@ -33,21 +50,63 @@ const FIN_GOALS_HISTORY_KEY = 'babel_financial_goals_history_v1';
 const FIN_GOALS_LAST_KEY = 'babel_financial_goals_v1';
 const FIN_HISTORY_MAX = 10;
 
+function productoIngresos(p: FinProductoForm): number {
+  return (p.unidades || 0) * (p.precio || 0);
+}
+
+function productoVarPct(p: FinProductoForm): number {
+  return p.gastosVariables.reduce(function (s, v) {
+    return s + toAmountPct(v.value, v.mode, p.precio || 0);
+  }, 0);
+}
+
 function formFromInput(inp: FinancialGoalsInput): FinSavedForm {
-  return {
-    unitPrice: typeof inp.unitPrice === 'number' ? inp.unitPrice : 0,
-    desiredProfit: typeof inp.desiredProfit === 'number' ? inp.desiredProfit : 0,
-    fixedItems: Array.isArray(inp.fixedItems)
-      ? inp.fixedItems.map(function (f) { return { name: f.name ?? '', amount: f.amount ?? 0 }; })
-      : [],
-    varItems: Array.isArray(inp.varItems)
+  const fixedItems = Array.isArray(inp.fixedItems)
+    ? inp.fixedItems.map(function (f) { return { name: f.name ?? '', amount: f.amount ?? 0 }; })
+    : [];
+  const desiredProfit = typeof inp.desiredProfit === 'number' ? inp.desiredProfit : 0;
+  const marketingPct = Math.round((inp.marketingPct ?? 0) * 100);
+  const hasProducts = Array.isArray(inp.channels) && inp.channels.some(function (c) {
+    return Array.isArray(c.products) && c.products.length > 0;
+  });
+  let canales: FinCanalForm[];
+  if (hasProducts) {
+    canales = inp.channels.map(function (c) {
+      return {
+        nombre: c.name ?? '',
+        productos: (c.products ?? []).map(function (p) {
+          return {
+            nombre: p.name ?? '',
+            unidades: typeof p.units === 'number' ? p.units : 0,
+            unidadMedida: p.unitMeasure ?? '',
+            precio: typeof p.unitPrice === 'number' ? p.unitPrice : 0,
+            gastosVariables: Array.isArray(p.varItems)
+              ? p.varItems.map(function (v) { return { name: v.name ?? '', value: (v.pct ?? 0) * 100, mode: '%' as '$' | '%' }; })
+              : [],
+          };
+        }),
+      };
+    });
+  } else {
+    const legacyVar: FinVarItemForm[] = Array.isArray(inp.varItems)
       ? inp.varItems.map(function (v) { return { name: v.name ?? '', value: (v.pct ?? 0) * 100, mode: '%' as '$' | '%' }; })
-      : [],
-    channels: Array.isArray(inp.channels)
-      ? inp.channels.map(function (c) { return { name: c.name ?? '', pct: Math.round((c.pct ?? 0) * 100) }; })
-      : [],
-    marketingPct: Math.round((inp.marketingPct ?? 0) * 100),
-  };
+      : [];
+    canales = (Array.isArray(inp.channels) ? inp.channels : []).map(function (c) {
+      return {
+        nombre: c.name ?? '',
+        productos: [
+          {
+            nombre: '',
+            unidades: 0,
+            unidadMedida: '',
+            precio: typeof inp.unitPrice === 'number' ? inp.unitPrice : 0,
+            gastosVariables: legacyVar.slice(),
+          },
+        ],
+      };
+    });
+  }
+  return { canales: canales, fixedItems: fixedItems, desiredProfit: desiredProfit, marketingPct: marketingPct };
 }
 
 function readFinHistory(): FinGoalsSaved[] {
@@ -115,11 +174,9 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
   const [finReviewing, setFinReviewing] = React.useState(false);
   const [finSending, setFinSending] = React.useState(false);
   const [finError, setFinError] = React.useState<string | null>(null);
-  const [finUnitPrice, setFinUnitPrice] = React.useState(0);
-  const [finDesiredProfit, setFinDesiredProfit] = React.useState(0);
+  const [finCanales, setFinCanales] = React.useState<FinCanalForm[]>([]);
   const [finFixedItems, setFinFixedItems] = React.useState<{ name: string; amount: number }[]>([]);
-  const [finVarItems, setFinVarItems] = React.useState<{ name: string; value: number; mode: '$' | '%' }[]>([]);
-  const [finChannels, setFinChannels] = React.useState<{ name: string; pct: number }[]>([]);
+  const [finDesiredProfit, setFinDesiredProfit] = React.useState(0);
   const [finMarketingPct, setFinMarketingPct] = React.useState(0);
   const [finDone, setFinDone] = React.useState(false);
   const [finHistory, setFinHistory] = React.useState<FinGoalsSaved[]>([]);
@@ -140,11 +197,9 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
     setFinReviewing(false);
     setFinSending(false);
     setFinError(null);
-    setFinUnitPrice(0);
-    setFinDesiredProfit(0);
+    setFinCanales([]);
     setFinFixedItems([]);
-    setFinVarItems([]);
-    setFinChannels([]);
+    setFinDesiredProfit(0);
     setFinMarketingPct(0);
     setFinDone(false);
     setFinMenu(false);
@@ -164,11 +219,22 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
   }
   function handleEditSaved(entry: FinGoalsSaved) {
     const f = entry.form ?? formFromInput(entry.input);
-    setFinUnitPrice(f.unitPrice);
-    setFinDesiredProfit(f.desiredProfit);
+    setFinCanales(f.canales.map(function (c) {
+      return {
+        nombre: c.nombre,
+        productos: c.productos.map(function (p) {
+          return {
+            nombre: p.nombre,
+            unidades: p.unidades,
+            unidadMedida: p.unidadMedida,
+            precio: p.precio,
+            gastosVariables: p.gastosVariables.map(function (v) { return { name: v.name, value: v.value, mode: v.mode }; }),
+          };
+        }),
+      };
+    }));
     setFinFixedItems(f.fixedItems.map(function (item) { return { name: item.name, amount: item.amount }; }));
-    setFinVarItems(f.varItems.map(function (item) { return { name: item.name, value: item.value, mode: item.mode }; }));
-    setFinChannels(f.channels.map(function (c) { return { name: c.name, pct: c.pct }; }));
+    setFinDesiredProfit(f.desiredProfit);
     setFinMarketingPct(f.marketingPct);
     setFinEditingId(entry.id);
     setFinStage(1);
@@ -185,6 +251,84 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
     resetFin();
     setFinActive(false);
   }
+
+  function addCanal() {
+    setFinCanales(function (prev) {
+      return [...prev, { nombre: '', productos: [{ nombre: '', unidades: 0, unidadMedida: '', precio: 0, gastosVariables: [] }] }];
+    });
+  }
+  function updateCanal(index: number, patch: Partial<{ nombre: string }>) {
+    setFinCanales(function (prev) { return prev.map(function (c, i) { return i === index ? { ...c, ...patch } : c; }); });
+  }
+  function removeCanal(index: number) {
+    setFinCanales(function (prev) { return prev.filter(function (_, i) { return i !== index; }); });
+  }
+  function addProducto(canalIndex: number) {
+    setFinCanales(function (prev) {
+      return prev.map(function (c, i) {
+        return i === canalIndex
+          ? { ...c, productos: [...c.productos, { nombre: '', unidades: 0, unidadMedida: '', precio: 0, gastosVariables: [] }] }
+          : c;
+      });
+    });
+  }
+  function updateProducto(canalIndex: number, prodIndex: number, patch: Partial<FinProductoForm>) {
+    setFinCanales(function (prev) {
+      return prev.map(function (c, i) {
+        if (i !== canalIndex) return c;
+        return { ...c, productos: c.productos.map(function (p, j) { return j === prodIndex ? { ...p, ...patch } : p; }) };
+      });
+    });
+  }
+  function removeProducto(canalIndex: number, prodIndex: number) {
+    setFinCanales(function (prev) {
+      return prev.map(function (c, i) {
+        if (i !== canalIndex) return c;
+        return { ...c, productos: c.productos.filter(function (_, j) { return j !== prodIndex; }) };
+      });
+    });
+  }
+  function addGastoVar(canalIndex: number, prodIndex: number) {
+    setFinCanales(function (prev) {
+      return prev.map(function (c, i) {
+        if (i !== canalIndex) return c;
+        return {
+          ...c,
+          productos: c.productos.map(function (p, j) {
+            return j === prodIndex ? { ...p, gastosVariables: [...p.gastosVariables, { name: '', value: 0, mode: '$' as '$' | '%' }] } : p;
+          }),
+        };
+      });
+    });
+  }
+  function updateGastoVar(canalIndex: number, prodIndex: number, itemIndex: number, patch: Partial<FinVarItemForm>) {
+    setFinCanales(function (prev) {
+      return prev.map(function (c, i) {
+        if (i !== canalIndex) return c;
+        return {
+          ...c,
+          productos: c.productos.map(function (p, j) {
+            if (j !== prodIndex) return p;
+            return { ...p, gastosVariables: p.gastosVariables.map(function (v, k) { return k === itemIndex ? { ...v, ...patch } : v; }) };
+          }),
+        };
+      });
+    });
+  }
+  function removeGastoVar(canalIndex: number, prodIndex: number, itemIndex: number) {
+    setFinCanales(function (prev) {
+      return prev.map(function (c, i) {
+        if (i !== canalIndex) return c;
+        return {
+          ...c,
+          productos: c.productos.map(function (p, j) {
+            if (j !== prodIndex) return p;
+            return { ...p, gastosVariables: p.gastosVariables.filter(function (_, k) { return k !== itemIndex; }) };
+          }),
+        };
+      });
+    });
+  }
   function addFixedItem() {
     setFinFixedItems(function (prev) { return [...prev, { name: '', amount: 0 }]; });
   }
@@ -194,29 +338,59 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
   function removeFixedItem(index: number) {
     setFinFixedItems(function (prev) { return prev.filter(function (_, i) { return i !== index; }); });
   }
-  function addVarItem() {
-    setFinVarItems(function (prev) { return [...prev, { name: '', value: 0, mode: '$' as '$' | '%' }]; });
+
+  function buildGoalsInput(): FinancialGoalsInput {
+    const channels: FinancialGoalsChannel[] = finCanales.map(function (c) {
+      return {
+        name: c.nombre,
+        products: c.productos.map(function (p) {
+          return {
+            name: p.nombre,
+            units: p.unidades || 0,
+            unitMeasure: p.unidadMedida,
+            unitPrice: p.precio || 0,
+            varItems: p.gastosVariables.map(function (v) {
+              return { name: v.name, pct: toAmountPct(v.value, v.mode, p.precio || 0) };
+            }),
+          };
+        }),
+      };
+    });
+    return {
+      language: lang,
+      channels: channels,
+      fixedItems: finFixedItems,
+      fixedTotalFallback: 0,
+      desiredProfit: finDesiredProfit,
+      marketingPct: finMarketingPct / 100,
+    };
   }
-  function updateVarItem(index: number, patch: Partial<{ name: string; value: number; mode: '$' | '%' }>) {
-    setFinVarItems(function (prev) { return prev.map(function (item, i) { return i === index ? { ...item, ...patch } : item; }); });
-  }
-  function removeVarItem(index: number) {
-    setFinVarItems(function (prev) { return prev.filter(function (_, i) { return i !== index; }); });
-  }
-  function addChannel() {
-    setFinChannels(function (prev) { return [...prev, { name: '', pct: 0 }]; });
-  }
-  function updateChannel(index: number, patch: Partial<{ name: string; pct: number }>) {
-    setFinChannels(function (prev) { return prev.map(function (item, i) { return i === index ? { ...item, ...patch } : item; }); });
-  }
-  function removeChannel(index: number) {
-    setFinChannels(function (prev) { return prev.filter(function (_, i) { return i !== index; }); });
-  }
+
   function handleFinNext() {
     setFinError(null);
     if (finStage === 1) {
-      if (finUnitPrice <= 0) {
-        setFinError(lang === 'en' ? 'Enter a sale price greater than zero.' : 'Ingresa un precio de venta mayor a cero.');
+      if (finCanales.length === 0) {
+        setFinError(
+          lang === 'en'
+            ? 'Add at least one income channel (e.g. Ice Cream Shop).'
+            : 'Agrega al menos un canal de ingreso (ej. Nevería).'
+        );
+        return;
+      }
+      if (!finCanales.some(function (c) { return c.nombre.trim() !== ''; })) {
+        setFinError(
+          lang === 'en'
+            ? 'Write the name of at least one income channel.'
+            : 'Escribe el nombre de al menos un canal de ingreso.'
+        );
+        return;
+      }
+      if (finIngresosTotal <= 0) {
+        setFinError(
+          lang === 'en'
+            ? 'Enter units and a sale price per unit in at least one product.'
+            : 'Ingresa unidades y un precio de venta por unidad en al menos un producto.'
+        );
         return;
       }
       if (finFixedItems.length === 0) {
@@ -230,8 +404,8 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
       if (finTotalVarPct >= 1) {
         setFinError(
           lang === 'en'
-            ? 'Your variable costs already add up to 100% or more of your sale price. Adjust the numbers before continuing.'
-            : 'Tus costos variables ya suman 100% o más de tu precio de venta. Ajusta los montos antes de continuar.'
+            ? 'Your variable costs already add up to 100% or more of your revenue. Adjust the numbers before continuing.'
+            : 'Tus costos variables ya suman 100% o más de tus ingresos. Ajusta los montos antes de continuar.'
         );
         return;
       }
@@ -239,23 +413,6 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
       return;
     }
     if (finStage === 2) {
-      if (finChannels.length === 0) {
-        setFinError(
-          lang === 'en'
-            ? 'Add at least one revenue channel before continuing.'
-            : 'Agrega al menos un canal de ingreso antes de continuar.'
-        );
-        return;
-      }
-      const sum = finChannels.reduce(function (s, c) { return s + c.pct; }, 0);
-      if (sum <= 0) {
-        setFinError(
-          lang === 'en'
-            ? 'Enter a percentage greater than zero for at least one channel.'
-            : 'Ingresa un porcentaje mayor a cero en al menos un canal.'
-        );
-        return;
-      }
       setFinStage(3);
       return;
     }
@@ -277,30 +434,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
     setFinSending(true);
     setFinError(null);
     try {
-      const materialsPct = 0;
-      const laborPct = 0;
-      const otherVarPct = 0;
-      const varItemsForExcel = finVarItems.map(function (v) {
-        return { name: v.name, pct: toAmountPct(v.value, v.mode, finUnitPrice) };
-      });
-      const channelPctSum = finChannels.reduce(function (s, c) { return s + c.pct; }, 0);
-      const normalizedChannels =
-        channelPctSum > 0
-          ? finChannels.map(function (c) { return { name: c.name, pct: c.pct / channelPctSum }; })
-          : finChannels.map(function (c) { return { name: c.name, pct: 0 }; });
-      const goalsInput: FinancialGoalsInput = {
-        language: lang,
-        unitPrice: finUnitPrice,
-        materialsPct: materialsPct,
-        laborPct: laborPct,
-        otherVarPct: otherVarPct,
-        fixedItems: finFixedItems,
-        fixedTotalFallback: 0,
-        varItems: varItemsForExcel,
-        desiredProfit: finDesiredProfit,
-        channels: normalizedChannels,
-        marketingPct: finMarketingPct / 100,
-      };
+      const goalsInput = buildGoalsInput();
       try {
         const resultForSave = computeFinancialGoals(goalsInput);
         const savedEntry: FinGoalsSaved = {
@@ -309,11 +443,22 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
           result: resultForSave,
           savedAt: new Date().toISOString(),
           form: {
-            unitPrice: finUnitPrice,
-            desiredProfit: finDesiredProfit,
+            canales: finCanales.map(function (c) {
+              return {
+                nombre: c.nombre,
+                productos: c.productos.map(function (p) {
+                  return {
+                    nombre: p.nombre,
+                    unidades: p.unidades,
+                    unidadMedida: p.unidadMedida,
+                    precio: p.precio,
+                    gastosVariables: p.gastosVariables.map(function (v) { return { name: v.name, value: v.value, mode: v.mode }; }),
+                  };
+                }),
+              };
+            }),
             fixedItems: finFixedItems.map(function (item) { return { name: item.name, amount: item.amount }; }),
-            varItems: finVarItems.map(function (item) { return { name: item.name, value: item.value, mode: item.mode }; }),
-            channels: finChannels.map(function (c) { return { name: c.name, pct: c.pct }; }),
+            desiredProfit: finDesiredProfit,
             marketingPct: finMarketingPct,
           },
         };
@@ -339,7 +484,13 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
     finFixedItems.length > 0
       ? finFixedItems.reduce(function (s, f) { return s + f.amount; }, 0)
       : 0;
-  const finTotalVarPct = finVarItems.reduce(function (s, v) { return s + toAmountPct(v.value, v.mode, finUnitPrice); }, 0);
+  const finIngresosTotal = finCanales.reduce(function (s, c) {
+    return s + c.productos.reduce(function (s2, p) { return s2 + productoIngresos(p); }, 0);
+  }, 0);
+  const finGastosVarPonderado = finCanales.reduce(function (s, c) {
+    return s + c.productos.reduce(function (s2, p) { return s2 + productoIngresos(p) * productoVarPct(p); }, 0);
+  }, 0);
+  const finTotalVarPct = finIngresosTotal > 0 ? finGastosVarPonderado / finIngresosTotal : 0;
   const finStage1Invalid = finTotalVarPct >= 1;
   const finStage1Denom = 1 - finTotalVarPct;
   const finStage1BreakEven = finStage1Invalid ? null : finItemizedFixedTotal / finStage1Denom;
@@ -348,27 +499,14 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
   const finDenom = 1 - finTotalVarPct;
   const finBreakEven = finInvalid ? null : finItemizedFixedTotal / finDenom;
   const finTarget = finInvalid ? null : (finItemizedFixedTotal + finDesiredProfit) / finDenom;
-  const finChannelPctSum = finChannels.reduce(function (s, c) { return s + c.pct; }, 0);
-  const finChannelsNormalized =
-    finChannelPctSum > 0
-      ? finChannels.map(function (c) { return { name: c.name, pct: c.pct / finChannelPctSum }; })
-      : finChannels.map(function (c) { return { name: c.name, pct: 0 }; });
   const finResultLive: FinancialGoalsResult | null =
-    !finInvalid && finChannels.length > 0
-      ? computeFinancialGoals({
-          language: lang,
-          unitPrice: finUnitPrice,
-          materialsPct: 0,
-          laborPct: 0,
-          otherVarPct: 0,
-          fixedItems: finFixedItems,
-          fixedTotalFallback: 0,
-          varItems: finVarItems.map(function (v) { return { name: v.name, pct: toAmountPct(v.value, v.mode, finUnitPrice) }; }),
-          desiredProfit: finDesiredProfit,
-          channels: finChannelsNormalized,
-          marketingPct: finMarketingPct / 100,
-        })
+    !finInvalid && finCanales.length > 0
+      ? computeFinancialGoals(buildGoalsInput())
       : null;
+
+  function fmtMoney(v: number): string {
+    return '$' + Math.round(v).toLocaleString(undefined, { maximumFractionDigits: 0 });
+  }
 
   return (
     <div>
@@ -402,7 +540,6 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                 )}
                 {finHistory.map(function (entry, idx) {
                   const isLatest = idx === 0;
-                  const fmtMoney = function (v: number) { return '$' + v.toLocaleString(undefined, { maximumFractionDigits: 0 }); };
                   const marketingShown = entry.form?.marketingPct ?? Math.round((entry.input.marketingPct ?? 0) * 100);
                   return (
                     <div key={entry.id} className={'rounded-lg border p-3 ' + (isLatest ? 'border-[#32BAD0] bg-[#E1F6FA]/50' : 'border-slate-200 bg-slate-50/70')}>
@@ -485,90 +622,189 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
               )}
               {!finReviewing && finStage === 1 && (
                 <div className="space-y-3 text-sm text-slate-800">
-                  <p className="font-semibold">{lang === 'en' ? 'Stage 1: Your product or service and your expenses' : 'Etapa 1: Tu producto o servicio y tus gastos'}</p>
-                  <label className="block space-y-1">
-                    <span className="text-xs text-slate-600">{lang === 'en' ? 'Sale price per unit' : 'Precio de venta por unidad'}</span>
-                    <input
-                      type="number"
-                      value={finUnitPrice || ''}
-                      onChange={function (e) { setFinUnitPrice(Number(e.target.value)); }}
-                      placeholder="500"
-                      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </label>
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium text-slate-600">
-                      {lang === 'en' ? 'Break down your fixed expenses' : 'Desglosa tus gastos fijos'}
-                      <span className="text-slate-400">
-                        {' '}
-                        {lang === 'en' ? '(e.g. Rent, Utilities, Payroll, Advertising, Internet)' : '(ej. renta, luz, nómina, publicidad, internet)'}
-                      </span>
-                    </p>
-                    {finFixedItems.map(function (item, i) {
-                      return (
-                        <div key={i} className="flex gap-2 items-center">
+                  <p className="font-semibold">{lang === 'en' ? 'Stage 1: Your income channels, products and expenses' : 'Etapa 1: Tus canales de ingreso, productos y gastos'}</p>
+                  <datalist id="fin-unidad-medida-list">
+                    <option value={lang === 'en' ? 'pieces' : 'piezas'} />
+                    <option value="horas" />
+                    <option value="litros" />
+                    <option value="kilos" />
+                    <option value="metros" />
+                    <option value={lang === 'en' ? 'boxes' : 'cajas'} />
+                    <option value={lang === 'en' ? 'dozens' : 'docenas'} />
+                    <option value={lang === 'en' ? 'services' : 'servicios'} />
+                  </datalist>
+                  {finCanales.map(function (c, ci) {
+                    const ciIngresos = c.productos.reduce(function (s, p) { return s + productoIngresos(p); }, 0);
+                    const ciVar = c.productos.reduce(function (s, p) { return s + productoIngresos(p) * productoVarPct(p); }, 0);
+                    const ciVarPct = ciIngresos > 0 ? (ciVar / ciIngresos) * 100 : 0;
+                    const ciPct = finIngresosTotal > 0 ? (ciIngresos / finIngresosTotal) * 100 : 0;
+                    return (
+                      <div key={ci} className="space-y-2 rounded-lg border border-slate-200 bg-slate-50/70 p-3">
+                        <div className="flex items-center gap-2">
                           <input
                             type="text"
-                            value={item.name}
-                            onChange={function (e) { updateFixedItem(i, { name: e.target.value }); }}
-                            placeholder={lang === 'en' ? 'Name (e.g. Rent)' : 'Nombre (ej. Renta)'}
+                            value={c.nombre}
+                            onChange={function (e) { updateCanal(ci, { nombre: e.target.value }); }}
+                            placeholder={lang === 'en' ? 'Income channel (e.g. Ice Cream Shop)' : 'Canal de ingreso (ej. Nevería)'}
                             className="flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
-                          <input
-                            type="number"
-                            value={item.amount || ''}
-                            onChange={function (e) { updateFixedItem(i, { amount: Number(e.target.value) }); }}
-                            placeholder="$"
-                            className="w-28 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                          <button type="button" onClick={function () { removeFixedItem(i); }} className="text-red-500 hover:text-red-700 text-sm px-2">×</button>
+                          <button type="button" onClick={function () { removeCanal(ci); }} className="text-red-500 hover:text-red-700 text-sm px-2">×</button>
                         </div>
-                      );
-                    })}
-                    <button type="button" onClick={addFixedItem} className="text-xs font-medium text-blue-600 hover:text-blue-800 underline underline-offset-2">
-                      {lang === 'en' ? '+ Add fixed expense' : '+ Agregar gasto fijo'}
-                    </button>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium text-slate-600">
-                      {lang === 'en' ? 'Break down your variable expenses' : 'Desglosa tus gastos variables'}
-                      <span className="text-slate-400">
-                        {' '}
-                        {lang === 'en' ? '(e.g. Supplies, Provider, Commissions, Taxes)' : '(ej. insumos, proveedor, comisiones, impuestos)'}
-                      </span>
-                    </p>
-                    {finVarItems.map(function (item, i) {
-                      return (
-                        <div key={i} className="flex gap-2 items-center">
-                          <input
-                            type="text"
-                            value={item.name}
-                            onChange={function (e) { updateVarItem(i, { name: e.target.value }); }}
-                            placeholder={lang === 'en' ? 'Name (e.g. Supplies)' : 'Nombre (ej. Insumos)'}
-                            className="flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                          <input
-                            type="number"
-                            value={item.value || ''}
-                            onChange={function (e) { updateVarItem(i, { value: Number(e.target.value) }); }}
-                            className="w-24 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                          <select
-                            value={item.mode}
-                            onChange={function (e) { updateVarItem(i, { mode: e.target.value as '$' | '%' }); }}
-                            className="rounded-md border border-slate-300 bg-white px-2 py-2 text-sm"
-                          >
-                            <option value="$">$</option>
-                            <option value="%">%</option>
-                          </select>
-                          <button type="button" onClick={function () { removeVarItem(i); }} className="text-red-500 hover:text-red-700 text-sm px-2">×</button>
+                        {c.productos.map(function (p, pi) {
+                          const pIngresos = productoIngresos(p);
+                          const pVarPct = productoVarPct(p);
+                          return (
+                            <div key={pi} className="space-y-2 rounded-md border border-slate-200 bg-white p-2.5">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                                  {lang === 'en' ? 'Product/Service' : 'Producto/Servicio'}
+                                </span>
+                                <input
+                                  type="text"
+                                  value={p.nombre}
+                                  onChange={function (e) { updateProducto(ci, pi, { nombre: e.target.value }); }}
+                                  placeholder={lang === 'en' ? 'e.g. Ice cream' : 'ej. Helado'}
+                                  className="flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                                <button type="button" onClick={function () { removeProducto(ci, pi); }} className="text-red-500 hover:text-red-700 text-sm px-2">×</button>
+                              </div>
+                              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                                <label className="block space-y-1">
+                                  <span className="text-[11px] text-slate-600">{lang === 'en' ? 'Units per month' : 'Unidades al mes'}</span>
+                                  <input
+                                    type="number"
+                                    value={p.unidades || ''}
+                                    onChange={function (e) { updateProducto(ci, pi, { unidades: Number(e.target.value) }); }}
+                                    placeholder="500"
+                                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  />
+                                </label>
+                                <label className="block space-y-1">
+                                  <span className="text-[11px] text-slate-600">{lang === 'en' ? 'Measure' : 'Medida'}</span>
+                                  <input
+                                    type="text"
+                                    list="fin-unidad-medida-list"
+                                    value={p.unidadMedida}
+                                    onChange={function (e) { updateProducto(ci, pi, { unidadMedida: e.target.value }); }}
+                                    placeholder={lang === 'en' ? 'pieces, hours, liters...' : 'piezas, horas, litros...'}
+                                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  />
+                                </label>
+                                <label className="block space-y-1">
+                                  <span className="text-[11px] text-slate-600">{lang === 'en' ? 'Sale price per unit' : 'Precio de venta x unidad'}</span>
+                                  <input
+                                    type="number"
+                                    value={p.precio || ''}
+                                    onChange={function (e) { updateProducto(ci, pi, { precio: Number(e.target.value) }); }}
+                                    placeholder="50"
+                                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  />
+                                </label>
+                              </div>
+                              <div className="space-y-1.5">
+                                <p className="text-[11px] text-slate-600">
+                                  {lang === 'en' ? 'Variable expenses of this product' : 'Gastos variables del producto'}
+                                </p>
+                                {p.gastosVariables.map(function (v, vi) {
+                                  return (
+                                    <div key={vi} className="flex gap-2 items-center">
+                                      <input
+                                        type="text"
+                                        value={v.name}
+                                        onChange={function (e) { updateGastoVar(ci, pi, vi, { name: e.target.value }); }}
+                                        placeholder={lang === 'en' ? 'Name (e.g. Supplies)' : 'Nombre (ej. Insumos)'}
+                                        className="flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                      />
+                                      <input
+                                        type="number"
+                                        value={v.value || ''}
+                                        onChange={function (e) { updateGastoVar(ci, pi, vi, { value: Number(e.target.value) }); }}
+                                        className="w-24 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                      />
+                                      <select
+                                        value={v.mode}
+                                        onChange={function (e) { updateGastoVar(ci, pi, vi, { mode: e.target.value as '$' | '%' }); }}
+                                        className="rounded-md border border-slate-300 bg-white px-2 py-2 text-sm"
+                                      >
+                                        <option value="$">$</option>
+                                        <option value="%">%</option>
+                                      </select>
+                                      <button type="button" onClick={function () { removeGastoVar(ci, pi, vi); }} className="text-red-500 hover:text-red-700 text-sm px-2">×</button>
+                                    </div>
+                                  );
+                                })}
+                                <button type="button" onClick={function () { addGastoVar(ci, pi); }} className="text-xs font-medium text-blue-600 hover:text-blue-800 underline underline-offset-2">
+                                  {lang === 'en' ? '+ Add variable expense' : '+ Agregar gasto variable del producto'}
+                                </button>
+                              </div>
+                              <div className="rounded-md bg-slate-50 border border-slate-200 px-3 py-1.5 text-xs text-slate-600">
+                                {lang === 'en' ? 'Revenue: ' : 'Ingresos: '}
+                                <span className="font-semibold text-slate-800">{fmtMoney(pIngresos)}</span>
+                                <span className="mx-1.5">|</span>
+                                {lang === 'en' ? '% Variable: ' : '% Gastos variables: '}
+                                <span className="font-semibold text-slate-800">{(pVarPct * 100).toFixed(1)}%</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        <button type="button" onClick={function () { addProducto(ci); }} className="text-xs font-medium text-blue-600 hover:text-blue-800 underline underline-offset-2">
+                          {lang === 'en' ? '+ Add product/service' : '+ Agregar Producto/Servicio'}
+                        </button>
+                        <div className="rounded-md bg-[#E1F6FA] border border-[#32BAD0]/30 px-3 py-1.5 text-xs text-slate-700">
+                          {lang === 'en' ? 'Channel revenue: ' : 'Ingresos del canal: '}
+                          <span className="font-semibold">{fmtMoney(ciIngresos)}</span>
+                          <span className="mx-1.5">|</span>
+                          {lang === 'en' ? '% of total income: ' : '% del ingreso total: '}
+                          <span className="font-semibold">{ciPct.toFixed(1)}%</span>
+                          <span className="mx-1.5">|</span>
+                          {lang === 'en' ? 'Channel % variable: ' : '% gastos variables del canal: '}
+                          <span className="font-semibold">{ciVarPct.toFixed(1)}%</span>
                         </div>
-                      );
-                    })}
-                    <button type="button" onClick={addVarItem} className="text-xs font-medium text-blue-600 hover:text-blue-800 underline underline-offset-2">
-                      {lang === 'en' ? '+ Add variable expense' : '+ Agregar gasto variable'}
-                    </button>
-                  </div>
+                      </div>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={addCanal}
+                    className="w-full rounded-md border border-dashed border-[#32BAD0] px-3 py-2 text-sm font-semibold text-[#1D7686] transition-colors hover:bg-[#E1F6FA]/60"
+                  >
+                    {lang === 'en' ? '+ Add income channel' : '+ Agregar Canal de Ingreso'}
+                  </button>
+                  {finCanales.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-slate-600">
+                        {lang === 'en' ? 'Break down your fixed expenses' : 'Desglosa tus gastos fijos'}
+                        <span className="text-slate-400">
+                          {' '}
+                          {lang === 'en' ? '(e.g. Rent, Utilities, Payroll, Advertising, Internet)' : '(ej. renta, luz, nómina, publicidad, internet)'}
+                        </span>
+                      </p>
+                      {finFixedItems.map(function (item, i) {
+                        return (
+                          <div key={i} className="flex gap-2 items-center">
+                            <input
+                              type="text"
+                              value={item.name}
+                              onChange={function (e) { updateFixedItem(i, { name: e.target.value }); }}
+                              placeholder={lang === 'en' ? 'Name (e.g. Rent)' : 'Nombre (ej. Renta)'}
+                              className="flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <input
+                              type="number"
+                              value={item.amount || ''}
+                              onChange={function (e) { updateFixedItem(i, { amount: Number(e.target.value) }); }}
+                              placeholder="$"
+                              className="w-28 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <button type="button" onClick={function () { removeFixedItem(i); }} className="text-red-500 hover:text-red-700 text-sm px-2">×</button>
+                          </div>
+                        );
+                      })}
+                      <button type="button" onClick={addFixedItem} className="text-xs font-medium text-blue-600 hover:text-blue-800 underline underline-offset-2">
+                        {lang === 'en' ? '+ Add fixed expense' : '+ Agregar gastos fijos'}
+                      </button>
+                    </div>
+                  )}
                   <label className="block space-y-1">
                     <span className="text-xs text-slate-600">{lang === 'en' ? 'Desired monthly profit' : 'Utilidad mensual deseada'}</span>
                     <input
@@ -579,18 +815,19 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                     />
                   </label>
                   <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 space-y-1 text-slate-900">
+                    <p>{lang === 'en' ? 'Total monthly revenue' : 'Ingresos totales mensuales'}: {fmtMoney(finIngresosTotal)}</p>
                     <p>{lang === 'en' ? 'Total fixed expenses' : 'Total gastos fijos'}: {finItemizedFixedTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
-                    <p>{lang === 'en' ? '% Variable costs' : '% Costos variables'}: {(finTotalVarPct * 100).toFixed(1)}%</p>
+                    <p>{lang === 'en' ? '% Variable costs (weighted)' : '% Costos variables (ponderado)'}: {(finTotalVarPct * 100).toFixed(1)}%</p>
                     {finStage1Invalid ? (
                       <p className="text-red-600 font-medium">
                         {lang === 'en'
-                          ? 'Your variable costs already reach 100% or more of your price. Fix the numbers above before continuing.'
-                          : 'Tus costos variables ya llegan a 100% o más de tu precio. Corrige los montos antes de continuar.'}
+                          ? 'Your variable costs already reach 100% or more of your revenue. Fix the numbers above before continuing.'
+                          : 'Tus costos variables ya llegan a 100% o más de tus ingresos. Corrige los montos antes de continuar.'}
                       </p>
                     ) : (
                       <>
-                        <p>{lang === 'en' ? 'Break-even point' : 'Punto de equilibrio'}: {finStage1BreakEven !== null ? finStage1BreakEven.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—'}</p>
-                        <p>{lang === 'en' ? 'Revenue needed for your profit goal' : 'Ingreso necesario para tu meta de utilidad'}: {finStage1Target !== null ? finStage1Target.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—'}</p>
+                        <p>{lang === 'en' ? 'Break-even point' : 'Punto de equilibrio'}: {finStage1BreakEven !== null ? fmtMoney(finStage1BreakEven) : '—'}</p>
+                        <p>{lang === 'en' ? 'Revenue needed for your profit goal' : 'Ingreso necesario para tu meta de utilidad'}: {finStage1Target !== null ? fmtMoney(finStage1Target) : '—'}</p>
                       </>
                     )}
                   </div>
@@ -602,44 +839,27 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
               {!finReviewing && finStage === 2 && (
                 <div className="space-y-3 text-sm text-slate-800">
                   <p className="font-semibold">{lang === 'en' ? 'Stage 2: Your revenue channels' : 'Etapa 2: Tus canales de ingreso'}</p>
-                  {finChannels.map(function (c, i) {
+                  <p className="text-xs text-slate-500">
+                    {lang === 'en'
+                      ? 'We calculated each channel share from the revenue of its products. This weighting adjusts your revenue and variable costs.'
+                      : 'Calculamos la participación de cada canal con los ingresos de sus productos. Esta ponderación ajusta tus ingresos y % de gastos variables.'}
+                  </p>
+                  {finCanales.map(function (c, i) {
+                    const ciIngresos = c.productos.reduce(function (s, p) { return s + productoIngresos(p); }, 0);
+                    const ciVar = c.productos.reduce(function (s, p) { return s + productoIngresos(p) * productoVarPct(p); }, 0);
+                    const ciVarPct = ciIngresos > 0 ? (ciVar / ciIngresos) * 100 : 0;
+                    const ciPct = finIngresosTotal > 0 ? (ciIngresos / finIngresosTotal) * 100 : 0;
                     return (
-                      <div key={i} className="flex gap-2 items-center">
-                        <input
-                          type="text"
-                          value={c.name}
-                          onChange={function (e) { updateChannel(i, { name: e.target.value }); }}
-                          placeholder={lang === 'en' ? 'Name (e.g. Online sales)' : 'Nombre (ej. Ventas en línea)'}
-                          className="flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <input
-                          type="number"
-                          value={c.pct || ''}
-                          onChange={function (e) { updateChannel(i, { pct: Number(e.target.value) }); }}
-                          placeholder="%"
-                          className="w-20 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <button type="button" onClick={function () { removeChannel(i); }} className="text-red-500 hover:text-red-700 text-sm px-2">×</button>
+                      <div key={i} className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                        <p className="font-medium">{c.nombre || (lang === 'en' ? '(unnamed)' : '(sin nombre)')}</p>
+                        <div className="flex items-center gap-4 text-xs">
+                          <span className="text-slate-500">{lang === 'en' ? 'Revenue' : 'Ingresos'}: <span className="font-semibold text-slate-800">{fmtMoney(ciIngresos)}</span></span>
+                          <span className="text-slate-500">% <span className="font-semibold text-slate-800">{ciPct.toFixed(1)}%</span></span>
+                          <span className="text-slate-500">{lang === 'en' ? 'Var.' : 'Var.'}: <span className="font-semibold text-slate-800">{ciVarPct.toFixed(1)}%</span></span>
+                        </div>
                       </div>
                     );
                   })}
-                  <button type="button" onClick={addChannel} className="text-xs font-medium text-blue-600 hover:text-blue-800 underline underline-offset-2">
-                    {lang === 'en' ? '+ Add channel' : '+ Agregar canal'}
-                  </button>
-                  {finChannels.length > 0 && (
-                    <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 space-y-1 text-slate-900">
-                      {finChannelsNormalized.map(function (c, i) {
-                        return <p key={i}>{c.name || (lang === 'en' ? '(unnamed)' : '(sin nombre)')}: {(c.pct * 100).toFixed(1)}%</p>;
-                      })}
-                      {Math.abs(finChannelPctSum - 100) > 2 && (
-                        <p className="text-xs text-slate-500">
-                          {lang === 'en'
-                            ? "Your percentages didn't add up to 100%, so we'll adjust them proportionally."
-                            : 'Tus porcentajes no suman 100%, los ajustaremos proporcionalmente.'}
-                        </p>
-                      )}
-                    </div>
-                  )}
                   <div className="flex gap-2">
                     <Button onClick={handleFinBack} variant="outline" size="sm">{lang === 'en' ? 'Back' : 'Atrás'}</Button>
                     <Button onClick={handleFinNext} size="sm">{lang === 'en' ? 'Continue' : 'Continuar'}</Button>

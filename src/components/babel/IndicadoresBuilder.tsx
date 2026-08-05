@@ -196,7 +196,16 @@ function buildFinancialContext(lang: PlanLang): string {
     const monthly = lang === 'en' ? 'monthly' : 'mensuales';
     const channels =
       Array.isArray(i.channels) && i.channels.length > 0
-        ? i.channels.map((c: { name: string; pct: number }) => c.name + ' (' + Math.round(c.pct) + '%)').join(', ')
+        ? i.channels
+            .map((c: any) => {
+              const hasProducts = Array.isArray(c.products) && c.products.length > 0;
+              if (hasProducts) {
+                const income = c.products.reduce((s2: number, p: any) => s2 + (p.units || 0) * (p.unitPrice || 0), 0);
+                return c.name + ' ($' + Math.round(income).toLocaleString(lang === 'en' ? 'en-US' : 'es-MX') + ' ' + monthly + ')';
+              }
+              return c.name + ' (' + Math.round(c.pct ?? 0) + '%)';
+            })
+            .join(', ')
         : lang === 'en'
           ? 'not declared'
           : 'no declarados';

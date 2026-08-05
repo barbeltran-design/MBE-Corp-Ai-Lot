@@ -632,23 +632,46 @@ export interface FinancialGoalsVarItem {
   pct: number;
 }
 
+export interface FinancialGoalsProduct {
+  name: string;
+  units: number;
+  unitMeasure: string;
+  unitPrice: number;
+  varItems: FinancialGoalsVarItem[];
+}
+
 export interface FinancialGoalsChannel {
   name: string;
-  pct: number;
+  products?: FinancialGoalsProduct[];
+  pct?: number;
 }
 
 export interface FinancialGoalsInput {
   language: 'es' | 'en';
-  unitPrice: number;
-  materialsPct: number;
-  laborPct: number;
-  otherVarPct: number;
+  unitPrice?: number;
+  materialsPct?: number;
+  laborPct?: number;
+  otherVarPct?: number;
   fixedItems: FinancialGoalsFixedItem[];
   fixedTotalFallback: number;
-  varItems: FinancialGoalsVarItem[];
+  varItems?: FinancialGoalsVarItem[];
   desiredProfit: number;
   channels: FinancialGoalsChannel[];
   marketingPct: number;
+}
+
+export interface FinancialChannelSummary {
+  name: string;
+  pct: number;
+  income: number;
+  varPct: number;
+}
+
+export interface FinancialChannelsSummary {
+  summaries: FinancialChannelSummary[];
+  totalIncome: number;
+  totalVarPct: number;
+  isLegacy: boolean;
 }
 
 export interface FinancialGoalsResult {
@@ -670,11 +693,64 @@ export interface FinancialGoalsResult {
 // OBJETIVOS FINANCIEROS: CALCULO
 // ==========================================================================
 
-export function computeFinancialGoals(input: FinancialGoalsInput): FinancialGoalsResult {
-  const varItemsPct = input.varItems.reduce(function (s, v) {
-    return s + (v.pct || 0);
+export function computeFinancialChannels(input: FinancialGoalsInput): FinancialChannelsSummary {
+  const anyProducts = input.channels.some(function (c) {
+    return Array.isArray(c.products) && c.products.length > 0;
+  });
+  if (!anyProducts) {
+    const legacyVarPct =
+      (input.materialsPct ?? 0) +
+      (input.laborPct ?? 0) +
+      (input.otherVarPct ?? 0) +
+      (input.varItems ?? []).reduce(function (s, v) {
+        return s + (v.pct || 0);
+      }, 0);
+    return {
+      summaries: input.channels.map(function (c) {
+        return { name: c.name ?? '', pct: c.pct ?? 0, income: 0, varPct: legacyVarPct };
+      }),
+      totalIncome: 0,
+      totalVarPct: legacyVarPct,
+      isLegacy: true,
+    };
+  }
+  const totalIncome = input.channels.reduce(function (s, c) {
+    return (
+      s +
+      (c.products ?? []).reduce(function (s2, p) {
+        return s2 + (p.units || 0) * (p.unitPrice || 0);
+      }, 0)
+    );
   }, 0);
-  const totalVariablePct = input.materialsPct + input.laborPct + input.otherVarPct + varItemsPct;
+  const summaries = input.channels.map(function (c) {
+    const income = (c.products ?? []).reduce(function (s2, p) {
+      return s2 + (p.units || 0) * (p.unitPrice || 0);
+    }, 0);
+    const weightedVar = (c.products ?? []).reduce(function (s2, p) {
+      const pVar = (p.varItems ?? []).reduce(function (s3, v) {
+        return s3 + (v.pct || 0);
+      }, 0);
+      return s2 + (p.units || 0) * (p.unitPrice || 0) * pVar;
+    }, 0);
+    return {
+      name: c.name ?? '',
+      pct: totalIncome > 0 ? income / totalIncome : 0,
+      income: income,
+      varPct: income > 0 ? weightedVar / income : 0,
+    };
+  });
+  const totalVarPct =
+    totalIncome > 0
+      ? summaries.reduce(function (s, c) {
+          return s + c.pct * c.varPct;
+        }, 0)
+      : 0;
+  return { summaries: summaries, totalIncome: totalIncome, totalVarPct: totalVarPct, isLegacy: false };
+}
+
+export function computeFinancialGoals(input: FinancialGoalsInput): FinancialGoalsResult {
+  const channelSummary = computeFinancialChannels(input);
+  const totalVariablePct = channelSummary.totalVarPct;
 
   const fixedTotal =
     input.fixedItems.length > 0
@@ -756,6 +832,8 @@ export async function downloadFinancialGoalsExcel(input: FinancialGoalsInput): P
   const logoDataUrl = await loadLogoDataUrl();
   const lang = input.language;
   const result = computeFinancialGoals(input);
+  const finCh = computeFinancialChannels(input);
+  const hasProducts = !finCh.isLegacy;
 
   const L =
     lang === 'en'
@@ -783,6 +861,15 @@ export async function downloadFinancialGoalsExcel(input: FinancialGoalsInput): P
           channelPct: '% Share',
           atBreakEven: 'Amount at Break-even',
           atTarget: 'Amount at Goal',
+          canalesProductosHeader: 'Channels and Products',
+          canalLabel: 'Channel',
+          productoLabel: 'Product/Service',
+          unidadesLabel: 'Units',
+          medidaLabel: 'Measure',
+          precioUnitLabel: 'Unit Price',
+          ingresosLabel: 'Revenue',
+          gastosVarLabel: '% Variable Costs',
+          totalIngresos: 'Total Monthly Revenue',
           marketingHeader: 'Marketing',
           marketingPct: '% Invested in Marketing',
           expectedGrowth: 'Expected Monthly Growth',
@@ -829,6 +916,15 @@ export async function downloadFinancialGoalsExcel(input: FinancialGoalsInput): P
           channelPct: '% Participacion',
           atBreakEven: 'Monto en Equilibrio',
           atTarget: 'Monto en Meta',
+          canalesProductosHeader: 'Canales y Productos',
+          canalLabel: 'Canal',
+          productoLabel: 'Producto/Servicio',
+          unidadesLabel: 'Unidades',
+          medidaLabel: 'Medida',
+          precioUnitLabel: 'Precio x Unidad',
+          ingresosLabel: 'Ingresos',
+          gastosVarLabel: '% Gastos Variables',
+          totalIngresos: 'Ingresos Totales Mensuales',
           marketingHeader: 'Mercadotecnia',
           marketingPct: '% Invertido en Mercadotecnia',
           expectedGrowth: 'Crecimiento Mensual Esperado',
@@ -910,7 +1006,7 @@ export async function downloadFinancialGoalsExcel(input: FinancialGoalsInput): P
   wb.created = new Date();
 
   const ws1 = wb.addWorksheet(L.sheet1, { views: [{ showGridLines: false }] });
-  ws1.columns = [{ width: 36 }, { width: 18 }, { width: 18 }, { width: 18 }];
+  ws1.columns = [{ width: 32 }, { width: 24 }, { width: 12 }, { width: 14 }, { width: 16 }, { width: 18 }, { width: 18 }];
 
   let logoId: number | null = null;
   if (logoDataUrl) {
@@ -928,7 +1024,61 @@ export async function downloadFinancialGoalsExcel(input: FinancialGoalsInput): P
   nextRow(ws1);
 
   sectionHeader(ws1, L.businessData, 4);
-  dataRow(ws1, L.unitPrice, input.unitPrice, { fmt: '#,##0.00' });
+  if (hasProducts) {
+    sectionHeader(ws1, L.canalesProductosHeader, 7);
+    const prodHdr = nextRow(ws1, [L.canalLabel, L.productoLabel, L.unidadesLabel, L.medidaLabel, L.precioUnitLabel, L.ingresosLabel, L.gastosVarLabel]);
+    for (let cc = 1; cc <= 7; cc++) {
+      const c = ws1.getCell(prodHdr, cc);
+      c.font = { name: 'Calibri', size: 11, bold: true, color: { argb: ARGB_WHITE } };
+      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ARGB_TEAL } };
+      c.border = borderAll();
+      c.alignment = { vertical: 'middle', horizontal: cc === 1 || cc === 2 ? 'left' : 'right' };
+    }
+    ws1.getRow(prodHdr).height = 20;
+    let firstProdRow = 0;
+    let lastProdRow = 0;
+    input.channels.forEach(function (ch) {
+      const products = ch.products ?? [];
+      const start = ws1.rowCount + 1;
+      products.forEach(function (p) {
+        const pVarPct = (p.varItems ?? []).reduce(function (s, v) {
+          return s + (v.pct || 0);
+        }, 0);
+        const r = nextRow(ws1, ['', p.name ?? '', p.units || 0, p.unitMeasure ?? '', p.unitPrice || 0, (p.units || 0) * (p.unitPrice || 0), pVarPct]);
+        for (let cc = 1; cc <= 7; cc++) {
+          const c = ws1.getCell(r, cc);
+          c.border = borderAll();
+          c.font = { name: 'Calibri', size: 11, color: { argb: ARGB_INK } };
+          c.alignment = { vertical: 'middle', horizontal: cc === 1 || cc === 2 || cc === 4 ? 'left' : 'right' };
+        }
+        ws1.getCell(r, 3).numFmt = '#,##0';
+        ws1.getCell(r, 5).numFmt = '#,##0.00';
+        ws1.getCell(r, 6).numFmt = '#,##0.00';
+        ws1.getCell(r, 7).numFmt = '0.0%';
+      });
+      if (products.length > 0) {
+        const end = ws1.rowCount;
+        ws1.mergeCells(start, 1, end, 1);
+        const cc = ws1.getCell(start, 1);
+        cc.value = ch.name ?? '';
+        cc.font = { name: 'Calibri', size: 11, bold: true, color: { argb: ARGB_INK } };
+        cc.alignment = { vertical: 'middle', horizontal: 'left' };
+        if (firstProdRow === 0) firstProdRow = start;
+        lastProdRow = end;
+      }
+    });
+    if (firstProdRow > 0) {
+      dataRow(ws1, L.totalIngresos, finCh.totalIncome, {
+        f: 'SUM(F' + firstProdRow + ':F' + lastProdRow + ')',
+        result: finCh.totalIncome,
+        fmt: '#,##0.00',
+        bold: true,
+        fill: ARGB_LIGHT,
+      });
+    }
+  } else {
+    dataRow(ws1, L.unitPrice, input.unitPrice ?? 0, { fmt: '#,##0.00' });
+  }
   const totalVarPctRowNum = dataRow(ws1, L.totalVarPct, result.totalVariablePctWithMarketing, { fmt: '0.0%' });
   const desiredProfitRowNum = dataRow(ws1, L.desiredProfit, input.desiredProfit, { fmt: '#,##0.00' });
 
@@ -982,17 +1132,17 @@ export async function downloadFinancialGoalsExcel(input: FinancialGoalsInput): P
     fill: ARGB_LIGHT,
   });
 
-  sectionHeader(ws1, L.channelsHeader, 4);
-  const chHdr = nextRow(ws1, [L.channel, L.channelPct, L.atBreakEven, L.atTarget]);
-  for (let cc = 1; cc <= 4; cc++) {
+  sectionHeader(ws1, L.channelsHeader, 5);
+  const chHdr = nextRow(ws1, [L.channel, L.channelPct, L.gastosVarLabel, L.atBreakEven, L.atTarget]);
+  for (let cc = 1; cc <= 5; cc++) {
     const c = ws1.getCell(chHdr, cc);
     c.font = { name: 'Calibri', size: 11, bold: true, color: { argb: ARGB_WHITE } };
     c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ARGB_TEAL } };
     c.border = borderAll();
     c.alignment = { vertical: 'middle', horizontal: cc === 1 ? 'left' : 'right' };
   }
-  for (let i = 0; i < input.channels.length; i++) {
-    const ch = input.channels[i];
+  for (let i = 0; i < finCh.summaries.length; i++) {
+    const ch = finCh.summaries[i];
     const r = nextRow(ws1, [ch.name]);
     const lc = ws1.getCell(r, 1);
     lc.font = { name: 'Calibri', size: 11, bold: true, color: { argb: ARGB_INK } };
@@ -1002,12 +1152,17 @@ export async function downloadFinancialGoalsExcel(input: FinancialGoalsInput): P
     bp.border = borderAll();
     bp.numFmt = '0.0%';
     bp.alignment = { vertical: 'middle', horizontal: 'right' };
-    const bc = ws1.getCell(r, 3);
+    const vp = ws1.getCell(r, 3);
+    vp.border = borderAll();
+    vp.value = ch.varPct;
+    vp.numFmt = '0.0%';
+    vp.alignment = { vertical: 'middle', horizontal: 'right' };
+    const bc = ws1.getCell(r, 4);
     bc.border = borderAll();
     bc.value = { formula: 'B' + breakEvenRowNum + '*B' + r, result: result.breakEvenWithMarketing * ch.pct };
     bc.numFmt = '#,##0.00';
     bc.alignment = { vertical: 'middle', horizontal: 'right' };
-    const tc = ws1.getCell(r, 4);
+    const tc = ws1.getCell(r, 5);
     tc.border = borderAll();
     tc.value = { formula: 'B' + targetRevenueRowNum + '*B' + r, result: result.targetRevenueWithMarketing * ch.pct };
     tc.numFmt = '#,##0.00';
