@@ -1,0 +1,39 @@
+name: Sync convocatorias (domingo)
+
+on:
+  schedule:
+    # Cada domingo 08:00 UTC (02:00-03:00 CDMX) — sincroniza la hoja de Google
+    # con src/lib/convocatorias-data.json y hace commit/push si hubo cambios.
+    - cron: '0 8 * * 0'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Ejecutar sync con la hoja de Google Sheets
+        run: node scripts/sync-convocatorias.mjs
+
+      - name: Commit y push si hubo cambios
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet -- src/lib/convocatorias-data.json; then
+            git add src/lib/convocatorias-data.json
+            git commit -m "Convocatorias y fondos: sync semanal automatico con la hoja de Google (fuente canonica)"
+            git push
+            echo "Cambios sincronizados."
+          else
+            echo "Sin cambios; la hoja no se actualizo desde el ultimo sync."
+          fi

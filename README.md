@@ -39,6 +39,15 @@ Copia `.env.example` a `.env.local` y llena:
 
 **Reglas de seguridad:** despliega `firestore.rules` y `storage.rules` con `firebase deploy --only firestore:rules,storage:rules` (requiere Firebase CLI configurado con tu proyecto).
 
+## Convocatorias y fondos (`/babel/convocatorias`)
+
+Tablero de convocatorias, premios, becas y fondos alineados a los ODS para organizaciones en
+México. Los datos viven en `src/lib/convocatorias-data.json` y su fuente canónica es una hoja de
+Google Sheets sincronizada cada domingo por GitHub Actions.
+
+- Proceso completo (fuentes de búsqueda, sync, criterios de elegibilidad): [`docs/CONVOCATORIAS.md`](docs/CONVOCATORIAS.md)
+- Sync manual: `node scripts/sync-convocatorias.mjs`
+
 ## Estructura relevante
 
 ```
