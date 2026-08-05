@@ -6,7 +6,6 @@ import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 import {
   DATOS_CONVOCATORIAS,
   ESTADOS_MX,
-  FUENTES,
   ODS_NAMES,
   calcularMontoAbiertas,
   diasRestantes,
@@ -76,10 +75,6 @@ const LABELS = {
     diasCierra: 'Cierra en {d} dias',
     cierraHoy: 'Cierra hoy!',
     fechaPorConfirmar: 'Fecha por confirmar',
-    fuentesTitle: 'Fuentes profesionales para encontrar mas fondos',
-    fuentesSub:
-      'Estas son las plataformas y agregadores donde viven cientos de convocatorias. La busqueda automatica semanal ya las revisa; aqui las tienes a la mano para explorar por tu cuenta.',
-    abrir: 'Abrir',
     guardado: 'Directorio de convocatorias con datos de 2025-2026. Verifica siempre los requisitos completos en la liga oficial de cada convocatoria.',
     hoyLabel: '{dia}/{mes}/{anio}',
   },
@@ -136,10 +131,6 @@ const LABELS = {
     diasCierra: 'Closes in {d} days',
     cierraHoy: 'Closes today!',
     fechaPorConfirmar: 'Date TBD',
-    fuentesTitle: 'Professional sources to find more funding',
-    fuentesSub:
-      'These are the platforms and aggregators where hundreds of calls live. The automatic weekly search already checks them; here they are at hand for you to explore on your own.',
-    abrir: 'Open',
     guardado:
       'Calls directory with 2025-2026 data. Always verify the full requirements on the official link of each call.',
     hoyLabel: '{dia}/{mes}/{anio}',
@@ -162,15 +153,9 @@ const PASOS_TOUR: Record<ConvoLang, TourStep[]> = {
     },
     {
       selector: '#convocatorias-catalogo',
-      title: 'Catálogo completo',
+      title: 'Catálogo de abiertas',
       description:
-        'Explora el catálogo completo con buscador por nombre, tema u ODS, y filtros por estatus, tipo y ámbito. Cada tarjeta incluye requisitos, monto, fecha límite y la liga oficial.',
-    },
-    {
-      selector: '#convocatorias-fuentes',
-      title: 'Fuentes profesionales',
-      description:
-        'Plataformas y agregadores donde se publican cientos de convocatorias y fondos para que amplíes tu búsqueda.',
+        'Por defecto el catálogo muestra solo las convocatorias abiertas. Puedes cambiar el filtro de estatus a "Cerrada" o "Todas" si quieres revisar el historial.',
     },
   ],
   en: [
@@ -188,15 +173,9 @@ const PASOS_TOUR: Record<ConvoLang, TourStep[]> = {
     },
     {
       selector: '#convocatorias-catalogo',
-      title: 'Full catalog',
+      title: 'Open calls catalog',
       description:
-        'Browse the full catalog with a search box by name, topic or SDG, and filters by status, type and scope. Each card includes requirements, amount, deadline and the official link.',
-    },
-    {
-      selector: '#convocatorias-fuentes',
-      title: 'Professional sources',
-      description:
-        'Platforms and aggregators where hundreds of calls and funds are published, so you can expand your search.',
+        'By default the catalog shows only open calls. You can switch the status filter to "Closed" or "All" to review the history.',
     },
   ],
 };
@@ -208,8 +187,8 @@ function fechaHoy(hoy: Date): string {
 }
 
 function claseEstatus(estatus: string): string {
-  if (estatus === 'Abierta') return 'bg-green-100 text-green-800';
-  if (estatus === 'Cerrada') return 'bg-red-100 text-red-800';
+  if (estatus.startsWith('Abierta') || estatus === 'Abierta') return 'bg-green-100 text-green-800';
+  if (estatus.startsWith('Cerrada')) return 'bg-red-100 text-red-800';
   return 'bg-slate-100 text-slate-600';
 }
 
@@ -239,7 +218,9 @@ export default function ConvocatoriasBuilder({ lang }: { lang: ConvoLang }) {
   const [evaluado, setEvaluado] = React.useState(false);
 
   const [busca, setBusca] = React.useState('');
-  const [fEstatus, setFEstatus] = React.useState('');
+  // Por defecto el catalogo solo muestra lo que NO esta cerrado: las abiertas con
+  // fecha en vivo y las de estatus 'Abierta (permanente)'/'Variable'/'Anual'.
+  const [fEstatus, setFEstatus] = React.useState('Abierta');
   const [fTipo, setFTipo] = React.useState('');
   const [fAmbito, setFAmbito] = React.useState('');
 
@@ -314,9 +295,12 @@ export default function ConvocatoriasBuilder({ lang }: { lang: ConvoLang }) {
     const q = busca.toLowerCase();
     return datos.filter((c) => {
       const txt = (c.convocatoria + ' ' + c.descripcion + ' ' + c.ods + ' ' + c.requisitos + ' ' + c.tipo + ' ' + c.ambito).toLowerCase();
+      const est = estatusReal(c, hoyD);
+      const cumpleEstatus =
+        fEstatus === '' || (fEstatus === 'Abierta' ? est !== 'Cerrada' : est === fEstatus);
       return (
         (!q || txt.includes(q)) &&
-        (!fEstatus || estatusReal(c, hoyD) === fEstatus) &&
+        cumpleEstatus &&
         (!fTipo || c.tipo === fTipo) &&
         (!fAmbito || c.ambito === fAmbito)
       );
@@ -623,33 +607,6 @@ if (!hoy) {
             {t.vacio}
           </div>
         )}
-      </div>
-
-      {/* Fuentes */}
-      <div id="convocatorias-fuentes" className="mt-6 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-        <h4 className="text-sm font-semibold text-slate-700">🔎 {t.fuentesTitle}</h4>
-        <p className="mt-1 text-xs text-slate-500">{t.fuentesSub}</p>
-        {FUENTES.map((sec) => (
-          <div key={sec.titulo} className="mt-4">
-            <h5 className="text-xs font-bold text-slate-700">{sec.titulo}</h5>
-            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {sec.items.map((f) => (
-                <div key={f.nombre} className="flex flex-col rounded-lg border border-slate-200 bg-slate-50 p-2.5">
-                  <p className="text-xs font-semibold text-slate-800">{f.nombre}</p>
-                  <p className="mt-1 flex-1 text-xs text-slate-600">{f.descripcion}</p>
-                  <a
-                    href={f.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:underline"
-                  >
-                    {t.abrir} → <ExternalLink className="h-3 w-3" />
-                  </a>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
       </div>
 
       <p className="mt-4 text-xs text-slate-400">{t.guardado}</p>
