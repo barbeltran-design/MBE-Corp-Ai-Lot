@@ -164,7 +164,7 @@ const PASOS_TOUR: Record<ConvoLang, TourStep[]> = {
       selector: '#convocatorias-catalogo',
       title: 'Catálogo completo',
       description:
-        'Explora las 35 convocatorias con buscador por nombre, tema u ODS, y filtros por estatus, tipo y ámbito. Cada tarjeta incluye requisitos, monto, fecha límite y la liga oficial.',
+        'Explora el catálogo completo con buscador por nombre, tema u ODS, y filtros por estatus, tipo y ámbito. Cada tarjeta incluye requisitos, monto, fecha límite y la liga oficial.',
     },
     {
       selector: '#convocatorias-fuentes',
@@ -190,7 +190,7 @@ const PASOS_TOUR: Record<ConvoLang, TourStep[]> = {
       selector: '#convocatorias-catalogo',
       title: 'Full catalog',
       description:
-        'Browse the 35 calls with a search box by name, topic or SDG, and filters by status, type and scope. Each card includes requirements, amount, deadline and the official link.',
+        'Browse the full catalog with a search box by name, topic or SDG, and filters by status, type and scope. Each card includes requirements, amount, deadline and the official link.',
     },
     {
       selector: '#convocatorias-fuentes',
