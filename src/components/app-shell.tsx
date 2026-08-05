@@ -19,8 +19,8 @@ function AppShellInner({
   const navItems: ExecutiveNavItem[] = [
     { href: `/${locale}/executive-preview`, label: navLabel('Resumen ejecutivo', 'Executive Summary'), icon: LayoutDashboard },
     { href: `/${locale}/dashboard`, label: navLabel('Evaluación de madurez', 'Maturity Assessment'), icon: Gauge },
-    { href: `/${locale}/babel/indicadores`, label: navLabel('Objetivos estratégicos', 'Strategic Objectives'), icon: TrendingUp },
     { href: `/${locale}/babel/madurez`, label: navLabel('Mejora del Nivel de Madurez', 'Maturity Level Improvement'), icon: LineChart },
+    { href: `/${locale}/babel/indicadores`, label: navLabel('Objetivos estratégicos', 'Strategic Objectives'), icon: TrendingUp },
     { href: `/${locale}/babel`, label: navLabel('Reflexión estratégica', 'Strategic Reflection'), icon: Sparkles },
     { href: `/${locale}/babel/organigrama`, label: navLabel('Organigrama y roles', 'Org Chart & Roles'), icon: Users },
     { href: `/${locale}/babel/plan-accion`, label: navLabel('Plan de acción estratégico', 'Strategic Action Plan'), icon: ClipboardList },

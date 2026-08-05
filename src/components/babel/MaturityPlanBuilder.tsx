@@ -310,15 +310,13 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
 
   const siguienteDeAgente = React.useCallback(
     (mentor: MentorAgente): { themeId: DimensionId; nivel: number; practica: PracticaMadurez } | null => {
-      const yaEnMes = plan.compromisos[mesSel] ?? [];
       for (const id of DIMENSION_IDS) {
-        if (yaEnMes.some((c) => c.themeId === id)) continue;
         const sig = proximaPractica(id);
         if (sig && sig.practica.mentor === mentor) return { themeId: id, ...sig };
       }
       return null;
     },
-    [plan.compromisos, mesSel, proximaPractica]
+    [proximaPractica]
   );
 
   const generarMes = (mesKey: string) => {
