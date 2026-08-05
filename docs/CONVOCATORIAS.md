@@ -69,23 +69,59 @@ hoja y verifica que no venga vacío. Es idempotente: si la hoja no cambió, el J
 ## Actualización semanal automática (cada domingo)
 
 El workflow GitHub Actions `.github/workflows/sync-convocatorias.yml` corre **cada domingo a las
-08:00 UTC** (02:00–03:00 CDMX) con el job `sync`:
+08:00 UTC** (02:00–03:00 CDMX) con dos jobs:
 
-1. Checkout del repo.
-2. Node ≥ 20.
-3. `node scripts/sync-convocatorias.mjs` (descarga la hoja y regenera el JSON).
-4. Si el JSON cambió → commit `Convocatorias y fondos: sync semanal automatico…` + push.
-5. Si no cambió → no hace nada.
+**1. Job `busqueda`** (busca candidatas nuevas con IA y las inserta en la hoja):
+
+```bash
+node scripts/buscar-convocatorias.mjs --insertar
+```
+
+- Llama a **Gemini** (`GEMINI_API_KEY`) con *Google Search grounding* (búsqueda en la web real)
+  y un prompt que recorre las 4 categorías de fuentes: buscadores internacionales de fondos,
+  agregadores de América Latina, plataformas EE.UU./inglés y datos IATI de cooperación a México.
+- Pide hasta `LIMITE_CANDIDATAS` (default 20) objetos con las **11 columnas de la hoja**.
+- **Deduplica** contra `src/lib/convocatorias-data.json` (nombre normalizado) para no repetir.
+- Con `--insertar` hace `POST {filas:[...]}` al **Apps Script Web App** (`SHEETS_WEB_APP_URL`),
+  que inserta las filas nuevas en la hoja (también deduplica del lado de Google).
+- Sin `SHEETS_WEB_APP_URL` imprime las candidatas y no inserta. Sin `GEMINI_API_KEY` se omite
+  todo y solo queda el sync.
+
+**2. Job `sync`** (depende del anterior): `node scripts/sync-convocatorias.mjs` y, si el JSON
+cambió, commit `Convocatorias y fondos: sync semanal automatico…` + push.
 
 Se puede disparar a mano desde la pestaña **Actions → Sync convocatorias (domingo) → Run workflow**.
 
-## Proceso semanal de búsqueda de nuevas convocatorias
+### Setup de una sola vez (para que la búsqueda funcione)
 
-Cada semana (idealmente antes del sync del domingo, o el mismo domingo) se revisan las fuentes
-y se agregan nuevas filas a la hoja. El flujo sugerido:
+1. **Desplegar el Apps Script** (`apps-script/convocatorias-hook.gs`) en la hoja:
+   Extensiones → Apps Script → pegar el código → guardar → ejecutar `configurarEncabezado` una vez
+   (autorizar) → Implementar → Nueva implementación → **Aplicación web** (Ejecutar como: "Yo";
+   Tener acceso: "Cualquier persona") → copiar la URL (`https://script.google.com/macros/s/.../exec`).
+2. **Configurar secrets en GitHub** (Settings → Secrets and variables → Actions):
+   - `GEMINI_API_KEY` — la llave de Gemini (la misma que está en Vercel/.env.prod).
+   - `SHEETS_WEB_APP_URL` — la URL del paso anterior.
+   - (opcional) `GEMINI_MODEL` y `LIMITE_CANDIDATAS` como variables del repo.
+3. Probar con **Run workflow** en Actions (o localmente con las mismas env vars).
 
-1. **Revisar las secciones de fuentes de la página** (`<section>` "Fuentes profesionales" en
-   `/babel/convocatorias`), agrupadas en 4 bloques:
+### Búsqueda local (sin GitHub)
+
+```bash
+$env:GEMINI_API_KEY = "..."  # tu llave de Gemini
+$env:SHEETS_WEB_APP_URL = "https://script.google.com/macros/s/.../exec"
+node scripts/buscar-convocatorias.mjs          # solo imprime candidatas
+node scripts/buscar-convocatorias.mjs --insertar
+```
+
+## Proceso semanal (revisión de lo que insertó la IA)
+
+La búsqueda la hace el Action del domingo (job `busqueda`). Tu tarea semanal es de **validación**
+sobre lo que la IA dejó en la hoja (o, si aún no configuras `SHEETS_WEB_APP_URL`, hacer la
+búsqueda a mano con el mismo prompt):
+
+1. **Ver lo que insertó la IA** en la hoja (filas de la semana) y/o el log del Action
+   (Actions → Sync convocatorias → job `busqueda`).
+2. Las 4 categorías de fuentes que recorre el prompt automático:
    - **Buscadores internacionales de fondos:** GrantStation, FundsForNGOs, Devex Funding, Candid
      (Foundation Directory), Portal UE · Funding & Tenders, Banco Mundial eConsultant2, Climate
      Funds Update, TerraViva Grants.
@@ -95,16 +131,12 @@ y se agregan nuevas filas a la hoja. El flujo sugerido:
      (datos abiertos de cooperación: montos, donantes y sectores).
    - **Plataformas de fondos en EE.UU. / en inglés (revisar elegibilidad internacional):**
      Grants.gov, Hello Alice, GrantWatch, The Grant Portal, USA Funding Applications.
-2. **Google / búsqueda por prompt** con un asistente de IA: pide convocatorias contractuales,
-   premios, becas y fondos **vigentes** para organizaciones de México, con fecha límite concreta
-   y liga oficial, y que devuelva los campos en el mismo formato de la hoja.
-3. Para cada candidata, **validar con el ojo humano**: abrir la liga, confirmar la fecha límite,
-   sea cierta, que el monto estimado sea razonable, y apuntar observaciones de elegibilidad
-   (¿acepta OSC mexicanas? ¿internacionales?).
-4. **Agregar la fila a la hoja** (título descriptivo, tipo, ámbito, ODS alineados "`ODS n`…`",
-   descripción, requisitos, monto, fecha límite, estatus "Abierta", liga y revisión).
-5. **Sincronizar**: correr el script a mano o dejar que el Action del domingo lo haga.
-6. En el JSON resultante, **enriquecer los `criterios`** de los registros nuevos con
+3. Para cada candidata nueva, **validar con el ojo humano**: abrir la liga, confirmar la fecha
+   límite, que el monto estimado sea razonable, y apuntar observaciones de elegibilidad
+   (¿acepta OSC mexicanas? ¿internacionales?). Corrige en la hoja lo que la IA haya inventado
+   o mal copiado.
+4. **Sincronizar**: correr el script a mano o dejar que el Action del domingo lo haga.
+5. En el JSON resultante, **enriquecer los `criterios`** de los registros nuevos con
    `tipos_elegibles`, `ods_num`, `anios_min_operacion`, `liderazgo`, etc. (el derivado solo
    funciona de base).
 

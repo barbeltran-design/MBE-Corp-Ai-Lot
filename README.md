@@ -43,10 +43,12 @@ Copia `.env.example` a `.env.local` y llena:
 
 Tablero de convocatorias, premios, becas y fondos alineados a los ODS para organizaciones en
 México. Los datos viven en `src/lib/convocatorias-data.json` y su fuente canónica es una hoja de
-Google Sheets sincronizada cada domingo por GitHub Actions.
+Google Sheets. Cada domingo GitHub Actions **busca candidatas con Gemini** (Google Search
+grounding), las inserta en la hoja vía un Apps Script Web App, y sincroniza el JSON.
 
-- Proceso completo (fuentes de búsqueda, sync, criterios de elegibilidad): [`docs/CONVOCATORIAS.md`](docs/CONVOCATORIAS.md)
+- Proceso completo (búsqueda automática, Apps Script, sync, criterios): [`docs/CONVOCATORIAS.md`](docs/CONVOCATORIAS.md)
 - Sync manual: `node scripts/sync-convocatorias.mjs`
+- Búsqueda manual: `node scripts/buscar-convocatorias.mjs [--insertar]`
 
 ## Estructura relevante
 

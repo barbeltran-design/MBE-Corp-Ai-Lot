@@ -2,8 +2,9 @@ name: Sync convocatorias (domingo)
 
 on:
   schedule:
-    # Cada domingo 08:00 UTC (02:00-03:00 CDMX) — sincroniza la hoja de Google
-    # con src/lib/convocatorias-data.json y hace commit/push si hubo cambios.
+    # Cada domingo 08:00 UTC (02:00-03:00 CDMX) — busca candidatas con Gemini,
+    # las inserta en la hoja (si SHEETS_WEB_APP_URL está configurado) y luego
+    # sincroniza la hoja con src/lib/convocatorias-data.json.
     - cron: '0 8 * * 0'
   workflow_dispatch: {}
 
@@ -11,7 +12,38 @@ permissions:
   contents: write
 
 jobs:
+  busqueda:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Buscar candidatas con Gemini
+        id: buscar
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SHEETS_WEB_APP_URL: ${{ secrets.SHEETS_WEB_APP_URL }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          LIMITE_CANDIDATAS: ${{ vars.LIMITE_CANDIDATAS }}
+        # Sin secretos GEMINI_API_KEY/SHEETS_WEB_APP_URL este paso se hace skip
+        # y solo queda el sync básico, que no necesita llaves.
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "GEMINI_API_KEY no configurado; se omite la busqueda semanal."
+            exit 0
+          fi
+          if [ -z "$SHEETS_WEB_APP_URL" ]; then
+            echo "SHEETS_WEB_APP_URL no configurado; la busqueda solo imprime candidatas (sin insertar)."
+          fi
+          node scripts/buscar-convocatorias.mjs --insertar || exit $?
+
   sync:
+    needs: busqueda
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
