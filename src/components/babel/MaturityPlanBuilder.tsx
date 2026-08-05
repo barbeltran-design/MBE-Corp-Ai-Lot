@@ -193,17 +193,17 @@ function fmtDay(date: Date, lang: PlanLang): string {
 const PASOS_TOUR: Record<PlanLang, TourStep[]> = {
   es: [
     { selector: '#madurez-plan-title', title: 'Mejora del Nivel de Madurez', description: 'Aquí defines las acciones para mejorar la madurez de tu organización: cada mes una práctica con cada agente, en el orden de los temas de la evaluación.' },
+    { selector: '#madurez-scrum', title: 'Scrum semanal', description: 'Semana a semana se elige UNA acción y se divide en tareas. Toca una tarjeta para moverla entre columnas.' },
     { selector: '#madurez-agentes', title: 'Siguiente práctica por agente', description: 'Cada agente (Babel, Fisnando, Karmetin, Normau y Atech) tiene asignada la siguiente práctica sugerida, partiendo del nivel más bajo no completado de tu evaluación.' },
     { selector: '#madurez-mensual', title: 'Plan del mes', description: 'Cada mes se agenda una práctica con cada agente. Actualiza el estatus a Completada para avanzar automáticamente al siguiente nivel del tema.' },
     { selector: '#madurez-temas', title: 'Prácticas por tema', description: 'El detalle de los 11 temas: la siguiente práctica a trabajar y, si ya la dominas, márcala completada.' },
-    { selector: '#madurez-scrum', title: 'Scrum semanal', description: 'Semana a semana se elige UNA acción y se divide en tareas. Toca una tarjeta para moverla entre columnas.' },
   ],
   en: [
     { selector: '#madurez-plan-title', title: 'Maturity Level Improvement', description: 'This is where you define the actions to improve your organization\'s maturity: one practice with each agent per month, following the assessment topic order.' },
+    { selector: '#madurez-scrum', title: 'Weekly scrum', description: 'Week by week you choose ONE action and break it into tasks. Tap a card to move it across columns.' },
     { selector: '#madurez-agentes', title: 'Next practice per agent', description: 'Each agent (Babel, Fisnando, Karmetin, Normau and Atech) has its next suggested practice, starting from the lowest incomplete level of your assessment.' },
     { selector: '#madurez-mensual', title: 'Monthly plan', description: 'Each month schedules one practice per agent. Update the status to Completed to automatically advance to the next level of the topic.' },
     { selector: '#madurez-temas', title: 'Practices by topic', description: 'The detail of the 11 topics: the next practice to work on and, if you already master it, mark it as completed.' },
-    { selector: '#madurez-scrum', title: 'Weekly scrum', description: 'Week by week you choose ONE action and break it into tasks. Tap a card to move it across columns.' },
   ],
 };
 
@@ -568,8 +568,119 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
         </div>
       ) : null}
 
+      {/* Scrum semanal */}
+      <div id="madurez-scrum" className="mt-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <h4 className="text-sm font-semibold text-slate-700">{t.scrumTitle}</h4>
+            <button
+              type="button"
+              onClick={() => setSemanaOffset((o) => o - 1)}
+              className="rounded-lg border border-slate-300 bg-white p-1 text-slate-600 hover:bg-slate-50"
+              aria-label="Semana anterior"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="min-w-[150px] text-center text-sm font-medium text-slate-800">{semanaLabel}</span>
+            <button
+              type="button"
+              onClick={() => setSemanaOffset((o) => o + 1)}
+              className="rounded-lg border border-slate-300 bg-white p-1 text-slate-600 hover:bg-slate-50"
+              aria-label="Semana siguiente"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+        <p className="mt-1 text-xs text-slate-400">{t.scrumHint}</p>
+
+        <div className="mt-2">
+          <label className="mb-1 block text-xs font-medium text-slate-500">{t.accionSemana}</label>
+          <select
+            value={accionSel}
+            onChange={(ev) => fijarAccion(ev.target.value)}
+            className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700"
+          >
+            {opcionesEfectivas.length > 0 ? (
+              opcionesEfectivas.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))
+            ) : (
+              <option value="">{t.accionSinOpciones}</option>
+            )}
+          </select>
+          {!accionSel && opcionesAccion.length > 0 ? <p className="mt-1 text-xs text-slate-400">{t.sinAccion}</p> : null}
+        </div>
+
+        <div className="mt-3 flex gap-2">
+          <input
+            type="text"
+            value={nuevaTarea}
+            onChange={(ev) => setNuevaTarea(ev.target.value)}
+            onKeyDown={(ev) => {
+              if (ev.key === 'Enter') agregarTarea();
+            }}
+            placeholder={t.tareaPlaceholder}
+            className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+          />
+          <button
+            type="button"
+            onClick={agregarTarea}
+            className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
+          >
+            {t.agregarTarea}
+          </button>
+        </div>
+
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+          {(
+            [
+              ['todo', t.colTodo],
+              ['doing', t.colDoing],
+              ['done', t.colDone],
+            ] as [TareaEstatus, string][]
+          ).map(([estatus, header]) => (
+            <div key={estatus} className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+              <p className="px-1 pb-1 text-xs font-semibold text-slate-500">{header}</p>
+              <div className="space-y-1.5">
+                {tareas
+                  .filter((ta) => ta.estatus === estatus)
+                  .map((ta) => (
+                    <div
+                      key={ta.id}
+                      onClick={() => moverTarea(ta.id)}
+                      title="Clic para mover"
+                      className={
+                        'flex cursor-pointer items-start justify-between gap-2 rounded-md border px-2 py-1.5 text-xs shadow-sm ' +
+                        (ta.estatus === 'done'
+                          ? 'border-green-200 bg-green-50 text-green-800 line-through'
+                          : 'border-slate-200 bg-white text-slate-700')
+                      }
+                    >
+                      <span className="min-w-0">{ta.texto}</span>
+                      <button
+                        type="button"
+                        onClick={(ev) => {
+                          ev.stopPropagation();
+                          eliminarTarea(ta.id);
+                        }}
+                        className="shrink-0 text-red-500 hover:text-red-700"
+                        aria-label="Eliminar tarea"
+                      >
+                        x
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Siguiente practica por agente */}
-      <div id="madurez-agentes" className="mt-5">
+      <div id="madurez-agentes" className="mt-6">
         <h4 className="text-sm font-semibold text-slate-700">{t.agentesTitle}</h4>
         <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
           {MENTORES.map((mentor) => {
@@ -721,117 +832,6 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
               </div>
             );
           })}
-        </div>
-      </div>
-
-      {/* Scrum semanal */}
-      <div id="madurez-scrum" className="mt-6">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <h4 className="text-sm font-semibold text-slate-700">{t.scrumTitle}</h4>
-            <button
-              type="button"
-              onClick={() => setSemanaOffset((o) => o - 1)}
-              className="rounded-lg border border-slate-300 bg-white p-1 text-slate-600 hover:bg-slate-50"
-              aria-label="Semana anterior"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <span className="min-w-[150px] text-center text-sm font-medium text-slate-800">{semanaLabel}</span>
-            <button
-              type="button"
-              onClick={() => setSemanaOffset((o) => o + 1)}
-              className="rounded-lg border border-slate-300 bg-white p-1 text-slate-600 hover:bg-slate-50"
-              aria-label="Semana siguiente"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-        <p className="mt-1 text-xs text-slate-400">{t.scrumHint}</p>
-
-        <div className="mt-2">
-          <label className="mb-1 block text-xs font-medium text-slate-500">{t.accionSemana}</label>
-          <select
-            value={accionSel}
-            onChange={(ev) => fijarAccion(ev.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700"
-          >
-            {opcionesEfectivas.length > 0 ? (
-              opcionesEfectivas.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))
-            ) : (
-              <option value="">{t.accionSinOpciones}</option>
-            )}
-          </select>
-          {!accionSel && opcionesAccion.length > 0 ? <p className="mt-1 text-xs text-slate-400">{t.sinAccion}</p> : null}
-        </div>
-
-        <div className="mt-3 flex gap-2">
-          <input
-            type="text"
-            value={nuevaTarea}
-            onChange={(ev) => setNuevaTarea(ev.target.value)}
-            onKeyDown={(ev) => {
-              if (ev.key === 'Enter') agregarTarea();
-            }}
-            placeholder={t.tareaPlaceholder}
-            className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-          />
-          <button
-            type="button"
-            onClick={agregarTarea}
-            className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
-          >
-            {t.agregarTarea}
-          </button>
-        </div>
-
-        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-          {(
-            [
-              ['todo', t.colTodo],
-              ['doing', t.colDoing],
-              ['done', t.colDone],
-            ] as [TareaEstatus, string][]
-          ).map(([estatus, header]) => (
-            <div key={estatus} className="rounded-lg border border-slate-200 bg-slate-50 p-2">
-              <p className="px-1 pb-1 text-xs font-semibold text-slate-500">{header}</p>
-              <div className="space-y-1.5">
-                {tareas
-                  .filter((ta) => ta.estatus === estatus)
-                  .map((ta) => (
-                    <div
-                      key={ta.id}
-                      onClick={() => moverTarea(ta.id)}
-                      title="Clic para mover"
-                      className={
-                        'flex cursor-pointer items-start justify-between gap-2 rounded-md border px-2 py-1.5 text-xs shadow-sm ' +
-                        (ta.estatus === 'done'
-                          ? 'border-green-200 bg-green-50 text-green-800 line-through'
-                          : 'border-slate-200 bg-white text-slate-700')
-                      }
-                    >
-                      <span className="min-w-0">{ta.texto}</span>
-                      <button
-                        type="button"
-                        onClick={(ev) => {
-                          ev.stopPropagation();
-                          eliminarTarea(ta.id);
-                        }}
-                        className="shrink-0 text-red-500 hover:text-red-700"
-                        aria-label="Eliminar tarea"
-                      >
-                        x
-                      </button>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          ))}
         </div>
       </div>
 
