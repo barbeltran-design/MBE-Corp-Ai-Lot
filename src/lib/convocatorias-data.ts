@@ -151,13 +151,24 @@ export function estatusYdias(c: Convocatoria, hoy: Date): { estatus: string; dia
   return { estatus: estatusReal(c, hoy), dias: diasRestantes(c, hoy) };
 }
 
+/**
+ * Grupo de estatus para ordenar el catálogo: Abierta con fecha → Abierta
+ * (permanente) → Anual (por confirmar) → Variable → otros sin fecha → Cerrada.
+ * Devuelve [grupo, subClave] donde subClave = días restantes dentro del grupo.
+ */
+function grupoEstatus(c: Convocatoria, hoy: Date): [number, number] {
+  const est = estatusReal(c, hoy);
+  const d = diasRestantes(c, hoy) ?? 0;
+  if (est === 'Cerrada' || est.startsWith('Cerrada')) return [5, d];
+  if (est === 'Abierta') return [0, d];
+  if (est.startsWith('Abierta')) return [1, d];
+  if (est.startsWith('Anual')) return [2, d];
+  if (est === 'Variable') return [3, d];
+  return [4, d];
+}
+
 export function ordenarPorVencimiento(lista: Convocatoria[], hoy: Date): Convocatoria[] {
-  const clave = (c: Convocatoria): [number, number] => {
-    const d = diasRestantes(c, hoy);
-    if (d !== null && d >= 0) return [0, d];
-    if (d !== null) return [2, -d];
-    return [1, 0];
-  };
+  const clave = (c: Convocatoria): [number, number] => grupoEstatus(c, hoy);
   return [...lista].sort((a, b) => {
     const [ka1, ka2] = clave(a);
     const [kb1, kb2] = clave(b);

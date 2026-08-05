@@ -231,7 +231,10 @@ export default function ConvocatoriasBuilder({ lang }: { lang: ConvoLang }) {
   const hoyD = hoy ?? new Date();
 
   const datos = React.useMemo(() => ordenarPorVencimiento(DATOS_CONVOCATORIAS, hoyD), [hoyD]);
-  const abiertas = React.useMemo(() => datos.filter((c) => estatusReal(c, hoyD) === 'Abierta').length, [datos, hoyD]);
+  const abiertas = React.useMemo(
+    () => datos.filter((c) => estatusReal(c, hoyD).startsWith('Abierta')).length,
+    [datos, hoyD]
+  );
   const monto = React.useMemo(() => calcularMontoAbiertas(DATOS_CONVOCATORIAS, hoyD), [hoyD]);
   const tiposUnicos = React.useMemo(() => Array.from(new Set(DATOS_CONVOCATORIAS.map((c) => c.tipo))).sort(), []);
   const ambitosUnicos = React.useMemo(() => Array.from(new Set(DATOS_CONVOCATORIAS.map((c) => c.ambito))).sort(), []);
@@ -275,7 +278,7 @@ export default function ConvocatoriasBuilder({ lang }: { lang: ConvoLang }) {
           (diasRestantes(a.c, hoyD) ?? 999) - (diasRestantes(b.c, hoyD) ?? 999)
       );
     const noEleg = evaluadas.filter((x) => !x.r.elegible);
-    const abiertasEleg = eleg.filter((x) => estatusReal(x.c, hoyD) === 'Abierta').length;
+    const abiertasEleg = eleg.filter((x) => estatusReal(x.c, hoyD).startsWith('Abierta')).length;
     setElegibles(eleg);
     setNoElegibles(noEleg);
     setResumen(t.resumen.replace('{n}', String(eleg.length)).replace('{a}', String(abiertasEleg)));
