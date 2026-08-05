@@ -2,7 +2,7 @@
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { downloadFinancialGoalsExcel, computeFinancialGoals } from '@/lib/deliverables';
+import { downloadFinancialGoalsExcel, computeFinancialGoals, computeFinancialChannels } from '@/lib/deliverables';
 import type { FinancialGoalsInput, FinancialGoalsResult, FinancialGoalsChannel } from '@/lib/deliverables';
 
 type FinLang = 'es' | 'en';
@@ -603,7 +603,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                           </span>
                         )}
                       </div>
-                      <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      <div className="mt-2 grid grid-cols-2 gap-2">
                         <div>
                           <p className="text-[10px] uppercase tracking-wide text-slate-500">{lang === 'en' ? 'Desired profit' : 'Utilidad deseada'}</p>
                           <p className="text-base font-bold text-slate-900">{fmtMoney(entry.form?.desiredProfit ?? entry.input.desiredProfit ?? 0)}</p>
@@ -612,15 +612,63 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                           <p className="text-[10px] uppercase tracking-wide text-slate-500">{lang === 'en' ? 'Break-even' : 'Punto de equilibrio'}</p>
                           <p className="text-base font-bold text-slate-900">{fmtMoney(entry.result.breakEvenWithMarketing ?? 0)}</p>
                         </div>
-                        <div>
-                          <p className="text-[10px] uppercase tracking-wide text-slate-500">{lang === 'en' ? 'Goal revenue' : 'Ingreso meta'}</p>
-                          <p className="text-base font-bold text-slate-900">{fmtMoney(entry.result.targetRevenueWithMarketing ?? 0)}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] uppercase tracking-wide text-slate-500">{lang === 'en' ? 'Variable costs' : 'Costos variables'}</p>
-                          <p className="text-base font-bold text-slate-900">{((entry.result.totalVariablePctWithMarketing ?? 0) * 100).toFixed(1)}%</p>
-                        </div>
                       </div>
+                      {(() => {
+                        let channelRows: { name: string; pct: number; varPct: number }[] = [];
+                        try {
+                          const finCh = computeFinancialChannels(entry.input);
+                          const wSum = finCh.summaries.reduce(function (s, c) { return s + c.pct; }, 0);
+                          channelRows = finCh.summaries.map(function (c) {
+                            return { name: c.name, pct: wSum > 0 ? c.pct / wSum : 0, varPct: c.varPct };
+                          });
+                        } catch {
+                          channelRows = [];
+                        }
+                        const targetRevenue = entry.result.targetRevenueWithMarketing ?? 0;
+                        const totalVarCosts = channelRows.reduce(function (s, c) {
+                          return s + targetRevenue * c.pct * c.varPct;
+                        }, 0);
+                        return (
+                          <div className="mt-2 rounded-lg border border-slate-200 bg-white p-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-[10px] uppercase tracking-wide text-slate-500">
+                                {lang === 'en' ? 'Goal revenue by channel' : 'Ingreso meta por canal de ingreso'}
+                              </p>
+                              <p className="text-xs font-bold text-slate-900">{fmtMoney(targetRevenue)}</p>
+                            </div>
+                            {channelRows.length === 0 ? (
+                              <p className="mt-1 text-[11px] text-slate-500">—</p>
+                            ) : (
+                              <div className="mt-1 space-y-1">
+                                {channelRows.map(function (ch, chIdx) {
+                                  const chTarget = targetRevenue * ch.pct;
+                                  const chVar = chTarget * ch.varPct;
+                                  return (
+                                    <div key={chIdx} className="flex items-start justify-between gap-2 border-b border-slate-100 py-1 text-[11px]">
+                                      <div className="min-w-0">
+                                        <p className="truncate font-medium text-slate-800">{ch.name || (lang === 'en' ? '(unnamed)' : '(sin nombre)')}</p>
+                                        <p className="text-[10px] text-slate-500">
+                                          {lang === 'en' ? 'Share' : 'Participación'}: {(ch.pct * 100).toFixed(1)}% | {lang === 'en' ? 'Var.' : 'Var.'}: {(ch.varPct * 100).toFixed(1)}%
+                                        </p>
+                                      </div>
+                                      <div className="shrink-0 text-right">
+                                        <p className="font-semibold text-slate-800">{fmtMoney(chTarget)}</p>
+                                        <p className="text-[10px] text-slate-500">
+                                          {lang === 'en' ? 'Var. costs' : 'Costos variables'}: {fmtMoney(chVar)}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                                <div className="flex items-center justify-between pt-1 text-[11px]">
+                                  <p className="font-semibold text-slate-800">{lang === 'en' ? 'Total variable costs' : 'Costos variables totales'}</p>
+                                  <p className="font-semibold text-slate-800">{fmtMoney(totalVarCosts)}</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                       <p className="mt-1.5 text-[11px] text-slate-500">
                         {lang === 'en' ? 'Marketing investment' : 'Inversión en mercadotecnia'}: {marketingShown}%
                       </p>
@@ -993,8 +1041,8 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                   <p className="font-semibold">{lang === 'en' ? 'Before you download...' : 'Antes de descargar...'}</p>
                   <p>
                     {lang === 'en'
-                      ? 'Take a look back at what you answered in Phase 0 (your business type, niche, and offer) to confirm these goals still make sense for your business. You can still go back and edit any field.'
-                      : 'Revisa lo que respondiste en la Fase 0 (tu giro, nicho y oferta) para confirmar que estas metas sigan alineadas con tu negocio. Todavía puedes regresar y editar cualquier campo.'}
+                      ? 'Check that you are not missing any income channel, product and/or service. You can still go back and edit any field.'
+                      : 'Revisa si no tienes algún canal de ingreso, producto y/o servicio adicional. Todavía puedes regresar y editar cualquier campo'}
                   </p>
                   <div className="flex gap-2">
                     <Button onClick={handleFinBack} variant="outline" size="sm">{lang === 'en' ? 'Back' : 'Atrás'}</Button>
