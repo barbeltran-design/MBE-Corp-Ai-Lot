@@ -17,6 +17,7 @@ import {
   Gauge,
   LayoutDashboard,
   LineChart,
+  Megaphone,
   MessagesSquare,
   Sparkles,
   TrendingUp,
@@ -57,7 +58,7 @@ interface PhaseRow {
   deliverables: string[];
 }
 
-const NAV_ICON_MAP = { LayoutDashboard, Gauge, Sparkles, ClipboardList, Users, TrendingUp, LineChart };
+const NAV_ICON_MAP = { LayoutDashboard, Gauge, Sparkles, ClipboardList, Users, TrendingUp, LineChart, Megaphone };
 
 const STATUS_CLASS: Record<PhaseStatus, string> = {
   completado: 'text-success',
@@ -212,6 +213,7 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
     { href: `/${routeLocale}/dashboard`, label: t('Evaluación de madurez', 'Maturity Assessment'), icon: NAV_ICON_MAP.Gauge },
     { href: `/${routeLocale}/babel/madurez`, label: t('Mejora del Nivel de Madurez', 'Maturity Level Improvement'), icon: NAV_ICON_MAP.LineChart },
     { href: `/${routeLocale}/babel/indicadores`, label: t('Objetivos estratégicos', 'Strategic Objectives'), icon: NAV_ICON_MAP.TrendingUp },
+    { href: `/${routeLocale}/babel/convocatorias`, label: t('Convocatorias y fondos', 'Calls & Grants'), icon: NAV_ICON_MAP.Megaphone },
     { href: `/${routeLocale}/babel`, label: t('Reflexión estratégica', 'Strategic Reflection'), icon: NAV_ICON_MAP.Sparkles },
     { href: `/${routeLocale}/babel/organigrama`, label: t('Organigrama y roles', 'Org Chart & Roles'), icon: NAV_ICON_MAP.Users },
     { href: `/${routeLocale}/babel/plan-accion`, label: t('Plan de acción estratégico', 'Strategic Action Plan'), icon: NAV_ICON_MAP.ClipboardList },
