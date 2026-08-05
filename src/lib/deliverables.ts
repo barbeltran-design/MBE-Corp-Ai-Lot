@@ -638,6 +638,7 @@ export interface FinancialGoalsProduct {
   unitMeasure: string;
   unitPrice: number;
   varItems: FinancialGoalsVarItem[];
+  pct?: number;
 }
 
 export interface FinancialGoalsChannel {
@@ -667,8 +668,17 @@ export interface FinancialChannelSummary {
   varPct: number;
 }
 
+export interface FinancialProductSummary {
+  name: string;
+  channel: string;
+  pct: number;
+  income: number;
+  varPct: number;
+}
+
 export interface FinancialChannelsSummary {
   summaries: FinancialChannelSummary[];
+  products: FinancialProductSummary[];
   totalIncome: number;
   totalVarPct: number;
   isLegacy: boolean;
@@ -709,43 +719,69 @@ export function computeFinancialChannels(input: FinancialGoalsInput): FinancialC
       summaries: input.channels.map(function (c) {
         return { name: c.name ?? '', pct: c.pct ?? 0, income: 0, varPct: legacyVarPct };
       }),
+      products: [],
       totalIncome: 0,
       totalVarPct: legacyVarPct,
       isLegacy: true,
     };
   }
-  const totalIncome = input.channels.reduce(function (s, c) {
-    return (
-      s +
-      (c.products ?? []).reduce(function (s2, p) {
-        return s2 + (p.units || 0) * (p.unitPrice || 0);
-      }, 0)
-    );
-  }, 0);
-  const summaries = input.channels.map(function (c) {
-    const income = (c.products ?? []).reduce(function (s2, p) {
-      return s2 + (p.units || 0) * (p.unitPrice || 0);
-    }, 0);
-    const weightedVar = (c.products ?? []).reduce(function (s2, p) {
-      const pVar = (p.varItems ?? []).reduce(function (s3, v) {
-        return s3 + (v.pct || 0);
+  const rows: { channel: FinancialGoalsChannel; product: FinancialGoalsProduct; income: number; varPct: number }[] = [];
+  let totalIncome = 0;
+  input.channels.forEach(function (c) {
+    (c.products ?? []).forEach(function (p) {
+      const income = (p.units || 0) * (p.unitPrice || 0);
+      const varPct = (p.varItems ?? []).reduce(function (s, v) {
+        return s + (v.pct || 0);
       }, 0);
-      return s2 + (p.units || 0) * (p.unitPrice || 0) * pVar;
-    }, 0);
+      totalIncome += income;
+      rows.push({ channel: c, product: p, income: income, varPct: varPct });
+    });
+  });
+  const explicitSum = rows.reduce(function (s, r) {
+    return s + (typeof r.product.pct === 'number' && isFinite(r.product.pct) && r.product.pct > 0 ? r.product.pct : 0);
+  }, 0);
+  const useExplicit = explicitSum > 0;
+  const products = rows.map(function (r) {
+    const explicitPct = typeof r.product.pct === 'number' && isFinite(r.product.pct) && r.product.pct > 0 ? r.product.pct : 0;
     return {
-      name: c.name ?? '',
-      pct: totalIncome > 0 ? income / totalIncome : 0,
-      income: income,
-      varPct: income > 0 ? weightedVar / income : 0,
+      name: r.product.name ?? '',
+      channel: r.channel.name ?? '',
+      pct: useExplicit
+        ? explicitSum > 0
+          ? explicitPct / explicitSum
+          : 0
+        : totalIncome > 0
+          ? r.income / totalIncome
+          : 0,
+      income: r.income,
+      varPct: r.varPct,
     };
   });
-  const totalVarPct =
-    totalIncome > 0
-      ? summaries.reduce(function (s, c) {
-          return s + c.pct * c.varPct;
-        }, 0)
-      : 0;
-  return { summaries: summaries, totalIncome: totalIncome, totalVarPct: totalVarPct, isLegacy: false };
+  const summaries: FinancialChannelSummary[] = [];
+  let idx = 0;
+  input.channels.forEach(function (c) {
+    let income = 0;
+    let weightedVar = 0;
+    let pctSum = 0;
+    for (let k = idx; k < rows.length; k++) {
+      const r = rows[k];
+      if (r.channel !== c) break;
+      income += r.income;
+      weightedVar += r.income * r.varPct;
+      pctSum += products[k].pct;
+      idx = k + 1;
+    }
+    summaries.push({
+      name: c.name ?? '',
+      pct: pctSum,
+      income: income,
+      varPct: income > 0 ? weightedVar / income : 0,
+    });
+  });
+  const totalVarPct = products.reduce(function (s, p) {
+    return s + p.pct * p.varPct;
+  }, 0);
+  return { summaries: summaries, products: products, totalIncome: totalIncome, totalVarPct: totalVarPct, isLegacy: false };
 }
 
 export function computeFinancialGoals(input: FinancialGoalsInput): FinancialGoalsResult {
@@ -867,6 +903,7 @@ export async function downloadFinancialGoalsExcel(input: FinancialGoalsInput): P
           unidadesLabel: 'Units',
           medidaLabel: 'Measure',
           precioUnitLabel: 'Unit Price',
+          participacionLabel: '% Participation',
           ingresosLabel: 'Revenue',
           gastosVarLabel: '% Variable Costs',
           totalIngresos: 'Total Monthly Revenue',
@@ -922,6 +959,7 @@ export async function downloadFinancialGoalsExcel(input: FinancialGoalsInput): P
           unidadesLabel: 'Unidades',
           medidaLabel: 'Medida',
           precioUnitLabel: 'Precio x Unidad',
+          participacionLabel: '% Participacion',
           ingresosLabel: 'Ingresos',
           gastosVarLabel: '% Gastos Variables',
           totalIngresos: 'Ingresos Totales Mensuales',
@@ -1006,7 +1044,7 @@ export async function downloadFinancialGoalsExcel(input: FinancialGoalsInput): P
   wb.created = new Date();
 
   const ws1 = wb.addWorksheet(L.sheet1, { views: [{ showGridLines: false }] });
-  ws1.columns = [{ width: 32 }, { width: 24 }, { width: 12 }, { width: 14 }, { width: 16 }, { width: 18 }, { width: 18 }];
+  ws1.columns = [{ width: 30 }, { width: 22 }, { width: 12 }, { width: 14 }, { width: 15 }, { width: 15 }, { width: 16 }, { width: 18 }];
 
   let logoId: number | null = null;
   if (logoDataUrl) {
@@ -1025,51 +1063,59 @@ export async function downloadFinancialGoalsExcel(input: FinancialGoalsInput): P
 
   sectionHeader(ws1, L.businessData, 4);
   if (hasProducts) {
-    sectionHeader(ws1, L.canalesProductosHeader, 7);
-    const prodHdr = nextRow(ws1, [L.canalLabel, L.productoLabel, L.unidadesLabel, L.medidaLabel, L.precioUnitLabel, L.ingresosLabel, L.gastosVarLabel]);
-    for (let cc = 1; cc <= 7; cc++) {
+    sectionHeader(ws1, L.canalesProductosHeader, 8);
+    const prodHdr = nextRow(ws1, [L.canalLabel, L.productoLabel, L.unidadesLabel, L.medidaLabel, L.precioUnitLabel, L.participacionLabel, L.ingresosLabel, L.gastosVarLabel]);
+    for (let cc = 1; cc <= 8; cc++) {
       const c = ws1.getCell(prodHdr, cc);
       c.font = { name: 'Calibri', size: 11, bold: true, color: { argb: ARGB_WHITE } };
       c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ARGB_TEAL } };
       c.border = borderAll();
-      c.alignment = { vertical: 'middle', horizontal: cc === 1 || cc === 2 ? 'left' : 'right' };
+      c.alignment = { vertical: 'middle', horizontal: cc === 1 || cc === 2 || cc === 4 ? 'left' : 'right' };
     }
     ws1.getRow(prodHdr).height = 20;
     let firstProdRow = 0;
     let lastProdRow = 0;
-    input.channels.forEach(function (ch) {
-      const products = ch.products ?? [];
-      const start = ws1.rowCount + 1;
-      products.forEach(function (p) {
-        const pVarPct = (p.varItems ?? []).reduce(function (s, v) {
-          return s + (v.pct || 0);
-        }, 0);
-        const r = nextRow(ws1, ['', p.name ?? '', p.units || 0, p.unitMeasure ?? '', p.unitPrice || 0, (p.units || 0) * (p.unitPrice || 0), pVarPct]);
-        for (let cc = 1; cc <= 7; cc++) {
-          const c = ws1.getCell(r, cc);
-          c.border = borderAll();
-          c.font = { name: 'Calibri', size: 11, color: { argb: ARGB_INK } };
-          c.alignment = { vertical: 'middle', horizontal: cc === 1 || cc === 2 || cc === 4 ? 'left' : 'right' };
+    finCh.products.forEach(function (p, i) {
+      const prevChannel = i > 0 ? finCh.products[i - 1].channel : null;
+      if (prevChannel !== p.channel) {
+        if (prevChannel !== null && firstProdRow > 0 && lastProdRow >= firstProdRow) {
+          ws1.mergeCells(firstProdRow, 1, lastProdRow, 1);
+          const mc = ws1.getCell(firstProdRow, 1);
+          mc.value = prevChannel;
+          mc.font = { name: 'Calibri', size: 11, bold: true, color: { argb: ARGB_INK } };
+          mc.alignment = { vertical: 'middle', horizontal: 'left' };
         }
-        ws1.getCell(r, 3).numFmt = '#,##0';
-        ws1.getCell(r, 5).numFmt = '#,##0.00';
-        ws1.getCell(r, 6).numFmt = '#,##0.00';
-        ws1.getCell(r, 7).numFmt = '0.0%';
-      });
-      if (products.length > 0) {
-        const end = ws1.rowCount;
-        ws1.mergeCells(start, 1, end, 1);
-        const cc = ws1.getCell(start, 1);
-        cc.value = ch.name ?? '';
-        cc.font = { name: 'Calibri', size: 11, bold: true, color: { argb: ARGB_INK } };
-        cc.alignment = { vertical: 'middle', horizontal: 'left' };
-        if (firstProdRow === 0) firstProdRow = start;
-        lastProdRow = end;
+        firstProdRow = ws1.rowCount + 1;
       }
+      const prodSource = input.channels
+        .find(function (c) { return c.name === p.channel; })
+        ?.products?.find(function (pr) { return pr.name === p.name; });
+      const units = prodSource?.units ?? 0;
+      const measure = prodSource?.unitMeasure ?? '';
+      const unitPrice = prodSource?.unitPrice ?? 0;
+      const r = nextRow(ws1, ['', p.name, units, measure, unitPrice, p.pct, p.income, p.varPct]);
+      for (let cc = 1; cc <= 8; cc++) {
+        const c = ws1.getCell(r, cc);
+        c.border = borderAll();
+        c.font = { name: 'Calibri', size: 11, color: { argb: ARGB_INK } };
+        c.alignment = { vertical: 'middle', horizontal: cc === 1 || cc === 2 || cc === 4 ? 'left' : 'right' };
+      }
+      ws1.getCell(r, 3).numFmt = '#,##0';
+      ws1.getCell(r, 5).numFmt = '#,##0.00';
+      ws1.getCell(r, 6).numFmt = '0.0%';
+      ws1.getCell(r, 7).numFmt = '#,##0.00';
+      ws1.getCell(r, 8).numFmt = '0.0%';
+      lastProdRow = r;
     });
-    if (firstProdRow > 0) {
+    if (firstProdRow > 0 && lastProdRow >= firstProdRow) {
+      const lastChannel = finCh.products[finCh.products.length - 1]?.channel ?? '';
+      ws1.mergeCells(firstProdRow, 1, lastProdRow, 1);
+      const mc = ws1.getCell(firstProdRow, 1);
+      mc.value = lastChannel;
+      mc.font = { name: 'Calibri', size: 11, bold: true, color: { argb: ARGB_INK } };
+      mc.alignment = { vertical: 'middle', horizontal: 'left' };
       dataRow(ws1, L.totalIngresos, finCh.totalIncome, {
-        f: 'SUM(F' + firstProdRow + ':F' + lastProdRow + ')',
+        f: 'SUM(G' + firstProdRow + ':G' + lastProdRow + ')',
         result: finCh.totalIncome,
         fmt: '#,##0.00',
         bold: true,
