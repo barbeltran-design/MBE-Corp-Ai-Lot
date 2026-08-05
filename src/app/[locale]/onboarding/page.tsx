@@ -134,7 +134,7 @@ function OnboardingInner() {
         const data = snap.data() as UserDoc | undefined;
         if (cancelled) return;
         if (!isRetake && data?.assessmentCompleted) {
-          router.replace(`/${locale}/dashboard`);
+          router.replace(`/${locale}/inicio`);
           return;
         }
         // Sin borrador en curso: precarga el último diagnóstico guardado
@@ -185,7 +185,7 @@ function OnboardingInner() {
       } catch {
         // best effort
       }
-      router.push(`/${locale}/dashboard`);
+      router.push(`/${locale}/inicio`);
     } catch (err) {
       console.error('[MBE Assessment] failed to save', err);
       setSaveError(t('saveError'));

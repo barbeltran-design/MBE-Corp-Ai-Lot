@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { ClipboardList, Gauge, LayoutDashboard, LineChart, Megaphone, Sparkles, TrendingUp, Users } from 'lucide-react';
+import { ClipboardList, Gauge, Home, LayoutDashboard, LineChart, Megaphone, Sparkles, TrendingUp, Users } from 'lucide-react';
 import { ExecutiveShell, type ExecutiveNavItem } from '@/components/executive-shell';
 import { BackgroundBlobs } from '@/components/ui/executive/background-blobs';
 import { DisplayLangProvider, useDisplayLang } from '@/components/display-lang-provider';
@@ -17,6 +17,7 @@ function AppShellInner({
   const navLabel = (es: string, en: string) => lang === 'en' ? en : es;
 
   const navItems: ExecutiveNavItem[] = [
+    { href: `/${locale}/inicio`, label: navLabel('Inicio', 'Home'), icon: Home },
     { href: `/${locale}/executive-preview`, label: navLabel('Resumen ejecutivo', 'Executive Summary'), icon: LayoutDashboard },
     { href: `/${locale}/dashboard`, label: navLabel('Evaluación de madurez', 'Maturity Assessment'), icon: Gauge },
     { href: `/${locale}/babel/madurez`, label: navLabel('Mejora del Nivel de Madurez', 'Maturity Level Improvement'), icon: LineChart },

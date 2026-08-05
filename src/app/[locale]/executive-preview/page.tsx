@@ -15,6 +15,7 @@ import {
   Clock,
   FileCheck2,
   Gauge,
+  Home,
   LayoutDashboard,
   LineChart,
   Megaphone,
@@ -58,7 +59,7 @@ interface PhaseRow {
   deliverables: string[];
 }
 
-const NAV_ICON_MAP = { LayoutDashboard, Gauge, Sparkles, ClipboardList, Users, TrendingUp, LineChart, Megaphone };
+const NAV_ICON_MAP = { Home, LayoutDashboard, Gauge, Sparkles, ClipboardList, Users, TrendingUp, LineChart, Megaphone };
 
 const STATUS_CLASS: Record<PhaseStatus, string> = {
   completado: 'text-success',
@@ -209,6 +210,7 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
   ];
 
   const navItems: ExecutiveNavItem[] = [
+    { href: `/${routeLocale}/inicio`, label: t('Inicio', 'Home'), icon: NAV_ICON_MAP.Home },
     { href: `/${routeLocale}/executive-preview`, label: t('Resumen ejecutivo', 'Executive Summary'), icon: NAV_ICON_MAP.LayoutDashboard },
     { href: `/${routeLocale}/dashboard`, label: t('Evaluación de madurez', 'Maturity Assessment'), icon: NAV_ICON_MAP.Gauge },
     { href: `/${routeLocale}/babel/madurez`, label: t('Mejora del Nivel de Madurez', 'Maturity Level Improvement'), icon: NAV_ICON_MAP.LineChart },
