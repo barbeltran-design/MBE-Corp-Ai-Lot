@@ -32,6 +32,15 @@ export interface UserDoc {
   currentMonth: number; // 1-12
   totalMaturity: number; // 0-120
   assessmentCompleted?: boolean; // true once saveAssessment() has run at least once
+  // Roles del ecosistema MBE (uno o varios): 'admin' | 'rep_sale' |
+  // 'especialista' | 'usuario'. Ver src/lib/roles.ts.
+  roles?: string[];
+  // Temas de madurez asignados a un usuario con rol 'especialista'.
+  especialistaTemas?: string[];
+  // Agenda de reuniones del especialista (Calendly / Google Calendar).
+  agenda?: { plataforma?: string; link?: string; usuario?: string } | null;
+  // Datos bancarios del especialista para recibir pagos.
+  banco?: { clabe?: string; banco?: string; titular?: string; email?: string } | null;
 }
 
 /** Firestore collection: companies/{uid} */

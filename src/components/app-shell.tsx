@@ -1,10 +1,12 @@
 'use client';
 
 import * as React from 'react';
-import { ClipboardList, Gauge, Home, LayoutDashboard, LineChart, Megaphone, Sparkles, TrendingUp, Users } from 'lucide-react';
+import { CalendarClock, ClipboardList, Gauge, Home, LayoutDashboard, LineChart, Megaphone, ShieldCheck, Sparkles, TrendingUp, UserCheck2, Users } from 'lucide-react';
 import { ExecutiveShell, type ExecutiveNavItem } from '@/components/executive-shell';
 import { BackgroundBlobs } from '@/components/ui/executive/background-blobs';
 import { DisplayLangProvider, useDisplayLang } from '@/components/display-lang-provider';
+import { WorkspaceSyncer } from '@/components/workspace-syncer';
+import { useUserRoles } from '@/lib/use-user-roles';
 
 function AppShellInner({
   children,
@@ -14,6 +16,7 @@ function AppShellInner({
   locale: string;
 }) {
   const { lang } = useDisplayLang();
+  const { administracion, especialista } = useUserRoles();
   const navLabel = (es: string, en: string) => lang === 'en' ? en : es;
 
   const navItems: ExecutiveNavItem[] = [
@@ -28,8 +31,21 @@ function AppShellInner({
     { href: `/${locale}/babel/plan-accion`, label: navLabel('Plan de acción estratégico', 'Strategic Action Plan'), icon: ClipboardList, group: navLabel('Estrategia Socioambiental', 'Socio-environmental Strategy') },
   ];
 
+  // Grupo "Admin" solo para administradores; "Especialista" para usuarios con
+  // rol de especialista. Se agregan DESPUÉS del grupo socioambiental, como
+  // grupo propio al final del menú.
+  if (administracion) {
+    navItems.push({ href: `/${locale}/admin`, label: navLabel('Administración', 'Administration'), icon: ShieldCheck });
+  }
+  if (especialista) {
+    navItems.push({ href: `/${locale}/especialista`, label: navLabel('Panel de especialista', 'Specialist Panel'), icon: UserCheck2 });
+  }
+  // Agendar con especialistas: visible para todos los usuarios autenticados.
+  navItems.push({ href: `/${locale}/agendar`, label: navLabel('Agenda con especialistas', 'Book a specialist'), icon: CalendarClock });
+
   return (
     <ExecutiveShell navItems={navItems} brandLabel="MBE Corpilot AI" logoSrc="/logo-mbe.png">
+      <WorkspaceSyncer />
       <BackgroundBlobs />
       {children}
     </ExecutiveShell>

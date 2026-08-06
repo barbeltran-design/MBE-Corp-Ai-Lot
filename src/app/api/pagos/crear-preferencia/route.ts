@@ -24,12 +24,10 @@
 // ─────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server';
 import { MercadoPagoConfig, Preference } from 'mercadopago';
-import { getAdminAuth } from '@/lib/firebase-admin';
+import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 import { locales } from '@/i18n/routing';
-
-// TODO: ajusta este precio al precio real de tu plan de pago.
-const PLAN_PRICE_MXN = 99;
-const PLAN_TITLE = 'MBE Corpilot AI — Plan completo';
+import { productIdValido, defaultCatalogItem } from '@/lib/catalog';
+import { seedCatalogIfNeeded } from '@/lib/catalog-seed';
 
 export async function POST(req: NextRequest) {
   try {
@@ -47,12 +45,17 @@ export async function POST(req: NextRequest) {
     // El dashboard manda el idioma actual en el body. Si por alguna razón
     // no viene, o viene un valor que no es un idioma soportado, usamos
     // "es" como respaldo — así nunca se arma una URL de regreso rota.
+    // El producto a cobrar. Si no viene, se asume el plan completo por defecto.
     let requestedLocale: string | undefined;
-    let returnPath = '/dashboard';
+    let returnPath = '/perfil';
+    let productId = 'plan_mensual';
     try {
       const body = await req.json();
       requestedLocale = body?.locale;
-      if (typeof body?.returnPath === 'string' && (body.returnPath === '/perfil' || body.returnPath === '/dashboard')) {
+      if (typeof body?.productId === 'string' && productIdValido(body.productId)) {
+        productId = body.productId;
+      }
+      if (typeof body?.returnPath === 'string' && ['/perfil', '/dashboard'].includes(body.returnPath)) {
         returnPath = body.returnPath;
       }
     } catch {
@@ -61,6 +64,25 @@ export async function POST(req: NextRequest) {
     const locale = locales.includes(requestedLocale as (typeof locales)[number])
       ? requestedLocale!
       : 'es';
+
+    // Precio y título se leen del catálogo de Firestore (admin) con fallback
+    // a los defaults de cada producto.
+    const db = getAdminDb();
+    await seedCatalogIfNeeded();
+    const catalogSnap = await db.collection('catalog').doc(productId).get();
+    const catalogData = catalogSnap.exists ? catalogSnap.data() : null;
+    const def = defaultCatalogItem(productId);
+    const precio =
+      typeof catalogData?.promocion === 'number' && catalogData?.promocionActiva === true
+        ? catalogData.promocion
+        : typeof catalogData?.precio === 'number'
+          ? catalogData.precio
+          : def?.precio ?? 99;
+    const titulo =
+      locale === 'en'
+        ? (typeof catalogData?.tituloEn === 'string' ? catalogData.tituloEn : def?.tituloEn ?? '')
+        : (typeof catalogData?.titulo === 'string' ? catalogData.titulo : def?.titulo ?? '');
+    const titleFinal = titulo || def?.titulo || 'MBE Corpilot AI — Plan completo';
 
     const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
     if (!accessToken) {
@@ -76,13 +98,14 @@ export async function POST(req: NextRequest) {
       body: {
         items: [
           {
-            id: 'plan-completo',
-            title: PLAN_TITLE,
+            id: productId,
+            title: titleFinal,
             quantity: 1,
-            unit_price: PLAN_PRICE_MXN,
+            unit_price: precio,
             currency_id: 'MXN',
           },
         ],
+        metadata: { productId, catalogVersion: catalogData?.updatedAt ?? '' },
         // external_reference es cómo, cuando llegue la confirmación (webhook),
         // sabremos a qué usuario (uid de Firebase) corresponde ese pago.
         external_reference: uid,

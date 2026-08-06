@@ -14,6 +14,7 @@ import { Select } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useDisplayLang } from '@/components/display-lang-provider';
 import { AVATAR_COLORS, avatarBgColor, initialsOf } from '@/lib/avatar';
+import { TEMAS_ESPECIALISTA, TEMA_LABELS, ROLE_LABELS } from '@/lib/roles';
 import type { CompanySize, Industry, Language, UserDoc } from '@/types/firestore';
 
 const COUNTRIES = ['MX', 'CO', 'AR', 'CL', 'PE', 'US', 'ES', 'OTHER'] as const;
@@ -79,6 +80,13 @@ function ProfilePageInner() {
   const [payLoading, setPayLoading] = React.useState(false);
   const [payError, setPayError] = React.useState('');
 
+  // ── Solicitar rol de especialista / rep sale ─────────────────────────
+  const [roles, setRoles] = React.useState<string[]>([]);
+  const [solicitudTipo, setSolicitudTipo] = React.useState<'especialista' | 'rep_sale'>('especialista');
+  const [solicitudTemas, setSolicitudTemas] = React.useState<string[]>([]);
+  const [solicitudMsg, setSolicitudMsg] = React.useState('');
+  const [solicitudError, setSolicitudError] = React.useState('');
+
   React.useEffect(() => {
     const auth = getFirebaseAuth();
     const unsubscribe = onAuthStateChanged(auth, (u) => {
@@ -112,6 +120,7 @@ function ProfilePageInner() {
           setSubscription(data.subscription || 'free');
           setPlanStatus(data.planStatus || '');
           setPlanActivatedAt(data.planActivatedAt || '');
+          if (Array.isArray(data.roles)) setRoles(data.roles.map(String));
         }
         const companySnap = await getDoc(doc(db, 'companies', user.uid));
         if (!cancelled && companySnap.exists()) {
@@ -278,6 +287,37 @@ function ProfilePageInner() {
     const auth = getFirebaseAuth();
     await signOut(auth);
     router.push('/' + locale);
+  }
+
+  async function handleSolicitarRol() {
+    if (!user) return;
+    setSolicitudMsg('');
+    setSolicitudError('');
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/solicitar-rol', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tipo: solicitudTipo,
+          temas: solicitudTipo === 'especialista' ? solicitudTemas : [],
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'solicitud failed');
+      }
+      setSolicitudMsg(t('Solicitud enviada. Administración la revisará.', 'Request sent. Administration will review it.'));
+    } catch (err) {
+      console.error('[perfil] solicitud rol failed', err);
+      setSolicitudError(
+        (err instanceof Error ? err.message + '. ' : '') +
+          t('No se pudo enviar la solicitud. Intenta de nuevo.', 'Could not send the request. Try again.')
+      );
+    }
   }
 
   if (user === undefined) {
@@ -485,6 +525,55 @@ function ProfilePageInner() {
                 </div>
               )}
             </div>
+          </Card>
+
+          <Card className="p-6">
+            <h2 className="text-sm font-semibold text-foreground">{t('Mi rol en la plataforma', 'My platform role')}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t('Solicita convertirte en Especialista (para asesorar a otros usuarios por tema) o en Rep Sale (para vender el Reference Place). Administración aprobará tu solicitud.', 'Request to become a Specialist (to advise other users per theme) or a Rep Sale (to sell the Reference Place). Administration will approve your request.')}
+            </p>
+
+            {roles.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {roles.map((r) => (
+                  <span key={r} className="rounded-full bg-teal-100 px-2 py-0.5 text-xs font-medium text-teal-800 dark:bg-teal-500/20 dark:text-teal-200">
+                    {ROLE_LABELS[r as keyof typeof ROLE_LABELS]?.[dispLang === 'en' ? 'en' : 'es'] ?? r}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <Select value={solicitudTipo} onChange={(e) => setSolicitudTipo(e.target.value as 'especialista' | 'rep_sale')}>
+                <option value="especialista">{t('Especialista', 'Specialist')}</option>
+                <option value="rep_sale">{t('Rep Sale', 'Rep Sale')}</option>
+              </Select>
+              {solicitudTipo === 'especialista' && (
+                <select
+                  multiple
+                  value={solicitudTemas}
+                  onChange={(e) => {
+                    const opts = Array.from(e.target.selectedOptions).map((o) => o.value);
+                    setSolicitudTemas(opts);
+                  }}
+                  className="h-28 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-foreground dark:border-slate-700 dark:bg-slate-900"
+                >
+                  {TEMAS_ESPECIALISTA.map((tm) => (
+                    <option key={tm} value={tm} className="py-0.5">
+                      {TEMA_LABELS[tm][dispLang === 'en' ? 'en' : 'es']}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <Button type="button" variant="outline" onClick={handleSolicitarRol}>
+                {t('Enviar solicitud', 'Send request')}
+              </Button>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {t('Para ser Especialista selecciona los temas en los que quieres asesorar (Ctrl para varios).', 'To become a Specialist, select the themes you want to advise on (Ctrl to pick multiple).')}
+            </p>
+            {solicitudMsg && <p className="mt-2 text-sm text-emerald-700">{solicitudMsg}</p>}
+            {solicitudError && <p className="mt-2 text-sm text-red-600">{solicitudError}</p>}
           </Card>
         </>
       )}

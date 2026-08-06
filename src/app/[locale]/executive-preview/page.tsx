@@ -9,6 +9,7 @@ import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { ColumnDef } from '@tanstack/react-table';
 import {
+  CalendarClock,
   CheckCircle2,
   CircleDashed,
   ClipboardList,
@@ -20,8 +21,10 @@ import {
   LineChart,
   Megaphone,
   MessagesSquare,
+  ShieldCheck,
   Sparkles,
   TrendingUp,
+  UserCheck2,
   Users,
 } from 'lucide-react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
@@ -41,6 +44,7 @@ import { DisplayLangProvider, useDisplayLang } from '@/components/display-lang-p
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 import BabelAvatar from '@/components/babel/BabelAvatar';
 import { getFirebaseAuth, getFirebaseDb } from '@/lib/firebase';
+import { useUserRoles } from '@/lib/use-user-roles';
 import { getMaturityDimensions } from '@/lib/maturity-dimensions';
 import { computeResults, type AssessmentResult, type DimensionAnswers } from '@/lib/maturity-scoring';
 import { getAssessmentHistory, getLatestAssessmentAnswers, type AssessmentHistoryPoint } from '@/lib/assessment';
@@ -59,7 +63,7 @@ interface PhaseRow {
   deliverables: string[];
 }
 
-const NAV_ICON_MAP = { Home, LayoutDashboard, Gauge, Sparkles, ClipboardList, Users, TrendingUp, LineChart, Megaphone };
+const NAV_ICON_MAP = { Home, LayoutDashboard, Gauge, Sparkles, ClipboardList, Users, TrendingUp, LineChart, Megaphone, ShieldCheck, UserCheck2, CalendarClock };
 
 const STATUS_CLASS: Record<PhaseStatus, string> = {
   completado: 'text-success',
@@ -162,6 +166,7 @@ export default function ExecutivePreviewPage() {
 function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
   const router = useRouter();
   const { lang } = useDisplayLang();
+  const { administracion: administracionRol, especialista: especialistaRol } = useUserRoles();
 
   const t = (es: string, en: string) => (lang === 'en' ? en : es);
   const locale = lang === 'en' ? 'en' : 'es';
@@ -220,6 +225,13 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
     { href: `/${routeLocale}/babel/organigrama`, label: t('Organigrama y roles', 'Org Chart & Roles'), icon: NAV_ICON_MAP.Users, group: t('Estrategia Socioambiental', 'Socio-environmental Strategy') },
     { href: `/${routeLocale}/babel/plan-accion`, label: t('Plan de acción estratégico', 'Strategic Action Plan'), icon: NAV_ICON_MAP.ClipboardList, group: t('Estrategia Socioambiental', 'Socio-environmental Strategy') },
   ];
+  if (administracionRol) {
+    navItems.push({ href: `/${routeLocale}/admin`, label: t('Administración', 'Administration'), icon: NAV_ICON_MAP.ShieldCheck });
+  }
+  if (especialistaRol) {
+    navItems.push({ href: `/${routeLocale}/especialista`, label: t('Panel de especialista', 'Specialist Panel'), icon: NAV_ICON_MAP.UserCheck2 });
+  }
+  navItems.push({ href: `/${routeLocale}/agendar`, label: t('Agenda con especialistas', 'Book a specialist'), icon: NAV_ICON_MAP.CalendarClock });
 
   const [user, setUser] = React.useState<User | null | undefined>(undefined);
   const [answers, setAnswers] = React.useState<DimensionAnswers | null>(null);

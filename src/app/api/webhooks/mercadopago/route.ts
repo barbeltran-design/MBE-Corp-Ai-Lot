@@ -79,17 +79,54 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true }, { status: 200 });
     }
 
-    if (payment.status === 'approved') {
-      const db = getAdminDb();
-      await db.collection('users').doc(uid).set(
+    const db = getAdminDb();
+
+    // Registrar el pago recibido en la colección `pagos` (visible en /admin),
+    // pase lo que pase con el estado — así el administrador ve el histórico
+    // completo (aprobados, pendientes, rechazados).
+    const metadata = payment.metadata as Record<string, unknown> | null | undefined;
+    const productIdRaw = metadata?.productId;
+    const productId =
+      typeof productIdRaw === 'string' && productIdRaw ? productIdRaw : 'plan_mensual';
+    const numId = Number(payment.id);
+    const pagoId = `${numId}`;
+
+    try {
+      await db.collection('pagos').doc(pagoId).set(
         {
-          subscription: 'pro',
-          planStatus: 'active',
+          uid,
+          productoId: productId,
+          monto: payment.transaction_amount ?? payment.transaction_details?.total_paid_amount ?? null,
+          moneda: payment.currency_id ?? 'MXN',
+          status: payment.status,
+          statusDetail: payment.status_detail ?? '',
           mercadoPagoPaymentId: String(payment.id),
-          planActivatedAt: new Date().toISOString(),
+          fechaPago: payment.date_approved ?? null,
+          externalReference: uid,
+          createdAt: new Date().toISOString(),
         },
-        { merge: true } // merge: true = solo agrega/actualiza estos campos, no borra los demás
+        { merge: true }
       );
+    } catch (err) {
+      console.error('[webhook mercadopago] No se pudo registrar el pago en Firestore:', err);
+    }
+
+    if (payment.status === 'approved') {
+      if (productId === 'plan_mensual') {
+        await db.collection('users').doc(uid).set(
+          {
+            subscription: 'pro',
+            planStatus: 'active',
+            mercadoPagoPaymentId: String(payment.id),
+            planActivatedAt: new Date().toISOString(),
+          },
+          { merge: true } // merge: true = solo agrega/actualiza estos campos, no borra los demás
+        );
+      }
+      // Otros productos (apoyo_ondemand, certificacion_mbe, paquete_especialista):
+      // se registran en `pagos` pero no activan el plan completo — pueden activar
+      // flags específicos si se requiere más adelante.
+      console.log(`[webhook mercadopago] Pago aprobado ${dataId} producto ${productId}`);
     } else {
       // pending, rejected, in_process, etc. — se registra pero no se activa el plan.
       console.log(`[webhook mercadopago] Pago ${dataId} con estado: ${payment.status}`);

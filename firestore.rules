@@ -12,6 +12,12 @@ service cloud.firestore {
     // users/{uid} and companies/{uid} — a user can only read/write their own docs.
     match /users/{uid} {
       allow read, write: if isOwner(uid);
+
+      // users/{uid}/workspace/{seccion} — sync del workspace (plan de acción,
+      // indicadores, organigrama, etc.) desde el cliente, solo el dueño.
+      match /workspace/{seccion} {
+        allow read, write: if isOwner(uid);
+      }
     }
     match /companies/{uid} {
       allow read, write: if isOwner(uid);
