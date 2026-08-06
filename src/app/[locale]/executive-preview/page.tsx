@@ -212,13 +212,13 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
   const navItems: ExecutiveNavItem[] = [
     { href: `/${routeLocale}/inicio`, label: t('Inicio', 'Home'), icon: NAV_ICON_MAP.Home },
     { href: `/${routeLocale}/executive-preview`, label: t('Resumen ejecutivo', 'Executive Summary'), icon: NAV_ICON_MAP.LayoutDashboard },
+    { href: `/${routeLocale}/babel/convocatorias`, label: t('Convocatorias y fondos', 'Calls & Grants'), icon: NAV_ICON_MAP.Megaphone },
+    { href: `/${routeLocale}/babel/indicadores`, label: t('Objetivos estratégicos', 'Strategic Objectives'), icon: NAV_ICON_MAP.TrendingUp },
     { href: `/${routeLocale}/dashboard`, label: t('Evaluación de madurez', 'Maturity Assessment'), icon: NAV_ICON_MAP.Gauge },
     { href: `/${routeLocale}/babel/madurez`, label: t('Mejora del Nivel de Madurez', 'Maturity Level Improvement'), icon: NAV_ICON_MAP.LineChart },
-    { href: `/${routeLocale}/babel/indicadores`, label: t('Objetivos estratégicos', 'Strategic Objectives'), icon: NAV_ICON_MAP.TrendingUp },
-    { href: `/${routeLocale}/babel/convocatorias`, label: t('Convocatorias y fondos', 'Calls & Grants'), icon: NAV_ICON_MAP.Megaphone },
-    { href: `/${routeLocale}/babel`, label: t('Reflexión estratégica', 'Strategic Reflection'), icon: NAV_ICON_MAP.Sparkles },
-    { href: `/${routeLocale}/babel/organigrama`, label: t('Organigrama y roles', 'Org Chart & Roles'), icon: NAV_ICON_MAP.Users },
-    { href: `/${routeLocale}/babel/plan-accion`, label: t('Plan de acción estratégico', 'Strategic Action Plan'), icon: NAV_ICON_MAP.ClipboardList },
+    { href: `/${routeLocale}/babel`, label: t('Reflexión estratégica', 'Strategic Reflection'), icon: NAV_ICON_MAP.Sparkles, group: t('Estrategia Socioambiental', 'Socio-environmental Strategy') },
+    { href: `/${routeLocale}/babel/organigrama`, label: t('Organigrama y roles', 'Org Chart & Roles'), icon: NAV_ICON_MAP.Users, group: t('Estrategia Socioambiental', 'Socio-environmental Strategy') },
+    { href: `/${routeLocale}/babel/plan-accion`, label: t('Plan de acción estratégico', 'Strategic Action Plan'), icon: NAV_ICON_MAP.ClipboardList, group: t('Estrategia Socioambiental', 'Socio-environmental Strategy') },
   ];
 
   const [user, setUser] = React.useState<User | null | undefined>(undefined);
