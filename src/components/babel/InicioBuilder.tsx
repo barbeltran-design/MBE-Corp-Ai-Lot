@@ -54,7 +54,7 @@ const COSTO_CLS: Record<Costo, string> = {
 
 const COSTO_LBL: Record<Costo, [string, string]> = {
   gratis: ['Gratis', 'Free'],
-  plan: ['Incluido en el Plan Corpilot', 'Included in the Corpilot Plan'],
+  plan: ['Incluido en el Plan', 'Included in the Plan'],
   ondemand: ['On-Demand', 'On-demand'],
 };
 
@@ -85,15 +85,15 @@ const impulsores: Impulsor[] = [
           : 'Not having money to invest is a huge growth barrier. We give you access to calls for proposals, awards and funds to raise capital. We also refer you to large companies that people in our community already work with.',
       notaCostos:
         lang === 'es'
-          ? 'Gratis: directorio de convocatorias y objetivos estratégicos. On-Demand: apoyo de especialista, paquete y certificación, cada uno con su precio. Reference Place incluido en el Plan Corpilot.'
-          : 'Free: calls directory and strategic objectives. On-Demand: specialist support, package and certification, each priced separately. Reference Place included in the Corpilot Plan.',
+          ? 'Gratis: directorio de convocatorias y objetivos estratégicos. On-Demand: apoyo de especialista, paquete y certificación, cada uno con su precio. Reference Place incluido en el Plan.'
+          : 'Free: calls directory and strategic objectives. On-Demand: specialist support, package and certification, each priced separately. Reference Place included in the Plan.',
       items: [
         { id: 'convo', icono: Megaphone, titulo: lang === 'es' ? 'Convocatorias y fondos' : 'Calls & Grants', desc: lang === 'es' ? 'Directorio vivo de convocatorias, premios y fondos con tu perfil para ver a cuáles postulas.' : 'Living directory of calls, awards and grants matched to your profile.', costo: 'gratis', nota: '', futuro: false, href: '/babel/convocatorias' },
         { id: 'objetivos', icono: TrendingUp, titulo: lang === 'es' ? 'Objetivos Estratégicos' : 'Strategic Objectives', desc: lang === 'es' ? 'Tus metas financieras y punto de equilibrio para saber cuánto debes crecer.' : 'Your financial targets and break-even point to know how much you must grow.', costo: 'gratis', nota: '', futuro: false, href: '/babel/indicadores' },
         { id: 'refplace', icono: Coins, titulo: lang === 'es' ? 'Reference Place' : 'Reference Place', desc: lang === 'es' ? 'Obtén referencias de grandes empresas una vez que te hayas certificado.' : 'Get references from large companies once you are certified.', costo: 'plan', precio: lang === 'es' ? '$99/mes' : '$99/mo', nota: '', futuro: true },
-        { id: 'cert', icono: BadgeCheck, titulo: lang === 'es' ? 'Certificación MBE' : 'MBE Certification', desc: lang === 'es' ? 'Obtén tu sello de confianza para recibir referencias e inversiones.' : 'Get your trust seal to receive references and investments.', costo: 'ondemand', precio: lang === 'es' ? '$5,000/Año' : '$5,000/year', nota: '', futuro: true },
-        { id: 'apoyo', icono: UserCheck, titulo: lang === 'es' ? 'Apoyo On Demand' : 'On-Demand support', desc: lang === 'es' ? 'Apoyo de un Especialista de nivel directivo para conseguir una convocatoria / premio / fondo, o para alcanzar el nivel de certificación.' : 'Support from an executive-level Specialist to win a call / award / fund, or to reach certification level.', costo: 'ondemand', precio: lang === 'es' ? '$4,000 MXN' : '$4,000 MXN', nota: lang === 'es' ? 'Agenda una reunión gratis con algún especialista para más información de este tema.' : 'Book a free meeting with a specialist to learn more about this topic.', futuro: false },
-        { id: 'paquete', icono: Award, titulo: lang === 'es' ? 'Paquete de Especialista' : 'Specialist package', desc: lang === 'es' ? 'Un especialista en un área interviene tu empresa y te da hasta 4 entregables en un mes.' : 'A specialist in one area works with your company and delivers up to 4 deliverables in a month.', costo: 'ondemand', precio: lang === 'es' ? '$10,000 MXN' : '$10,000 MXN', nota: '', futuro: true },
+        { id: 'cert', icono: BadgeCheck, titulo: lang === 'es' ? 'Certificación MBE' : 'MBE Certification', desc: lang === 'es' ? 'Obtén tu sello de confianza para recibir referencias e inversiones.' : 'Get your trust seal to receive references and investments.', costo: 'ondemand', precio: lang === 'es' ? '$5,000/Año' : '$5,000/year', nota: lang === 'es' ? 'Agenda GRATIS una reunión para conocer los beneficios de este tema.' : 'Book a FREE meeting to learn about the benefits of this topic.', futuro: true },
+        { id: 'apoyo', icono: UserCheck, titulo: lang === 'es' ? 'Apoyo On Demand' : 'On-Demand support', desc: lang === 'es' ? 'Apoyo de un Especialista de nivel directivo para conseguir una convocatoria / premio / fondo, o para alcanzar el nivel de certificación.' : 'Support from an executive-level Specialist to win a call / award / fund, or to reach certification level.', costo: 'ondemand', precio: lang === 'es' ? '$4,000 MXN' : '$4,000 MXN', nota: lang === 'es' ? 'Agenda GRATIS una reunión para conocer los beneficios de este tema.' : 'Book a FREE meeting to learn about the benefits of this topic.', futuro: false },
+        { id: 'paquete', icono: Award, titulo: lang === 'es' ? 'Paquete de Especialista' : 'Specialist package', desc: lang === 'es' ? 'Un especialista en un área interviene tu empresa y te da hasta 4 entregables en un mes.' : 'A specialist in one area works with your company and delivers up to 4 deliverables in a month.', costo: 'ondemand', precio: lang === 'es' ? '$10,000 MXN' : '$10,000 MXN', nota: lang === 'es' ? 'Agenda GRATIS una reunión para conocer los beneficios de este tema.' : 'Book a FREE meeting to learn about the benefits of this topic.', futuro: true },
       ],
     },
     {
@@ -106,8 +106,8 @@ const impulsores: Impulsor[] = [
           : 'Work smarter, not harder. Senior and AI specialists in Socio-Environmental Strategy, Marketing, Sales, Customer Experience, Finance, Compliance, Operations, Digitalization and Human Capital become your Board and Executive Team.',
       notaCostos:
         lang === 'es'
-          ? 'Gratis: evaluación y mejora de madurez, juntas de mentoría. Incluido en el Plan Corpilot: estrategia socioambiental, equipo directivo IA y asesoría del consejo.'
-          : 'Free: maturity assessment and improvement, mentoring meetings. Included in the Corpilot Plan: socio-environmental strategy, AI executive team and board advisory.',
+          ? 'Gratis: evaluación y mejora de madurez, juntas de mentoría. Incluido en el Plan: estrategia socioambiental, equipo directivo IA y asesoría del consejo.'
+          : 'Free: maturity assessment and improvement, mentoring meetings. Included in the Plan: socio-environmental strategy, AI executive team and board advisory.',
       items: [
         { id: 'mentorias', icono: CalendarClock, titulo: lang === 'es' ? 'Juntas de Mentoría' : 'Mentoring Meetings', desc: lang === 'es' ? 'Reuniones semanales con otros empresarios para recibir y dar mentoría de diversos temas. Agenda sesiones con algún empresario para Compras, Asesoría, Trueques, Alianzas Estratégicas y Referencias sencillas. No recorras este camino en solitario y participa en la comunidad.' : 'Weekly meetings with other entrepreneurs to give and receive mentoring on many topics. Book sessions with another entrepreneur for Purchases, Advisory, Trades, Strategic Alliances and simple referrals. Do not walk this path alone; join the community.', costo: 'gratis', nota: '', futuro: true },
         { id: 'madurez', icono: Gauge, titulo: lang === 'es' ? 'Evaluación y Mejora del Nivel de Madurez' : 'Maturity Assessment & Improvement', desc: lang === 'es' ? 'Evalúa tu madurez y obtén un plan para mejorarlo con tareas semanales y mensuales.' : 'Assess your maturity and get a plan to improve it with weekly and monthly tasks.', costo: 'gratis', nota: '', futuro: false, href: '/babel/madurez' },
@@ -158,23 +158,13 @@ const impulsores: Impulsor[] = [
                     key={it.id}
                     disabled={Disabled}
                     onClick={() => !Disabled && it.href && router.push(`/${lang}${it.href}`)}
-                    className={
-                      'relative flex h-full flex-col rounded-xl border bg-white p-4 text-left shadow-sm transition ' +
-                      (Disabled
-                        ? 'border-dashed border-slate-300 opacity-90'
-                        : 'border-slate-200 hover:border-teal-400 hover:shadow-md')
-                    }
+                    className="relative flex h-full flex-col rounded-2xl border border-glass-border bg-glass p-4 text-left shadow-[0_8px_32px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur-2xl backdrop-saturate-150 transition-all duration-200 ease-executive hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/30"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal-500/15 text-teal-700">
                         <ItIcon className="h-5 w-5" />
                       </span>
                       <div className="flex flex-wrap items-center gap-1">
-                        {Disabled && (
-                          <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600">
-                            {lang === 'es' ? 'Próximamente' : 'Coming soon'}
-                          </span>
-                        )}
                         {costo && (
                           <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${costoCls}`}>{costo}</span>
                         )}
@@ -185,11 +175,11 @@ const impulsores: Impulsor[] = [
                         )}
                       </div>
                     </div>
-                    <h5 className="mt-2 text-sm font-bold text-slate-800">{it.titulo}</h5>
-                    <p className="mt-0.5 flex-1 text-xs leading-relaxed text-slate-600">{it.desc}</p>
-                    {it.nota && <p className="mt-2 text-[11px] italic text-teal-700">{it.nota}</p>}
+                    <h5 className="mt-2 text-sm font-bold text-slate-800 dark:text-slate-100">{it.titulo}</h5>
+                    <p className="mt-0.5 flex-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{it.desc}</p>
+                    {it.nota && <p className="mt-2 text-[11px] italic text-teal-700 dark:text-teal-300">{it.nota}</p>}
                     {!Disabled && it.href && (
-                      <span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-teal-700">
+                      <span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-teal-700 dark:text-teal-300">
                         {lang === 'es' ? 'Entrar' : 'Open'}
                         <ChevronRight className="h-3.5 w-3.5" />
                       </span>
