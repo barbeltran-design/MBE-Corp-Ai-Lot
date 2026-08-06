@@ -30,6 +30,7 @@ type Tarjeta = {
   titulo: string;
   desc: string;
   costo: Costo | null;
+  costoLabel?: string;
   precio?: string;
   nota: string;
   futuro: boolean;
@@ -53,20 +54,20 @@ const COSTO_CLS: Record<Costo, string> = {
 
 const COSTO_LBL: Record<Costo, [string, string]> = {
   gratis: ['Gratis', 'Free'],
-  plan: ['Plan mensual', 'Monthly plan'],
+  plan: ['Incluido en el Plan Corpilot', 'Included in the Corpilot Plan'],
   ondemand: ['On-Demand', 'On-demand'],
 };
 
 const PASOS_TOUR: Record<InicioLang, TourStep[]> = {
   es: [
-    { selector: '#inicio-title', title: 'Inicio', description: 'Bienvenido. Aquí tienes el punto de partida de tu crecimiento en MBE: tu acceso a capital y tu equipo de trabajo con IA.' },
-    { selector: '#inicio-impulso-dinero', title: 'Impulso 1 · Acceso a dinero', description: 'Convocatorias, entregables, certificación y Reference Place: el camino para conseguir capital para tu negocio.' },
-    { selector: '#inicio-impulso-equipo', title: 'Impulso 2 · Tu equipo con IA', description: 'Cinco agentes de IA trabajan contigo día a día en madurez, finanzas, objetivos y plan de acción.' },
+    { selector: '#inicio-title', title: 'Inicio', description: 'Bienvenido. Aquí tienes el punto de partida de tu crecimiento en MBE: tu acceso a capital y tu equipo directivo.' },
+    { selector: '#inicio-impulso-dinero', title: 'Impulso 1 · Acceso a dinero', description: 'Convocatorias, fondos, certificación y Reference Place: el camino para bajar capital para tu negocio.' },
+    { selector: '#inicio-impulso-equipo', title: 'Impulso 2 · Tu equipo directivo', description: 'Especialistas Senior y de IA que se vuelven tu Consejo y Equipo Directivo.' },
   ],
   en: [
-    { selector: '#inicio-title', title: 'Home', description: 'Welcome. This is the starting point of your growth at MBE: your access to capital and your AI work team.' },
-    { selector: '#inicio-impulso-dinero', title: 'Driver 1 · Access to money', description: 'Calls & grants, deliverables, certification and the ecosystem: the path to funding your business.' },
-    { selector: '#inicio-impulso-equipo', title: 'Driver 2 · Your AI team', description: 'Five AI agents work with you on strategy, plans, objectives and the action plan.' },
+    { selector: '#inicio-title', title: 'Home', description: 'Welcome. This is the starting point of your growth at MBE: your access to capital and your executive team.' },
+    { selector: '#inicio-impulso-dinero', title: 'Driver 1 · Access to money', description: 'Calls & grants, certification and Reference Place: the path to raise capital for your business.' },
+    { selector: '#inicio-impulso-equipo', title: 'Driver 2 · Your executive team', description: 'Senior and AI specialists who become your Board and Executive Team.' },
   ],
 };
 
@@ -80,43 +81,39 @@ const impulsores: Impulsor[] = [
       titulo: lang === 'es' ? 'Impulso 1 · Acceso a dinero' : 'Driver 1 · Access to money',
       sub:
         lang === 'es'
-          ? 'El segundo problema: no tener capital estratégico. Te conectamos con convocatorias abiertas, fondos, mentores y certificación para que tu empresa acceda a dinero y crezca.'
-          : 'The second problem: no strategic capital. We connect you with open calls, grants, mentors and certification so your business gets funded and grows.',
+          ? 'Es una gran barrera de crecimiento no tener dinero para invertir. Te damos acceso a convocatorias, premios y fondos para lograr bajar capital. También te referimos con grandes empresas con las que gente de nuestra comunidad ya trabaja.'
+          : 'Not having money to invest is a huge growth barrier. We give you access to calls for proposals, awards and funds to raise capital. We also refer you to large companies that people in our community already work with.',
       notaCostos:
         lang === 'es'
-          ? 'Gratis: directorio de convocatorias. Plan mensual ($99): Reference Place para empresas ya certificadas. On-Demand: entregables de apoyo humano ($4,000 c/u), paquete de especialista con 4 entregables al mes ($10,000) y certificación ($5,000).'
-          : 'Free: calls directory. Monthly plan ($99): Reference Place for certified businesses. On-Demand: human support deliverables ($4,000 each), a specialist package with 4 deliverables per month ($10,000), and certification ($5,000).',
+          ? 'Gratis: directorio de convocatorias y objetivos estratégicos. On-Demand: apoyo de especialista, paquete y certificación, cada uno con su precio. Reference Place incluido en el Plan Corpilot.'
+          : 'Free: calls directory and strategic objectives. On-Demand: specialist support, package and certification, each priced separately. Reference Place included in the Corpilot Plan.',
       items: [
         { id: 'convo', icono: Megaphone, titulo: lang === 'es' ? 'Convocatorias y fondos' : 'Calls & Grants', desc: lang === 'es' ? 'Directorio vivo de convocatorias, premios y fondos con tu perfil para ver a cuáles postulas.' : 'Living directory of calls, awards and grants matched to your profile.', costo: 'gratis', nota: '', futuro: false, href: '/babel/convocatorias' },
-        { id: 'deliverable', icono: UserCheck, titulo: lang === 'es' ? 'Entregable On-Demand' : 'On-Demand deliverable', desc: lang === 'es' ? 'Apoyo humano personalizado en el Plan de Acción, convocatorias, mejora de madurez o certificación.' : 'Custom human support on your Action Plan, calls & grants, maturity improvement or certification.', costo: 'ondemand', precio: lang === 'es' ? '$4,000 MXN' : '$4,000 MXN', nota: lang === 'es' ? 'Contacta a un experto en una reunión de 30 mins gratis para más información de los entregables.' : 'Talk to an expert in a free 30-min meeting to learn more about the deliverables.', futuro: true },
-        { id: 'paquete', icono: BadgeCheck, titulo: lang === 'es' ? 'Paquete de Especialista' : 'Specialist package', desc: lang === 'es' ? 'Un especialista te apoya con 4 entregables en un mes.' : 'A specialist supports you with 4 deliverables in one month.', costo: 'ondemand', precio: lang === 'es' ? '$10,000 MXN' : '$10,000 MXN', nota: '', futuro: true },
-        { id: 'cert', icono: Award, titulo: lang === 'es' ? 'Certificación MBE' : 'MBE Certification', desc: lang === 'es' ? 'Certificación para lograr el sello de tu negocio ante compradores e inversores.' : 'Certification to earn your business badge with buyers and investors.', costo: 'ondemand', precio: lang === 'es' ? '$5,000 MXN' : '$5,000 MXN', nota: '', futuro: true },
-        { id: 'refplace', icono: Coins, titulo: lang === 'es' ? 'Reference Place (ya certificado)' : 'Reference Place (already certified)', desc: lang === 'es' ? 'Referencias de tu proyecto ante fondos y empresas certificadas.' : 'Project references with leading funds and certified businesses.', costo: 'plan', precio: lang === 'es' ? '$99/mes' : '$99/mo', nota: lang === 'es' ? 'Para empresas ya certificadas.' : 'For already certified businesses.', futuro: true },
+        { id: 'objetivos', icono: TrendingUp, titulo: lang === 'es' ? 'Objetivos Estratégicos' : 'Strategic Objectives', desc: lang === 'es' ? 'Tus metas financieras y punto de equilibrio para saber cuánto debes crecer.' : 'Your financial targets and break-even point to know how much you must grow.', costo: 'gratis', nota: '', futuro: false, href: '/babel/indicadores' },
+        { id: 'refplace', icono: Coins, titulo: lang === 'es' ? 'Reference Place' : 'Reference Place', desc: lang === 'es' ? 'Obtén referencias de grandes empresas una vez que te hayas certificado.' : 'Get references from large companies once you are certified.', costo: 'plan', precio: lang === 'es' ? '$99/mes' : '$99/mo', nota: '', futuro: true },
+        { id: 'cert', icono: BadgeCheck, titulo: lang === 'es' ? 'Certificación MBE' : 'MBE Certification', desc: lang === 'es' ? 'Obtén tu sello de confianza para recibir referencias e inversiones.' : 'Get your trust seal to receive references and investments.', costo: 'ondemand', precio: lang === 'es' ? '$5,000/Año' : '$5,000/year', nota: '', futuro: true },
+        { id: 'apoyo', icono: UserCheck, titulo: lang === 'es' ? 'Apoyo On Demand' : 'On-Demand support', desc: lang === 'es' ? 'Apoyo de un Especialista de nivel directivo para conseguir una convocatoria / premio / fondo, o para alcanzar el nivel de certificación.' : 'Support from an executive-level Specialist to win a call / award / fund, or to reach certification level.', costo: 'ondemand', precio: lang === 'es' ? '$4,000 MXN' : '$4,000 MXN', nota: lang === 'es' ? 'Agenda una reunión gratis con algún especialista para más información de este tema.' : 'Book a free meeting with a specialist to learn more about this topic.', futuro: false },
+        { id: 'paquete', icono: Award, titulo: lang === 'es' ? 'Paquete de Especialista' : 'Specialist package', desc: lang === 'es' ? 'Un especialista en un área interviene tu empresa y te da hasta 4 entregables en un mes.' : 'A specialist in one area works with your company and delivers up to 4 deliverables in a month.', costo: 'ondemand', precio: lang === 'es' ? '$10,000 MXN' : '$10,000 MXN', nota: '', futuro: true },
       ],
     },
     {
       id: 'inicio-impulso-equipo',
       icono: Bot,
-      titulo: lang === 'es' ? 'Impulso 2 · Tu equipo de trabajo con IA' : 'Driver 2 · Your AI Work Team',
+      titulo: lang === 'es' ? 'Impulso 2 · Tu Equipo Directivo On Demand' : 'Driver 2 · Your On-Demand Executive Team',
       sub:
         lang === 'es'
-          ? 'Trabajas duro, pero tu empresa no crece sola. Con estos agentes de IA dejas tu equipo en solitario: estrategia (Babel), finanzas (Fisnando), ventas (Karmetín), operación (Atech) y normas-capital humano (Normau).'
-          : 'You work hard, but the business does not grow alone. With these AI agents you stop operating solo: strategy (Babel), finance (Fisnando), sales (Karmetín), operations (Atech), compliance-HR (Normau).',
+          ? 'No trabajes más, trabaja más inteligentemente. Especialistas Senior y de IA en Estrategia Socioambiental, Marketing, Comercial, Experiencia del Cliente, Finanzas, Normatividad, Operación, Digitalización y Capital Humano se vuelven tu Consejo y Equipo Directivo.'
+          : 'Work smarter, not harder. Senior and AI specialists in Socio-Environmental Strategy, Marketing, Sales, Customer Experience, Finance, Compliance, Operations, Digitalization and Human Capital become your Board and Executive Team.',
       notaCostos:
         lang === 'es'
-          ? 'Gratis: diagnóstico, objetivos y acceso básico. Plan mensual ($99): Reflexión, Organigrama, Plan de Acción con IA, herramientas de los agentes y asesoría con humanos. On-Demand: apoyo de un especialista humano por entregable.'
-          : 'Free: assessment, objectives and basic access. Monthly plan ($99): Reflection, Org Chart, AI Action Plan, agent tools and human advisory. On-Demand: human expert support per deliverable.',
+          ? 'Gratis: evaluación y mejora de madurez, juntas de mentoría. Incluido en el Plan Corpilot: estrategia socioambiental, equipo directivo IA y asesoría del consejo.'
+          : 'Free: maturity assessment and improvement, mentoring meetings. Included in the Corpilot Plan: socio-environmental strategy, AI executive team and board advisory.',
       items: [
-        { id: 'resumen', icono: LayoutDashboard, titulo: lang === 'es' ? 'Resumen ejecutivo' : 'Executive Summary', desc: lang === 'es' ? 'Todo tu avance en un vistazo: madurez, fases y plan de acción.' : 'All your progress in one glance: maturity, phases and action plan.', costo: 'gratis', nota: '', futuro: false, href: '/executive-preview' },
-        { id: 'madurez', icono: Gauge, titulo: lang === 'es' ? 'Evaluación de madurez' : 'Maturity Assessment', desc: lang === 'es' ? 'Descubre el nivel de madurez de tu empresa en 11 temas.' : 'Discover your business maturity level across 11 topics.', costo: 'gratis', nota: '', futuro: false, href: '/dashboard' },
-        { id: 'mejora', icono: LineChart, titulo: lang === 'es' ? 'Mejora del Nivel de Madurez' : 'Maturity Improvement', desc: lang === 'es' ? 'Prácticas mensuales y Scrum semanal para subir de nivel con cada agente.' : 'Monthly practices and weekly Scrum to level up with each agent.', costo: 'gratis', nota: lang === 'es' ? 'Apoyo IA: Plan $99/mes · Apoyo humano: Entregable On-Demand' : 'AI support: $99/mo plan · Human support: On-demand deliverable', futuro: false, href: '/babel/madurez' },
-        { id: 'objetivos', icono: TrendingUp, titulo: lang === 'es' ? 'Objetivos estratégicos' : 'Strategic Objectives', desc: lang === 'es' ? 'Metas con fórmula, indicadores y metas financieras.' : 'Goals with formulas, indicators and financial targets.', costo: 'gratis', nota: '', futuro: false, href: '/babel/indicadores' },
-        { id: 'reflexion', icono: Sparkles, titulo: lang === 'es' ? 'Reflexión estratégica' : 'Strategic Reflection', desc: lang === 'es' ? 'Alineación socioambiental de tu rumbo con Babel.' : 'Socio-environmental alignment of your direction with Babel.', costo: 'plan', precio: lang === 'es' ? '$99/mes' : '$99/mo', nota: '', futuro: false, href: '/babel' },
-        { id: 'organigrama', icono: Users, titulo: lang === 'es' ? 'Organigrama y Roles' : 'Org Chart & Roles', desc: lang === 'es' ? 'Define roles, responsables y tu directorio de contactos.' : 'Define roles, owners and your contacts directory.', costo: 'plan', precio: lang === 'es' ? '$99/mes' : '$99/mo', nota: '', futuro: false, href: '/babel/organigrama' },
-        { id: 'plan', icono: ClipboardList, titulo: lang === 'es' ? 'Plan de acción estratégico' : 'Strategic Action Plan', desc: lang === 'es' ? 'Especialistas con IA construyen tus acciones y factibilidad.' : 'Specialists with AI build your actions and feasibility.', costo: 'plan', precio: lang === 'es' ? '$99/mes' : '$99/mo', nota: lang === 'es' ? 'Especialista humano: Entregable On-Demand' : 'Human specialist: On-Demand deliverable', futuro: false, href: '/babel/plan-accion' },
-        { id: 'herramientas', icono: Bot, titulo: lang === 'es' ? 'Herramientas de los Agentes de IA' : 'AI agent tools', desc: lang === 'es' ? 'Herramientas profundas y paneles de cada agente para tu negocio.' : 'Deeper tools and dashboards from each agent for your business.', costo: 'plan', precio: lang === 'es' ? '$99/mes' : '$99/mo', nota: '', futuro: true },
-        { id: 'asesoria', icono: CalendarClock, titulo: lang === 'es' ? 'Sesiones de asesoría con humanos · 30 min' : 'Human advisory sessions · 30 min', desc: lang === 'es' ? 'Agenda sesiones breves con un asesor MBE en tu plan.' : 'Book short sessions with an MBE advisor in your plan.', costo: 'plan', precio: lang === 'es' ? '$99/mes' : '$99/mo', nota: '', futuro: true },
-        { id: 'mentorias', icono: CalendarClock, titulo: lang === 'es' ? 'Juntas de mentoría semanales' : 'Weekly mentoring meetings', desc: lang === 'es' ? 'Acompañamiento de mentor en grupo, en vivo y cada semana.' : 'Group mentoring, live, every week.', costo: 'gratis', nota: '', futuro: true },
+        { id: 'mentorias', icono: CalendarClock, titulo: lang === 'es' ? 'Juntas de Mentoría' : 'Mentoring Meetings', desc: lang === 'es' ? 'Reuniones semanales con otros empresarios para recibir y dar mentoría de diversos temas. Agenda sesiones con algún empresario para Compras, Asesoría, Trueques, Alianzas Estratégicas y Referencias sencillas. No recorras este camino en solitario y participa en la comunidad.' : 'Weekly meetings with other entrepreneurs to give and receive mentoring on many topics. Book sessions with another entrepreneur for Purchases, Advisory, Trades, Strategic Alliances and simple referrals. Do not walk this path alone; join the community.', costo: 'gratis', nota: '', futuro: true },
+        { id: 'madurez', icono: Gauge, titulo: lang === 'es' ? 'Evaluación y Mejora del Nivel de Madurez' : 'Maturity Assessment & Improvement', desc: lang === 'es' ? 'Evalúa tu madurez y obtén un plan para mejorarlo con tareas semanales y mensuales.' : 'Assess your maturity and get a plan to improve it with weekly and monthly tasks.', costo: 'gratis', nota: '', futuro: false, href: '/babel/madurez' },
+        { id: 'estrategia', icono: Sparkles, titulo: lang === 'es' ? 'Estrategia socioambiental' : 'Socio-environmental Strategy', desc: lang === 'es' ? 'Babel define tu rumbo estratégico desde una perspectiva socioambiental, identifica su organigrama y realiza un plan de acción para alcanzar tus objetivos estratégicos.' : 'Babel defines your strategic direction from a socio-environmental perspective, maps your org chart and builds an action plan to reach your strategic objectives.', costo: 'plan', precio: lang === 'es' ? '$99/mes' : '$99/mo', nota: '', futuro: false, href: '/babel' },
+        { id: 'directivo-ia', icono: Bot, titulo: lang === 'es' ? 'Equipo Directivo IA' : 'AI Executive Team', desc: lang === 'es' ? 'Accede a más herramientas de nuestros agentes de IA. Babel: Alianzas y Enfoque Socioambiental Congruente. Karmetín: Marketing, Ventas y Atención al cliente. Normau: Cumplimiento Normativo, Capital Humano y Cultura Organizacional. Fisnando: Finanzas y Fiscal. Atech: Operación y Digitalización.' : 'Access more tools from our AI agents. Babel: Alliances and Congruent Socio-Environmental Focus. Karmetín: Marketing, Sales and Customer Service. Normau: Compliance, Human Capital and Organizational Culture. Fisnando: Finance and Tax. Atech: Operations and Digitalization.', costo: 'plan', precio: lang === 'es' ? '$99/mes' : '$99/mo', nota: '', futuro: true },
+        { id: 'asesoria', icono: CalendarClock, titulo: lang === 'es' ? 'Asesoría del Consejo Directivo' : 'Board Advisory', desc: lang === 'es' ? 'Agenda sesiones de 30 minutos con la contraparte humana de uno de nuestros agentes de IA para recibir orientación y aclarar dudas.' : 'Book 30-minute sessions with the human counterpart of one of our AI agents for guidance and to clarify doubts.', costo: 'plan', precio: lang === 'es' ? '$99/mes' : '$99/mo', nota: '', futuro: true },
       ],
     },
   ];
@@ -127,17 +124,12 @@ const impulsores: Impulsor[] = [
         <BabelAvatar size={56} className="shrink-0" />
         <div>
           <h3 id="inicio-title" className="text-2xl font-bold text-slate-800">
-            {lang === 'es' ? 'Inicio' : 'Home'}
+            {lang === 'es' ? 'Impulsamos el crecimiento de tu empresa' : 'We drive your company growth'}
           </h3>
           <p className="mt-1 text-sm font-semibold text-slate-500">
             {lang === 'es'
-              ? 'Tu empresa no crece sin equipo ni sin acceso a dinero. Aquí tienes ambos.'
-              : 'Your business grows only with a team and capital access. You have both here.'}
-          </p>
-          <p className="mt-1 text-sm text-slate-500">
-            {lang === 'es'
-              ? 'En MBE Corpilot AI te conectamos con tus herramientas, tus agentes de IA y las oportunidades de financiamiento para crecer con método.'
-              : 'MBE Corpilot AI connects you with your tools, your AI agents and funding opportunities to grow with method.'}
+              ? 'Ninguna empresa puede crecer sin Dinero para invertir y sin un Equipo de Trabajo con Especialistas Senior en varios temas. Aquí tienes ambos.'
+              : 'No business can grow without money to invest and without a Work Team of Senior Specialists in several fields. Here you have both.'}
           </p>
         </div>
       </div>
