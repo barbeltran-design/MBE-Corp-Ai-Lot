@@ -54,11 +54,11 @@ const MESES: Record<PlanLang, string[]> = {
 };
 
 const MENTOR_COLOR: Record<MentorAgente, string> = {
-  Babel: 'bg-teal-100 text-teal-800',
-  Fisnando: 'bg-emerald-100 text-emerald-800',
-  Karmetin: 'bg-indigo-100 text-indigo-800',
-  Normau: 'bg-sky-100 text-sky-800',
-  Atech: 'bg-amber-100 text-amber-800',
+  Babel: 'bg-teal-100 text-teal-800 dark:bg-teal-500/20 dark:text-teal-200',
+  Fisnando: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200',
+  Karmetin: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-200',
+  Normau: 'bg-sky-100 text-sky-800 dark:bg-sky-500/20 dark:text-sky-200',
+  Atech: 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200',
 };
 
 const LABELS = {

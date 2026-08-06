@@ -325,7 +325,7 @@ export default function ConvocatoriasBuilder({ lang }: { lang: ConvoLang }) {
       >
         <div className="mb-2 flex flex-wrap gap-1.5">
           <span className={'rounded-full px-2.5 py-0.5 text-[11px] font-semibold ' + claseEstatus(est)}>{est || '—'}</span>
-          <span className="rounded-full bg-sky-50 px-2.5 py-0.5 text-[11px] font-semibold text-sky-800">{c.tipo}</span>
+          <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-[11px] font-semibold text-sky-900 dark:bg-sky-500/20 dark:text-sky-200">{c.tipo}</span>
         </div>
         <h4 className="text-sm font-bold leading-snug text-slate-800">{c.convocatoria}</h4>
         {c.ods ? <p className="mt-0.5 text-[11px] italic text-slate-500">{c.ods}</p> : null}

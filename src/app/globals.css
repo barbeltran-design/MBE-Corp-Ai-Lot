@@ -241,6 +241,7 @@
   .dark .text-sky-800 { color: hsl(200, 60%, 70%); }
   .dark .bg-blue-50 { background-color: hsl(220, 40%, 11%); }
   .dark .bg-blue-100 { background-color: hsl(220, 40%, 14%); }
+  .dark .text-blue-600 { color: hsl(205, 90%, 76%); }
   .dark .text-blue-700,
   .dark .text-blue-800,
   .dark .text-blue-900 { color: hsl(220, 60%, 70%); }
