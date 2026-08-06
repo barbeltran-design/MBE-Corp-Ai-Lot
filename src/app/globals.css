@@ -272,3 +272,39 @@
     color-scheme: dark;
   }
 }
+
+/* --- Recharts: letras de ejes/ticks legibles en light y dark --- */
+.recharts-text {
+  fill: hsl(220, 12%, 35%);
+}
+.dark .recharts-text {
+  fill: hsl(220, 9%, 78%);
+}
+.recharts-cartesian-axis-line,
+.recharts-cartesian-axis-tick-line {
+  stroke: hsl(220, 12%, 80%);
+}
+.dark .recharts-cartesian-axis-line,
+.dark .recharts-cartesian-axis-tick-line {
+  stroke: hsl(220, 9%, 35%);
+}
+.recharts-polar-grid-angle line,
+.recharts-polar-grid-radius line,
+.recharts-polar-grid line {
+  stroke: hsl(220, 12%, 85%);
+}
+.dark .recharts-polar-grid-angle line,
+.dark .recharts-polar-grid-radius line,
+.dark .recharts-polar-grid line {
+  stroke: hsl(220, 9%, 30%);
+}
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background-color: hsl(220, 23%, 97%) !important;
+  color: hsl(220, 12%, 25%) !important;
+  border-color: hsl(220, 12%, 80%) !important;
+}
+.dark .recharts-tooltip-wrapper .recharts-default-tooltip {
+  background-color: hsl(222, 20%, 14%) !important;
+  color: hsl(220, 9%, 92%) !important;
+  border-color: hsl(220, 9%, 30%) !important;
+}
