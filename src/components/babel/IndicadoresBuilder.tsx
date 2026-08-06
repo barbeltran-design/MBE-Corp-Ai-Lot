@@ -401,7 +401,7 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
 
   const renderIndicador = (ind: Indicador) => {
     return (
-      <div key={ind.id} className="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div key={ind.id} className="glass-panel mb-4 p-4">
         <div className="mb-2 flex flex-wrap items-center gap-2">
           <span
             className={
@@ -514,7 +514,7 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <div className="rounded-lg border border-slate-200 bg-white p-3 text-center">
+        <div className="glass-panel p-3 text-center">
           <div className="text-lg font-bold text-slate-800">{indicadores.length}</div>
           <div className="text-xs text-slate-500">{t.summaryTotal}</div>
         </div>
@@ -526,23 +526,23 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
           <div className="text-lg font-bold text-amber-700">{pendientes}</div>
           <div className="text-xs text-amber-600">{t.summaryPendientes}</div>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-3 text-center">
+        <div className="glass-panel p-3 text-center">
           <div className="text-lg font-bold text-slate-800">{perspectivaCount('financiera')}</div>
           <div className="text-xs text-slate-500">{t.summaryFinanciera}</div>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-3 text-center">
+        <div className="glass-panel p-3 text-center">
           <div className="text-lg font-bold text-slate-800">{perspectivaCount('clientes')}</div>
           <div className="text-xs text-slate-500">{t.summaryClientes}</div>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-3 text-center">
+        <div className="glass-panel p-3 text-center">
           <div className="text-lg font-bold text-slate-800">{perspectivaCount('procesos_internos')}</div>
           <div className="text-xs text-slate-500">{t.summaryProcesos}</div>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-3 text-center">
+        <div className="glass-panel p-3 text-center">
           <div className="text-lg font-bold text-slate-800">{perspectivaCount('aprendizaje_crecimiento')}</div>
           <div className="text-xs text-slate-500">{t.summaryAprendizaje}</div>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-3 text-center">
+        <div className="glass-panel p-3 text-center">
           <div className="text-lg font-bold text-slate-800">{perspectivaCount('socioambiental')}</div>
           <div className="text-xs text-slate-500">{t.summarySocioambiental}</div>
         </div>
@@ -599,7 +599,7 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
                 <button
                   type="button"
                   onClick={() => toggleSeccion(g.key)}
-                  className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 transition-colors hover:bg-slate-100"
+                  className="glass-panel glass-panel-hover flex w-full items-center justify-between px-4 py-2.5"
                 >
                   <span className="flex items-center gap-2 text-sm font-semibold text-slate-800">
                     {g.key === 'sin_perspectiva'

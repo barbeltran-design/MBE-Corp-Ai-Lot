@@ -169,7 +169,7 @@ const impulsores: Impulsor[] = [
                           <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${costoCls}`}>{costo}</span>
                         )}
                         {it.precio && (
-                          <span className="rounded-full bg-teal-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-teal-800">
+                          <span className="rounded-full bg-teal-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-teal-800 dark:bg-teal-500/20 dark:text-teal-200">
                             {it.precio}
                           </span>
                         )}

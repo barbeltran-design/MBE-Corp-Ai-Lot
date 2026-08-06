@@ -315,7 +315,7 @@ export default function ConvocatoriasBuilder({ lang }: { lang: ConvoLang }) {
     return (
       <div
         className={
-          'flex flex-col rounded-lg border border-slate-200 bg-white p-3 shadow-sm ' +
+          'flex flex-col p-3 glass-panel ' +
           (extraClase === 'ok'
             ? 'border-l-4 border-l-green-500'
             : extraClase === 'no'
@@ -387,7 +387,7 @@ export default function ConvocatoriasBuilder({ lang }: { lang: ConvoLang }) {
 
       {/* Stats */}
       <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+        <div className="glass-panel p-3">
           <p className="text-xl font-bold text-slate-800">{datos.length}</p>
           <p className="text-xs text-slate-500">{t.statsTotal}</p>
         </div>
@@ -395,18 +395,18 @@ export default function ConvocatoriasBuilder({ lang }: { lang: ConvoLang }) {
           <p className="text-xl font-bold text-green-800">{abiertas}</p>
           <p className="text-xs text-green-700">{t.statsAbiertas}</p>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+        <div className="glass-panel p-3">
           <p className="text-xl font-bold text-slate-800">{monto.parts}</p>
           <p className="text-xs text-slate-500">{t.statsMonto}</p>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+        <div className="glass-panel p-3">
           <p className="text-xl font-bold text-slate-800">{fechaHoy(hoyD)}</p>
           <p className="text-xs text-slate-500">{t.statsAct}</p>
         </div>
       </div>
 
       {/* Buscar por perfil */}
-      <div id="convocatorias-buscar" className="mt-5 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+      <div id="convocatorias-buscar" className="mt-5 glass-panel p-3">
         <h4 className="text-sm font-semibold text-slate-700">{t.buscarTitle}</h4>
         <p className="mt-1 text-xs text-slate-500">{t.buscarSub}</p>
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -467,7 +467,7 @@ export default function ConvocatoriasBuilder({ lang }: { lang: ConvoLang }) {
         </div>
         <div className="mt-3">
           <label className="mb-1 block text-xs font-medium text-slate-500">{t.lblOds}</label>
-          <div className="grid max-h-40 grid-cols-1 gap-1 overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-2 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid max-h-40 grid-cols-1 gap-1 overflow-auto p-2 sm:grid-cols-2 lg:grid-cols-3 glass-panel">
             {Object.keys(ODS_NAMES).map((k) => {
               const n = Number(k);
               const on = odsSel.includes(n);
@@ -606,7 +606,7 @@ if (!hoy) {
             {filtradas.map((c) => tarjeta(c))}
           </div>
         ) : (
-          <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
+          <div className="mt-3 glass-panel p-6 text-center text-sm text-slate-500">
             {t.vacio}
           </div>
         )}

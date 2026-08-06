@@ -576,7 +576,7 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
             <button
               type="button"
               onClick={() => setSemanaOffset((o) => o - 1)}
-              className="rounded-lg border border-slate-300 bg-white p-1 text-slate-600 hover:bg-slate-50"
+              className="glass-panel glass-panel-hover p-1 text-slate-600"
               aria-label="Semana anterior"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -585,7 +585,7 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
             <button
               type="button"
               onClick={() => setSemanaOffset((o) => o + 1)}
-              className="rounded-lg border border-slate-300 bg-white p-1 text-slate-600 hover:bg-slate-50"
+              className="glass-panel glass-panel-hover p-1 text-slate-600"
               aria-label="Semana siguiente"
             >
               <ChevronRight className="h-4 w-4" />
@@ -642,7 +642,7 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
               ['done', t.colDone],
             ] as [TareaEstatus, string][]
           ).map(([estatus, header]) => (
-            <div key={estatus} className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+            <div key={estatus} className="glass-panel p-2">
               <p className="px-1 pb-1 text-xs font-semibold text-slate-500">{header}</p>
               <div className="space-y-1.5">
                 {tareas
@@ -653,10 +653,10 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
                       onClick={() => moverTarea(ta.id)}
                       title="Clic para mover"
                       className={
-                        'flex cursor-pointer items-start justify-between gap-2 rounded-md border px-2 py-1.5 text-xs shadow-sm ' +
+                        'flex cursor-pointer items-start justify-between gap-2 px-2 py-1.5 text-xs ' +
                         (ta.estatus === 'done'
-                          ? 'border-green-200 bg-green-50 text-green-800 line-through'
-                          : 'border-slate-200 bg-white text-slate-700')
+                          ? 'rounded-md border border-green-200 bg-green-50 text-green-800 line-through'
+                          : 'glass-panel glass-panel-hover text-slate-700')
                       }
                     >
                       <span className="min-w-0">{ta.texto}</span>
@@ -686,7 +686,7 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
           {MENTORES.map((mentor) => {
             const sig = siguienteDeAgente(mentor);
             return (
-              <div key={mentor} className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+              <div key={mentor} className="glass-panel p-3">
                 <span className={'inline-block rounded-full px-2.5 py-1 text-xs font-medium ' + MENTOR_COLOR[mentor]}>
                   {mentor}
                 </span>
@@ -714,7 +714,7 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
             <button
               type="button"
               onClick={() => setMesSel((m) => addMonths(m, -1))}
-              className="rounded-lg border border-slate-300 bg-white p-1 text-slate-600 hover:bg-slate-50"
+              className="glass-panel glass-panel-hover p-1 text-slate-600"
               aria-label="Mes anterior"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -723,7 +723,7 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
             <button
               type="button"
               onClick={() => setMesSel((m) => addMonths(m, 1))}
-              className="rounded-lg border border-slate-300 bg-white p-1 text-slate-600 hover:bg-slate-50"
+              className="glass-panel glass-panel-hover p-1 text-slate-600"
               aria-label="Mes siguiente"
             >
               <ChevronRight className="h-4 w-4" />
@@ -740,7 +740,7 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
         <p className="mt-1 text-xs text-slate-400">{t.planMensualHint}</p>
 
         {compromisosMes.length === 0 && MENTORES.every((m) => !siguienteDeAgente(m)) ? (
-          <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-500">{t.emptyMes}</div>
+          <div className="glass-panel mt-2 p-3 text-sm text-slate-500">{t.emptyMes}</div>
         ) : (
           <div className="mt-2 space-y-2">
             {MENTORES.map((mentor) => {
@@ -748,7 +748,7 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
               return (
                 <div
                   key={mentor}
-                  className="grid items-center gap-2 rounded-lg border border-slate-200 bg-white p-3 shadow-sm sm:grid-cols-[110px_1fr_90px_130px_auto]"
+                  className="glass-panel grid items-center gap-2 p-3 sm:grid-cols-[110px_1fr_90px_130px_auto]"
                 >
                   <span className={'inline-block w-fit rounded-full px-2.5 py-1 text-xs font-medium ' + MENTOR_COLOR[mentor]}>
                     {mentor}
@@ -809,7 +809,7 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
           {DIMENSION_IDS.map((id) => {
             const sig = proximaPractica(id);
             return (
-              <div key={id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+              <div key={id} className="glass-panel flex flex-wrap items-center justify-between gap-2 p-3">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-slate-800">{temaDe[id]}</p>
                   {sig ? (

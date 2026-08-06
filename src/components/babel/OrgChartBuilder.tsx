@@ -945,7 +945,7 @@ export default function OrgChartBuilder({ lang }: { lang: OrgLang }) {
     const kids = childrenOf(role.key);
     return (
       <div key={role.key} style={{ marginLeft: depth * 20 }} className="mb-3">
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="glass-panel p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h4 className="font-semibold text-slate-800">
@@ -1023,7 +1023,7 @@ export default function OrgChartBuilder({ lang }: { lang: OrgLang }) {
                   <div className="space-y-3">
                     {boardData.consejeros.map(function (c) {
                       return (
-                        <div key={c.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <div key={c.id} className="glass-panel p-3">
                           <div className="flex items-start justify-between gap-2">
                             <div className="grid flex-1 gap-2 sm:grid-cols-2">
                               <div>
@@ -1227,7 +1227,7 @@ export default function OrgChartBuilder({ lang }: { lang: OrgLang }) {
         </div>
       </div>
       <p className="mt-3 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-800">{t.repeatNote}</p>
-      <div id="organigrama-resumen" className="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div id="organigrama-resumen" className="glass-panel mt-4 p-4">
         <h4 className="mb-2 text-sm font-semibold text-slate-700">{t.summaryTitle}</h4>
         <p className="mb-2 text-xs text-slate-400">
           {t.counts(counts.green, counts.yellow, counts.orange, counts.red)}
@@ -1255,7 +1255,7 @@ export default function OrgChartBuilder({ lang }: { lang: OrgLang }) {
         })}
       </div>
 
-      <div id="organigrama-contactos" className="mt-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div id="organigrama-contactos" className="glass-panel glass-panel-hover mt-6 p-4">
         <button
           type="button"
           onClick={() => setContactosOpen(!contactosOpen)}

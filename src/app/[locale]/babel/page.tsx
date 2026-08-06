@@ -18,7 +18,6 @@ import {
 import { BABEL_IMPLEMENTED_PHASES, babelApprovalMarker, babelPhaseTopics } from '@/lib/babel-constants';
 import { downloadCompiledPlanPdf } from '@/lib/deliverables';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { useDisplayLang } from '@/components/display-lang-provider';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 import BabelAvatar from '@/components/babel/BabelAvatar';
@@ -712,7 +711,7 @@ export default function BabelPage() {
       </div>
       <PhaseStepper currentPhase={currentPhase} approved={session.phases ?? []} lang={dispLang} />
       {currentQuestionIndex > 0 && (
-          <Card id="babel-chat" className="flex-1 space-y-3 overflow-y-auto p-4 max-h-[40vh]">
+          <div id="babel-chat" className="glass-panel flex-1 space-y-3 overflow-y-auto p-4 max-h-[40vh]">
             {Array.from({ length: currentQuestionIndex }).map(function (_unused, k) {
               const qText = (k === 0 ? fase0IntroText(dispLang) : '') + questions[k].question;
               const answerText = phase0Answers[questions[k].key] ?? '';
@@ -727,7 +726,7 @@ export default function BabelPage() {
                 </React.Fragment>
               );
             })}
-          </Card>
+          </div>
         )}
         <div className="w-full bg-slate-200 rounded-full h-2">
           <div className="bg-blue-600 h-2 rounded-full transition-all" style={{ width: String(((currentQuestionIndex + 1) / questions.length) * 100) + '%' }} />
@@ -760,7 +759,7 @@ export default function BabelPage() {
           </div>
         )}
         {showManualEditor && (
-          <Card className="p-4 space-y-2">
+          <div className="glass-panel p-4 space-y-2">
             <p className="text-sm font-medium text-slate-700">{dispLang === 'en' ? 'Write your Phase 0 conclusion manually:' : 'Escribe tu conclusion de la Fase 0 manualmente:'}</p>
             <textarea
               value={manualContent}
@@ -777,9 +776,9 @@ export default function BabelPage() {
                 {sending ? (dispLang === 'en' ? 'Saving...' : 'Guardando...') : (dispLang === 'en' ? 'Save and approve Phase 0' : 'Guardar y aprobar Fase 0')}
               </Button>
             </div>
-          </Card>
+          </div>
         )}
-        <Card id="babel-entrada" className="p-6">
+        <div id="babel-entrada" className="glass-panel p-6">
           <div className="whitespace-pre-wrap text-slate-900 mb-4 font-medium">
             {questions[currentQuestionIndex].question}
           </div>
@@ -807,7 +806,7 @@ export default function BabelPage() {
               {sending ? (dispLang === 'en' ? 'Sending...' : 'Enviando...') : (dispLang === locale ? t('send') : UI_FALLBACK[dispLang].send)}
             </Button>
           </form>
-        </Card>
+        </div>
       </div>
       <PageTour pageId="babel-reflexion" steps={pasosTour} lang={dispLang} />
       </React.Fragment>
@@ -836,7 +835,7 @@ export default function BabelPage() {
         </div>
       </div>
       <PhaseStepper currentPhase={currentPhase} approved={session.phases ?? []} lang={dispLang} />
-      <Card id="babel-chat" className="flex-1 space-y-3 overflow-y-auto p-4 min-h-[60vh]">
+      <div id="babel-chat" className="glass-panel flex-1 space-y-3 overflow-y-auto p-4 min-h-[60vh]">
         {session.messages.map(function (m, i) {
           const isStoredPhase0SummaryUser =
             m.role === 'user' && (m.content.startsWith('Fase 0 completada:') || m.content.startsWith('Phase 0 completed:'));
@@ -931,7 +930,7 @@ export default function BabelPage() {
           </div>
         )}
         <div ref={bottomRef} />
-      </Card>
+      </div>
         {error && (
         <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600 border border-red-200">
           <div className="mb-1">{friendlyError(error)}</div>
@@ -957,7 +956,7 @@ export default function BabelPage() {
         </div>
       )}
       {showManualEditor && !awaitingApproval && (
-        <Card className="p-4 space-y-2">
+        <div className="glass-panel p-4 space-y-2">
           <p className="text-sm font-medium text-slate-700">{dispLang === 'en' ? 'Write your conclusion for Phase ' + currentPhase + ' manually:' : 'Escribe tu conclusion para la Fase ' + currentPhase + ' manualmente:'}</p>
           <textarea
             value={manualContent}
@@ -974,7 +973,7 @@ export default function BabelPage() {
               {sending ? (dispLang === 'en' ? 'Saving...' : 'Guardando...') : (dispLang === 'en' ? 'Save and approve Phase ' + currentPhase : 'Guardar y aprobar Fase ' + String(currentPhase))}
             </Button>
           </div>
-        </Card>
+        </div>
       )}
       <div className="flex flex-col gap-2">
         {awaitingApproval && editingMessageIndex === null && !showManualEditor && (
@@ -985,7 +984,7 @@ export default function BabelPage() {
           </Button>
         )}
         {awaitingApproval && showManualEditor && (
-          <Card className="p-4 space-y-2">
+          <div className="glass-panel p-4 space-y-2">
             <p className="text-sm font-medium text-slate-700">{dispLang === 'en' ? 'Write your own conclusion for Phase ' + currentPhase + ':' : 'Escribe tu propia conclusion para la Fase ' + currentPhase + ':'}</p>
             <textarea
               value={manualContent}
@@ -1002,7 +1001,7 @@ export default function BabelPage() {
                 {sending ? (dispLang === 'en' ? 'Saving...' : 'Guardando...') : (dispLang === 'en' ? 'Save and approve Phase ' + currentPhase : 'Guardar y aprobar Fase ' + String(currentPhase))}
               </Button>
             </div>
-          </Card>
+          </div>
         )}
         {awaitingApproval && editingMessageIndex !== null && (
           <div className="flex gap-2">

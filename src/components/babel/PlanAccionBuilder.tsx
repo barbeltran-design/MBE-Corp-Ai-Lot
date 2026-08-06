@@ -1186,7 +1186,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
     const d = daysUntil(a.fecha);
     const showDue = a.estatus !== 'terminado' && d <= 7;
     return (
-      <div key={a.id} className="mb-3 rounded-lg border border-slate-200 bg-white p-3">
+      <div key={a.id} className="mb-3 glass-panel p-3">
         <div className="grid gap-2 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label className="mb-1 block text-xs font-medium text-slate-600">{t.accionDesc}</label>
@@ -1371,7 +1371,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
   const renderFD = (f: FortalezaDebilidad, e: AmenazaOportunidad, o: Objetivo) => {
     const proyecto = findProyectoByFd(f.id);
     return (
-      <div key={f.id} className="mb-3 rounded-lg border border-slate-200 bg-white p-3">
+      <div key={f.id} className="mb-3 glass-panel p-3">
         <div className="grid gap-2 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-600">{t.entornoTipo}</label>
@@ -1433,7 +1433,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
     const isExpanded = expanded[e.id] === true;
     const fdsDeE = fds.filter((f) => f.entornoIds.indexOf(e.id) !== -1);
     return (
-      <div key={e.id} className="mb-3 rounded-lg border border-slate-300 bg-slate-50 p-3">
+      <div key={e.id} className="mb-3 glass-panel p-3">
         <div className="grid gap-2 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-600">{t.entornoTipo}</label>
@@ -1503,7 +1503,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
     const isExpanded = expanded[o.id] === true;
     const entornosDeO = entornos.filter((e) => e.objetivoIds.indexOf(o.id) !== -1);
     return (
-      <div key={o.id} className="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div key={o.id} className="mb-4 glass-panel p-4">
         <div className="grid gap-2">
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-600">{t.objetivoLabel}</label>
@@ -1567,11 +1567,11 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
-        <div className="rounded-lg border border-slate-200 bg-white p-3 text-center">
+        <div className="glass-panel p-3 text-center">
           <div className="text-lg font-bold text-slate-800">{objetivos.length}</div>
           <div className="text-xs text-slate-500">{t.summaryObjetivos}</div>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-3 text-center">
+        <div className="glass-panel p-3 text-center">
           <div className="text-lg font-bold text-slate-800">{acciones.length}</div>
           <div className="text-xs text-slate-500">{t.summaryAcciones}</div>
         </div>
@@ -1583,13 +1583,13 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
           <div className="text-lg font-bold text-amber-700">{porVencer.length}</div>
           <div className="text-xs text-amber-600">{t.summaryPorVencer}</div>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-3 text-center">
+        <div className="glass-panel p-3 text-center">
           <div className="text-lg font-bold text-slate-800">{pendientesValidar}</div>
           <div className="text-xs text-slate-500">{t.summaryValidar}</div>
         </div>
       </div>
 
-      <div id="plan-accion-etapas" className="mt-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div id="plan-accion-etapas" className="mt-6 glass-panel p-4">
         <h4 className="text-sm font-semibold text-slate-800">{t.planIaTitle}</h4>
         <p className="mt-1 text-sm text-slate-500">{t.planIaSubtitle}</p>
         <div className="mt-3 grid gap-3 md:grid-cols-2">
