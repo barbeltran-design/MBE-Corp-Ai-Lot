@@ -5,7 +5,8 @@ import { useParams } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase';
 import { useDisplayLang } from '@/components/display-lang-provider';
-import { CalendarDays, ChevronDown, ExternalLink } from 'lucide-react';
+import { CalendarDays, ChevronDown, ExternalLink, Loader2 } from 'lucide-react';
+import type { User } from 'firebase/auth';
 
 interface EspecialistaPublico {
   uid: string;
@@ -172,16 +173,54 @@ export default function AgendarPage() {
   const [especialistas, setEspecialistas] = React.useState<EspecialistaPublico[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [abierto, setAbierto] = React.useState<string | null>(null);
+  const [user, setUser] = React.useState<User | null>(null);
+  const [payLoading, setPayLoading] = React.useState<string | null>(null);
+  const [payError, setPayError] = React.useState('');
+
+  async function handlePagar(productId: string) {
+    if (!user) {
+      setPayError(t('Inicia sesión para contratar.', 'Log in to purchase.'));
+      return;
+    }
+    setPayLoading(productId);
+    setPayError('');
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/pagos/crear-preferencia', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ locale: dispLang, returnPath: '/perfil', productId }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.checkoutUrl) {
+        throw new Error(data.error || 'pago fallido');
+      }
+      window.location.href = data.checkoutUrl;
+    } catch (err) {
+      console.error('[agendar] pago fallido', err);
+      setPayError(
+        t(
+          'No se pudo iniciar el pago. Intenta de nuevo en unos segundos.',
+          'Could not start the payment. Try again in a few seconds.'
+        )
+      );
+      setPayLoading(null);
+    }
+  }
 
   React.useEffect(() => {
     let cancelled = false;
     const auth = getFirebaseAuth();
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (!user) {
+    const unsub = onAuthStateChanged(auth, (usr) => {
+      setUser(usr);
+      if (!usr) {
         if (!cancelled) setLoading(false);
         return;
       }
-      void user
+      void usr
         .getIdToken()
         .then(async (token) => {
           const res = await fetch('/api/especialistas', {
@@ -276,6 +315,51 @@ export default function AgendarPage() {
                         {t('Agenda Cita de orientación GRATIS', 'Book FREE orientation session')}
                         <ChevronDown className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} />
                       </button>
+                      {area.id === 'certificacion' ? (
+                        <button
+                          type="button"
+                          onClick={() => handlePagar('certificacion_mbe')}
+                          disabled={payLoading !== null}
+                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-teal-600 bg-transparent px-4 py-2 text-sm font-semibold text-teal-700 transition-colors hover:bg-teal-50 disabled:opacity-60 dark:text-teal-300 dark:hover:bg-teal-500/10"
+                        >
+                          {payLoading === 'certificacion_mbe' ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <ExternalLink className="h-4 w-4" />
+                          )}
+                          {t('Contratar Certificación Anual', 'Purchase Annual Certification')}
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handlePagar('apoyo_ondemand')}
+                            disabled={payLoading !== null}
+                            className="inline-flex items-center justify-center gap-2 rounded-lg border border-teal-600 bg-transparent px-4 py-2 text-sm font-semibold text-teal-700 transition-colors hover:bg-teal-50 disabled:opacity-60 dark:text-teal-300 dark:hover:bg-teal-500/10"
+                          >
+                            {payLoading === 'apoyo_ondemand' ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <ExternalLink className="h-4 w-4" />
+                            )}
+                            {t('Contratar Apoyo On Demand (1 entregable)', 'Purchase On-Demand Support (1 deliverable)')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handlePagar('paquete_especialista')}
+                            disabled={payLoading !== null}
+                            className="inline-flex items-center justify-center gap-2 rounded-lg border border-teal-600 bg-transparent px-4 py-2 text-sm font-semibold text-teal-700 transition-colors hover:bg-teal-50 disabled:opacity-60 dark:text-teal-300 dark:hover:bg-teal-500/10"
+                          >
+                            {payLoading === 'paquete_especialista' ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <ExternalLink className="h-4 w-4" />
+                            )}
+                            {t('Contratar Paquete Mentor (Hasta 4 entregables)', 'Purchase Mentor Package (Up to 4 deliverables)')}
+                          </button>
+                        </>
+                      )}
+                      {payError && <p className="text-xs text-red-600">{payError}</p>}
                       {open && (
                         <div className="flex flex-wrap justify-end gap-1.5">
                           {mentores.map((e) => (
