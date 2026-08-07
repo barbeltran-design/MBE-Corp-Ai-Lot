@@ -45,6 +45,9 @@ export interface MaturityLevelDef {
   maxPoints: number;
   description: string;
   deliverable: string;
+  // Explicación del nivel desde el tutorial oficial de MBE: cómo se llama el
+  // nivel, la pregunta "¿Cómo lo ...?" y la explicación de qué hace la empresa.
+  tutorial: { nivel: string; pregunta: string; explicacion: string };
 }
 
 export interface MaturityDimensionDef {
@@ -61,6 +64,82 @@ const LEVEL_META: { key: MaturityLevel; maxPoints: number }[] = [
   { key: 'optimization', maxPoints: 20 },
   { key: 'excellence', maxPoints: 20 },
   { key: 'influencer', maxPoints: 30 },
+];
+
+// Orden del tutorial: 1 Ejecución, 2 Documentación, 3 Control, 4 Mejora,
+// 5 Excelencia, 6 Influencia (mismo orden que LEVEL_META).
+const LEVEL_TUTORIAL_ES: {
+  nivel: string;
+  pregunta: string;
+  explicacion: string;
+}[] = [
+  {
+    nivel: 'Ejecución',
+    pregunta: '¿Cómo lo ejecuto?',
+    explicacion: 'Hago el trabajo en el día a día para que mi negocio funcione',
+  },
+  {
+    nivel: 'Documentación',
+    pregunta: '¿Cómo lo documento?',
+    explicacion: 'Escribo mis reglas, procedimientos y guías para estandarizar y no depender de mi memoria',
+  },
+  {
+    nivel: 'Control',
+    pregunta: '¿Cómo lo controlo?',
+    explicacion: 'Reviso constantemente con indicadores y listas de verificación que el estándar se cumpla sin desviaciones',
+  },
+  {
+    nivel: 'Mejora',
+    pregunta: '¿Cómo lo mejoro?',
+    explicacion: 'Analizo las fallas, encuentro la causa raíz y optimizo mis procesos para ser más eficiente',
+  },
+  {
+    nivel: 'Excelencia',
+    pregunta: '¿Cómo me encamino a ser el mejor?',
+    explicacion: 'Digitalizo, automatizo y opero bajo estándares de clase mundial',
+  },
+  {
+    nivel: 'Influencia',
+    pregunta: '¿Cómo influencio en mi industria?',
+    explicacion: 'Dicto las reglas del juego, inspiro al mercado y transformo mi entorno',
+  },
+];
+
+const LEVEL_TUTORIAL_EN: {
+  nivel: string;
+  pregunta: string;
+  explicacion: string;
+}[] = [
+  {
+    nivel: 'Execution',
+    pregunta: 'How do I execute it?',
+    explicacion: 'I do the day-to-day work to keep my business running',
+  },
+  {
+    nivel: 'Documentation',
+    pregunta: 'How do I document it?',
+    explicacion: 'I write down my rules, procedures and guides to standardize and stop relying on memory',
+  },
+  {
+    nivel: 'Control',
+    pregunta: 'How do I control it?',
+    explicacion: 'I constantly review with indicators and checklists that the standard is met without deviations',
+  },
+  {
+    nivel: 'Improvement',
+    pregunta: 'How do I improve it?',
+    explicacion: 'I analyze failures, find the root cause and improve my processes to be more efficient',
+  },
+  {
+    nivel: 'Excellence',
+    pregunta: 'How do I get on the path to being the best?',
+    explicacion: 'I digitize, automate and operate under world-class standards',
+  },
+  {
+    nivel: 'Influence',
+    pregunta: 'How do I influence my industry?',
+    explicacion: 'I set the rules of the game, inspire the market and transform my environment',
+  },
 ];
 
 interface DimensionText {
@@ -342,6 +421,7 @@ const CONTENT: Record<Language, Record<DimensionId, DimensionText>> = {
 
 export function getMaturityDimensions(locale: Language): MaturityDimensionDef[] {
   const content = CONTENT[locale] ?? CONTENT.es;
+  const tutorial = locale === 'en' ? LEVEL_TUTORIAL_EN : LEVEL_TUTORIAL_ES;
   return DIMENSION_IDS.map((id) => {
     const text = content[id];
     return {
@@ -353,6 +433,7 @@ export function getMaturityDimensions(locale: Language): MaturityDimensionDef[] 
         maxPoints: meta.maxPoints,
         description: text.levels[i][0],
         deliverable: text.levels[i][1],
+        tutorial: tutorial[i],
       })),
     };
   });

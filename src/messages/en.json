@@ -80,6 +80,7 @@
   "assessment": {
     "loading": "Loading...",
     "stepLabel": "Maturity Assessment · Topic {current} of {total}",
+    "nivel": "Level",
     "expectedEvidence": "Expected evidence:",
     "answers": {
       "yes": "Yes",

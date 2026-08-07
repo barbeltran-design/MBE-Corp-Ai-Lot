@@ -80,6 +80,7 @@
   "assessment": {
     "loading": "Cargando...",
     "stepLabel": "Diagnóstico de madurez · Tema {current} de {total}",
+    "nivel": "Nivel",
     "expectedEvidence": "Evidencia esperada:",
     "answers": {
       "yes": "Sí",

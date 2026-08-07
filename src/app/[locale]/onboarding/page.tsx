@@ -237,8 +237,16 @@ function OnboardingInner() {
           <div className="mt-6 space-y-6">
             {currentDimension.levels.map((level, i) => (
               <div key={level.key} className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-                <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">{tLevel(level.key)}</p>
-                <p className="mt-1 text-sm text-slate-700">{level.description}</p>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300">
+                    {t('nivel')} {i + 1}: {level.tutorial.nivel}
+                  </span>
+                  <span className="text-xs font-semibold italic text-emerald-700 dark:text-emerald-400">
+                    {level.tutorial.pregunta}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-slate-500">{level.tutorial.explicacion}</p>
+                <p className="mt-2 text-sm text-slate-700">{level.description}</p>
                 <p className="mt-1 text-xs text-slate-400">
                   {t('expectedEvidence')} {level.deliverable}
                 </p>
