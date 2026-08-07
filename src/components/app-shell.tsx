@@ -21,8 +21,8 @@ function AppShellInner({
 
   const navItems: ExecutiveNavItem[] = [
     { href: `/${locale}/inicio`, label: navLabel('Inicio', 'Home'), icon: Home },
-    { href: `/${locale}/executive-preview`, label: navLabel('Resumen ejecutivo', 'Executive Summary'), icon: LayoutDashboard },
     { href: `/${locale}/babel/convocatorias`, label: navLabel('Convocatorias y fondos', 'Calls & Grants'), icon: Megaphone },
+    { href: `/${locale}/executive-preview`, label: navLabel('Resumen ejecutivo', 'Executive Summary'), icon: LayoutDashboard },
     { href: `/${locale}/babel/indicadores`, label: navLabel('Objetivos estratégicos', 'Strategic Objectives'), icon: TrendingUp },
     { href: `/${locale}/dashboard`, label: navLabel('Evaluación de madurez', 'Maturity Assessment'), icon: Gauge },
     { href: `/${locale}/babel/madurez`, label: navLabel('Mejora del Nivel de Madurez', 'Maturity Level Improvement'), icon: LineChart },

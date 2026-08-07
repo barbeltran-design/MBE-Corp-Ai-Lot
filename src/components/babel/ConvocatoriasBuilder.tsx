@@ -1,6 +1,6 @@
 'use client';
 import * as React from 'react';
-import { ExternalLink, RefreshCw, Search } from 'lucide-react';
+import { CalendarCheck, ExternalLink, RefreshCw, Search } from 'lucide-react';
 import BabelAvatar from '@/components/babel/BabelAvatar';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 import {
@@ -25,6 +25,9 @@ const LABELS = {
     title: 'Convocatorias y fondos',
     subtitle:
       'Directorio de convocatorias, premios, becas y fondos alineados a los ODS para organizaciones, emprendimientos y proyectos socioambientales en México y el mundo. Captura el perfil de tu organizacion y te mostramos a cuales puedes aplicar y por que. Todo se calcula en tu navegador.',
+    mentorCtaText:
+      'Quieres encontrar una convocatoria y apoyo para aplicar y ganarla? Agenda una cita con un mentor de nivel directivo.',
+    mentorCtaBtn: 'Agenda Cita de orientacion GRATIS',
     statsTotal: 'convocatorias en seguimiento',
     statsAbiertas: 'abiertas ahora',
     statsMonto: 'disponible en abiertas (estimado)',
@@ -82,6 +85,9 @@ const LABELS = {
     title: 'Calls & Grants',
     subtitle:
       'Directory of calls for proposals, awards, fellowships and grants aligned with the SDGs for organizations, ventures and socio-environmental projects in Mexico and worldwide. Fill in your organization profile and we will show you which ones you can apply to and why. Everything is computed in your browser.',
+    mentorCtaText:
+      'Do you want to find a grant and get support to apply and win it? Book a free orientation session with a director-level mentor.',
+    mentorCtaBtn: 'Book a FREE orientation session',
     statsTotal: 'calls being tracked',
     statsAbiertas: 'open right now',
     statsMonto: 'available in open calls (estimated)',
@@ -383,6 +389,20 @@ export default function ConvocatoriasBuilder({ lang }: { lang: ConvoLang }) {
           </h3>
           <p className="mt-1 text-sm text-slate-500">{t.subtitle}</p>
         </div>
+      </div>
+
+      {/* Agendar cita con mentor */}
+      <div className="mt-4 flex flex-col gap-3 rounded-xl border border-teal-200 bg-teal-50/70 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm leading-relaxed text-slate-700">
+          {t.mentorCtaText}
+        </p>
+        <a
+          href={`/${lang}/agendar`}
+          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700"
+        >
+          <CalendarCheck className="h-4 w-4" />
+          {t.mentorCtaBtn}
+        </a>
       </div>
 
       {/* Stats */}
