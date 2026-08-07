@@ -392,8 +392,8 @@ export default function ConvocatoriasBuilder({ lang }: { lang: ConvoLang }) {
       </div>
 
       {/* Agendar cita con mentor */}
-      <div className="mt-4 flex flex-col gap-3 rounded-xl border border-teal-200 bg-teal-50/70 p-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm leading-relaxed text-slate-700">
+      <div className="glass-panel mt-4 flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-200">
           {t.mentorCtaText}
         </p>
         <a
