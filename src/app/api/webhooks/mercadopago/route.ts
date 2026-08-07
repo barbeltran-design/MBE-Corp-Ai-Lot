@@ -122,10 +122,19 @@ export async function POST(req: NextRequest) {
           },
           { merge: true } // merge: true = solo agrega/actualiza estos campos, no borra los demás
         );
+      } else if (productId === 'certificacion_mbe') {
+        // Marca al usuario como certificado en la comunidad del Reference Place.
+        await db.collection('users').doc(uid).set(
+          {
+            certificado: true,
+            certificadoDesde: new Date().toISOString(),
+            mercadoPagoPaymentId: String(payment.id),
+          },
+          { merge: true }
+        );
       }
-      // Otros productos (apoyo_ondemand, certificacion_mbe, paquete_especialista):
-      // se registran en `pagos` pero no activan el plan completo — pueden activar
-      // flags específicos si se requiere más adelante.
+      // Otros productos (apoyo_ondemand, paquete_especialista):
+      // se registran en `pagos` pero no activan el plan completo ni flags.
       console.log(`[webhook mercadopago] Pago aprobado ${dataId} producto ${productId}`);
     } else {
       // pending, rejected, in_process, etc. — se registra pero no se activa el plan.

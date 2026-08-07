@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { useDisplayLang } from '@/components/display-lang-provider';
 import { AVATAR_COLORS, avatarBgColor, initialsOf } from '@/lib/avatar';
 import { TEMAS_ESPECIALISTA, TEMA_LABELS, ROLE_LABELS } from '@/lib/roles';
+import { NIVELES_COMUNIDAD, nivelLabel } from '@/lib/refplace';
 import type { CompanySize, Industry, Language, UserDoc } from '@/types/firestore';
 
 const COUNTRIES = ['MX', 'CO', 'AR', 'CL', 'PE', 'US', 'ES', 'OTHER'] as const;
@@ -65,6 +66,8 @@ function ProfilePageInner() {
   const [country, setCountry] = React.useState<string>('MX');
   const [website, setWebsite] = React.useState('');
   const [language, setLanguage] = React.useState<Language>('es');
+  const [telefono, setTelefono] = React.useState('');
+  const [nivelComunidad, setNivelComunidad] = React.useState('godin_wannabe');
 
   const [saving, setSaving] = React.useState(false);
   const [savedMsg, setSavedMsg] = React.useState('');
@@ -117,6 +120,8 @@ function ProfilePageInner() {
           if (typeof data.avatarColor === 'number') setAvatarColor(data.avatarColor);
           setCountry(data.country || 'MX');
           setLanguage(data.language || 'es');
+          setTelefono((data.telefono as string) || '');
+          setNivelComunidad((data.nivelComunidad as string) || 'godin_wannabe');
           setSubscription(data.subscription || 'free');
           setPlanStatus(data.planStatus || '');
           setPlanActivatedAt(data.planActivatedAt || '');
@@ -152,7 +157,13 @@ function ProfilePageInner() {
       await Promise.all([
         setDoc(
           doc(db, 'users', user.uid),
-          { name: name.trim(), language, country },
+          {
+            name: name.trim(),
+            language,
+            country,
+            telefono: telefono.trim(),
+            nivelComunidad,
+          },
           { merge: true }
         ),
         setDoc(
@@ -436,6 +447,35 @@ function ProfilePageInner() {
               <div className="space-y-1">
                 <Label htmlFor="perfil-email">{t('Correo electrónico', 'Email')}</Label>
                 <Input id="perfil-email" value={email} disabled />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="perfil-telefono">
+                  {t('Teléfono celular (visible en tu perfil público)', 'Cell phone (shown on your public profile)')}
+                </Label>
+                <Input
+                  id="perfil-telefono"
+                  value={telefono}
+                  onChange={(e) => setTelefono(e.target.value)}
+                  placeholder="+52 55 0000 0000"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="perfil-nivel">
+                  {t('Nivel en la comunidad', 'Community level')}
+                </Label>
+                <Select id="perfil-nivel" value={nivelComunidad} onChange={(e) => setNivelComunidad(e.target.value)}>
+                  {NIVELES_COMUNIDAD.map((n) => (
+                    <option key={n.id} value={n.id}>
+                      {nivelLabel(n.id, dispLang)}
+                    </option>
+                  ))}
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {t(
+                    'Tu nivel se muestra en el Reference Place y habilita reuniones B2B (desde Freelancero) y solicitar referencias (desde Empresario Orquesta).',
+                    'Your level is shown in the Reference Place and unlocks B2B meetings (from Freelancer) and requesting referrals (from Orchestra Business Owner).'
+                  )}
+                </p>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="perfil-country">{t('País', 'Country')}</Label>

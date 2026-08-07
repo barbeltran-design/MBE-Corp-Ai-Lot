@@ -41,6 +41,14 @@ export interface UserDoc {
   agenda?: { plataforma?: string; link?: string; usuario?: string } | null;
   // Datos bancarios del especialista para recibir pagos.
   banco?: { clabe?: string; banco?: string; titular?: string; email?: string } | null;
+  // Reference Place: nivel en la comunidad (ver src/lib/refplace.ts NIVELES_COMUNIDAD).
+  // Default 'godin_wannabe' para todos los usuarios nuevos.
+  nivelComunidad?: string;
+  // Teléfono celular visible en el perfil público del Reference Place.
+  telefono?: string;
+  // true cuando el usuario pagó/obtuvo la certificación MBE (certificacion_mbe).
+  certificado?: boolean;
+  certificadoDesde?: string;
 }
 
 /** Firestore collection: companies/{uid} */

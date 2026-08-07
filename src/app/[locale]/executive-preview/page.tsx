@@ -23,6 +23,7 @@ import {
   MessagesSquare,
   ShieldCheck,
   Sparkles,
+  Store,
   TrendingUp,
   UserCheck2,
   Users,
@@ -63,7 +64,7 @@ interface PhaseRow {
   deliverables: string[];
 }
 
-const NAV_ICON_MAP = { Home, LayoutDashboard, Gauge, Sparkles, ClipboardList, Users, TrendingUp, LineChart, Megaphone, ShieldCheck, UserCheck2, CalendarClock };
+const NAV_ICON_MAP = { Home, LayoutDashboard, Gauge, Sparkles, ClipboardList, Users, TrendingUp, LineChart, Megaphone, ShieldCheck, UserCheck2, CalendarClock, Store };
 
 const STATUS_CLASS: Record<PhaseStatus, string> = {
   completado: 'text-success',
@@ -231,6 +232,7 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
   if (especialistaRol) {
     navItems.push({ href: `/${routeLocale}/especialista`, label: t('Panel de Mentor', 'Mentor Panel'), icon: NAV_ICON_MAP.UserCheck2 });
   }
+  navItems.push({ href: `/${routeLocale}/refplace`, label: t('Reference Place', 'Reference Place'), icon: NAV_ICON_MAP.Store });
   navItems.push({ href: `/${routeLocale}/agendar`, label: t('Agenda con mentores', 'Book a mentor'), icon: NAV_ICON_MAP.CalendarClock });
 
   const [user, setUser] = React.useState<User | null | undefined>(undefined);
