@@ -229,7 +229,7 @@ export default function AgendarPage() {
         )}
 
         {!loading && especialistas.length === 0 && (
-          <div className="rounded-xl border border-slate-200 bg-white p-10 text-center dark:border-slate-700 dark:bg-slate-900">
+          <div className="glass-panel p-10 text-center">
             <CalendarDays className="mx-auto h-10 w-10 text-muted-foreground/50" />
             <p className="mt-3 text-sm text-muted-foreground">
               {t('Todavía no hay mentores con agenda configurada.', 'There are no mentors with a calendar set up yet.')}
@@ -245,7 +245,7 @@ export default function AgendarPage() {
               return (
                 <div
                   key={area.id}
-                  className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900"
+                  className="glass-panel overflow-hidden"
                 >
                   <div className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-start gap-3">
@@ -300,7 +300,7 @@ export default function AgendarPage() {
                     </div>
                   </div>
                   {open && (
-                    <div className="border-t border-slate-100 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/40">
+                    <div className="border-t p-4" style={{ borderColor: 'var(--glass-border)' }}>
                       <p className="text-xs font-medium text-foreground">
                         {t('Calendarios de los mentores de este tema', 'Mentors calendars for this topic')}
                       </p>
@@ -308,7 +308,7 @@ export default function AgendarPage() {
                         {mentores.map((e) => (
                           <div
                             key={e.uid}
-                            className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900"
+                            className="glass-panel flex items-center justify-between gap-3 p-3"
                           >
                             <div className="min-w-0">
                               <p className="truncate text-sm font-medium text-foreground">
