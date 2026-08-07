@@ -176,9 +176,9 @@ export default function EspecialistaPage() {
   if (!especialista) {
     return (
       <div className="mx-auto max-w-2xl space-y-4 px-4 py-10 text-center">
-        <h1 className="text-xl font-semibold">{t('Panel de especialista', 'Specialist Panel')}</h1>
+        <h1 className="text-xl font-semibold">{t('Panel de Mentor', 'Mentor Panel')}</h1>
         <p className="text-sm text-muted-foreground">
-          {t('No tienes rol de especialista.', 'You do not have a specialist role.')}
+          {t('No tienes rol de mentor.', 'You do not have a mentor role.')}
         </p>
         <Button type="button" variant="outline" onClick={() => router.push(`/${routeLocale}/inicio`)}>
           {t('Ir al inicio', 'Go home')}
@@ -197,7 +197,7 @@ export default function EspecialistaPage() {
     <div className="px-4 py-8">
       <div className="mx-auto max-w-6xl space-y-6">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">{t('Panel de especialista', 'Specialist Panel')}</h1>
+          <h1 className="text-xl font-semibold text-foreground">{t('Panel de Mentor', 'Mentor Panel')}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {t('Agenda, usuarios por tema, actividades y pagos.', 'Calendar, users per theme, activities and payments.')}
           </p>

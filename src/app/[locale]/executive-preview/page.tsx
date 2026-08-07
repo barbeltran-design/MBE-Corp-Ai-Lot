@@ -229,9 +229,9 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
     navItems.push({ href: `/${routeLocale}/admin`, label: t('Administración', 'Administration'), icon: NAV_ICON_MAP.ShieldCheck });
   }
   if (especialistaRol) {
-    navItems.push({ href: `/${routeLocale}/especialista`, label: t('Panel de especialista', 'Specialist Panel'), icon: NAV_ICON_MAP.UserCheck2 });
+    navItems.push({ href: `/${routeLocale}/especialista`, label: t('Panel de Mentor', 'Mentor Panel'), icon: NAV_ICON_MAP.UserCheck2 });
   }
-  navItems.push({ href: `/${routeLocale}/agendar`, label: t('Agenda con especialistas', 'Book a specialist'), icon: NAV_ICON_MAP.CalendarClock });
+  navItems.push({ href: `/${routeLocale}/agendar`, label: t('Agenda con mentores', 'Book a mentor'), icon: NAV_ICON_MAP.CalendarClock });
 
   const [user, setUser] = React.useState<User | null | undefined>(undefined);
   const [answers, setAnswers] = React.useState<DimensionAnswers | null>(null);

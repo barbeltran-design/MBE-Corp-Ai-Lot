@@ -31,17 +31,17 @@ function AppShellInner({
     { href: `/${locale}/babel/plan-accion`, label: navLabel('Plan de acción estratégico', 'Strategic Action Plan'), icon: ClipboardList, group: navLabel('Estrategia Socioambiental', 'Socio-environmental Strategy') },
   ];
 
-  // Grupo "Admin" solo para administradores; "Especialista" para usuarios con
-  // rol de especialista. Se agregan DESPUÉS del grupo socioambiental, como
+  // Grupo "Admin" solo para administradores; "Mentor" para usuarios con
+  // rol de mentor. Se agregan DESPUÉS del grupo socioambiental, como
   // grupo propio al final del menú.
   if (administracion) {
     navItems.push({ href: `/${locale}/admin`, label: navLabel('Administración', 'Administration'), icon: ShieldCheck });
   }
   if (especialista) {
-    navItems.push({ href: `/${locale}/especialista`, label: navLabel('Panel de especialista', 'Specialist Panel'), icon: UserCheck2 });
+    navItems.push({ href: `/${locale}/especialista`, label: navLabel('Panel de Mentor', 'Mentor Panel'), icon: UserCheck2 });
   }
-  // Agendar con especialistas: visible para todos los usuarios autenticados.
-  navItems.push({ href: `/${locale}/agendar`, label: navLabel('Agenda con especialistas', 'Book a specialist'), icon: CalendarClock });
+  // Agendar con mentores: visible para todos los usuarios autenticados.
+  navItems.push({ href: `/${locale}/agendar`, label: navLabel('Agenda con mentores', 'Book a mentor'), icon: CalendarClock });
 
   return (
     <ExecutiveShell navItems={navItems} brandLabel="MBE Corpilot AI" logoSrc="/logo-mbe.png">

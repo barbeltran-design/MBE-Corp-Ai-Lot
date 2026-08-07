@@ -69,9 +69,9 @@ export default function AgendarPage() {
     <div className="px-4 py-8">
       <div className="mx-auto max-w-5xl space-y-6">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">{t('Agenda con un especialista', 'Schedule a meeting with a specialist')}</h1>
+          <h1 className="text-xl font-semibold text-foreground">{t('Agenda con un mentor', 'Schedule a meeting with a mentor')}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {t('Elige un especialista y agenda una reunión virtual en el tema que necesitas. Los botones abren su plataforma de agendamiento (Calendly o Google Calendar).', 'Pick a specialist and book a virtual meeting in the theme you need. The buttons open their booking platform (Calendly or Google Calendar).')}
+            {t('Elige un mentor y agenda una reunión virtual en el tema que necesitas. Los botones abren su plataforma de agendamiento (Calendly o Google Calendar).', 'Pick a mentor and book a virtual meeting in the theme you need. The buttons open their booking platform (Calendly or Google Calendar).')}
           </p>
         </div>
 
@@ -83,7 +83,7 @@ export default function AgendarPage() {
           <div className="rounded-xl border border-slate-200 bg-white p-10 text-center dark:border-slate-700 dark:bg-slate-900">
             <CalendarDays className="mx-auto h-10 w-10 text-muted-foreground/50" />
             <p className="mt-3 text-sm text-muted-foreground">
-              {t('Todavía no hay especialistas con agenda configurada.', 'There are no specialists with a calendar set up yet.')}
+              {t('Todavía no hay mentores con agenda configurada.', 'There are no mentors with a calendar set up yet.')}
             </p>
           </div>
         )}
@@ -96,11 +96,11 @@ export default function AgendarPage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="font-semibold text-foreground">{e.nombre || t('Especialista', 'Specialist')}</h2>
+                  <h2 className="font-semibold text-foreground">{e.nombre || t('Mentor', 'Mentor')}</h2>
                   <p className="text-xs text-muted-foreground">{e.email}</p>
                 </div>
                 <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-200">
-                  {t('Especialista', 'Specialist')}
+                  {t('Mentor', 'Mentor')}
                 </span>
               </div>
               <div className="mt-3 flex flex-wrap gap-1.5">
@@ -129,7 +129,7 @@ export default function AgendarPage() {
                   </a>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    {t('Este especialista aún no configura su agenda. Vuelve más tarde.', 'This specialist has not set up a calendar yet. Come back later.')}
+                    {t('Este mentor aún no configura su agenda. Vuelve más tarde.', 'This mentor has not set up a calendar yet. Come back later.')}
                   </p>
                 )}
               </div>
@@ -138,7 +138,7 @@ export default function AgendarPage() {
         </div>
 
         <p className="text-xs text-muted-foreground">
-          {t('¿Eres especialista? Configura tu agenda y datos bancarios desde tu sección "Panel de especialista".', 'Are you a specialist? Set up your calendar and bank details in your "Specialist Panel" section.')}
+          {t('¿Eres mentor? Configura tu agenda y datos bancarios desde tu sección "Panel de Mentor".', 'Are you a mentor? Set up your calendar and bank details in your "Mentor Panel" section.')}
         </p>
       </div>
     </div>

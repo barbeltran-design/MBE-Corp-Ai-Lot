@@ -62,12 +62,12 @@ const PASOS_TOUR: Record<InicioLang, TourStep[]> = {
   es: [
     { selector: '#inicio-title', title: 'Inicio', description: 'Bienvenido. Aquí tienes el punto de partida de tu crecimiento en MBE: tu acceso a capital y tu equipo directivo.' },
     { selector: '#inicio-impulso-dinero', title: 'Impulso 1 · Acceso a dinero', description: 'Convocatorias, fondos, certificación y Reference Place: el camino para bajar capital para tu negocio.' },
-    { selector: '#inicio-impulso-equipo', title: 'Impulso 2 · Tu equipo directivo', description: 'Especialistas Senior y de IA que se vuelven tu Consejo y Equipo Directivo.' },
+    { selector: '#inicio-impulso-equipo', title: 'Impulso 2 · Tu equipo directivo', description: 'Mentores Senior y de IA que se vuelven tu Consejo y Equipo Directivo.' },
   ],
   en: [
     { selector: '#inicio-title', title: 'Home', description: 'Welcome. This is the starting point of your growth at MBE: your access to capital and your executive team.' },
     { selector: '#inicio-impulso-dinero', title: 'Driver 1 · Access to money', description: 'Calls & grants, certification and Reference Place: the path to raise capital for your business.' },
-    { selector: '#inicio-impulso-equipo', title: 'Driver 2 · Your executive team', description: 'Senior and AI specialists who become your Board and Executive Team.' },
+    { selector: '#inicio-impulso-equipo', title: 'Driver 2 · Your executive team', description: 'Senior and AI mentors who become your Board and Executive Team.' },
   ],
 };
 
@@ -85,15 +85,15 @@ const impulsores: Impulsor[] = [
           : 'Not having money to invest is a huge growth barrier. We give you access to calls for proposals, awards and funds to raise capital. We also refer you to large companies that people in our community already work with.',
       notaCostos:
         lang === 'es'
-          ? 'Gratis: directorio de convocatorias y objetivos estratégicos. On-Demand: apoyo de especialista, paquete y certificación, cada uno con su precio. Reference Place incluido en el Plan.'
-          : 'Free: calls directory and strategic objectives. On-Demand: specialist support, package and certification, each priced separately. Reference Place included in the Plan.',
+          ? 'Gratis: directorio de convocatorias y objetivos estratégicos. On-Demand: apoyo de mentor, paquete y certificación, cada uno con su precio. Reference Place incluido en el Plan.'
+          : 'Free: calls directory and strategic objectives. On-Demand: mentor support, package and certification, each priced separately. Reference Place included in the Plan.',
       items: [
         { id: 'convo', icono: Megaphone, titulo: lang === 'es' ? 'Convocatorias y fondos' : 'Calls & Grants', desc: lang === 'es' ? 'Directorio vivo de convocatorias, premios y fondos con tu perfil para ver a cuáles postulas.' : 'Living directory of calls, awards and grants matched to your profile.', costo: 'gratis', nota: '', futuro: false, href: '/babel/convocatorias' },
         { id: 'objetivos', icono: TrendingUp, titulo: lang === 'es' ? 'Objetivos Estratégicos' : 'Strategic Objectives', desc: lang === 'es' ? 'Tus metas financieras y punto de equilibrio para saber cuánto debes crecer.' : 'Your financial targets and break-even point to know how much you must grow.', costo: 'gratis', nota: '', futuro: false, href: '/babel/indicadores' },
         { id: 'refplace', icono: Coins, titulo: lang === 'es' ? 'Reference Place' : 'Reference Place', desc: lang === 'es' ? 'Obtén referencias de grandes empresas una vez que te hayas certificado.' : 'Get references from large companies once you are certified.', costo: 'plan', precio: lang === 'es' ? '$99/mes' : '$99/mo', nota: '', futuro: true },
         { id: 'cert', icono: BadgeCheck, titulo: lang === 'es' ? 'Certificación MBE' : 'MBE Certification', desc: lang === 'es' ? 'Obtén tu sello de confianza para recibir referencias e inversiones.' : 'Get your trust seal to receive references and investments.', costo: 'ondemand', precio: lang === 'es' ? '$5,000/Año' : '$5,000/year', nota: lang === 'es' ? 'Agenda GRATIS una reunión para conocer los beneficios de este tema.' : 'Book a FREE meeting to learn about the benefits of this topic.', futuro: true },
-        { id: 'apoyo', icono: UserCheck, titulo: lang === 'es' ? 'Apoyo On Demand' : 'On-Demand support', desc: lang === 'es' ? 'Apoyo de un Especialista de nivel directivo para conseguir una convocatoria / premio / fondo, o para alcanzar el nivel de certificación.' : 'Support from an executive-level Specialist to win a call / award / fund, or to reach certification level.', costo: 'ondemand', precio: lang === 'es' ? '$4,000 MXN' : '$4,000 MXN', nota: lang === 'es' ? 'Agenda GRATIS una reunión para conocer los beneficios de este tema.' : 'Book a FREE meeting to learn about the benefits of this topic.', futuro: false },
-        { id: 'paquete', icono: Award, titulo: lang === 'es' ? 'Paquete de Especialista' : 'Specialist package', desc: lang === 'es' ? 'Un especialista en un área interviene tu empresa y te da hasta 4 entregables en un mes.' : 'A specialist in one area works with your company and delivers up to 4 deliverables in a month.', costo: 'ondemand', precio: lang === 'es' ? '$10,000 MXN' : '$10,000 MXN', nota: lang === 'es' ? 'Agenda GRATIS una reunión para conocer los beneficios de este tema.' : 'Book a FREE meeting to learn about the benefits of this topic.', futuro: true },
+        { id: 'apoyo', icono: UserCheck, titulo: lang === 'es' ? 'Apoyo On Demand' : 'On-Demand support', desc: lang === 'es' ? 'Apoyo de un Mentor de nivel directivo para conseguir una convocatoria / premio / fondo, o para alcanzar el nivel de certificación.' : 'Support from an executive-level Mentor to win a call / award / fund, or to reach certification level.', costo: 'ondemand', precio: lang === 'es' ? '$4,000 MXN' : '$4,000 MXN', nota: lang === 'es' ? 'Agenda GRATIS una reunión para conocer los beneficios de este tema.' : 'Book a FREE meeting to learn about the benefits of this topic.', futuro: false },
+        { id: 'paquete', icono: Award, titulo: lang === 'es' ? 'Paquete de Mentor' : 'Mentor package', desc: lang === 'es' ? 'Un mentor en un área interviene tu empresa y te da hasta 4 entregables en un mes.' : 'A mentor in one area works with your company and delivers up to 4 deliverables in a month.', costo: 'ondemand', precio: lang === 'es' ? '$10,000 MXN' : '$10,000 MXN', nota: lang === 'es' ? 'Agenda GRATIS una reunión para conocer los beneficios de este tema.' : 'Book a FREE meeting to learn about the benefits of this topic.', futuro: true },
       ],
     },
     {
@@ -102,8 +102,8 @@ const impulsores: Impulsor[] = [
       titulo: lang === 'es' ? 'Impulso 2 · Tu Equipo Directivo On Demand' : 'Driver 2 · Your On-Demand Executive Team',
       sub:
         lang === 'es'
-          ? 'No trabajes más, trabaja más inteligentemente. Especialistas Senior y de IA en Estrategia Socioambiental, Marketing, Comercial, Experiencia del Cliente, Finanzas, Normatividad, Operación, Digitalización y Capital Humano se vuelven tu Consejo y Equipo Directivo.'
-          : 'Work smarter, not harder. Senior and AI specialists in Socio-Environmental Strategy, Marketing, Sales, Customer Experience, Finance, Compliance, Operations, Digitalization and Human Capital become your Board and Executive Team.',
+          ? 'No trabajes más, trabaja más inteligentemente. Mentores Senior y de IA en Estrategia Socioambiental, Marketing, Comercial, Experiencia del Cliente, Finanzas, Normatividad, Operación, Digitalización y Capital Humano se vuelven tu Consejo y Equipo Directivo.'
+          : 'Work smarter, not harder. Senior and AI mentors in Socio-Environmental Strategy, Marketing, Sales, Customer Experience, Finance, Compliance, Operations, Digitalization and Human Capital become your Board and Executive Team.',
       notaCostos:
         lang === 'es'
           ? 'Gratis: evaluación y mejora de madurez, juntas de mentoría. Incluido en el Plan: estrategia socioambiental, equipo directivo IA y asesoría del consejo.'
@@ -128,8 +128,8 @@ const impulsores: Impulsor[] = [
           </h3>
           <p className="mt-1 text-sm font-semibold text-slate-500">
             {lang === 'es'
-              ? 'Ninguna empresa puede crecer sin Dinero para invertir y sin un Equipo de Trabajo con Especialistas Senior en varios temas. Aquí tienes ambos.'
-              : 'No business can grow without money to invest and without a Work Team of Senior Specialists in several fields. Here you have both.'}
+              ? 'Ninguna empresa puede crecer sin Dinero para invertir y sin un Equipo de Trabajo con Mentores Senior en varios temas. Aquí tienes ambos.'
+              : 'No business can grow without money to invest and without a Work Team of Senior Mentors in several fields. Here you have both.'}
           </p>
         </div>
       </div>
