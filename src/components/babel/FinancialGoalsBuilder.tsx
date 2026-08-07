@@ -53,7 +53,7 @@ const FIN_GOALS_LAST_KEY = 'babel_financial_goals_v1';
 const FIN_HISTORY_MAX = 10;
 
 function productoIngresos(p: FinProductoForm): number {
-  return (p.unidades || 0) * (p.precio || 0);
+  return (p.unidades || 1) * (p.precio || 0);
 }
 
 function productoVarPct(p: FinProductoForm): number {
@@ -262,7 +262,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
 
   function addCanal() {
     setFinCanales(function (prev) {
-      return [...prev, { nombre: '', participacion: 0, productos: [{ nombre: '', unidades: 0, unidadMedida: '', precio: 0, participacion: 0, gastosVariables: [] }] }];
+      return [...prev, { nombre: '', participacion: 0, productos: [{ nombre: '', unidades: 1, unidadMedida: '', precio: 0, participacion: 0, gastosVariables: [] }] }];
     });
   }
   function updateCanal(index: number, patch: Partial<{ nombre: string }>) {
@@ -275,7 +275,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
     setFinCanales(function (prev) {
       return prev.map(function (c, i) {
         return i === canalIndex
-          ? { ...c, productos: [...c.productos, { nombre: '', unidades: 0, unidadMedida: '', precio: 0, participacion: 0, gastosVariables: [] }] }
+          ? { ...c, productos: [...c.productos, { nombre: '', unidades: 1, unidadMedida: '', precio: 0, participacion: 0, gastosVariables: [] }] }
           : c;
       });
     });
@@ -368,7 +368,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
           const part = p.participacion || 0;
           return {
             name: p.nombre,
-            units: p.unidades || 0,
+            units: p.unidades || 1,
             unitMeasure: p.unidadMedida,
             unitPrice: p.precio || 0,
             varItems: p.gastosVariables.map(function (v) {
@@ -411,8 +411,8 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
       if (finIngresosTotal <= 0) {
         setFinError(
           lang === 'en'
-            ? 'Enter units and a sale price per unit in at least one product.'
-            : 'Ingresa unidades y un precio de venta por unidad en al menos un producto.'
+            ? 'Enter a unit price in at least one product.'
+            : 'Ingresa un precio unitario en al menos un producto.'
         );
         return;
       }
@@ -768,14 +768,17 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                                 />
                                 <button type="button" onClick={function () { removeProducto(ci, pi); }} className="text-red-500 hover:text-red-700 text-sm px-2">×</button>
                               </div>
-                              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                                 <label className="block space-y-1">
-                                  <span className="text-[11px] text-slate-600">{lang === 'en' ? 'Units per month' : 'Unidades al mes'}</span>
+                                  <span className="text-[11px] text-slate-600">{lang === 'en' ? 'Unit price' : 'Precio Unitario'}</span>
                                   <input
                                     type="number"
-                                    value={p.unidades || ''}
-                                    onChange={function (e) { updateProducto(ci, pi, { unidades: Number(e.target.value) }); }}
-                                    placeholder="500"
+                                    inputMode="decimal"
+                                    min="0"
+                                    step="0.01"
+                                    value={p.precio || ''}
+                                    onChange={function (e) { updateProducto(ci, pi, { precio: Number(e.target.value) }); }}
+                                    placeholder="50"
                                     className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                   />
                                 </label>
@@ -787,16 +790,6 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                                     value={p.unidadMedida}
                                     onChange={function (e) { updateProducto(ci, pi, { unidadMedida: e.target.value }); }}
                                     placeholder={lang === 'en' ? 'pieces, hours, liters...' : 'piezas, horas, litros...'}
-                                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                  />
-                                </label>
-                                <label className="block space-y-1">
-                                  <span className="text-[11px] text-slate-600">{lang === 'en' ? 'Sale price per unit' : 'Precio de venta x unidad'}</span>
-                                  <input
-                                    type="number"
-                                    value={p.precio || ''}
-                                    onChange={function (e) { updateProducto(ci, pi, { precio: Number(e.target.value) }); }}
-                                    placeholder="50"
                                     className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                   />
                                 </label>
