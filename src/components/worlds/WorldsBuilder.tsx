@@ -1,10 +1,11 @@
 'use client';
 
 import * as React from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase';
 import { useDisplayLang } from '@/components/display-lang-provider';
+import { useTheme } from '@/components/theme-provider';
 import BabelAvatar from '@/components/babel/BabelAvatar';
 import { getLatestAssessmentAnswers } from '@/lib/assessment';
 import { getMaturityDimensions } from '@/lib/maturity-dimensions';
@@ -126,6 +127,7 @@ const I = {
   misionCompleta: ['¡Misión completada!', 'Mission complete!'],
   tableroGanado: ['¡Tablero de Retos desbloqueado!', 'Challenges Board unlocked!'],
   errorProcesar: ['No se pudo procesar la acción.', 'Could not process the action.'],
+  temaAria: ['Cambiar tema claro/oscuro', 'Toggle light/dark theme'],
 } as const;
 
 type Params = readonly [string, string];
@@ -158,9 +160,20 @@ function Confetti({ seed }: { seed: number }) {
 
 export function WorldsBuilder() {
   const router = useRouter();
-  const { lang } = useDisplayLang();
+  const pathname = usePathname();
+  const { lang, setLang } = useDisplayLang();
+  const { theme, toggleTheme } = useTheme();
   const T = t2(lang === 'es' ? 'es' : 'en');
   const en = (p: Params) => T(p);
+
+  const navigateLang = (newLang: 'es' | 'en') => {
+    setLang(newLang);
+    const segments = pathname.split('/');
+    if (segments[1] === 'es' || segments[1] === 'en') {
+      segments[1] = newLang;
+    }
+    router.replace(segments.join('/'));
+  };
 
   const [yo, setYo] = React.useState<Progreso | null>(null);
   const [cargando, setCargando] = React.useState(true);
@@ -293,6 +306,33 @@ export function WorldsBuilder() {
             <span className="rounded-full border border-amber-300/60 bg-white/50 px-3 py-1.5 backdrop-blur-md dark:bg-white/10">
               🔥 {en(I.chipRacha)} {en(I.rachaDemo)}
             </span>
+            {/* Selector de idioma (como las demás páginas) */}
+            <span className="flex gap-0.5 rounded-full border border-teal-300/60 bg-white/50 p-0.5 backdrop-blur-md dark:bg-white/10">
+              <button
+                type="button"
+                onClick={() => navigateLang('es')}
+                className={'rounded-full px-2.5 py-1 transition-colors ' + (lang === 'es' ? 'bg-teal-500 text-white' : 'text-slate-600 dark:text-slate-300 hover:text-teal-600')}
+              >
+                ES
+              </button>
+              <button
+                type="button"
+                onClick={() => navigateLang('en')}
+                className={'rounded-full px-2.5 py-1 transition-colors ' + (lang === 'en' ? 'bg-teal-500 text-white' : 'text-slate-600 dark:text-slate-300 hover:text-teal-600')}
+              >
+                EN
+              </button>
+            </span>
+            {/* Tema claro/oscuro */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="rounded-full border border-teal-300/60 bg-white/50 px-3 py-1.5 transition hover:bg-white/80 dark:bg-white/10 dark:hover:bg-white/20"
+              aria-label={en(I.temaAria)}
+              title={en(I.temaAria)}
+            >
+              {theme === 'dark' ? '☀️' : '🌙'}
+            </button>
           </div>
         </div>
 
