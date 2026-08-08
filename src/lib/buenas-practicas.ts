@@ -49,8 +49,8 @@ export const BUENAS_PRACTICAS: BuenaPractica[] = [
   { tema: 'Conocimiento', practica: 'Pasantias y formacion continua', perspectiva: 'Aprendizaje y Crecimiento', mentor: 'Atech' },
   { tema: 'Enfoque SocioAmbiental Congruente', practica: 'Transparencia socioambiental', perspectiva: 'Procesos Internos', mentor: 'Normau' },
   { tema: 'Enfoque SocioAmbiental Congruente', practica: 'Estrategia ESG documentada', perspectiva: 'Procesos Internos', mentor: 'Normau' },
-  { tema: 'Capital Humano', practica: 'Perfiles y Descriptivos de Puestos y Onboarding', perspectiva: 'Aprendizaje y Crecimiento', mentor: 'Atech' },
-  { tema: 'Capital Humano', practica: 'Capacitacion y certificaciones', perspectiva: 'Aprendizaje y Crecimiento', mentor: 'Atech' },
-  { tema: 'Capital Humano', practica: 'Evaluacion de desempeno', perspectiva: 'Aprendizaje y Crecimiento', mentor: 'Atech' },
-  { tema: 'Capital Humano', practica: 'Beneficios e incentivos', perspectiva: 'Aprendizaje y Crecimiento', mentor: 'Atech' },
+  { tema: 'Capital Humano', practica: 'Perfiles y Descriptivos de Puestos y Onboarding', perspectiva: 'Aprendizaje y Crecimiento', mentor: 'Babel' },
+  { tema: 'Capital Humano', practica: 'Capacitacion y certificaciones', perspectiva: 'Aprendizaje y Crecimiento', mentor: 'Babel' },
+  { tema: 'Capital Humano', practica: 'Evaluacion de desempeno', perspectiva: 'Aprendizaje y Crecimiento', mentor: 'Babel' },
+  { tema: 'Capital Humano', practica: 'Beneficios e incentivos', perspectiva: 'Aprendizaje y Crecimiento', mentor: 'Babel' },
 ];

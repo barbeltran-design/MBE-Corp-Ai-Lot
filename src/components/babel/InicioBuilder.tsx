@@ -18,7 +18,7 @@ import {
   UserCheck,
   Users,
 } from 'lucide-react';
-import BabelAvatar from '@/components/babel/BabelAvatar';
+import AgentAvatar from '@/components/agentes/AgentAvatar';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 
 type InicioLang = 'es' | 'en';
@@ -121,7 +121,7 @@ const impulsores: Impulsor[] = [
   return (
     <div>
       <div className="flex items-center gap-3">
-        <BabelAvatar size={56} className="shrink-0" />
+        <AgentAvatar size={56} className="shrink-0" />
         <div>
           <h3 id="inicio-title" className="text-2xl font-bold text-slate-800">
             {lang === 'es' ? 'Impulsamos el crecimiento de tu empresa' : 'We drive your company growth'}

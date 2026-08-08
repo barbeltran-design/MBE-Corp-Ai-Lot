@@ -45,7 +45,7 @@ import { babelPhaseTopics } from '@/lib/babel-constants';
 import { cn } from '@/lib/utils';
 import { DisplayLangProvider, useDisplayLang } from '@/components/display-lang-provider';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
-import BabelAvatar from '@/components/babel/BabelAvatar';
+import AgentAvatar from '@/components/agentes/AgentAvatar';
 import { getFirebaseAuth, getFirebaseDb } from '@/lib/firebase';
 import { useUserRoles } from '@/lib/use-user-roles';
 import { getMaturityDimensions } from '@/lib/maturity-dimensions';
@@ -443,7 +443,7 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <div id="resumen-titulo" className="animate-fade-in">
           <div className="flex items-center gap-3">
-            <BabelAvatar size={56} className="shrink-0" />
+            <AgentAvatar size={56} className="shrink-0" />
             <h1 className="text-xl font-semibold tracking-tight text-foreground">
               {t('Resumen ejecutivo', 'Executive Summary')}
             </h1>

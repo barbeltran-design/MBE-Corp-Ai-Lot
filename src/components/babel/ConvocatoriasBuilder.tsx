@@ -1,7 +1,7 @@
 'use client';
 import * as React from 'react';
 import { CalendarCheck, ExternalLink, RefreshCw, Search } from 'lucide-react';
-import BabelAvatar from '@/components/babel/BabelAvatar';
+import AgentAvatar from '@/components/agentes/AgentAvatar';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 import {
   DATOS_CONVOCATORIAS,
@@ -382,7 +382,7 @@ export default function ConvocatoriasBuilder({ lang }: { lang: ConvoLang }) {
   return (
     <div>
       <div className="flex items-center gap-3">
-        <BabelAvatar size={56} className="shrink-0" />
+        <AgentAvatar size={56} className="shrink-0" />
         <div>
           <h3 id="convocatorias-title" className="text-xl font-bold text-slate-800">
             {t.title}
@@ -494,7 +494,7 @@ export default function ConvocatoriasBuilder({ lang }: { lang: ConvoLang }) {
 if (!hoy) {
     return (
       <div className="flex items-center gap-3">
-        <BabelAvatar size={56} className="shrink-0" />
+        <AgentAvatar size={56} className="shrink-0" />
         <div>
           <h3 id="convocatorias-title" className="text-xl font-bold text-slate-800">
             {t.title}

@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { ChevronDown } from 'lucide-react';
-import BabelAvatar from '@/components/babel/BabelAvatar';
+import AgentAvatar from '@/components/agentes/AgentAvatar';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 type OrgLang = 'es' | 'en';
 type OrgStatus = 'green' | 'yellow' | 'orange' | 'red';
@@ -1220,7 +1220,7 @@ export default function OrgChartBuilder({ lang }: { lang: OrgLang }) {
   return (
     <div className="mx-auto max-w-3xl">
       <div className="flex items-center gap-3">
-        <BabelAvatar size={56} className="shrink-0" />
+        <AgentAvatar size={56} className="shrink-0" />
         <div>
           <h3 id="organigrama-title" className="text-xl font-bold text-slate-800">{t.title}</h3>
           <p className="mt-1 text-sm text-slate-500">{t.subtitle}</p>

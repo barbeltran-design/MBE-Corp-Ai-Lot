@@ -6,7 +6,7 @@ import { getLatestAssessmentAnswers } from '@/lib/assessment';
 import { getMaturityDimensions } from '@/lib/maturity-dimensions';
 import { computeResults, type AssessmentResult } from '@/lib/maturity-scoring';
 import { getBabelSessionIfExists } from '@/lib/babel-session';
-import BabelAvatar from '@/components/babel/BabelAvatar';
+import AgentAvatar from '@/components/agentes/AgentAvatar';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 
 const MATURITY_LEVEL_LABEL: Record<string, { es: string; en: string }> = {
@@ -1555,8 +1555,9 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
   return (
     <div className="mx-auto max-w-4xl">
       <div className="flex items-center gap-3">
-        <BabelAvatar
-          state={pasoGenerando !== null || prioGenerating ? 'thinking' : 'idle'}
+        <AgentAvatar
+          agente="Babel"
+          pose={pasoGenerando !== null || prioGenerating ? 'guiando' : 'reposando'}
           size={56}
           className="shrink-0"
         />

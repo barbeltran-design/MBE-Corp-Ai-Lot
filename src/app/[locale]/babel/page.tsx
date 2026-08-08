@@ -20,7 +20,7 @@ import { downloadCompiledPlanPdf } from '@/lib/deliverables';
 import { Button } from '@/components/ui/button';
 import { useDisplayLang } from '@/components/display-lang-provider';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
-import BabelAvatar from '@/components/babel/BabelAvatar';
+import AgentAvatar from '@/components/agentes/AgentAvatar';
 import type { BabelPhaseRecord, ChatMessage, SessionDoc } from '@/types/firestore';
 // Preguntas de la Fase 0 (una por una) — alineadas con las 5 respuestas que
 // pide el prompt de Fase 0 en src/app/api/babel/route.ts.
@@ -697,7 +697,7 @@ export default function BabelPage() {
       <div className="mx-auto flex max-w-2xl flex-col gap-4 p-4 sm:p-6">
         <div id="babel-titulo" className="flex items-center justify-between border-b pb-4">
           <div className="flex items-center gap-3">
-            <BabelAvatar size={56} className="shrink-0" />
+            <AgentAvatar size={56} className="shrink-0" />
             <div>
               <h1 className="text-xl font-semibold text-slate-900">{dispLang === locale ? t('title') : UI_FALLBACK[dispLang].title}</h1>
               <p className="text-sm text-slate-500">{dispLang === 'en' ? 'Phase 0: Initial Calibration' : 'Fase 0: Calibración Inicial'}</p>
@@ -817,7 +817,7 @@ export default function BabelPage() {
     <div className="mx-auto flex max-w-4xl flex-col gap-4 p-4 sm:p-6">
       <div id="babel-titulo" className="flex items-center justify-between border-b pb-4">
         <div className="flex items-center gap-3">
-          <BabelAvatar size={56} className="shrink-0" />
+          <AgentAvatar size={56} className="shrink-0" />
           <div>
             <h1 className="text-xl font-semibold text-slate-900">{dispLang === locale ? t('title') : UI_FALLBACK[dispLang].title}</h1>
             <p className="text-sm text-slate-500">

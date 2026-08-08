@@ -2,7 +2,7 @@
 import * as React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import BabelAvatar from '@/components/babel/BabelAvatar';
+import AgentAvatar from '@/components/agentes/AgentAvatar';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 import { getFirebaseAuth } from '@/lib/firebase';
 import { getLatestAssessmentAnswers } from '@/lib/assessment';
@@ -553,7 +553,7 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
   return (
     <div>
       <div className="flex items-center gap-3">
-        <BabelAvatar size={56} className="shrink-0" />
+        <AgentAvatar agente="Babel" size={56} className="shrink-0" />
         <div>
           <h3 id="madurez-plan-title" className="text-xl font-bold text-slate-800">
             {t.title}
@@ -687,11 +687,13 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
             const sig = siguienteDeAgente(mentor);
             return (
               <div key={mentor} className="glass-panel p-3">
-                <span className={'inline-block rounded-full px-2.5 py-1 text-xs font-medium ' + MENTOR_COLOR[mentor]}>
-                  {mentor}
-                </span>
-                <p className="mt-2 text-xs text-slate-600">
-                  {sig ? (
+                <div className="flex items-center gap-2">
+                  <AgentAvatar agente={mentor} size={24} />
+                  <span className={'inline-block rounded-full px-2.5 py-1 text-xs font-medium ' + MENTOR_COLOR[mentor]}>
+                    {mentor}
+                  </span>
+                </div>
+                <p className="mt-2 text-xs text-slate-600">                  {sig ? (
                     <>
                       <span className="font-semibold text-slate-800">{temaDe[sig.themeId]}</span> ({LEVEL_LABELS[lang][sig.nivel]}) -{' '}
                       {sig.practica.practica}
@@ -750,8 +752,11 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
                   key={mentor}
                   className="glass-panel grid items-center gap-2 p-3 sm:grid-cols-[110px_1fr_90px_130px_auto]"
                 >
-                  <span className={'inline-block w-fit rounded-full px-2.5 py-1 text-xs font-medium ' + MENTOR_COLOR[mentor]}>
-                    {mentor}
+                  <span className="flex w-fit items-center gap-1.5">
+                    <AgentAvatar agente={mentor} size={20} />
+                    <span className={'inline-block rounded-full px-2.5 py-1 text-xs font-medium ' + MENTOR_COLOR[mentor]}>
+                      {mentor}
+                    </span>
                   </span>
                   {comp ? (
                     <>

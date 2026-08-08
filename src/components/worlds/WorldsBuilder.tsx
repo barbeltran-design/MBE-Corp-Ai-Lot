@@ -6,7 +6,7 @@ import { onAuthStateChanged, type User } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase';
 import { useDisplayLang } from '@/components/display-lang-provider';
 import { useTheme } from '@/components/theme-provider';
-import BabelAvatar from '@/components/babel/BabelAvatar';
+import AgentAvatar from '@/components/agentes/AgentAvatar';
 import { getLatestAssessmentAnswers } from '@/lib/assessment';
 import { getMaturityDimensions } from '@/lib/maturity-dimensions';
 import { nivelDesdePuntos } from '@/lib/club';
@@ -337,7 +337,7 @@ export function WorldsBuilder() {
         </div>
 
         <div className="world-glass mb-6 flex items-start gap-4 p-5">
-          <BabelAvatar size={56} state="talking" className="shrink-0" />
+          <AgentAvatar agente="Babel" pose="guiando" size={56} className="shrink-0" />
           <div className="min-w-0 flex-1 text-sm leading-relaxed text-slate-700 dark:text-slate-100">
             <p>
               <b className="text-teal-700 dark:text-teal-300">
@@ -444,7 +444,10 @@ export function WorldsBuilder() {
                       Premium
                     </span>
                     <div className="text-4xl">🧭</div>
-                    <h3 className="mt-2 text-base font-extrabold text-slate-800 dark:text-white">Estrategia</h3>
+                    <div className="mt-3 flex items-center gap-2">
+                      <AgentAvatar agente="Babel" size={28} className="ring-2 ring-fuchsia-300/60" />
+                      <h3 className="text-base font-extrabold text-slate-800 dark:text-white">Estrategia</h3>
+                    </div>
                     <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
                       {en(I.host)} <b>Babel</b> · {SUBMUNDOS_ESTRATEGIA_LABELS.length} {en(I.submundos)} · {en(I.faseALista)}.
                     </p>
@@ -457,7 +460,10 @@ export function WorldsBuilder() {
                         {en(I.enConstruccion)}
                       </span>
                       <div className="text-4xl">{m.icon}</div>
-                      <h3 className="mt-2 text-base font-extrabold text-slate-800 dark:text-white">{lang === 'en' ? m.en : m.es}</h3>
+                      <div className="mt-3 flex items-center gap-2">
+                        <AgentAvatar agente={m.agente} size={28} className="ring-2 ring-teal-300/60" />
+                        <h3 className="text-base font-extrabold text-slate-800 dark:text-white">{lang === 'en' ? m.en : m.es}</h3>
+                      </div>
                       <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
                         {en(I.host)} <b>{m.agente}</b> · {m.subs} {en(I.submundos)} · {lang === 'en' ? m.enDesc : m.esDesc}
                       </p>
