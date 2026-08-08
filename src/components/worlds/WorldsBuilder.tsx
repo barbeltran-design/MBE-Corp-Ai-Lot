@@ -17,6 +17,7 @@ import {
   nivelLabelPuntos,
 } from '@/lib/worlds';
 import { WorldsBg } from '@/components/worlds/worlds-bg';
+import { WorldMap, PUNTOS_RECORRIDO, type PuntoRecorrido } from '@/components/worlds/WorldMap';
 
 type Vista = 'mapa' | 'partida' | 'tablero' | 'estrategia';
 
@@ -183,6 +184,7 @@ export function WorldsBuilder() {
   const [completando, setCompletando] = React.useState<number | null>(null);
   const [uid, setUid] = React.useState<string | null>(null);
   const [respuestas, setRespuestas] = React.useState<Record<string, string[]> | null>(null);
+  const [recorrido, setRecorrido] = React.useState<string[]>([]);
 
   const notificar = React.useCallback((msg: string) => {
     setToast(msg);
@@ -278,6 +280,45 @@ export function WorldsBuilder() {
       setCompletando(null);
     }
   }
+
+  React.useEffect(() => {
+    try {
+      const guardado = window.localStorage.getItem('babel_worlds_recorrido_v1');
+      if (guardado) {
+        const ids = JSON.parse(guardado) as string[];
+        if (Array.isArray(ids)) setRecorrido(ids.filter((id) => PUNTOS_RECORRIDO.some((p) => p.id === id)));
+      }
+    } catch {
+      // localStorage no disponible
+    }
+  }, []);
+
+  React.useEffect(() => {
+    try {
+      window.localStorage.setItem('babel_worlds_recorrido_v1', JSON.stringify(recorrido));
+    } catch {
+      // noop
+    }
+  }, [recorrido]);
+
+  const navegarPunto = (p: PuntoRecorrido) => {
+    if (p.interno) {
+      if (p.id === 'partida') setVista('partida');
+      else if (p.id === 'tablero') setVista(yo?.tablero ? 'tablero' : 'mapa');
+      else if (p.id === 'estrategia') setVista('estrategia');
+      return;
+    }
+    router.push(`/${lang === 'es' ? 'es' : 'en'}${p.ruta}`);
+  };
+
+  const completarPunto = (id: string) => {
+    setRecorrido((prev) => {
+      if (prev.includes(id)) return prev;
+      const siguiente = [...prev, id];
+      festejar();
+      return siguiente;
+    });
+  };
 
   const hechas = yo?.partida ?? [];
 
@@ -384,6 +425,13 @@ export function WorldsBuilder() {
 
             {vista === 'mapa' && (
               <>
+                <WorldMap
+                  lang={lang === 'es' ? 'es' : 'en'}
+                  doneIds={recorrido}
+                  onNavegar={navegarPunto}
+                  onCompletar={(id: string) => completarPunto(id)}
+                />
+
                 <div className="world-glass world-grain mb-5 p-5">
                   <h2 className="text-lg font-extrabold text-slate-800 dark:text-white">🗺️ {en(I.progreso)}</h2>
                   <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-400/25">

@@ -24,6 +24,40 @@ import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 type InicioLang = 'es' | 'en';
 type Costo = 'gratis' | 'plan' | 'ondemand';
 
+type AgenteInfo = {
+  agente: 'Babel' | 'Karmetin' | 'Normau' | 'Fisnando' | 'Atech';
+  temas: [string, string];
+  rasgo: [string, string];
+};
+
+const AGENTES_INFO: AgenteInfo[] = [
+  {
+    agente: 'Babel',
+    temas: ['Rumbo Estratégico, Capital Humano y Cultura Organizacional', 'Strategic Direction, Human Capital and Organizational Culture'],
+    rasgo: ['Es inteligente y le importa ayudar.', 'Smart, and he truly cares about helping.'],
+  },
+  {
+    agente: 'Karmetin',
+    temas: ['Marketing y Ventas, y Atención al Cliente', 'Marketing & Sales and Customer Service'],
+    rasgo: ['Es creativo y servicial.', 'Creative and helpful.'],
+  },
+  {
+    agente: 'Normau',
+    temas: ['Cumplimiento Normativo, Alianzas y Enfoque Socioambiental', 'Compliance, Alliances and Socio-environmental Focus'],
+    rasgo: ['Es protector y se preocupa por el ambiente.', 'Protective and cares about the environment.'],
+  },
+  {
+    agente: 'Fisnando',
+    temas: ['Finanzas y Fiscales', 'Finance and Tax'],
+    rasgo: ['Es motivador y cumplido.', 'Motivating and dependable.'],
+  },
+  {
+    agente: 'Atech',
+    temas: ['Operación y Conocimiento', 'Operations and Knowledge'],
+    rasgo: ['Es un geek muy estructurado.', 'A very structured geek.'],
+  },
+];
+
 type Tarjeta = {
   id: string;
   icono: React.ElementType;
@@ -133,6 +167,34 @@ const impulsores: Impulsor[] = [
           </p>
         </div>
       </div>
+
+      <section id="inicio-agentes" className="mt-8">
+        <div className="flex items-center gap-2">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-500/15 text-teal-700">
+            <Bot className="h-5 w-5" />
+          </span>
+          <h4 className="text-lg font-bold text-teal-800">{lang === 'es' ? 'Mis Agentes de IA' : 'My AI Agents'}</h4>
+        </div>
+        <p className="mt-1 text-sm text-slate-600">
+          {lang === 'es'
+            ? 'Toca el avatar para verlo en grande y conoce qué temas atiende cada agente.'
+            : 'Tap an avatar to zoom in, and meet what each agent covers.'}
+        </p>
+
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          {AGENTES_INFO.map((ag) => (
+            <div
+              key={ag.agente}
+              className="relative flex h-full flex-col items-center rounded-2xl border border-glass-border bg-glass p-4 text-center shadow-[0_8px_32px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur-2xl backdrop-saturate-150 transition-all duration-200 ease-executive hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/30"
+            >
+              <AgentAvatar agente={ag.agente} size={96} className="ring-2 ring-teal-300/40" />
+              <h5 className="mt-3 text-base font-extrabold text-slate-800 dark:text-slate-100">{ag.agente}</h5>
+              <p className="mt-1 text-xs font-semibold leading-relaxed text-teal-700 dark:text-teal-300">{lang === 'es' ? ag.temas[0] : ag.temas[1]}</p>
+              <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{lang === 'es' ? ag.rasgo[0] : ag.rasgo[1]}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
       {impulsores.map((imp) => {
         const ImIcon = imp.icono;
