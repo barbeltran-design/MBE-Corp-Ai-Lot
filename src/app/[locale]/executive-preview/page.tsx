@@ -17,6 +17,7 @@ import {
   Clock,
   FileCheck2,
   Gauge,
+  Gamepad2,
   Home,
   LayoutDashboard,
   LineChart,
@@ -65,7 +66,7 @@ interface PhaseRow {
   deliverables: string[];
 }
 
-const NAV_ICON_MAP = { Home, LayoutDashboard, Gauge, Sparkles, ClipboardList, Users, TrendingUp, LineChart, Megaphone, ShieldCheck, UserCheck2, CalendarClock, CalendarRange, Store };
+const NAV_ICON_MAP = { Home, Gamepad2, LayoutDashboard, Gauge, Sparkles, ClipboardList, Users, TrendingUp, LineChart, Megaphone, ShieldCheck, UserCheck2, CalendarClock, CalendarRange, Store };
 
 const STATUS_CLASS: Record<PhaseStatus, string> = {
   completado: 'text-success',
@@ -218,6 +219,7 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
 
   const navItems: ExecutiveNavItem[] = [
     { href: `/${routeLocale}/inicio`, label: t('Inicio', 'Home'), icon: NAV_ICON_MAP.Home },
+    { href: `/${routeLocale}/worlds`, label: t('Mundos', 'Worlds'), icon: NAV_ICON_MAP.Gamepad2 },
     { href: `/${routeLocale}/babel/convocatorias`, label: t('Convocatorias y fondos', 'Calls & Grants'), icon: NAV_ICON_MAP.Megaphone },
     { href: `/${routeLocale}/executive-preview`, label: t('Resumen ejecutivo', 'Executive Summary'), icon: NAV_ICON_MAP.LayoutDashboard },
     { href: `/${routeLocale}/babel/indicadores`, label: t('Objetivos estratégicos', 'Strategic Objectives'), icon: NAV_ICON_MAP.TrendingUp },
