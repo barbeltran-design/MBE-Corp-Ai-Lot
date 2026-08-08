@@ -49,6 +49,11 @@ export interface UserDoc {
   // true cuando el usuario pagó/obtuvo la certificación MBE (certificacion_mbe).
   certificado?: boolean;
   certificadoDesde?: string;
+  // Club de juntas semanales: puntos acumulados, semanas asistidas y fecha de
+  // la primera junta confirmada (los nivela el sistema desde puntosClub).
+  puntosClub?: number;
+  semanasJunta?: number;
+  primerJuntaAt?: string;
 }
 
 /** Firestore collection: companies/{uid} */

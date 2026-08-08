@@ -10,6 +10,7 @@ import { useParams, useRouter } from 'next/navigation';
 import type { ColumnDef } from '@tanstack/react-table';
 import {
   CalendarClock,
+  CalendarRange,
   CheckCircle2,
   CircleDashed,
   ClipboardList,
@@ -64,7 +65,7 @@ interface PhaseRow {
   deliverables: string[];
 }
 
-const NAV_ICON_MAP = { Home, LayoutDashboard, Gauge, Sparkles, ClipboardList, Users, TrendingUp, LineChart, Megaphone, ShieldCheck, UserCheck2, CalendarClock, Store };
+const NAV_ICON_MAP = { Home, LayoutDashboard, Gauge, Sparkles, ClipboardList, Users, TrendingUp, LineChart, Megaphone, ShieldCheck, UserCheck2, CalendarClock, CalendarRange, Store };
 
 const STATUS_CLASS: Record<PhaseStatus, string> = {
   completado: 'text-success',
@@ -233,6 +234,7 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
     navItems.push({ href: `/${routeLocale}/especialista`, label: t('Panel de Mentor', 'Mentor Panel'), icon: NAV_ICON_MAP.UserCheck2 });
   }
   navItems.push({ href: `/${routeLocale}/refplace`, label: t('Reference Place', 'Reference Place'), icon: NAV_ICON_MAP.Store });
+  navItems.push({ href: `/${routeLocale}/club`, label: t('Juntas de mentoria', 'Mentoring meetings'), icon: NAV_ICON_MAP.CalendarRange });
   navItems.push({ href: `/${routeLocale}/agendar`, label: t('Agenda con mentores', 'Book a mentor'), icon: NAV_ICON_MAP.CalendarClock });
 
   const [user, setUser] = React.useState<User | null | undefined>(undefined);

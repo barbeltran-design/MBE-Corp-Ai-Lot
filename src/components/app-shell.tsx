@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { CalendarClock, ClipboardList, Gauge, Home, LayoutDashboard, LineChart, Megaphone, ShieldCheck, Sparkles, Store, TrendingUp, UserCheck2, Users } from 'lucide-react';
+import { CalendarClock, CalendarRange, ClipboardList, Gauge, Home, LayoutDashboard, LineChart, Megaphone, ShieldCheck, Sparkles, Store, TrendingUp, UserCheck2, Users } from 'lucide-react';
 import { ExecutiveShell, type ExecutiveNavItem } from '@/components/executive-shell';
 import { BackgroundBlobs } from '@/components/ui/executive/background-blobs';
 import { DisplayLangProvider, useDisplayLang } from '@/components/display-lang-provider';
@@ -42,6 +42,8 @@ function AppShellInner({
   }
   // Reference Place: comunidad certificada, mercado de referencias y B2B.
   navItems.push({ href: `/${locale}/refplace`, label: navLabel('Reference Place', 'Reference Place'), icon: Store });
+  // Juntas semanales del club de mentoria.
+  navItems.push({ href: `/${locale}/club`, label: navLabel('Juntas de mentoria', 'Mentoring meetings'), icon: CalendarRange });
   // Agendar con mentores: visible para todos los usuarios autenticados.
   navItems.push({ href: `/${locale}/agendar`, label: navLabel('Agenda con mentores', 'Book a mentor'), icon: CalendarClock });
 

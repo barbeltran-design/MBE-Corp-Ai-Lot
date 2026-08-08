@@ -180,7 +180,7 @@ export async function GET(req: NextRequest) {
         nivel: yoNivel,
         certificado: yoData.certificado === true,
         rolRepSale: yoRoles.includes('rep_sale'),
-        puedeB2B: nivelIndex(yoNivel) >= 1 || yoRoles.includes('rep_sale'),
+        puedeB2B: true, // desde Godín Wannabe todos participan en reuniones B2B
         puedeReferencias: nivelIndex(yoNivel) >= 3 || yoRoles.includes('rep_sale'),
       },
       miembros,
@@ -278,13 +278,6 @@ export async function POST(req: NextRequest) {
     }
 
     if (accion === 'crear-reunion') {
-      const nivelRaw = typeof userData.nivelComunidad === 'string' ? userData.nivelComunidad : '';
-      if (!esRep && nivelIndex(nivelRaw) < 1) {
-        return NextResponse.json(
-          { error: 'Tu nivel aún no permite reuniones B2B. Necesitas ser al menos Freelancero.' },
-          { status: 403 }
-        );
-      }
       const titulo = String(body?.titulo ?? '').trim();
       const participantesRaw = Array.isArray(body?.participantes) ? body.participantes : [];
       const participantes: { uid: string; nombre: string }[] = [];

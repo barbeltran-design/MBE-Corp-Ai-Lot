@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { useDisplayLang } from '@/components/display-lang-provider';
 import { AVATAR_COLORS, avatarBgColor, initialsOf } from '@/lib/avatar';
 import { TEMAS_ESPECIALISTA, TEMA_LABELS, ROLE_LABELS } from '@/lib/roles';
-import { NIVELES_COMUNIDAD, nivelLabel } from '@/lib/refplace';
+import { NIVELES_COMUNIDAD, nivelLabel, nivelPorPuntos } from '@/lib/refplace';
 import type { CompanySize, Industry, Language, UserDoc } from '@/types/firestore';
 
 const COUNTRIES = ['MX', 'CO', 'AR', 'CL', 'PE', 'US', 'ES', 'OTHER'] as const;
@@ -80,6 +80,11 @@ function ProfilePageInner() {
   const [planStatus, setPlanStatus] = React.useState<string>('');
   const [planActivatedAt, setPlanActivatedAt] = React.useState<string>('');
 
+  // Club de juntas semanales
+  const [puntosClub, setPuntosClub] = React.useState(0);
+  const [semanasJunta, setSemanasJunta] = React.useState(0);
+  const [primerJuntaAt, setPrimerJuntaAt] = React.useState('');
+
   const [payLoading, setPayLoading] = React.useState(false);
   const [payError, setPayError] = React.useState('');
 
@@ -122,6 +127,9 @@ function ProfilePageInner() {
           setLanguage(data.language || 'es');
           setTelefono((data.telefono as string) || '');
           setNivelComunidad((data.nivelComunidad as string) || 'godin_wannabe');
+          setPuntosClub(typeof data.puntosClub === 'number' ? data.puntosClub : 0);
+          setSemanasJunta(typeof data.semanasJunta === 'number' ? data.semanasJunta : 0);
+          setPrimerJuntaAt((data.primerJuntaAt as string) || '');
           setSubscription(data.subscription || 'free');
           setPlanStatus(data.planStatus || '');
           setPlanActivatedAt(data.planActivatedAt || '');
@@ -472,10 +480,45 @@ function ProfilePageInner() {
                 </Select>
                 <p className="text-xs text-muted-foreground">
                   {t(
-                    'Tu nivel se muestra en el Reference Place y habilita reuniones B2B (desde Freelancero) y solicitar referencias (desde Empresario Orquesta).',
-                    'Your level is shown in the Reference Place and unlocks B2B meetings (from Freelancer) and requesting referrals (from Orchestra Business Owner).'
+                    'Tu nivel se muestra en el Reference Place y habilita reuniones B2B (todos los niveles), solicitar referencias (desde Empresario Orquesta) e inversiones (desde Director General).',
+                    'Your level is shown in the Reference Place and unlocks B2B meetings (all levels), requesting referrals (from Orchestra Business Owner) and investments (from CEO).'
                   )}
                 </p>
+              </div>
+              <div className="space-y-1 sm:col-span-2">
+                <Label>{t('Club de juntas semanales', 'Weekly meetings club')}</Label>
+                <div className="rounded-lg border border-glass-border bg-glass p-3 text-sm">
+                  <div className="flex flex-wrap gap-x-6 gap-y-1">
+                    <span className="text-muted-foreground">
+                      {t('Puntos del club:', 'Club points:')}{' '}
+                      <span className="font-semibold text-foreground">{puntosClub}</span>
+                    </span>
+                    <span className="text-muted-foreground">
+                      {t('Nivel automático:', 'Automatic level:')}{' '}
+                      <span className="font-semibold text-teal-700 dark:text-teal-300">{nivelLabel(nivelPorPuntos(puntosClub), dispLang)}</span>
+                    </span>
+                    {semanasJunta > 0 && (
+                      <span className="text-muted-foreground">
+                        {t('Juntas asistidas:', 'Meetings attended:')}{' '}
+                        <span className="font-semibold text-foreground">{semanasJunta}</span>
+                      </span>
+                    )}
+                    {primerJuntaAt && (
+                      <span className="text-muted-foreground">
+                        {t('Primera junta:', 'First meeting:')}{' '}
+                        <span className="font-semibold text-foreground">
+                          {new Date(primerJuntaAt).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        </span>
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    {t(
+                      'Al acumular puntos en las juntas tu nivel avanza automaticamente: 50 Freelancero, 200 Emprendedor, 500 Empresario Orquesta, 900 Director General, 1,500 Presidente, 2,500 Inversionista y 4,000 Mentor.',
+                      'Earning points at meetings automatically advances your level: 50 Freelancer, 200 Entrepreneur, 500 Orchestra Business Owner, 900 CEO, 1,500 President, 2,500 Investor and 4,000 Mentor.'
+                    )}
+                  </p>
+                </div>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="perfil-country">{t('País', 'Country')}</Label>

@@ -1,19 +1,20 @@
 // Modelo del Reference Place (Marketplace B2B) — compartido cliente/servidor.
 
-// Niveles de la comunidad MBE, en orden ascendente. El nivel se muestra en el
-// perfil de cada usuario y habilita acciones:
-//   - Godín Wannabe: solo puede ver la comunidad.
-//   - Freelancero y Emprendedor: pueden solicitar/participar en reuniones B2B.
-//   - Empresario Orquesta en adelante: también pueden solicitar referencias.
+// Niveles de la comunidad MBE, en orden ascendente, con los puntos del club
+// necesarios para alcanzarlos (tabla oficial del usuario). El nivel se muestra
+// en el perfil de cada usuario y habilita acciones:
+//   - Godín Wannabe hasta Mentor: pueden participar en reuniones B2B.
+//   - Empresario Orquesta en adelante: pueden solicitar referencias.
+//   - Director General en adelante: acceso a Inversiones.
 export const NIVELES_COMUNIDAD = [
-  { id: 'godin_wannabe', es: 'Godín Wannabe', en: 'Wannabe Godin', b2b: false, referencias: false },
-  { id: 'freelancero', es: 'Freelancero', en: 'Freelancer', b2b: true, referencias: false },
-  { id: 'emprendedor', es: 'Emprendedor', en: 'Entrepreneur', b2b: true, referencias: false },
-  { id: 'empresario_orquesta', es: 'Empresario Orquesta', en: 'Orchestra Business Owner', b2b: true, referencias: true },
-  { id: 'director_general', es: 'Director General', en: 'CEO / General Director', b2b: true, referencias: true },
-  { id: 'presidente', es: 'Presidente', en: 'President', b2b: true, referencias: true },
-  { id: 'inversionista', es: 'Inversionista', en: 'Investor', b2b: true, referencias: true },
-  { id: 'mentor', es: 'Mentor', en: 'Mentor', b2b: true, referencias: true },
+  { id: 'godin_wannabe', es: 'Godín Wannabe', en: 'Wannabe Godin', puntos: 1, desc: { es: 'Empleado con visión emprendedora', en: 'Employee with an entrepreneurial vision' }, b2b: true, referencias: false, inversiones: false },
+  { id: 'freelancero', es: 'Freelancero', en: 'Freelancer', puntos: 50, desc: { es: 'Profesionista Independiente', en: 'Independent professional' }, b2b: true, referencias: false, inversiones: false },
+  { id: 'emprendedor', es: 'Emprendedor', en: 'Entrepreneur', puntos: 200, desc: { es: 'Inicias una empresa', en: 'You start a company' }, b2b: true, referencias: false, inversiones: false },
+  { id: 'empresario_orquesta', es: 'Empresario Orquesta', en: 'Orchestra Business Owner', puntos: 500, desc: { es: 'Haces todo', en: 'You do it all' }, b2b: true, referencias: true, inversiones: false },
+  { id: 'director_general', es: 'Director General', en: 'CEO / General Director', puntos: 900, desc: { es: 'Tienes un equipo', en: 'You have a team' }, b2b: true, referencias: true, inversiones: true },
+  { id: 'presidente', es: 'Presidente', en: 'President', puntos: 1500, desc: { es: 'Eres la cabeza del consejo', en: 'You lead the board' }, b2b: true, referencias: true, inversiones: true },
+  { id: 'inversionista', es: 'Inversionista', en: 'Investor', puntos: 2500, desc: { es: 'Apoyas otros emprendimientos', en: 'You support other ventures' }, b2b: true, referencias: true, inversiones: true },
+  { id: 'mentor', es: 'Mentor', en: 'Mentor', puntos: 4000, desc: { es: 'Guías otros empresarios', en: 'You guide other business owners' }, b2b: true, referencias: true, inversiones: true },
 ] as const;
 
 export type NivelComunidad = (typeof NIVELES_COMUNIDAD)[number]['id'];
@@ -23,17 +24,35 @@ export function nivelIndex(nivel: string | null | undefined): number {
   return i === -1 ? 0 : i;
 }
 
-export function puedeReunionesB2B(nivel: string | null | undefined): boolean {
-  return nivelIndex(nivel) >= 1;
+export function puedeReunionesB2B(_nivel: string | null | undefined): boolean {
+  return true; // desde Godín Wannabe (1 punto) todos participan en reuniones B2B
 }
 
 export function puedeSolicitarReferencias(nivel: string | null | undefined): boolean {
   return nivelIndex(nivel) >= 3;
 }
 
+export function puedeInversiones(nivel: string | null | undefined): boolean {
+  return nivelIndex(nivel) >= 4;
+}
+
+// Nivel alcanzado según los puntos acumulados del club.
+export function nivelPorPuntos(puntos: number): NivelComunidad {
+  let nivel: NivelComunidad = 'godin_wannabe';
+  for (const n of NIVELES_COMUNIDAD) {
+    if (puntos >= n.puntos) nivel = n.id;
+  }
+  return nivel;
+}
+
 export function nivelLabel(nivel: string | null | undefined, lang: 'es' | 'en'): string {
   const n = NIVELES_COMUNIDAD[nivelIndex(nivel)];
   return n ? (lang === 'en' ? n.en : n.es) : '';
+}
+
+export function nivelDesc(nivel: string | null | undefined, lang: 'es' | 'en'): string {
+  const n = NIVELES_COMUNIDAD[nivelIndex(nivel)];
+  return n ? (lang === 'en' ? n.desc.en : n.desc.es) : '';
 }
 
 export const TIPOS_REUNION = [

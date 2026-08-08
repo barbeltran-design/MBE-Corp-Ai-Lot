@@ -341,7 +341,6 @@ export function ReferencePlaceBuilder() {
                 {yo.telefono || t('Agrega tu teléfono en tu perfil para que la comunidad te contacte.', 'Add your phone in your profile so the community can reach you.')}
               </div>
               <div>
-                {!yo.puedeB2B && <span>{t('Reuniones B2B: disponible desde nivel Freelancero.', 'B2B meetings: available from Freelancer level.')}</span>}
                 {!yo.puedeReferencias && <span>{t('Referencias: disponible desde Empresario Orquesta.', 'Referrals: available from Orchestra Business Owner.')}</span>}
                 {yo.puedeB2B && yo.puedeReferencias && <span>{t('Tienes acceso completo de la comunidad.', 'You have full community access.')}</span>}
               </div>
@@ -639,7 +638,7 @@ export function ReferencePlaceBuilder() {
                   </div>
                 ) : (
                   <div className="glass-panel p-4 text-sm text-muted-foreground">
-                    {t('Para reuniones B2B necesitas al menos el nivel "Freelancero".', 'You need at least the "Freelancer" level to start B2B meetings.')}
+                    {t('Todavía no tienes acceso a esta sección.', 'You do not have access to this section yet.')}
                   </div>
                 )}
               </div>
