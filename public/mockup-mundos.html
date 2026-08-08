@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MBE Worlds — Mockup Conceptual Navegable</title>
+<style>
+  :root {
+    --ink: #201818;
+    --teal: #30b8d0;
+    --teal-dark: #1d7686;
+    --glass: rgba(255, 255, 255, 0.55);
+    --border: rgba(13, 42, 58, 0.12);
+    --text: #1e293b;
+    --muted: #64748b;
+    --bg-page: linear-gradient(160deg, #eef9fb 0%, #e3f0f4 40%, #f6efe6 100%);
+  }
+  [data-dark="true"] {
+    --bg: linear-gradient(160deg, #0b1c22 0%, #10272e 45%, #232022 100%);
+    --glass: rgba(15, 35, 44, 0.72);
+    --border: rgba(120, 200, 215, 0.18);
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    background-attachment: fixed;
+    color: var(--text);
+    min-height: 100vh;
+    transition: background 0.4s, color 0.3s;
+  }
+  .topbar {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 18px;
+    background: var(--glass); backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border);
+  }
+  .topbar .logo { font-weight: 800; font-size: 15px; letter-spacing: 0.3px; }
+  .topbar .logo b { color: var(--teal-dark); }
+  [data-dark="true"] .topbar .logo b { color: var(--teal); }
+  .spacer { flex: 1; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--glass); border: 1px solid var(--border);
+    border-radius: 999px; padding: 5px 12px; font-size: 12px; font-weight: 600;
+    color: var(--muted);
+  }
+  .chip .pts { color: var(--teal-dark); font-weight: 800; }
+  [data-dark="true"] .chip .pts { color: var(--teal); }
+  button {
+    font-family: inherit; cursor: pointer; border: none;
+    background: none; color: inherit;
+  }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    border-radius: 10px; padding: 9px 16px; font-size: 13px; font-weight: 700;
+    background: var(--teal); color: #fff; transition: transform 0.15s, opacity 0.2s;
+  }
+  .btn:hover { transform: translateY(-1px); opacity: 0.92; }
+  .btn.ghost { background: var(--glass); color: var(--text); border: 1px solid var(--border); }
+  .btn.sm { padding: 6px 10px; font-size: 12px; border-radius: 8px; }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+  main { max-width: 1080px; margin: 0 auto; padding: 28px 18px 80px; }
+  .screen { display: none; }
+  .screen.on { display: block; animation: fadeUp 0.35s ease; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .host {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--glass); border: 1px solid var(--border);
+    border-radius: 16px; padding: 14px; margin-bottom: 16px;
+    backdrop-filter: blur(10px);
+  }
+  .head {
+    display: flex; align-items: flex-start; gap: 14px; margin-bottom: 16px;
+  }
+  .avatar {
+    width: 56px; height: 64px; border-radius: 14px; flex-shrink: 0;
+    background: linear-gradient(180deg, var(--teal), var(--teal-dark));
+    display: flex; align-items: flex-end; justify-content: center;
+    font-size: 30px; box-shadow: 0 6px 18px rgba(13, 118, 134, 0.35);
+    animation: float 3.2s ease-in-out infinite;
+  }
+  @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+  .bubble {
+    position: relative; flex: 1;
+    background: var(--glass); border: 1px solid var(--border);
+    border-radius: 14px; padding: 12px 14px; font-size: 13.5px; line-height: 1.5;
+  }
+  .bubble::before {
+    content: ""; position: absolute; left: -8px; top: 20px;
+    border: 8px solid transparent; border-right-color: var(--border);
+  }
+  .bubble b { color: var(--teal-dark); }
+  [data-dark="true"] .bubble b { color: var(--teal); }
+  h1 { font-size: 22px; font-weight: 800; }
+  h2 { font-size: 15px; font-weight: 800; }
+  .sub { font-size: 13px; color: var(--muted); margin: 4px 0 0; }
+  .grid { display: grid; gap: 12px; }
+  .g2 { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+  .g3 { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+  .card {
+    position: relative;
+    background: var(--glass); border: 1px solid var(--border);
+    border-radius: 16px; padding: 16px; cursor: pointer;
+    transition: transform 0.18s, box-shadow 0.18s;
+    backdrop-filter: blur(8px); overflow: hidden;
+  }
+  .card:hover { transform: translateY(-3px); box-shadow: 0 12px 26px rgba(13, 118, 134, 0.16); }
+  .card.locked { cursor: not-allowed; filter: grayscale(0.6); opacity: 0.75; }
+  .card .icon { font-size: 30px; }
+  .card .tag {
+    position: absolute; top: 12px; right: 12px;
+    font-size: 10px; font-weight: 800; letter-spacing: 0.4px;
+    padding: 3px 8px; border-radius: 999px; text-transform: uppercase;
+  }
+  .tag.free { background: #d1fae5; color: #065f46; }
+  .tag.premium { background: #fde68a; color: #78350f; }
+  .tag.wip { background: #ddd6fe; color: #4c1d95; }
+  .tag.lock { background: #e2e8f0; color: #475569; }
+  [data-dark="true"] .tag.free { background: #064e3b; color: #a7f3d0; }
+  [data-dark="true"] .tag.premium { background: #78350f; color: #fde68a; }
+  [data-dark="true"] .tag.wip { background: #312e81; color: #c7d2fe; }
+  [data-dark="true"] .tag.lock { background: #334155; color: #cbd5e1; }
+  .card h3 { font-size: 15px; margin-top: 8px; }
+  .card p { font-size: 12.5px; color: var(--muted); margin-top: 4px; line-height: 1.45; }
+  .card .foot { margin-top: 10px; font-size: 11.5px; font-weight: 700; color: var(--teal-dark); }
+  [data-dark="true"] .card .foot { color: var(--teal); }
+  .done-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #d1fae5; color: #065f46; font-size: 11px; font-weight: 800;
+    border-radius: 999px; padding: 3px 9px;
+  }
+  [data-dark="true"] .done-badge { background: #064e3b; color: #a7f3d0; }
+  .progress { height: 8px; border-radius: 999px; background: rgba(128, 128, 128, 0.18); overflow: hidden; }
+  .progress > i { display: block; height: 100%; background: linear-gradient(90deg, var(--teal), #14b8a6); border-radius: 999px; }
+  .wall {
+    background: var(--glass); border: 1px solid var(--border);
+    border-radius: 16px; padding: 16px; margin-bottom: 14px;
+    backdrop-filter: blur(8px);
+  }
+  .wall h2 { display: flex; align-items: center; gap: 8px; }
+  .wall .desc { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .day {
+    width: 44px; height: 54px; border-radius: 10px;
+    background: var(--glass); border: 1px solid var(--border);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: var(--muted);
+  }
+  .day.on { background: #d1fae5; border-color: #10b981; color: #065f46; }
+  [data-dark="true"] .day.on { background: #064e3b; border-color: #10b981; color: #a7f3d0; }
+  .day .tic { font-size: 15px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th { text-align: left; color: var(--muted); text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.5px; padding: 6px 8px; }
+  td { padding: 7px 8px; border-top: 1px solid var(--border); }
+  .casilla {
+    width: 100%; aspect-ratio: 1; border-radius: 8px;
+    background: var(--glass); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; cursor: default; transition: 0.15s;
+  }
+.casilla.yes { background: #d1fae5; border-color: #10b981; }
+  .casilla.no { background: rgba(244, 63, 94, 0.14); border-color: rgba(244, 63, 94, 0.5); }
+  .casilla.mid { background: #fef3c7; border-color: #f59e0b; }
+  [data-dark="true"] .casilla.mid { background: #78350f; border-color: #f59e0b; }
+  .casilla:hover { transform: scale(1.12); z-index: 2; }
+  .tooltip { font-size: 11px; color: var(--muted); margin-top: 8px; }
+  .toast {
+    position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%);
+    background: #0f2c35; color: #fff; font-size: 13px; font-weight: 700;
+    padding: 10px 18px; border-radius: 12px; display: none;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); z-index: 99;
+    border: 1px solid rgba(48, 184, 208, 0.5);
+  }
+  .modal {
+    position: fixed; inset: 0; z-index: 80;
+    background: rgba(9, 14, 24, 0.55);
+    display: none; align-items: center; justify-content: center; padding: 18px;
+  }
+  .modal.on { display: flex; }
+  .modal-box { width: 100%; max-width: 520px; max-height: 84vh; overflow: auto; }
+  .confetti { position: fixed; top: -12px; left: 0; width: 100%; height: 100vh; pointer-events: none; z-index: 90; }
+  .confetti i { position: absolute; top: -14px; width: 8px; height: 14px; border-radius: 2px; animation: fall linear forwards; }
+  @keyframes fall {
+    to { transform: translateY(110vh) rotate(720deg); opacity: 0.2; }
+  }
+  .shop-item { display: flex; flex-direction: column; gap: 8px; }
+  .loot {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 800; color: #b45309;
+    background: #fef3c7; border-radius: 999px; padding: 3px 9px;
+  }
+  [data-dark="true"] .loot { background: #78350f; color: #fde68a; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 11.5px; color: var(--muted); margin-top: 10px; }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .sw { width: 12px; height: 12px; border-radius: 4px; display: inline-block; border: 1px solid var(--border); }
+  footer { text-align: center; font-size: 11px; color: var(--muted); padding: 20px; }
+</style>
+</head>
+<body data-dark="true">
+
+<header class="topbar">
+  <div class="logo">MBE <b>Worlds</b> · Mockup</div>
+  <span class="chip">🪙 Puntos <span class="pts" id="ptsTop">1,240</span></span>
+  <span class="chip">⭐ Nivel: Empresario Orquesta</span>
+  <span class="chip" id="chipRacha">🔥 Racha: 4 días</span>
+  <span class="spacer"></span>
+  <button class="btn ghost sm" onclick="toggleDark()">🌓 Tema</button>
+  <button class="btn sm" onclick="resetDemo()">↺ Reiniciar demo</button>
+</header>
+
+<main>
+  <!-- ============ 1 · MAPA DE MUNDOS ============ -->
+  <section class="screen on" id="s-mapa">
+    <div class="head">
+      <div class="avatar">🧭</div>
+      <div class="bubble">
+        <b>Babel tu guía:</b> "Bienvenido a <b>MBE Worlds</b>. Este es tu mapa: visita los mundos, completa submundos
+        y desbloquea el tablero de retos. Tu partida empieza en el <b>Mundo de Partida</b>."
+      </div>
+    </div>
+
+    <div class="wall">
+      <h2>🗺️ Tu progreso</h2>
+      <div class="progress" style="margin-top:10px"><i style="width:25%"></i></div>
+      <p class="sub" style="margin-top:8px">2 / 8 mundos · Mundo de Partida ✓ · Mundo de la Estrategia (suscrito) en curso</p>
+    </div>
+
+    <div class="grid g2">
+      <div class="card" onclick="go('partida')">
+        <span class="tag free">Gratis · Activo</span>
+        <div class="icon">🎓</div>
+        <h3>Mundo de Partida</h3><p>Anfitrión Babel · 5 submundos: la calibración tuya antes de la aventura. Al completarlo desbloqueas el Tablero de Retos.</p>
+        <div class="foot">► Entrar al mundo &nbsp;·&nbsp; 5 submundos</div>
+      </div>
+      <div class="card locked" id="cardTablero" onclick="blocked('Necesitas completar Calibración Inicial')">
+        <span class="tag lock">Bloqueado</span>
+        <div class="icon">🎯</div>
+        <h3>Tablero de Retos</h3>
+        <p>Retos semanales y mensuales sobre tus 11 temas de madurez. Se desbloquea al terminar el mundo de partida.</p>
+        <p class="foot">🔒 Requisito: "Calibración Inicial"</p>
+      </div>
+    </div>
+
+    <h2 style="margin:22px 0 10px">Mundos Premium <span class="chip" style="margin-left:6px">🔑 plan_mensual</span></h2>
+    <div class="grid g3">
+      <div class="card" onclick="go('estrategia')">
+        <span class="tag premium">Premium</span>
+        <div class="icon">🧭</div>
+        <h3>Estrategia</h3><p>Anfitrión <b>Babel</b> · 6 submundos · Fase B lista.</p>
+        <p class="foot">► Ver mundo</p>
+      </div>
+      <div class="card locked">
+        <span class="tag wip">En construcción</span>
+        <div class="icon">💰</div>
+        <h3>Dinero</h3><p>Anfitrión <b>Fisnando</b> · 5 submundos (evaluación fiscal, presupuesto anual, resultados mensuales…).</p>
+      </div>
+      <div class="card locked">
+        <span class="tag wip">En construcción</span>
+        <div class="icon">🤝</div>
+        <h3>Cliente</h3><p>Anfitrión <b>Karmetin</b> · 6 submundos (imagen, plan MKT, buyer persona, canales…).</p>
+      </div>
+      <div class="card locked">
+        <span class="tag wip">En construcción</span>
+        <div class="icon">⚖️</div>
+        <h3>Normativo</h3><p>Anfitrión <b>Normau</b> · 4 submundos (marca y patente, plan de normatividad…).</p>
+      </div>
+      <div class="card locked">
+        <span class="tag wip">En construcción</span>
+        <div class="icon">⚙️</div>
+        <h3>Operativo</h3><p>Anfitrión <b>Atech</b> · 5 submundos (digitalización, decisiones, resultados…).</p>
+      </div>
+      <div class="card locked">
+        <span class="tag wip">En construcción</span>
+        <div class="icon">🌱</div>
+        <h3>Cultura</h3><p>Anfitrión <b>Babel</b> · 5 submundos (clima laboral, plan de carrera, 9 cajas…).</p>
+      </div>
+    </div>
+
+    <p class="tooltip">💡 Tip del mockup: cada mundo guarda su <b>tienda de herramientas</b> (🌐). Entra al Mundo de Partida para verla.</p>
+  </section>
+
+  <!-- ============ 2 · MUNDO DE PARTIDA ============ -->
+  <section class="screen" id="s-partida">
+    <button class="btn ghost sm" style="margin-bottom:14px" onclick="go('mapa')">← Volver al mapa</button>
+
+    <div class="head">
+      <div class="avatar">🎓</div>
+      <div class="bubble">
+        <b>Babel:</b> "Esto no es un curso, <b>ejecutivo</b>: esto es tu partida. 5 misiones para calibrar tu empresa.
+        Cuando cierres la <b>Calibración Inicial</b>, desbloqueas el 🎯 Tablero de Retos."
+      </div>
+    </div>
+
+    <div class="grid g2" id="partidaGrid"></div>
+
+    <div class="wall" style="margin-top:16px">
+      <h2>🛠️ Tienda de herramientas del Mundo de Partida</h2>
+      <p class="desc">4 herramientas gratis para arrancar tu empresa en el tablero.</p>
+      <div class="grid g3" style="margin-top:10px">
+        <div class="card" style="cursor:default"><h3>📋 Checklist de arranque</h3><p class="desc">Descarga tu primera lista de apellidos con Babel.</p><button class="btn sm" style="background:#f59e0b" onclick="toast('Herramienta descargada (PDF)')">⬇ Descargar PDF</button></div>
+        <div class="card" style="cursor:default"><h3>🧮 Fondos sin prisa</h3><p class="desc">Filtra convocatorias y abre tu perfil de búsqueda.</p><button class="btn sm" onclick="toast('Abriendo herramienta…')">🧭 Usar</button></div>
+        <div class="card" style="cursor:default"><h3>🗺️ Mapa de madurez</h3><p class="desc">Los 11 temas con tus niveles en una visión.</p><button class="btn sm" onclick="go('tablero')">🗺️ Ver</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 3 · TABLERO DE RETOS ============ -->
+  <section class="screen" id="s-tablero">
+    <button class="btn ghost sm" style="margin-bottom:14px" onclick="go('mapa')">← Volver al mapa</button>
+
+    <div class="head">
+      <div class="avatar">🎯</div>
+      <div class="bubble">
+        <b>Babel:</b> "Misores desbloqueadas. ✅ Este tablero <b>juega con tu evaluación</b>: cada casilla es una práctica.
+        Casillas verdes = ya las dominas. Los retos salen de tu <b>Plan de Madurez</b> (uno por mes proagor)."
+      </div>
+    </div>
+
+    <div class="wall">
+      <h2>Reto semanal — Finanzas · Nivel 2 (Estándar)</h2>
+      <p class="desc">🔧 Práctica: "Controla tu flujo de caja" · Anfitrión: Fisnando 💰</p>
+      <div class="row" style="margin-top:12px">
+        <div class="day on"><span class="tic">✓</span>Lun</div>
+        <div class="day on"><span class="tic">✓</span>Mar</div>
+        <div class="day on"><span class="tic">✓</span>Mié</div>
+        <div class="day"><span class="tic">◦</span>Jue</div>
+        <div class="day"><span class="tic">◦</span>Vie</div>
+      </div>
+      <p class="tooltip">Completa 5 casillas → cofre semanal (+20 pts) · Puedes usar ⚡ potenciador IA (×2) una vez por semana.</p>
+    </div>
+
+    <div class="wall">
+      <h2>Reto mensual — una práctica por agente</h2>
+      <div class="row" style="margin-top:10px">
+        <button class="btn ghost sm" onclick="toast('Práctica de Babel completada')">🧭 Babel ✓ +20</button>
+        <button class="btn ghost sm" onclick="toast('Práctica de Fisnando completada')">💰 Fisnando ✓ +20</button>
+        <button class="btn ghost sm" onclick="toast('Práctica de Karmetin completada')">🤝 Karmetin ✓ +20</button>
+        <button class="btn ghost sm" onclick="toast('Práctica de Normau completada')">⚖️ Normau ✓ +20</button>
+        <button class="btn ghost sm" onclick="toast('Práctica de Atech completada')">⚙️ Atech ✓ +20</button>
+      </div>
+      <p class="tooltip">5/5 completados → 🎁 cofre del mes + insignia "Mes Perfecto" (+50 pts al club si 8+ miembros).</p>
+    </div>
+
+    <div class="wall">
+      <h2>Mapa de progreso · 11 temas × 6 niveles</h2>
+      <div id="tableroCasillas" style="display:grid; grid-template-columns:repeat(6,1fr); gap:6px; margin-top:12px"></div>
+      <p class="tooltip" style="margin-top:10px">66 casillas (11 temas × 6 niveles). Verde = dominado · Ámbar = en curso · Rojo = pendiente.</p>
+      <div class="legend">
+        <span><i class="sw" style="background:#d1fae5"></i> Dominado</span>
+        <span><i class="sw" style="background:#fef3c7"></i> En curso</span>
+        <span><i class="sw" style="background:#fee2e2"></i> Pendiente</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 4 · MUNDO PREMIUM (Estrategia) ============ -->
+  <section class="screen" id="s-estrategia">
+    <button class="btn ghost sm" style="margin-bottom:14px" onclick="go('mapa')">← Volver al mapa</button>
+
+    <div class="head">
+      <div class="avatar">🧭</div>
+      <div class="bubble">
+        <b>Babel:</b> "Este es el <b>Motor de tu empresa</b>. Cada submundo está alimentado por tu
+        Reflexión Estratégica y tu Plan de Acción: completa el ciclo y el mundo se cierra con sello de Estratega."
+      </div>
+    </div>
+
+    <div class="grid g2" id="estrategiaSubs"></div>
+
+    <div class="wall" style="margin-top:14px">
+      <h2>🛠️ Tienda de herramientas del Mundo Estrategia</h2>
+      <div class="grid g3" style="margin-top:10px" id="estrTools"></div>
+    </div>
+  </section>
+</main>
+
+<footer>MBE Worlds · Mockup conceptual navegable · Sin dependencias · Todos los datos son de demostración</footer>
+
+<!-- Modal genérico de submundo -->
+<div class="modal" id="modal">
+  <div class="card modal-box" id="modalBox" style="cursor:default"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="confetti" id="confetti"></div>
+
+<script>
+  // ---------- estado demo ----------
+  const estado = { pts: 1240, partida: { 1: true, 2: true, 3: true, 4: true, 5: false } };
+
+  const SUBMUNDOS_PARTIDA = [
+    { n: 1, icon: "🧭", t: "Convocatorias y Fondos", d: "Caza de fondos: encuentra 3 convocatorias elegibles y márcalas con Babel.", r: "+15 pts · sello Fondos", src: "Página Convocatorias (ya existente)" },
+    { n: 2, icon: "📊", t: "Evaluación de Madurez", d: "11 temas × 6 niveles. Se repite cada 3 meses con recordatorio automático (badge Reevaluado).", r: "+10/tema · insignia Caminante", src: "Evaluación en /dashboard", repetible: true },
+    { n: 3, icon: "💰", t: "Objetivos Financieros", d: "Arma tu máquina de ingresos: canales + productos hasta cubrir el punto de equilibrio.", r: "+20 pts", src: "Financial Goals (canales/productos)" },
+    { n: 4, icon: "🎯", t: "Objetivos Estratégicos", d: "Declaración de guerra: define 3 objetivos BSC con meta numérica.", r: "+15 pts", src: "Indicadores BSC" },
+    { n: 5, icon: "⭐", t: "Calibración Inicial  ★", d: "Babel resume tu empresa en 5 líneas (gamer mode) y te da tu nivel de salida. Al completarla se desbloquea el Tablero de Retos.", r: "+25 pts · desbloquea 🎯 Tablero", src: "Resumen ejecutivo", final: true }
+  ];
+
+  const SUBMUNDOS_ESTRATEGIA = [
+    { n: 1, icon: "🧭", t: "Propósito y Propuesta de Valor", d: "Se toma de la Fase 1 de la Reflexión Estratégica.", estado: "✅ Listo", r: "+25 pts · sello Estratega" },
+    { n: 2, icon: "🌐", t: "El Entorno", d: "Se toma de la Fase 2: amenazas y oportunidades.", estado: "✅ Listo", r: "+25" },
+    { n: 3, icon: "⚖️", t: "Mis Capacidades", d: "Se toma de la Fase 3: fortalezas y debilidades.", estado: "✅ Listo", r: "+25" },
+    { n: 4, icon: "🧭", t: "El Enfoque Estratégico", d: "Se toma de la Fase 4: rumbo y prioridades.", estado: "✅ Listo", r: "+25" },
+    { n: 5, icon: "🏢", t: "Organigrama y Roles", d: "Define tu estructura y responsables de cada accion.", estado: "🔨 En curso", r: "+25" },
+    { n: 6, icon: "📋", t: "Plan de Acción Socioambiental", d: "Cumplimiento de acciones del plan (pegamento que conecta todo el mundo).", estado: "⏳ Pendiente", r: "+25 · insignia Mundo" }
+  ];
+
+  const TEMAS = [
+    ["Rumbo Estratégico", "🥅"], ["Finanzas", "💰"], ["Ventas y MKT", "📈"], ["Atención al Cliente", "🤝"],
+    ["Cumplimiento", "⚖️"], ["Operación", "⚙️"], ["Conocimiento", "📚"], ["Alianzas", "🔗"],
+    ["Socioambiental", "🌱"], ["Capital Humano", "👥"], ["Cultura", "🌆"]
+  ];
+
+  // ---------- helpers ----------
+  function $s(id) { return document.getElementById(id); }
+  const SCREENS = ["s-mapa", "s-partida", "s-tablero", "s-estrategia"];
+  const SCREEN_MAP = { mapa: "s-mapa", partida: "s-partida", tablero: "s-tablero", estrategia: "s-estrategia" };
+
+  function go(name) {
+    const id = SCREEN_MAP[name];
+    if (!id) return;
+    SCREENS.forEach((s) => $s(s).classList.remove("on"));
+    $s(id).classList.add("on");
+    window.scrollTo(0, 0);
+  }
+
+  function toast(msg) {
+    const el = $s("toast");
+    el.textContent = "⭐ " + msg;
+    el.style.display = "block";
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => { el.style.display = "none"; }, 2600);
+  }
+
+  function blocked(msg) {
+    toast("🔒 " + msg);
+  }
+
+  function confetti() {
+    const host = $s("confetti");
+    host.innerHTML = "";
+    const colors = ["#0d9488", "#f59e0b", "#f472b6", "#a78bfa", "#34d399"];
+    for (let i = 0; i < 26; i++) {
+      const c = document.createElement("i");
+      const x = Math.random() * 100;
+      c.style.left = x + "vw";
+      c.style.background = colors[i % colors.length];
+      c.style.animationDuration = 1.4 + Math.random() * 1.8 + "s";
+      c.style.animationDelay = Math.random() * 0.6 + "s";
+      host.appendChild(c);
+    }
+    setTimeout(() => { host.innerHTML = ""; }, 4000);
+  }
+
+  function sumarPts(v) {
+    estado.pts += v;
+    $s("ptsTop").textContent = estado.pts.toLocaleString("en-US");
+  }
+
+  function toggleDark() {
+    const isDark = document.body.getAttribute("data-dark") === "true";
+    document.body.setAttribute("data-dark", isDark ? "false" : "true");
+  }
+
+  // ---------- render: mundo de partida ----------
+  function renderPartida() {
+    const grid = $s("partidaGrid");
+    if (!grid) return;
+    grid.innerHTML = "";
+    SUBMUNDOS_PARTIDA.forEach((s) => {
+      const done = estado.partida[s.n];
+      const div = document.createElement("div");
+      div.className = "card";
+      div.innerHTML =
+        '<span class="tag ' + (done ? "free" : s.repetible ? "premium" : "lock") + '">' +
+        (done ? "Completado" : s.repetible ? "Repetible (3m)" : "Misión") + "</span>" +
+        '<div class="icon">' + s.icon + "</div>" +
+        "<h3>Misión " + s.n + " · " + s.t + "</h3>" +
+        "<p>" + s.d + "</p>" +
+        '<p class="foot">Fuente: ' + s.src + "</p>" +
+        '<div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
+        (done
+          ? '<span class="done-badge">✓ Completada</span>'
+          : '<button class="btn sm" onclick="completarSub(' + s.n + ')">' + (s.final ? "⭐⭐ Completar misión final" : "🎖 Jugar misión") + "</button>") +
+        '<span class="loot">' + s.r + "</span>" +
+        "</div>";
+      div.addEventListener("click", (e) => {
+        if (e.target.closest("button")) return;
+        confetti();
+        toast("Abriendo " + s.t + "… (siguiente fase)");
+      });
+      grid.appendChild(div);
+    });
+  }
+
+  function completarSub(n) {
+    if (n === 5) {
+      estado.partida[5] = true;
+      renderPartida();
+      const c = $s("cardTablero");
+      c.className = "card";
+      c.innerHTML =
+        '<span class="tag free">Gratis · Desbloqueado</span>' +
+        '<div class="icon">🎯</div><h3>Tablero de Retos</h3>' +
+        "<p>Misores desbloqueadas, ejecutivo. Retos semanales y mensuales sobre tu evaluación de madurez.</p>" +
+        '<p class="foot" style="color:#065f46">✔ Desbloqueado · ▶ Jugar</p>';
+      c.onclick = () => go("tablero");
+      confetti();
+      sumarPts(25);
+      toast("🎉 ¡Tablero de Retos desbloqueado! +25 pts");
+    } else {
+      estado.partida[n] = true;
+      renderPartida();
+      sumarPts(20);
+      confetti();
+      toast("Misión completada · +20 pts");
+    }
+  }
+
+  // ---------- render: tablero ----------
+  function renderTablero() {
+    const grid = $s("tableroCasillas");
+    if (!grid) return;
+    grid.innerHTML = "";
+    let i = 0;
+    TEMAS.forEach(([tm, ic]) => {
+      for (let lv = 1; lv <= 6; lv++) {
+        const c = document.createElement("div");
+        const cls = i % 3 === 0 ? "yes" : i % 3 === 1 ? "mid" : "no";
+        c.className = "casilla " + cls;
+        c.title = ic + " " + tm + " · Nivel " + lv;
+        c.textContent = cls === "yes" ? "✓" : cls === "mid" ? "◦" : "✕";
+        grid.appendChild(c);
+        i++;
+      }
+    });
+  }
+
+  // ---------- render: mundo estrategia ----------
+  function desbloquearSub(btn, titulo) {
+    btn.textContent = "✓ En juego";
+    btn.style.background = "#10b981";
+    btn.disabled = true;
+    toast("▶ Abriendo submundo: " + titulo);
+  }
+
+  function renderEstrategia() {
+    const grid = $s("estrategiaSubs");
+    if (!grid) return;
+    grid.innerHTML = "";
+    SUBMUNDOS_ESTRATEGIA.forEach((s) => {
+      const div = document.createElement("div");
+      div.className = "card";
+      const listo = s.estado.includes("Listo");
+      div.innerHTML =
+        '<span class="tag ' + (listo ? "free" : "wip") + '">' + s.estado + "</span>" +
+        '<div class="icon">' + s.icon + "</div>" +
+        "<h3>" + s.n + ". " + s.t + "</h3><p>" + s.d + "</p>" +
+        '<div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap">' +
+        '<span class="loot">' + s.r + "</span>" +
+        '<button class="btn sm" onclick="desbloquearSub(this,\'' + s.t + "')\">Jugar</button>" +
+        "</div>";
+      grid.appendChild(div);
+    });
+
+    const tools = $s("estrTools");
+    tools.innerHTML = "";
+    [
+      ["🎨 Canvas Propuesta de Valor", "Plantilla interactiva para la Fase 1", "Usar"],
+      ["🌐 Matriz FODA", "Exporta con tus capacidades y entorno", "Exportar"],
+      ["📋 Plantilla Plan de Acción", "Descargable para tus 6 submundos", "Descargar"]
+    ].forEach(([n, d, b]) => {
+      const t = document.createElement("div");
+      t.className = "card";
+      t.style.cursor = "default";
+      t.innerHTML = "<h3>" + n + "</h3><p>" + d + "</p><div style='margin-top:8px'><button class='btn sm' onclick='toast(\"" + b + " listo (demo)\")'>" + b + "</button></div>";
+      tools.appendChild(t);
+    });
+  }
+
+  // ---------- reset ----------
+  function resetDemo() {
+    estado.partida = { 1: true, 2: true, 3: true, 4: true, 5: false };
+    estado.pts = 1240;
+    $s("ptsTop").textContent = "1,240";
+    renderPartida();
+    const c = $s("cardTablero");
+    c.className = "card locked";
+    c.innerHTML =
+      '<span class="tag lock">Bloqueado</span>' +
+      '<div class="icon">🎯</div><h3>Tablero de Retos</h3>' +
+      "<p>Retos semanales y mensuales sobre tus 11 temas de madurez.</p>" +
+      '<p class="foot">🔒 Requisito: "Calibración Inicial"</p>';
+    c.onclick = () => blocked("Necesitas completar la Calibración Inicial");
+    toast("Demo restablecida");
+  }
+
+  // ---------- init ----------
+  renderPartida();
+  renderTablero();
+  renderEstrategia();
+  $s("cardTablero").onclick = () => blocked("Necesitas completar la Calibración Inicial");
+</script>
+</body>
+</html>
