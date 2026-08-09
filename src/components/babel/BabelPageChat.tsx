@@ -101,6 +101,15 @@ function buildFase0Summary(answers: Record<string, string>, lang: 'es' | 'en'): 
   return { userContent: userContent, assistantContent: assistantContent };
 }
 /** Indicador compacto de las 5 fases de Babel (0-4): aprobada / actual / pendiente. */
+function limpiarMarkdown(texto: string): string {
+  return texto
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\*([^*]*)\*/g, '$1')
+    .replace(/(^|\n)\s*#{1,6}[ \t]*/g, '\n')
+    .replace(/(^|\n)[ \t]*---+[ \t]*$/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
 function PhaseStepper({
   currentPhase,
   approved,
@@ -758,7 +767,7 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
               return (
                 <React.Fragment key={k}>
                   <div className="max-w-[85%] rounded-xl bg-slate-100 px-3.5 py-2 text-sm text-slate-900 whitespace-pre-wrap">
-                    {qText}
+                    {limpiarMarkdown(qText)}
                   </div>
                   <div className="ml-auto max-w-[85%] rounded-xl bg-slate-900 px-3.5 py-2 text-sm text-white whitespace-pre-wrap">
                     {answerText}
@@ -857,13 +866,36 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
   // (/babel/proposito, /babel/entorno, /babel/capacidades, /babel/enfoque).
   if (faseInicial === 0) {
     const fase0Record = (session.phases ?? []).find(function (pP) { return pP.phase === 0; });
+    const pasosCalibracion: TourStep[] = [
+      {
+        selector: '#babel-calibracion-portal',
+        title: dispLang === 'en' ? 'Calibration completed' : 'Calibración completada',
+        description: dispLang === 'en'
+          ? 'Your Phase 0 summary is saved here. Tap any section of this box and I will explain it.'
+          : 'Tu resumen de la Fase 0 quedó guardado aquí. Toca cualquier sección de esta caja y te la explico.',
+      },
+      {
+        selector: '#babel-calibracion-siguiente',
+        title: dispLang === 'en' ? 'Keep going' : 'Continúa tu camino',
+        description: dispLang === 'en'
+          ? 'Each phase lives in its own page: continue to Phase 1 (Purpose) or open the full Strategic Reflection.'
+          : 'Cada fase vive en su propia página: continúa con la Fase 1 (Propósito) o abre la Reflexión Estratégica completa.',
+      },
+    ];
     return (
       <React.Fragment>
         <div className="mx-auto flex max-w-2xl flex-col gap-4 p-4 sm:p-6">
           <FaseBanner fase={0} lang={dispLang} locale={locale} />
-          <div className="glass-panel flex flex-col items-center gap-3 p-8 text-center">
+          <div id="babel-titulo" className="flex items-center gap-3 border-b pb-4">
+            <AgentAvatar size={56} className="shrink-0" />
+            <div>
+              <h1 className="text-xl font-semibold text-slate-900">{dispLang === locale ? t('title') : UI_FALLBACK[dispLang].title}</h1>
+              <p className="text-sm text-slate-500">{dispLang === 'en' ? 'Phase 0: Initial Calibration' : 'Fase 0: Calibración Inicial'}</p>
+            </div>
+          </div>
+          <div id="babel-calibracion-portal" className="glass-panel flex flex-col items-center gap-3 p-8 text-center">
             <div className="text-5xl">🎉</div>
-            <h1 className="text-xl font-semibold text-slate-900">{dispLang === 'en' ? 'Phase 0 completed' : 'Fase 0 completada'}</h1>
+            <h2 className="text-xl font-semibold text-slate-900">{dispLang === 'en' ? 'Phase 0 completed' : 'Fase 0 completada'}</h2>
             <p className="text-sm text-slate-600">
               {dispLang === 'en'
                 ? 'Your initial calibration is ready. Each remaining phase lives in its own page — continue there.'
@@ -872,10 +904,10 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
             {fase0Record && fase0Record.summary && (
               <div className="w-full rounded-lg border border-slate-200 bg-white/60 p-4 text-left text-sm text-slate-700 whitespace-pre-wrap">
                 <div className="mb-1 font-bold text-slate-900">{dispLang === 'en' ? 'Calibration summary' : 'Resumen de la calibración'}</div>
-                {fase0Record.summary}
+                {limpiarMarkdown(fase0Record.summary)}
               </div>
             )}
-            <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+            <div id="babel-calibracion-siguiente" className="mt-2 flex flex-wrap items-center justify-center gap-2">
               <a
                 href={`/${locale}/babel/proposito`}
                 className="rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 px-4 py-2 text-sm font-extrabold text-white shadow-md shadow-teal-500/30 transition hover:opacity-90"
@@ -891,6 +923,7 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
             </div>
           </div>
         </div>
+        <PageTour pageId="babel-calibracion" steps={pasosCalibracion} lang={dispLang} />
       </React.Fragment>
     );
   }
@@ -956,7 +989,11 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
               ) : (
                 m.role === 'assistant' ? (
                   <div className={isLong && !isExpanded ? 'max-h-32 overflow-y-auto' : ''}>
-                    <MarkdownMessage content={displayContent} />
+                    {isFase0SummaryPair ? (
+                      <div className="whitespace-pre-wrap">{limpiarMarkdown(displayContent)}</div>
+                    ) : (
+                      <MarkdownMessage content={displayContent} />
+                    )}
                   </div>
                 ) : (
                   <div className={'whitespace-pre-wrap ' + (isLong && !isExpanded ? 'max-h-32 overflow-y-auto' : '')}>

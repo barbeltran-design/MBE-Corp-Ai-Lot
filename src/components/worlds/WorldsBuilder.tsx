@@ -330,7 +330,17 @@ export function WorldsBuilder() {
       <div className="mx-auto max-w-6xl px-4 py-8">
         <div className="world-glass world-grain mb-6 flex flex-wrap items-center gap-3 p-4">
           <div className="flex items-center gap-2 text-lg font-extrabold text-slate-800 dark:text-white">
-            <span className="text-2xl">🌍</span> MBE <span className="text-teal-600 dark:text-teal-300">Worlds</span>
+            <span className="text-2xl">🌍</span>{' '}
+            {en([
+              vista === 'partida' ? 'Universo MBE - Mundo de partida'
+                : vista === 'tablero' ? 'Universo MBE - Tablero de retos'
+                : vista === 'estrategia' ? 'Universo MBE - Mundo de la Estrategia'
+                : 'Universo MBE - Mundos',
+              vista === 'partida' ? 'MBE Universe - Starting World'
+                : vista === 'tablero' ? 'MBE Universe - Challenges Board'
+                : vista === 'estrategia' ? 'MBE Universe - Strategy World'
+                : 'MBE Universe - Worlds',
+            ])}
           </div>
           <div className="ml-auto flex flex-wrap items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-100">
             <span className="rounded-full border border-teal-300/60 bg-white/50 px-3 py-1.5 backdrop-blur-md dark:bg-white/10">

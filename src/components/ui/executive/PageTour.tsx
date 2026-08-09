@@ -123,17 +123,17 @@ export default function PageTour({ pageId, steps, lang, autoOpen = true }: PageT
     setDone(true);
   }, [pageId]);
 
-  // Cualquier avatar de Babel abre/cierra la ayuda (toggle).
+  // El avatar de Babel (arriba-izquierda de cada pagina) abre el tutorial
+  // paso a paso; si el tutorial ya estaba abierto, lo cierra (toggle).
   React.useEffect(() => {
     const onAbrir = () => {
       setAyuda(null);
       if (modo === 'tour') {
         marcarVisto();
-        setModo('ayuda');
-      } else if (modo === 'ayuda') {
         setModo('cerrado');
       } else {
-        setModo('ayuda');
+        setIndice(0);
+        setModo('tour');
       }
     };
     window.addEventListener(BABEL_AYUDA_EVENT, onAbrir);
