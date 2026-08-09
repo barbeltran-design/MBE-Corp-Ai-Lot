@@ -505,6 +505,14 @@ export function WorldsBuilder() {
                         </h3>
                         <div className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{lang === 'en' ? m.enDesc : m.esDesc}</div>
                         <div className="mt-3 flex flex-wrap items-center gap-2">
+                          {'ruta' in m && (
+                            <button
+                              className="rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 px-3 py-1.5 text-xs font-extrabold text-white shadow-md shadow-teal-500/30 transition hover:opacity-90"
+                              onClick={() => router.push(`/${lang === 'es' ? 'es' : 'en'}${m.ruta}`)}
+                            >
+                              {en(I.abrirHerramienta)}
+                            </button>
+                          )}
                           {!done && (
                             <button
                               className="rounded-lg border border-teal-400/60 bg-white/40 px-3 py-1.5 text-xs font-extrabold text-teal-700 backdrop-blur-md transition hover:bg-white/70 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white/10 dark:text-teal-200 dark:hover:bg-white/20"

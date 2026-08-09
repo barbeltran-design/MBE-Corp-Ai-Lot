@@ -3,9 +3,9 @@
 // catálogo de mundos premium (es/en, rutas reales de la app).
 
 export const MISIONES_PART_LABELS = [
-  { n: 1, icon: '📊', pts: 10, es: 'Evaluación de Madurez', en: 'Maturity Assessment', esDesc: 'Los 11 temas × 6 niveles. Se repite cuando consideres un cambio en tu empresa (insignia Reevaluado).', enDesc: '11 topics × 6 levels. Repeat it whenever you consider a change in your company (Re-evaluated badge).', sello: 'Caminante', repetible: true },
-  { n: 2, icon: '🎯', pts: 15, es: 'Objetivos Estratégicos', en: 'Strategic Objectives', esDesc: 'Declaración de guerra: define tus objetivos BSC con meta numérica.', enDesc: 'Declaration of war: define your BSC objectives with a numeric target.', sello: '' },
-  { n: 3, icon: '⭐', pts: 25, es: 'Calibración Inicial', en: 'Initial Calibration', esDesc: 'Babel resume tu empresa en 5 líneas (gamer mode) y te da tu nivel de salida. Al completarla se desbloquea el Tablero de Retos.', enDesc: 'Babel summarizes your company in 5 lines (gamer mode) and gives you your starting level. Completing it unlocks the Challenges Board.', sello: 'Tablero', final: true },
+  { n: 1, icon: '📊', ruta: '/dashboard', pts: 10, es: 'Evaluación de Madurez', en: 'Maturity Assessment', esDesc: 'Los 11 temas × 6 niveles. Se repite cuando consideres un cambio en tu empresa (insignia Reevaluado).', enDesc: '11 topics × 6 levels. Repeat it whenever you consider a change in your company (Re-evaluated badge).', sello: 'Caminante', repetible: true },
+  { n: 2, icon: '🎯', ruta: '/babel/indicadores', pts: 15, es: 'Objetivos Estratégicos', en: 'Strategic Objectives', esDesc: 'Declaración de guerra: define tus objetivos BSC con meta numérica.', enDesc: 'Declaration of war: define your BSC objectives with a numeric target.', sello: '' },
+  { n: 3, icon: '⭐', ruta: '/babel/calibracion', pts: 25, es: 'Calibración Inicial', en: 'Initial Calibration', esDesc: 'Babel resume tu empresa en 5 líneas (gamer mode) y te da tu nivel de salida. Al completarla se desbloquea el Tablero de Retos.', enDesc: 'Babel summarizes your company in 5 lines (gamer mode) and gives you your starting level. Completing it unlocks the Challenges Board.', sello: 'Tablero', final: true },
 ] as const;
 
 export function puntosDeMision(n: number): number {
@@ -22,10 +22,10 @@ export function misionLabel(n: number, lang: 'es' | 'en'): string {
 // alimentan de la Reflexión Estratégica (rutas reales); 5 del organigrama y
 // 6 del Plan de Acción.
 export const SUBMUNDOS_ESTRATEGIA_LABELS = [
-  { n: 1, icon: '🧭', ruta: '/babel', es: 'Propósito y Propuesta de Valor', en: 'Purpose & Value Proposition', estado: 'listo', esDesc: 'Se toma de la Fase 1 de la Reflexión Estratégica.', enDesc: 'Taken from Phase 1 of the Strategic Reflection.', pts: 25, sello: 'Estratega' },
-  { n: 2, icon: '🌐', ruta: '/babel', es: 'El Entorno', en: 'The Environment', estado: 'listo', esDesc: 'Se toma de la Fase 2: amenazas y oportunidades.', enDesc: 'Taken from Phase 2: threats and opportunities.', pts: 25, sello: '' },
-  { n: 3, icon: '⚖️', ruta: '/babel', es: 'Mis Capacidades', en: 'My Capabilities', estado: 'listo', esDesc: 'Se toma de la Fase 3: fortalezas y debilidades.', enDesc: 'Taken from Phase 3: strengths and weaknesses.', pts: 25, sello: '' },
-  { n: 4, icon: '🧭', ruta: '/babel', es: 'El Enfoque Estratégico', en: 'The Strategic Focus', estado: 'listo', esDesc: 'Se toma de la Fase 4: rumbo y prioridades.', enDesc: 'Taken from Phase 4: course and priorities.', pts: 25, sello: '' },
+  { n: 1, icon: '🧭', ruta: '/babel/proposito', es: 'Propósito y Propuesta de Valor', en: 'Purpose & Value Proposition', estado: 'listo', esDesc: 'Se toma de la Fase 1 de la Reflexión Estratégica.', enDesc: 'Taken from Phase 1 of the Strategic Reflection.', pts: 25, sello: 'Estratega' },
+  { n: 2, icon: '🌐', ruta: '/babel/entorno', es: 'El Entorno', en: 'The Environment', estado: 'listo', esDesc: 'Se toma de la Fase 2: amenazas y oportunidades.', enDesc: 'Taken from Phase 2: threats and opportunities.', pts: 25, sello: '' },
+  { n: 3, icon: '⚖️', ruta: '/babel/capacidades', es: 'Mis Capacidades', en: 'My Capabilities', estado: 'listo', esDesc: 'Se toma de la Fase 3: fortalezas y debilidades.', enDesc: 'Taken from Phase 3: strengths and weaknesses.', pts: 25, sello: '' },
+  { n: 4, icon: '🧭', ruta: '/babel/enfoque', es: 'El Enfoque Estratégico', en: 'The Strategic Focus', estado: 'listo', esDesc: 'Se toma de la Fase 4: rumbo y prioridades.', enDesc: 'Taken from Phase 4: course and priorities.', pts: 25, sello: '' },
   { n: 5, icon: '🏢', ruta: '/babel/organigrama', es: 'Organigrama y Roles', en: 'Org Chart & Roles', estado: 'wip', esDesc: 'Define tu estructura y los responsables de cada acción.', enDesc: 'Define your structure and who owns each action.', pts: 25, sello: '' },
   { n: 6, icon: '📋', ruta: '/babel/plan-accion', es: 'Plan de Acción Socioambiental', en: 'Socio-environmental Action Plan', estado: 'pendiente', esDesc: 'Cumplimiento de acciones del plan (el pegamento que conecta todos los mundos).', enDesc: 'Compliance with the plan actions (the glue connecting every world).', pts: 25, sello: 'Mundo' },
 ] as const;

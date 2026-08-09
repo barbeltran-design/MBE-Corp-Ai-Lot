@@ -457,6 +457,37 @@
     opacity: 0.55;
   }
 
+  /* Galaxia espiral: SVG de dos brazos rotando muy lento alrededor del
+     centro de la pantalla (la espiral misma es el foco del fondo). */
+  .galaxy-spiral {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 185vmax;
+    height: 185vmax;
+    margin-left: -92.5vmax;
+    margin-top: -92.5vmax;
+    opacity: 0.6;
+    filter: blur(6px) saturate(1.15);
+    animation: galaxy-spin 300s linear infinite;
+    will-change: transform;
+  }
+  @keyframes galaxy-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* Chip de fase iluminado cuando se entra a la pagina por esa fase
+     (calibración / propósito / entorno / capacidades / enfoque). */
+  .phase-focus {
+    animation: phase-focus-pulse 0.7s ease-in-out 2;
+    box-shadow: 0 0 0 4px rgba(45, 212, 191, 0.55);
+  }
+  @keyframes phase-focus-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+  }
+
   @keyframes galaxy-drift {
     from { transform: translate3d(0, 0, 0); }
     to { transform: translate3d(-2.2%, 1.6%, 0); }
