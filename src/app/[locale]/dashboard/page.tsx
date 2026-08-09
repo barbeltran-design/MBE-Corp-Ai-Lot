@@ -170,7 +170,7 @@ function DashboardPageInner() {
           </div>
           <div className="flex items-center gap-3">
             <a
-              href={`/${locale}/worlds`}
+              href={`/${locale}/worlds/partida`}
               className="inline-flex items-center gap-1 rounded-lg border border-teal-400/60 bg-white/40 px-3 py-1.5 text-xs font-bold text-teal-700 backdrop-blur-md transition hover:bg-white/70 dark:bg-white/10 dark:text-teal-200 dark:hover:bg-white/20"
             >
               ← {en ? 'Back to Starting World' : 'Volver al Mundo de Partida'}

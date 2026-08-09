@@ -919,12 +919,19 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
                 <p className="text-sm text-slate-500">{dispLang === 'en' ? 'Phase 0: Initial Calibration' : 'Fase 0: Calibración Inicial'}</p>
               </div>
             </div>
-            <a
-              href={'/' + locale + '/worlds'}
-              className="inline-flex shrink-0 items-center rounded-lg border border-teal-400/60 bg-white/40 px-3 py-1.5 text-xs font-bold text-teal-700 backdrop-blur-md transition hover:bg-white/70 dark:bg-white/10 dark:text-teal-200 dark:hover:bg-white/20"
-            >
-              ← {dispLang === 'en' ? 'Back to Starting World' : 'Volver al Mundo de Partida'}
-            </a>
+            <div className="flex flex-col items-end gap-2">
+              <div className="flex gap-2">
+                <Button onClick={handleReset} disabled={sending} variant="outline" size="sm">
+                  {dispLang === 'en' ? 'Start over' : 'Empezar de nuevo'}
+                </Button>
+                <a
+                  href={'/' + locale + '/worlds/partida'}
+                  className="inline-flex shrink-0 items-center rounded-lg border border-teal-400/60 bg-white/40 px-3 py-1.5 text-xs font-bold text-teal-700 backdrop-blur-md transition hover:bg-white/70 dark:bg-white/10 dark:text-teal-200 dark:hover:bg-white/20"
+                >
+                  ← {dispLang === 'en' ? 'Back to Starting World' : 'Volver al Mundo de Partida'}
+                </a>
+              </div>
+            </div>
           </div>
           <div id="babel-calibracion-portal" className="glass-panel flex flex-col gap-4 p-6">
             <div className="flex flex-col items-center gap-3 text-center">

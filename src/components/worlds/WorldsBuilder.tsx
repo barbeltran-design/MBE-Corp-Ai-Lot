@@ -160,7 +160,7 @@ function Confetti({ seed }: { seed: number }) {
   );
 }
 
-export function WorldsBuilder() {
+export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
   const router = useRouter();
   const { lang, setLang } = useDisplayLang();
   const T = t2(lang === 'es' ? 'es' : 'en');
@@ -168,7 +168,7 @@ export function WorldsBuilder() {
 
   const [yo, setYo] = React.useState<Progreso | null>(null);
   const [cargando, setCargando] = React.useState(true);
-  const [vista, setVista] = React.useState<Vista>('mapa');
+  const [vista, setVista] = React.useState<Vista>(vistaInicial ?? 'mapa');
   const [toast, setToast] = React.useState<string | null>(null);
   const [confettiSeed, setConfettiSeed] = React.useState(0);
   const [completando, setCompletando] = React.useState<number | null>(null);

@@ -510,7 +510,7 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
           </div>
         </div>
         <a
-          href={'/' + lang + '/worlds'}
+          href={'/' + lang + '/worlds/partida'}
           className="inline-flex shrink-0 items-center rounded-lg border border-teal-400/60 bg-white/40 px-3 py-1.5 text-xs font-bold text-teal-700 backdrop-blur-md transition hover:bg-white/70 dark:bg-white/10 dark:text-teal-200 dark:hover:bg-white/20"
         >
           ← {lang === 'en' ? 'Back to Starting World' : 'Volver al Mundo de Partida'}
