@@ -3,11 +3,9 @@
 // catálogo de mundos premium (es/en, rutas reales de la app).
 
 export const MISIONES_PART_LABELS = [
-  { n: 1, icon: '🧭', pts: 15, ruta: '/babel/convocatorias', es: 'Convocatorias y Fondos', en: 'Calls & Grants', esDesc: 'Caza de fondos: encuentra 3 convocatorias elegibles y márcalas con Babel.', enDesc: 'Fund hunt: find 3 eligible calls and mark them with Babel.', sello: 'Fondos' },
-  { n: 2, icon: '📊', pts: 10, ruta: '/dashboard', es: 'Evaluación de Madurez', en: 'Maturity Assessment', esDesc: 'Los 11 temas × 6 niveles. Se repite cada 3 meses con recordatorio automático (insignia Reevaluado).', enDesc: '11 topics × 6 levels. Repeat it every 3 months with an automatic reminder (Re-evaluated badge).', sello: 'Caminante', repetible: true },
-  { n: 3, icon: '💰', pts: 20, ruta: '/babel/indicadores', es: 'Objetivos Financieros', en: 'Financial Goals', esDesc: 'Arma tu máquina de ingresos: canales + productos hasta cubrir el punto de equilibrio.', enDesc: 'Build your income machine: channels + products until you cover your break-even point.', sello: '' },
-  { n: 4, icon: '🎯', pts: 15, ruta: '/babel/indicadores', es: 'Objetivos Estratégicos', en: 'Strategic Objectives', esDesc: 'Declaración de guerra: define 3 objetivos BSC con meta numérica.', enDesc: 'Declaration of war: define 3 BSC objectives with a numeric target.', sello: '' },
-  { n: 5, icon: '⭐', pts: 25, ruta: '/executive-preview', es: 'Calibración Inicial', en: 'Initial Calibration', esDesc: 'Babel resume tu empresa en 5 líneas (gamer mode) y te da tu nivel de salida. Al completarla se desbloquea el Tablero de Retos.', enDesc: 'Babel summarizes your company in 5 lines (gamer mode) and gives you your starting level. Completing it unlocks the Challenges Board.', sello: 'Tablero', final: true },
+  { n: 1, icon: '📊', pts: 10, es: 'Evaluación de Madurez', en: 'Maturity Assessment', esDesc: 'Los 11 temas × 6 niveles. Se repite cuando consideres un cambio en tu empresa (insignia Reevaluado).', enDesc: '11 topics × 6 levels. Repeat it whenever you consider a change in your company (Re-evaluated badge).', sello: 'Caminante', repetible: true },
+  { n: 2, icon: '🎯', pts: 15, es: 'Objetivos Estratégicos', en: 'Strategic Objectives', esDesc: 'Declaración de guerra: define tus objetivos BSC con meta numérica.', enDesc: 'Declaration of war: define your BSC objectives with a numeric target.', sello: '' },
+  { n: 3, icon: '⭐', pts: 25, es: 'Calibración Inicial', en: 'Initial Calibration', esDesc: 'Babel resume tu empresa en 5 líneas (gamer mode) y te da tu nivel de salida. Al completarla se desbloquea el Tablero de Retos.', enDesc: 'Babel summarizes your company in 5 lines (gamer mode) and gives you your starting level. Completing it unlocks the Challenges Board.', sello: 'Tablero', final: true },
 ] as const;
 
 export function puntosDeMision(n: number): number {

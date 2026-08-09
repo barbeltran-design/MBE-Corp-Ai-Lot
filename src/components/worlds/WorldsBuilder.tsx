@@ -1,11 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase';
 import { useDisplayLang } from '@/components/display-lang-provider';
-import { useTheme } from '@/components/theme-provider';
 import AgentAvatar from '@/components/agentes/AgentAvatar';
 import { getLatestAssessmentAnswers } from '@/lib/assessment';
 import { getMaturityDimensions } from '@/lib/maturity-dimensions';
@@ -48,8 +47,8 @@ const I = {
   gratisTag: ['Gratis · Activo', 'Free · Active'],
   mundoPartida: ['Mundo de Partida', 'Starting World'],
   mundoPartidaDesc: [
-    'Anfitrión Babel · 5 misiones para calibrar tu empresa antes de la aventura. Al completarlas desbloqueas el Tablero de Retos.',
-    'Hosted by Babel · 5 missions to calibrate your company before the adventure. Completing them unlocks the Challenges Board.',
+    'Anfitrión Babel · 3 misiones para calibrar tu empresa antes de la aventura. Al completarlas desbloqueas el Tablero de Retos.',
+    'Hosted by Babel · 3 missions to calibrate your company before the adventure. Completing them unlocks the Challenges Board.',
   ],
   entrarPartida: ['► Entrar al mundo', '► Enter the world'],
   tableroCard: ['Tablero de Retos', 'Challenges Board'],
@@ -161,20 +160,9 @@ function Confetti({ seed }: { seed: number }) {
 
 export function WorldsBuilder() {
   const router = useRouter();
-  const pathname = usePathname();
   const { lang, setLang } = useDisplayLang();
-  const { theme, toggleTheme } = useTheme();
   const T = t2(lang === 'es' ? 'es' : 'en');
   const en = (p: Params) => T(p);
-
-  const navigateLang = (newLang: 'es' | 'en') => {
-    setLang(newLang);
-    const segments = pathname.split('/');
-    if (segments[1] === 'es' || segments[1] === 'en') {
-      segments[1] = newLang;
-    }
-    router.replace(segments.join('/'));
-  };
 
   const [yo, setYo] = React.useState<Progreso | null>(null);
   const [cargando, setCargando] = React.useState(true);
@@ -269,8 +257,8 @@ export function WorldsBuilder() {
             : prev
         );
         festejar();
-        notificar(`+${data.pts} ${en(I.pts)} · ${n === 5 ? en(I.tableroGanado) : en(I.misionCompleta)}`);
-        if (n === 5) setVista('mapa');
+        notificar(`+${data.pts} ${en(I.pts)} · ${n === 3 ? en(I.tableroGanado) : en(I.misionCompleta)}`);
+        if (n === 3) setVista('mapa');
       } else {
         notificar(String(data.error ?? en(I.errorProcesar)));
       }
@@ -354,63 +342,21 @@ export function WorldsBuilder() {
             <span className="rounded-full border border-amber-300/60 bg-white/50 px-3 py-1.5 backdrop-blur-md dark:bg-white/10">
               🔥 {en(I.chipRacha)} {en(I.rachaDemo)}
             </span>
-            {/* Selector de idioma (como las demás páginas) */}
-            <span className="flex gap-0.5 rounded-full border border-teal-300/60 bg-white/50 p-0.5 backdrop-blur-md dark:bg-white/10">
-              <button
-                type="button"
-                onClick={() => navigateLang('es')}
-                className={'rounded-full px-2.5 py-1 transition-colors ' + (lang === 'es' ? 'bg-teal-500 text-white' : 'text-slate-600 dark:text-slate-300 hover:text-teal-600')}
-              >
-                ES
-              </button>
-              <button
-                type="button"
-                onClick={() => navigateLang('en')}
-                className={'rounded-full px-2.5 py-1 transition-colors ' + (lang === 'en' ? 'bg-teal-500 text-white' : 'text-slate-600 dark:text-slate-300 hover:text-teal-600')}
-              >
-                EN
-              </button>
-            </span>
-            {/* Tema claro/oscuro */}
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="rounded-full border border-teal-300/60 bg-white/50 px-3 py-1.5 transition hover:bg-white/80 dark:bg-white/10 dark:hover:bg-white/20"
-              aria-label={en(I.temaAria)}
-              title={en(I.temaAria)}
-            >
-              {theme === 'dark' ? '☀️' : '🌙'}
-            </button>
           </div>
         </div>
 
         <div className="world-glass mb-6 flex items-start gap-4 p-5">
-          <AgentAvatar agente="Babel" pose="guiando" size={56} className="shrink-0" />
+          <AgentAvatar agente="Babel" pose="guiando" size={56} className="shrink-0" onClick={() => undefined} />
           <div className="min-w-0 flex-1 text-sm leading-relaxed text-slate-700 dark:text-slate-100">
             <p>
               <b className="text-teal-700 dark:text-teal-300">
                 {en(I.saludo)}
                 {yo?.nombre ? `, ${yo.nombre}!` : '!'} —
               </b>{' '}
-              {vista === 'partida'
-                ? en([
-                    'Esto no es un curso, ejecutivo: es tu partida. 5 misiones para calibrar tu empresa; al cerrar la Calibración Inicial se desbloquea el 🎯 Tablero.',
-                    'This is not a course, executive: this is your game. Complete the 5 missions; the Initial Calibration unlocks the 🎯 Board.',
-                  ])
-                : vista === 'tablero'
-                  ? en([
-                      'Tu tablero juega con tu evaluación: cada celda es una práctica. Las verdes ya las dominas; los retos salen de tu Plan de Madurez.',
-                      'Your board plays with your evaluation: every tile is a practice. Green tiles are already yours; challenges come from your Maturity Plan.',
-                    ])
-                  : vista === 'estrategia'
-                    ? en([
-                        'El motor de tu empresa. Cada submundo se alimenta de tu Reflexión Estratégica y tu Plan de Acción: cierra el ciclo y recibe el sello de Estratega.',
-                        'The engine of your company. Every subworld is fed by your Strategic Reflection and Action Plan: close the loop and earn the Strategist seal.',
-                      ])
-                    : en([
-                        'Bienvenido/a: este es tu mapa. Visita los mundos, completa misiones y desbloquea el Tablero de Retos. Tu partida empieza en el Mundo de Partida.',
-                        'Welcome: this is your map. Explore the worlds, complete missions and unlock the Challenges Board. Your game starts in the Starting World.',
-                      ])}
+              {en([
+                'Completa todas las misiones para desbloquear tu Zona de Dinero y Equipo de trabajo Real. Todas las misiones puedes volverlas a hacer cuando consideres un cambio en tu empresa.',
+                'Complete all missions to unlock your Money Zone and Real Working Team. You can redo every mission whenever you consider a change in your company.',
+              ])}
             </p>
           </div>
         </div>
@@ -444,11 +390,11 @@ export function WorldsBuilder() {
                   <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-400/25">
                     <div
                       className="h-full rounded-full bg-gradient-to-r from-teal-400 via-cyan-400 to-fuchsia-500 transition-all duration-500"
-                      style={{ width: `${Math.min(100, (hechas.length / 5) * 100)}%` }}
+                      style={{ width: `${Math.min(100, (hechas.length / 3) * 100)}%` }}
                     />
                   </div>
                   <p className="mt-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                    {hechas.length}/5 {en(I.misionesDe)} · {hechas.length === 5 ? en(I.partidaCompleta) : en(I.partidaEnCurso)} ·{' '}
+                    {hechas.length}/3 {en(I.misionesDe)} · {hechas.length === 3 ? en(I.partidaCompleta) : en(I.partidaEnCurso)} ·{' '}
                     {yo.tablero ? en(I.tableroListo) : en(I.tableroBloqueado)} · {en(I.estrategiaCurso)}
                   </p>
                 </div>
@@ -462,7 +408,7 @@ export function WorldsBuilder() {
                     <h3 className="mt-2 text-base font-extrabold text-slate-800 dark:text-white">{en(I.mundoPartida)}</h3>
                     <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{en(I.mundoPartidaDesc)}</p>
                     <p className="mt-2 text-xs font-bold text-teal-700 dark:text-teal-300">
-                      {en(I.entrarPartida)} · {hechas.length}/5
+                      {en(I.entrarPartida)} · {hechas.length}/3
                     </p>
                   </button>
 
@@ -558,16 +504,7 @@ export function WorldsBuilder() {
                           {en(I.misNum)} {m.n} · {lang === 'en' ? m.en : m.es}
                         </h3>
                         <div className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{lang === 'en' ? m.enDesc : m.esDesc}</div>
-                        <p className="mt-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                          📍 {en(I.rutaReal)}: {m.ruta}
-                        </p>
                         <div className="mt-3 flex flex-wrap items-center gap-2">
-                          <button
-                            className="rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 px-3 py-1.5 text-xs font-extrabold text-white shadow-md shadow-teal-500/30 transition hover:opacity-90"
-                            onClick={() => router.push(m.ruta)}
-                          >
-                            {en(I.abrirHerramienta)} →
-                          </button>
                           {!done && (
                             <button
                               className="rounded-lg border border-teal-400/60 bg-white/40 px-3 py-1.5 text-xs font-extrabold text-teal-700 backdrop-blur-md transition hover:bg-white/70 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white/10 dark:text-teal-200 dark:hover:bg-white/20"
@@ -582,23 +519,6 @@ export function WorldsBuilder() {
                       </div>
                     );
                   })}
-                </div>
-
-                <div className="world-glass world-grain mt-6 p-5">
-                  <h2 className="text-base font-extrabold text-slate-800 dark:text-white">{en(I.tiendaPartida)}</h2>
-                  <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{en(I.tiendaPartidaDesc)}</p>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                    {[
-                      { icon: '📋', name: en(I.checklist) },
-                      { icon: '🧮', name: en(I.fondos) },
-                      { icon: '🗺️', name: en(I.mapaMadurez) },
-                    ].map((h) => (
-                      <button key={h.icon} className="world-glass world-glass-hover p-4 text-left" onClick={() => notificar(en(I.toolToast))}>
-                        <div className="text-2xl">{h.icon}</div>
-                        <p className="mt-1 text-xs font-extrabold text-slate-800 dark:text-white">{h.name}</p>
-                      </button>
-                    ))}
-                  </div>
                 </div>
               </>
             )}

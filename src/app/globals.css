@@ -407,4 +407,62 @@
   @keyframes world-fall {
     to { transform: translateY(108vh) rotate(720deg); opacity: 0.15; }
   }
+
+  /* ------------------------------------------------------------
+   * Fondo de galaxias (solo dark mode) — simulación de nebulosas,
+   * cúmulos de estrellas que parpadean y deriva lenta del espacio.
+   * Se monta en el <body> de todas las páginas (ver [locale]/layout).
+   * ------------------------------------------------------------ */
+  .galaxy-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  html:not(.dark) .galaxy-bg {
+    display: none;
+  }
+  html.dark .galaxy-bg {
+    display: block;
+  }
+
+  /* Nebulosas coloridas desenfocadas que se mueven muy lento. */
+  .galaxy-bg::before {
+    content: '';
+    position: absolute;
+    inset: -15%;
+    background:
+      radial-gradient(ellipse 42% 34% at 18% 22%, rgba(124, 92, 245, 0.16), transparent 65%),
+      radial-gradient(ellipse 38% 30% at 84% 74%, rgba(45, 212, 191, 0.13), transparent 65%),
+      radial-gradient(ellipse 30% 26% at 70% 12%, rgba(236, 112, 199, 0.1), transparent 60%),
+      radial-gradient(ellipse 34% 28% at 28% 88%, rgba(56, 130, 246, 0.12), transparent 65%);
+    filter: blur(46px) saturate(1.15);
+    animation: galaxy-drift 46s ease-in-out infinite alternate;
+  }
+
+  /* Campo de estrellas: dos capas de puntos con distinto tamaño y el mismo
+     tipo de radio-gradiente repetido (performance segura en paint). */
+  .galaxy-bg::after {
+    content: '';
+    position: absolute;
+    inset: -40%;
+    background-image:
+      radial-gradient(circle, rgba(255, 255, 255, 0.95) 0.8px, transparent 1.6px),
+      radial-gradient(circle, rgba(255, 255, 255, 0.65) 0.6px, transparent 1.3px),
+      radial-gradient(circle, rgba(255, 255, 255, 0.4) 0.5px, transparent 1px);
+    background-size: 260px 260px, 150px 150px, 90px 90px;
+    background-position: 0 0, 30px 50px, 120px 20px;
+    animation: galaxy-drift 75s linear infinite alternate, galaxy-twinkle 6s ease-in-out infinite alternate;
+    opacity: 0.55;
+  }
+
+  @keyframes galaxy-drift {
+    from { transform: translate3d(0, 0, 0); }
+    to { transform: translate3d(-2.2%, 1.6%, 0); }
+  }
+  @keyframes galaxy-twinkle {
+    from { opacity: 0.35; }
+    to { opacity: 0.75; }
+  }
 }
