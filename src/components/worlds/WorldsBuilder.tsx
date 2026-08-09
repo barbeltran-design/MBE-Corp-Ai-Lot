@@ -281,6 +281,13 @@ export function WorldsBuilder() {
     }
   }
 
+  // Soporta /worlds?v=partida|tablero|estrategia para abrir directo una vista
+  // (los enlaces del Inicio llevan este parámetro).
+  React.useEffect(() => {
+    const v = new URLSearchParams(window.location.search).get('v');
+    if (v === 'partida' || v === 'tablero' || v === 'estrategia') setVista(v);
+  }, []);
+
   React.useEffect(() => {
     try {
       const guardado = window.localStorage.getItem('babel_worlds_recorrido_v1');

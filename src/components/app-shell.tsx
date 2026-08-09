@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { CalendarClock, CalendarRange, ClipboardList, Gamepad2, Gauge, Home, LayoutDashboard, LineChart, Megaphone, ShieldCheck, Sparkles, Store, TrendingUp, UserCheck2, Users } from 'lucide-react';
+import { CalendarClock, CalendarRange, ClipboardList, Gauge, Home, LayoutDashboard, LineChart, Megaphone, ShieldCheck, Sparkles, Store, TrendingUp, UserCheck2, Users } from 'lucide-react';
 import { ExecutiveShell, type ExecutiveNavItem } from '@/components/executive-shell';
 import { BackgroundBlobs } from '@/components/ui/executive/background-blobs';
 import { DisplayLangProvider, useDisplayLang } from '@/components/display-lang-provider';
@@ -21,7 +21,6 @@ function AppShellInner({
 
   const navItems: ExecutiveNavItem[] = [
     { href: `/${locale}/inicio`, label: navLabel('Inicio', 'Home'), icon: Home },
-    { href: `/${locale}/worlds`, label: navLabel('Mundos', 'Worlds'), icon: Gamepad2 },
     { href: `/${locale}/babel/convocatorias`, label: navLabel('Convocatorias y fondos', 'Calls & Grants'), icon: Megaphone },
     { href: `/${locale}/executive-preview`, label: navLabel('Resumen ejecutivo', 'Executive Summary'), icon: LayoutDashboard },
     { href: `/${locale}/babel/indicadores`, label: navLabel('Objetivos estratégicos', 'Strategic Objectives'), icon: TrendingUp },

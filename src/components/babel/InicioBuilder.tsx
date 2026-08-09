@@ -1,156 +1,160 @@
 'use client';
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Award,
-  BadgeCheck,
-  Bot,
-  CalendarClock,
-  ChevronRight,
-  ClipboardList,
-  Coins,
-  Gauge,
-  LayoutDashboard,
-  LineChart,
-  Megaphone,
-  Sparkles,
-  TrendingUp,
-  UserCheck,
-  Users,
-} from 'lucide-react';
-import AgentAvatar from '@/components/agentes/AgentAvatar';
+import { Bot, Coins, UsersRound } from 'lucide-react';
+import { onAuthStateChanged, type User } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { getFirebaseAuth, getFirebaseDb } from '@/lib/firebase';
+import AgentAvatar, { type AgenteAvatarId } from '@/components/agentes/AgentAvatar';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
+import { WorldMap, PUNTOS_RECORRIDO, type PuntoRecorrido } from '@/components/worlds/WorldMap';
+import { MUNDOS_PREMIUM_LABELS } from '@/lib/worlds';
 
 type InicioLang = 'es' | 'en';
-type Costo = 'gratis' | 'plan' | 'ondemand';
+type Params = readonly [string, string];
 
-type AgenteInfo = {
-  agente: 'Babel' | 'Karmetin' | 'Normau' | 'Fisnando' | 'Atech';
-  temas: [string, string];
-  rasgo: [string, string];
+const T = (lang: InicioLang) => (p: Params) => (lang === 'en' ? p[1] : p[0]);
+
+type CorpiloteInfo = {
+  agente: AgenteAvatarId;
+  temas: Params;
+  rasgo: Params;
 };
 
-const AGENTES_INFO: AgenteInfo[] = [
+// Orden oficial del usuario: Babel, Fisnando, Karmetin, Normau, Atech.
+const CORPILOTES: CorpiloteInfo[] = [
   {
     agente: 'Babel',
-    temas: ['Rumbo Estratégico, Capital Humano y Cultura Organizacional', 'Strategic Direction, Human Capital and Organizational Culture'],
-    rasgo: ['Es inteligente y le importa ayudar.', 'Smart, and he truly cares about helping.'],
-  },
-  {
-    agente: 'Karmetin',
-    temas: ['Marketing y Ventas, y Atención al Cliente', 'Marketing & Sales and Customer Service'],
-    rasgo: ['Es creativo y servicial.', 'Creative and helpful.'],
-  },
-  {
-    agente: 'Normau',
-    temas: ['Cumplimiento Normativo, Alianzas y Enfoque Socioambiental', 'Compliance, Alliances and Socio-environmental Focus'],
-    rasgo: ['Es protector y se preocupa por el ambiente.', 'Protective and cares about the environment.'],
+    temas: ['Estrategia | Gente | Cultura', 'Strategy | People | Culture'],
+    rasgo: ['Te diferencía y cambia tu entorno', 'Differentiates you and changes your world'],
   },
   {
     agente: 'Fisnando',
-    temas: ['Finanzas y Fiscales', 'Finance and Tax'],
-    rasgo: ['Es motivador y cumplido.', 'Motivating and dependable.'],
+    temas: ['Finanzas | Fiscal', 'Finance | Tax'],
+    rasgo: ['Te invierte y consigue dinero', 'Invests in you and gets you money'],
+  },
+  {
+    agente: 'Karmetin',
+    temas: ['Marketing | Ventas | Atención al Cliente', 'Marketing | Sales | Customer Service'],
+    rasgo: ['Te atrae y retiene clientes', 'Attracts and retains customers'],
+  },
+  {
+    agente: 'Normau',
+    temas: ['Normas | Alianzas | Socioambiental', 'Rules | Alliances | Socio-environmental'],
+    rasgo: ['Te protege del entorno', 'Protects you from the environment'],
   },
   {
     agente: 'Atech',
-    temas: ['Operación y Conocimiento', 'Operations and Knowledge'],
-    rasgo: ['Es un geek muy estructurado.', 'A very structured geek.'],
+    temas: ['Operación | Conocimiento', 'Operations | Knowledge'],
+    rasgo: ['Te estructura y facilita decisiones', 'Structures you and eases decisions'],
   },
 ];
 
-type Tarjeta = {
-  id: string;
-  icono: React.ElementType;
-  titulo: string;
-  desc: string;
-  costo: Costo | null;
-  costoLabel?: string;
-  precio?: string;
-  nota: string;
-  futuro: boolean;
-  href?: string;
-};
-
-type Impulsor = {
-  id: string;
-  icono: React.ElementType;
-  titulo: string;
-  sub: string;
-  items: Tarjeta[];
-  notaCostos: string;
-};
-
-const COSTO_CLS: Record<Costo, string> = {
-  gratis: 'bg-green-100 text-green-800',
-  plan: 'bg-indigo-100 text-indigo-800',
-  ondemand: 'bg-amber-100 text-amber-800',
-};
-
-const COSTO_LBL: Record<Costo, [string, string]> = {
-  gratis: ['Gratis', 'Free'],
-  plan: ['Incluido en el Plan', 'Included in the Plan'],
-  ondemand: ['On-Demand', 'On-demand'],
-};
+const MUNDOS_ACCESO = [
+  {
+    id: 'partida',
+    icono: '🎓',
+    titulo: ['Mundo de Partida', 'Starting World'] as Params,
+    desc: [
+      'Anfitrión Babel · 5 misiones para calibrar tu empresa antes de la aventura. Al completarlas desbloqueas el Tablero de Retos.',
+      'Hosted by Babel · 5 missions to calibrate your company before the adventure. Completing them unlocks the Challenges Board.',
+    ] as Params,
+    v: 'partida',
+  },
+  {
+    id: 'tablero',
+    icono: '🎯',
+    titulo: ['Tablero de Retos', 'Challenges Board'] as Params,
+    desc: [
+      'Retos semanales y mensuales sobre tus 11 temas de madurez. Se desbloquea terminando el Mundo de Partida.',
+      'Weekly and monthly challenges over your 11 maturity topics. Unlocks by finishing the Starting World.',
+    ] as Params,
+    v: 'tablero',
+  },
+  {
+    id: 'estrategia',
+    icono: '🧭',
+    titulo: ['Mundo de la Estrategia', 'Strategy World'] as Params,
+    desc: [
+      'El motor de tu empresa: cada submundo se alimenta de tu Reflexión Estratégica y tu Plan de Acción.',
+      'The engine of your company: every subworld is fed by your Strategic Reflection and Action Plan.',
+    ] as Params,
+    v: 'estrategia',
+  },
+];
 
 const PASOS_TOUR: Record<InicioLang, TourStep[]> = {
   es: [
-    { selector: '#inicio-title', title: 'Inicio', description: 'Bienvenido. Aquí tienes el punto de partida de tu crecimiento en MBE: tu acceso a capital y tu equipo directivo.' },
-    { selector: '#inicio-impulso-dinero', title: 'Impulso 1 · Acceso a dinero', description: 'Convocatorias, fondos, certificación y Reference Place: el camino para bajar capital para tu negocio.' },
-    { selector: '#inicio-impulso-equipo', title: 'Impulso 2 · Tu equipo directivo', description: 'Mentores Senior y de IA que se vuelven tu Consejo y Equipo Directivo.' },
+    { selector: '#inicio-title', title: 'Inicio', description: '¡Hola! Aquí empieza tu viaje con MBE: nosotros transformamos tu empresa y tú el mundo.' },
+    { selector: '#inicio-agentes', title: 'Tus Corpilotos de IA', description: 'Conoce a los 5 agentes que te ayudarán a recorrer varios mundos empresariales. Pasa el cursor sobre su imagen para verla en grande.' },
+    { selector: '#inicio-mundos', title: 'El universo MBE', description: 'Viaja por el universo empresarial de MBE Corp: cada mundo te conecta con tu equipo de especialistas, herramientas, mentoría y nuevas formas de hacer dinero.' },
   ],
   en: [
-    { selector: '#inicio-title', title: 'Home', description: 'Welcome. This is the starting point of your growth at MBE: your access to capital and your executive team.' },
-    { selector: '#inicio-impulso-dinero', title: 'Driver 1 · Access to money', description: 'Calls & grants, certification and Reference Place: the path to raise capital for your business.' },
-    { selector: '#inicio-impulso-equipo', title: 'Driver 2 · Your executive team', description: 'Senior and AI mentors who become your Board and Executive Team.' },
+    { selector: '#inicio-title', title: 'Home', description: 'Hi! Your journey with MBE starts here: we transform your company and you transform the world.' },
+    { selector: '#inicio-agentes', title: 'Your AI Copilots', description: 'Meet the 5 AI agents who will help you explore several business worlds. Hover their image to view it big.' },
+    { selector: '#inicio-mundos', title: 'The MBE universe', description: 'Travel across the business universe of MBE Corp: every world connects you with your specialist team, tools and new ways to make money.' },
   ],
 };
 
 export default function InicioBuilder({ lang }: { lang: InicioLang }) {
   const router = useRouter();
+  const t = T(lang);
 
-const impulsores: Impulsor[] = [
-    {
-      id: 'inicio-impulso-dinero',
-      icono: Coins,
-      titulo: lang === 'es' ? 'Impulso 1 · Acceso a dinero' : 'Driver 1 · Access to money',
-      sub:
-        lang === 'es'
-          ? 'Es una gran barrera de crecimiento no tener dinero para invertir. Te damos acceso a convocatorias, premios y fondos para lograr bajar capital. También te referimos con grandes empresas con las que gente de nuestra comunidad ya trabaja.'
-          : 'Not having money to invest is a huge growth barrier. We give you access to calls for proposals, awards and funds to raise capital. We also refer you to large companies that people in our community already work with.',
-      notaCostos:
-        lang === 'es'
-          ? 'Gratis: directorio de convocatorias y objetivos estratégicos. On-Demand: apoyo de mentor, paquete y certificación, cada uno con su precio. Reference Place incluido en el Plan.'
-          : 'Free: calls directory and strategic objectives. On-Demand: mentor support, package and certification, each priced separately. Reference Place included in the Plan.',
-      items: [
-        { id: 'convo', icono: Megaphone, titulo: lang === 'es' ? 'Convocatorias y fondos' : 'Calls & Grants', desc: lang === 'es' ? 'Directorio vivo de convocatorias, premios y fondos con tu perfil para ver a cuáles postulas.' : 'Living directory of calls, awards and grants matched to your profile.', costo: 'gratis', nota: '', futuro: false, href: '/babel/convocatorias' },
-        { id: 'objetivos', icono: TrendingUp, titulo: lang === 'es' ? 'Objetivos Estratégicos' : 'Strategic Objectives', desc: lang === 'es' ? 'Tus metas financieras y punto de equilibrio para saber cuánto debes crecer.' : 'Your financial targets and break-even point to know how much you must grow.', costo: 'gratis', nota: '', futuro: false, href: '/babel/indicadores' },
-        { id: 'refplace', icono: Coins, titulo: lang === 'es' ? 'Reference Place' : 'Reference Place', desc: lang === 'es' ? 'Obtén referencias de grandes empresas una vez que te hayas certificado.' : 'Get references from large companies once you are certified.', costo: 'plan', precio: lang === 'es' ? '$99/mes' : '$99/mo', nota: '', futuro: true },
-        { id: 'cert', icono: BadgeCheck, titulo: lang === 'es' ? 'Certificación MBE' : 'MBE Certification', desc: lang === 'es' ? 'Obtén tu sello de confianza para recibir referencias e inversiones.' : 'Get your trust seal to receive references and investments.', costo: 'ondemand', precio: lang === 'es' ? '$5,000/Año' : '$5,000/year', nota: lang === 'es' ? 'Agenda GRATIS una reunión para conocer los beneficios de este tema.' : 'Book a FREE meeting to learn about the benefits of this topic.', futuro: true },
-        { id: 'apoyo', icono: UserCheck, titulo: lang === 'es' ? 'Apoyo On Demand' : 'On-Demand support', desc: lang === 'es' ? 'Apoyo de un Mentor de nivel directivo para conseguir una convocatoria / premio / fondo, o para alcanzar el nivel de certificación.' : 'Support from an executive-level Mentor to win a call / award / fund, or to reach certification level.', costo: 'ondemand', precio: lang === 'es' ? '$4,000 MXN' : '$4,000 MXN', nota: lang === 'es' ? 'Agenda GRATIS una reunión para conocer los beneficios de este tema.' : 'Book a FREE meeting to learn about the benefits of this topic.', futuro: false },
-        { id: 'paquete', icono: Award, titulo: lang === 'es' ? 'Paquete de Mentor' : 'Mentor package', desc: lang === 'es' ? 'Un mentor en un área interviene tu empresa y te da hasta 4 entregables en un mes.' : 'A mentor in one area works with your company and delivers up to 4 deliverables in a month.', costo: 'ondemand', precio: lang === 'es' ? '$10,000 MXN' : '$10,000 MXN', nota: lang === 'es' ? 'Agenda GRATIS una reunión para conocer los beneficios de este tema.' : 'Book a FREE meeting to learn about the benefits of this topic.', futuro: true },
-      ],
-    },
-    {
-      id: 'inicio-impulso-equipo',
-      icono: Bot,
-      titulo: lang === 'es' ? 'Impulso 2 · Tu Equipo Directivo On Demand' : 'Driver 2 · Your On-Demand Executive Team',
-      sub:
-        lang === 'es'
-          ? 'No trabajes más, trabaja más inteligentemente. Mentores Senior y de IA en Rumbo Estratégico, Finanzas, Marketing y Ventas, Atención al Cliente, Cumplimiento Normativo, Operación, Conocimiento, Alianzas, Enfoque Socioambiental, Capital Humano y Cultura Organizacional se vuelven tu Consejo y Equipo Directivo.'
-          : 'Work smarter, not harder. Senior and AI mentors in Strategic Direction, Finance, Marketing & Sales, Customer Service, Compliance, Operations, Knowledge, Alliances, Socio-Environmental Focus, Human Capital and Organizational Culture become your Board and Executive Team.',
-      notaCostos:
-        lang === 'es'
-          ? 'Gratis: evaluación y mejora de madurez, juntas de mentoría. Incluido en el Plan: estrategia socioambiental, equipo directivo IA y asesoría del consejo.'
-          : 'Free: maturity assessment and improvement, mentoring meetings. Included in the Plan: socio-environmental strategy, AI executive team and board advisory.',
-      items: [
-        { id: 'mentorias', icono: CalendarClock, titulo: lang === 'es' ? 'Juntas de Mentoría' : 'Mentoring Meetings', desc: lang === 'es' ? 'Reuniones semanales con otros empresarios para recibir y dar mentoría de diversos temas. Agenda sesiones con algún empresario para Compras, Asesoría, Trueques, Alianzas Estratégicas y Referencias sencillas. No recorras este camino en solitario y participa en la comunidad.' : 'Weekly meetings with other entrepreneurs to give and receive mentoring on many topics. Book sessions with another entrepreneur for Purchases, Advisory, Trades, Strategic Alliances and simple referrals. Do not walk this path alone; join the community.', costo: 'gratis', nota: '', futuro: true },
-        { id: 'madurez', icono: Gauge, titulo: lang === 'es' ? 'Evaluación y Mejora del Nivel de Madurez' : 'Maturity Assessment & Improvement', desc: lang === 'es' ? 'Evalúa tu madurez y obtén un plan para mejorarlo con tareas semanales y mensuales.' : 'Assess your maturity and get a plan to improve it with weekly and monthly tasks.', costo: 'gratis', nota: '', futuro: false, href: '/babel/madurez' },
-        { id: 'estrategia', icono: Sparkles, titulo: lang === 'es' ? 'Estrategia socioambiental' : 'Socio-environmental Strategy', desc: lang === 'es' ? 'Babel define tu rumbo estratégico desde una perspectiva socioambiental, identifica su organigrama y realiza un plan de acción para alcanzar tus objetivos estratégicos.' : 'Babel defines your strategic direction from a socio-environmental perspective, maps your org chart and builds an action plan to reach your strategic objectives.', costo: 'plan', precio: lang === 'es' ? '$99/mes' : '$99/mo', nota: '', futuro: false, href: '/babel' },
-        { id: 'directivo-ia', icono: Bot, titulo: lang === 'es' ? 'Equipo Directivo IA' : 'AI Executive Team', desc: lang === 'es' ? 'Accede a más herramientas de nuestros agentes de IA. Babel: Rumbo Estratégico, Capital Humano y Cultura Organizacional. Karmetín: Marketing, Ventas y Atención al Cliente. Normau: Cumplimiento Normativo, Alianzas y Enfoque Socioambiental. Fisnando: Finanzas y Fiscales. Atech: Operación y Conocimiento.' : 'Access more tools from our AI agents. Babel: Strategic Direction, Human Capital and Organizational Culture. Karmetín: Marketing, Sales and Customer Service. Normau: Compliance, Alliances and Socio-Environmental Focus. Fisnando: Finance and Tax. Atech: Operations and Knowledge.', costo: 'plan', precio: lang === 'es' ? '$99/mes' : '$99/mo', nota: '', futuro: true },
-        { id: 'asesoria', icono: CalendarClock, titulo: lang === 'es' ? 'Asesoría del Consejo Directivo' : 'Board Advisory', desc: lang === 'es' ? 'Agenda sesiones de 30 minutos con la contraparte humana de uno de nuestros agentes de IA para recibir orientación y aclarar dudas.' : 'Book 30-minute sessions with the human counterpart of one of our AI agents for guidance and to clarify doubts.', costo: 'plan', precio: lang === 'es' ? '$99/mes' : '$99/mo', nota: '', futuro: true },
-      ],
-    },
-  ];
+  const [nombre, setNombre] = React.useState('');
+  const [recorrido, setRecorrido] = React.useState<string[]>([]);
+
+  // Nombre del usuario: profile users/{uid}.name, fallback displayName.
+  React.useEffect(() => {
+    const auth = getFirebaseAuth();
+    const unsub = onAuthStateChanged(auth, async (usr: User | null) => {
+      if (!usr) return;
+      try {
+        const snap = await getDoc(doc(getFirebaseDb(), 'users', usr.uid));
+        const data = snap.exists() ? (snap.data() as { name?: string }) : {};
+        setNombre(data.name || usr.displayName || '');
+      } catch {
+        setNombre(usr.displayName || '');
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  // Recorrido del mapa de mundos (mismo storage que Worlds).
+  React.useEffect(() => {
+    try {
+      const guardado = window.localStorage.getItem('babel_worlds_recorrido_v1');
+      if (guardado) {
+        const ids = JSON.parse(guardado) as string[];
+        if (Array.isArray(ids)) setRecorrido(ids.filter((id) => PUNTOS_RECORRIDO.some((p) => p.id === id)));
+      }
+    } catch {
+      // localStorage no disponible
+    }
+  }, []);
+
+  React.useEffect(() => {
+    try {
+      window.localStorage.setItem('babel_worlds_recorrido_v1', JSON.stringify(recorrido));
+    } catch {
+      // noop
+    }
+  }, [recorrido]);
+
+  const navegarPunto = (p: PuntoRecorrido) => {
+    if (p.interno) {
+      const v = p.id === 'partida' ? 'partida' : p.id === 'tablero' ? 'tablero' : 'estrategia';
+      router.push(`/${lang}/worlds?v=${v}`);
+      return;
+    }
+    router.push(`/${lang}${p.ruta}`);
+  };
+
+  const completarPunto = (id: string) => {
+    setRecorrido((prev) => {
+      if (prev.includes(id)) return prev;
+      return [...prev, id];
+    });
+  };
 
   return (
     <div>
@@ -158,115 +162,155 @@ const impulsores: Impulsor[] = [
         <AgentAvatar size={56} className="shrink-0" />
         <div>
           <h3 id="inicio-title" className="text-2xl font-bold text-slate-800">
-            {lang === 'es' ? 'Impulsamos el crecimiento de tu empresa' : 'We drive your company growth'}
+            {t(['¡Hola ', 'Hi '])}
+            {nombre ? `${nombre}!` : '!'}
           </h3>
           <p className="mt-1 text-sm font-semibold text-slate-500">
-            {lang === 'es'
-              ? 'Ninguna empresa puede crecer sin Dinero para invertir y sin un Equipo de Trabajo con Mentores Senior en varios temas. Aquí tienes ambos.'
-              : 'No business can grow without money to invest and without a Work Team of Senior Mentors in several fields. Here you have both.'}
+            {t(['Nosotros transformamos tu empresa y tú el mundo', 'We transform your company and you transform the world'])}
           </p>
         </div>
       </div>
+
+      <section id="inicio-dual" className="mt-8">
+        <div className="rounded-3xl border border-glass-border bg-glass p-6 text-center shadow-[0_10px_40px_rgba(13,148,136,0.12),inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur-2xl backdrop-saturate-150">
+          <p className="text-base font-semibold text-slate-600 dark:text-slate-300">
+            {t(['Ninguna empresa puede crecer sin', 'No business can grow without'])}
+          </p>
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="flex items-center gap-3 rounded-2xl border border-teal-200/70 bg-teal-50 p-4 text-left dark:border-teal-800/50 dark:bg-teal-900/30">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-500/15 text-teal-700">
+                <Coins className="h-5 w-5" />
+              </span>
+              <p className="text-sm font-bold leading-snug text-slate-800 dark:text-slate-100">
+                {t(['Dinero para invertir en ella', 'Money to invest in it'])}
+              </p>
+            </div>
+            <div className="flex items-center gap-3 rounded-2xl border border-teal-200/70 bg-teal-50 p-4 text-left dark:border-teal-800/50 dark:bg-teal-900/30">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-500/15 text-teal-700">
+                <UsersRound className="h-5 w-5" />
+              </span>
+              <p className="text-sm font-bold leading-snug text-slate-800 dark:text-slate-100">
+                {t(['Ayuda de Especialistas en todos los temas', 'Expert help in every topic'])}
+              </p>
+            </div>
+          </div>
+          <p className="mt-5 text-2xl font-extrabold text-teal-700 dark:text-teal-300">
+            {t(['¡Aquí encontrarás ambos!', 'You will find both here!'])}
+          </p>
+        </div>
+      </section>
 
       <section id="inicio-agentes" className="mt-8">
         <div className="flex items-center gap-2">
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-500/15 text-teal-700">
             <Bot className="h-5 w-5" />
           </span>
-          <h4 className="text-lg font-bold text-teal-800">{lang === 'es' ? 'Mis Agentes de IA' : 'My AI Agents'}</h4>
+          <h4 className="text-lg font-bold text-teal-800 dark:text-teal-200">
+            {t([
+              'Conoce a tus Corpilotos de IA que te ayudarán a recorrer varios mundos empresariales',
+              'Meet your AI Copilots that will help you explore several business worlds',
+            ])}
+          </h4>
         </div>
-        <p className="mt-1 text-sm text-slate-600">
-          {lang === 'es'
-            ? 'Toca el avatar para verlo en grande y conoce qué temas atiende cada agente.'
-            : 'Tap an avatar to zoom in, and meet what each agent covers.'}
-        </p>
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {AGENTES_INFO.map((ag) => (
+          {CORPILOTES.map((ag) => (
             <div
               key={ag.agente}
-              className="relative flex h-full flex-col items-center rounded-2xl border border-glass-border bg-glass p-4 text-center shadow-[0_8px_32px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur-2xl backdrop-saturate-150 transition-all duration-200 ease-executive hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/30"
+              className="group relative flex h-full flex-col items-center rounded-2xl border border-glass-border bg-glass p-4 text-center shadow-[0_8px_32px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur-2xl backdrop-saturate-150 transition-all duration-200 ease-executive hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/30"
             >
-              <AgentAvatar agente={ag.agente} size={96} className="ring-2 ring-teal-300/40" />
+              <div className="group/zoom">
+                <AgentAvatar agente={ag.agente} size={96} className="ring-2 ring-teal-300/40" />
+              </div>
               <h5 className="mt-3 text-base font-extrabold text-slate-800 dark:text-slate-100">{ag.agente}</h5>
-              <p className="mt-1 text-xs font-semibold leading-relaxed text-teal-700 dark:text-teal-300">{lang === 'es' ? ag.temas[0] : ag.temas[1]}</p>
-              <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{lang === 'es' ? ag.rasgo[0] : ag.rasgo[1]}</p>
+              <p className="mt-1 text-xs font-semibold leading-relaxed text-teal-700 dark:text-teal-300">{t(ag.temas)}</p>
+              <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{t(ag.rasgo)}</p>
+
+              {/* Zoom por hover: solo la imagen, sin nombre ni pose. */}
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute left-1/2 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 opacity-0 transition-all duration-200 ease-out group-hover/zoom:scale-110 group-hover/zoom:opacity-100"
+              >
+                <div className="h-56 w-56 overflow-hidden rounded-full shadow-2xl shadow-black/40 ring-4 ring-teal-300/70">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`/avatars/${ag.agente.toLowerCase()}-reposando.png`}
+                    alt=""
+                    width={224}
+                    height={224}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              </div>
             </div>
           ))}
         </div>
       </section>
 
-      {impulsores.map((imp) => {
-        const ImIcon = imp.icono;
-        return (
-          <section key={imp.id} id={imp.id} className="mt-8">
-            <div className="flex items-center gap-2">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-500/15 text-teal-700">
-                <ImIcon className="h-5 w-5" />
+      <section id="inicio-mundos" className="mt-8">
+        <div className="flex items-center gap-2">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-500/15 text-teal-700">
+            <Bot className="h-5 w-5" />
+          </span>
+          <h4 className="text-lg font-bold text-teal-800 dark:text-teal-200">
+            {t(['Viaja por el universo empresarial de MBE Corp', 'Travel across the MBE Corp business universe'])}
+          </h4>
+        </div>
+        <p className="mt-1 text-sm text-slate-600">
+          {t([
+            'En cada mundo podrás conectar con tu nuevo equipo de especialistas que trabajarán para ayudarte a crecer con herramientas, mentoría y nuevas formas de enamorar clientes y hacer dinero.',
+            'In every world you can connect with your new team of specialists who will work to help you grow with tools, mentoring and new ways to win over clients and make money.',
+          ])}
+        </p>
+
+        <div className="mt-4">
+          <WorldMap lang={lang} doneIds={recorrido} onNavegar={navegarPunto} onCompletar={completarPunto} />
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {MUNDOS_ACCESO.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => router.push(`/${lang}/worlds?v=${m.v}`)}
+              className="relative flex h-full flex-col rounded-2xl border border-glass-border bg-glass p-4 text-left shadow-[0_8px_32px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur-2xl backdrop-saturate-150 transition-all duration-200 ease-executive hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/30"
+            >
+              <div className="text-3xl">{m.icono}</div>
+              <h5 className="mt-2 text-sm font-bold text-slate-800 dark:text-slate-100">{t(m.titulo)}</h5>
+              <p className="mt-0.5 flex-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{t(m.desc)}</p>
+              <span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-teal-700 dark:text-teal-300">
+                {t(['Entrar al mundo', 'Enter the world'])} →
               </span>
-              <h4 className="text-lg font-bold text-teal-800">{imp.titulo}</h4>
+            </button>
+          ))}
+        </div>
+
+        <h5 className="mb-3 mt-5 text-sm font-bold text-slate-700 dark:text-slate-200">
+          {t(['Mundos Premium', 'Premium Worlds'])}{' '}
+          <span className="ml-1 inline-block rounded-full border border-amber-300/70 bg-amber-100 px-2 py-0.5 align-middle text-[10px] font-bold text-amber-700 dark:border-amber-700 dark:bg-amber-900 dark:text-amber-200">
+            🔑 {t(['plan_mensual', 'monthly plan'])}
+          </span>
+        </h5>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {MUNDOS_PREMIUM_LABELS.map((m) => (
+            <div key={m.id} className="rounded-2xl border border-glass-border bg-glass p-4 opacity-75">
+              <div className="text-3xl">{m.icon}</div>
+              <div className="mt-2 flex items-center gap-2">
+                <AgentAvatar agente={m.agente} size={28} className="ring-2 ring-teal-300/60" />
+                <h6 className="text-sm font-extrabold text-slate-800 dark:text-white">
+                  {lang === 'en' ? m.en : m.es}
+                </h6>
+              </div>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
+                {t(['Anfitrión', 'Host'])} <b>{m.agente}</b> · {m.subs} {t(['submundos', 'subworlds'])}
+              </p>
+              <p className="mt-2 rounded-full bg-slate-200 px-2 py-0.5 text-center text-[10px] font-extrabold uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                {t(['En construcción', 'Under construction'])}
+              </p>
             </div>
-            <p className="mt-1 text-sm text-slate-600">{imp.sub}</p>
-
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {imp.items.map((it) => {
-                const ItIcon = it.icono;
-                const costo = it.costo ? COSTO_LBL[it.costo][lang === 'es' ? 0 : 1] : null;
-                const costoCls = it.costo ? COSTO_CLS[it.costo] : '';
-                const Disabled = it.futuro;
-                return (
-                  <button
-                    type="button"
-                    key={it.id}
-                    disabled={Disabled}
-                    onClick={() => !Disabled && it.href && router.push(`/${lang}${it.href}`)}
-                    className="relative flex h-full flex-col rounded-2xl border border-glass-border bg-glass p-4 text-left shadow-[0_8px_32px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur-2xl backdrop-saturate-150 transition-all duration-200 ease-executive hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/30"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal-500/15 text-teal-700">
-                        <ItIcon className="h-5 w-5" />
-                      </span>
-                      <div className="flex flex-wrap items-center gap-1">
-                        {costo && (
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${costoCls}`}>{costo}</span>
-                        )}
-                        {it.precio && (
-                          <span className="rounded-full bg-teal-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-teal-800 dark:bg-teal-500/20 dark:text-teal-200">
-                            {it.precio}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <h5 className="mt-2 text-sm font-bold text-slate-800 dark:text-slate-100">{it.titulo}</h5>
-                    <p className="mt-0.5 flex-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{it.desc}</p>
-                    {it.nota && <p className="mt-2 text-[11px] italic text-teal-700 dark:text-teal-300">{it.nota}</p>}
-                    {!Disabled && it.href && (
-                      <span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-teal-700 dark:text-teal-300">
-                        {lang === 'es' ? 'Entrar' : 'Open'}
-                        <ChevronRight className="h-3.5 w-3.5" />
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            <p className="mt-3 text-[11px] text-slate-400">{imp.notaCostos}</p>
-          </section>
-        );
-      })}
-
-      <p className="mt-8 text-[11px] text-slate-400">
-        {lang === 'es'
-          ? 'Cada apoyo On-Demand inicia con una reunión gratuita de 30 minutos con un experto para que conozcas los entregables. Los montos pueden ajustarse aún.'
-          : 'Every On-Demand support starts with a free 30-minute meeting with an expert so you can learn about the deliverables. Prices may still be adjusted.'}
-      </p>
-
-      <p className="mt-3 text-[11px] text-slate-400">
-        {lang === 'es'
-          ? 'Los planes se habilitarán próximamente. Hoy puedes usar toda la app.'
-          : 'Paid plans will be enabled soon. Today you can use everything.'}
-      </p>
+          ))}
+        </div>
+      </section>
 
       <div className="mt-6">
         <PageTour pageId="inicio" steps={PASOS_TOUR[lang]} lang={lang} />
