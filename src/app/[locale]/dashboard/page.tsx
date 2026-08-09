@@ -168,13 +168,21 @@ function DashboardPageInner() {
             <AgentAvatar size={56} className="shrink-0" />
             <h1 className="text-2xl font-semibold text-slate-900">{t('welcomeTitle')}</h1>
           </div>
-          <button
-            type="button"
-            onClick={() => router.push(`/${locale}/onboarding?retake=true`)}
-            className="text-xs font-medium text-emerald-700 underline underline-offset-2 hover:text-emerald-800"
-          >
-            {t('retakeLink')}
-          </button>
+          <div className="flex items-center gap-3">
+            <a
+              href={`/${locale}/worlds`}
+              className="inline-flex items-center gap-1 rounded-lg border border-teal-400/60 bg-white/40 px-3 py-1.5 text-xs font-bold text-teal-700 backdrop-blur-md transition hover:bg-white/70 dark:bg-white/10 dark:text-teal-200 dark:hover:bg-white/20"
+            >
+              ← {en ? 'Back to Starting World' : 'Volver al Mundo de Partida'}
+            </a>
+            <button
+              type="button"
+              onClick={() => router.push(`/${locale}/onboarding?retake=true`)}
+              className="text-xs font-medium text-emerald-700 underline underline-offset-2 hover:text-emerald-800"
+            >
+              {t('retakeLink')}
+            </button>
+          </div>
         </div>
 
         <div id="dashboard-resumen" className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">

@@ -911,12 +911,20 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
       <React.Fragment>
         <div className="mx-auto flex max-w-2xl flex-col gap-4 p-4 sm:p-6">
           <FaseBanner fase={0} lang={dispLang} locale={locale} />
-          <div id="babel-titulo" className="flex items-center gap-3 border-b pb-4">
-            <AgentAvatar size={56} className="shrink-0" />
-            <div>
-              <h1 className="text-xl font-semibold text-slate-900">{dispLang === locale ? t('title') : UI_FALLBACK[dispLang].title}</h1>
-              <p className="text-sm text-slate-500">{dispLang === 'en' ? 'Phase 0: Initial Calibration' : 'Fase 0: Calibración Inicial'}</p>
+          <div id="babel-titulo" className="flex items-center justify-between gap-3 border-b pb-4">
+            <div className="flex items-center gap-3">
+              <AgentAvatar size={56} className="shrink-0" />
+              <div>
+                <h1 className="text-xl font-semibold text-slate-900">{dispLang === locale ? t('title') : UI_FALLBACK[dispLang].title}</h1>
+                <p className="text-sm text-slate-500">{dispLang === 'en' ? 'Phase 0: Initial Calibration' : 'Fase 0: Calibración Inicial'}</p>
+              </div>
             </div>
+            <a
+              href={'/' + locale + '/worlds'}
+              className="inline-flex shrink-0 items-center rounded-lg border border-teal-400/60 bg-white/40 px-3 py-1.5 text-xs font-bold text-teal-700 backdrop-blur-md transition hover:bg-white/70 dark:bg-white/10 dark:text-teal-200 dark:hover:bg-white/20"
+            >
+              ← {dispLang === 'en' ? 'Back to Starting World' : 'Volver al Mundo de Partida'}
+            </a>
           </div>
           <div id="babel-calibracion-portal" className="glass-panel flex flex-col gap-4 p-6">
             <div className="flex flex-col items-center gap-3 text-center">
@@ -929,12 +937,9 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
               </p>
             </div>
             <div id="babel-chat" className="max-h-[40vh] flex-1 space-y-3 overflow-y-auto rounded-xl border border-slate-200 bg-white/60 p-4 dark:border-slate-700 dark:bg-white/5">
-              {session.messages.slice(0, 2).map(function (m, i) {
-                const limpio = limpiarMarkdown(m.content);
-                const displayContent =
-                  i === 0
-                    ? limpio.replace(/^Fase 0 completada:\s*/i, '').replace(/^Phase 0 completed:\s*/i, '')
-                    : limpio;
+              {session.messages.length > 1 && session.messages.slice(1, 2).map(function (m, k) {
+                const i = k + 1;
+                const displayContent = limpiarMarkdown(m.content);
                 const isLong = displayContent.length > 300;
                 const isExpanded = chatExpanded.has(i);
                 return (

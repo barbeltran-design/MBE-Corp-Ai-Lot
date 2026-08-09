@@ -501,12 +501,20 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <div className="flex items-center gap-3">
-        <AgentAvatar size={56} className="shrink-0" />
-        <div>
-          <h3 id="indicadores-title" className="text-xl font-bold text-slate-800">{t.title}</h3>
-          <p className="mt-1 text-sm text-slate-500">{t.subtitle}</p>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <AgentAvatar size={56} className="shrink-0" />
+          <div>
+            <h3 id="indicadores-title" className="text-xl font-bold text-slate-800">{t.title}</h3>
+            <p className="mt-1 text-sm text-slate-500">{t.subtitle}</p>
+          </div>
         </div>
+        <a
+          href={'/' + lang + '/worlds'}
+          className="inline-flex shrink-0 items-center rounded-lg border border-teal-400/60 bg-white/40 px-3 py-1.5 text-xs font-bold text-teal-700 backdrop-blur-md transition hover:bg-white/70 dark:bg-white/10 dark:text-teal-200 dark:hover:bg-white/20"
+        >
+          ← {lang === 'en' ? 'Back to Starting World' : 'Volver al Mundo de Partida'}
+        </a>
       </div>
 
       <div id="indicadores-resumen" className="mt-4">
