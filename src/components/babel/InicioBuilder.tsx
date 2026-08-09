@@ -8,7 +8,6 @@ import { getFirebaseAuth, getFirebaseDb } from '@/lib/firebase';
 import AgentAvatar, { type AgenteAvatarId } from '@/components/agentes/AgentAvatar';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 import { WorldMap, PUNTOS_RECORRIDO, type PuntoRecorrido } from '@/components/worlds/WorldMap';
-import { MUNDOS_PREMIUM_LABELS } from '@/lib/worlds';
 
 type InicioLang = 'es' | 'en';
 type Params = readonly [string, string];
@@ -50,49 +49,126 @@ const CORPILOTES: CorpiloteInfo[] = [
   },
 ];
 
-const MUNDOS_ACCESO = [
+type MundoAcceso = {
+  id: string;
+  icono: string;
+  agente: AgenteAvatarId;
+  titulo: Params;
+  desc: Params;
+  tag: Params;
+  href: string;
+};
+
+const MUNDOS_ACCESO: MundoAcceso[] = [
   {
     id: 'partida',
     icono: '🎓',
-    titulo: ['Mundo de Partida', 'Starting World'] as Params,
+    agente: 'Babel',
+    titulo: ['Mundo de Partida', 'Starting World'],
     desc: [
-      'Anfitrión Babel · 5 misiones para calibrar tu empresa antes de la aventura. Al completarlas desbloqueas el Tablero de Retos.',
-      'Hosted by Babel · 5 missions to calibrate your company before the adventure. Completing them unlocks the Challenges Board.',
-    ] as Params,
-    v: 'partida',
+      'Queremos saber de dónde partes: evalúa el nivel de tu empresa, define cuánto necesitas ganar en dinero y qué objetivos debes alcanzar.',
+      'We want to know where you come from: assess your company level, define how much money you need to earn and the objectives you must reach.',
+    ],
+    tag: ['Gratis · Activo', 'Free · Active'],
+    href: '/worlds?v=partida',
   },
   {
-    id: 'tablero',
+    id: 'retos',
     icono: '🎯',
-    titulo: ['Tablero de Retos', 'Challenges Board'] as Params,
+    agente: 'Babel',
+    titulo: ['Mundo de Retos', 'Challenges World'],
     desc: [
-      'Retos semanales y mensuales sobre tus 11 temas de madurez. Se desbloquea terminando el Mundo de Partida.',
-      'Weekly and monthly challenges over your 11 maturity topics. Unlocks by finishing the Starting World.',
-    ] as Params,
-    v: 'tablero',
+      'Retos semanales y mensuales sobre tus 11 temas de madurez. Abre la Mejora del Nivel de Madurez para avanzar tus prácticas.',
+      'Weekly and monthly challenges over your 11 maturity topics. Open the Maturity Level Improvement to advance your practices.',
+    ],
+    tag: ['Abrir Mejora del Nivel de Madurez', 'Open Maturity Level Improvement'],
+    href: '/babel/madurez',
   },
+];
+
+type MundoPremium = {
+  id: string;
+  icono: string;
+  agente: AgenteAvatarId;
+  titulo: Params;
+  desc: Params;
+  href?: string;
+};
+
+const MUNDOS_PREMIUM: MundoPremium[] = [
   {
     id: 'estrategia',
     icono: '🧭',
-    titulo: ['Mundo de la Estrategia', 'Strategy World'] as Params,
+    agente: 'Babel',
+    titulo: ['Mundo de la Estrategia', 'Strategy World'],
     desc: [
-      'El motor de tu empresa: cada submundo se alimenta de tu Reflexión Estratégica y tu Plan de Acción.',
-      'The engine of your company: every subworld is fed by your Strategic Reflection and Action Plan.',
-    ] as Params,
-    v: 'estrategia',
+      'Define el rumbo de tu empresa con un enfoque socioambiental y crea un plan para alcanzar tus objetivos.',
+      'Define your company path with a socio-environmental approach and create a plan to reach your objectives.',
+    ],
+    href: '/worlds?v=estrategia',
+  },
+  {
+    id: 'dinero',
+    icono: '💰',
+    agente: 'Fisnando',
+    titulo: ['Mundo del Dinero', 'Money World'],
+    desc: [
+      'Ten claridad en tus obligaciones fiscales, finanzas y cómo potenciarlas.',
+      'Get clarity on your tax obligations, finance and how to boost them.',
+    ],
+  },
+  {
+    id: 'cliente',
+    icono: '🤝',
+    agente: 'Karmetin',
+    titulo: ['Mundo del Cliente', 'Customer World'],
+    desc: [
+      'Identifica quién es tu cliente ideal, atráelo, enamóralo y que te recomiende.',
+      'Identify who your ideal customer is, attract them, delight them and get referrals.',
+    ],
+  },
+  {
+    id: 'normativo',
+    icono: '⚖️',
+    agente: 'Normau',
+    titulo: ['Mundo Normativo', 'Compliance World'],
+    desc: [
+      'Protege tu empresa cumpliendo con las reglas que le corresponden.',
+      'Protect your company by meeting the rules that apply to it.',
+    ],
+  },
+  {
+    id: 'operativo',
+    icono: '⚙️',
+    agente: 'Atech',
+    titulo: ['Mundo Operativo', 'Operations World'],
+    desc: [
+      'Digitaliza tu toma de decisiones.',
+      'Digitalize your decision making.',
+    ],
+  },
+  {
+    id: 'cultura',
+    icono: '🏛️',
+    agente: 'Babel',
+    titulo: ['Mundo de la Cultura', 'Culture World'],
+    desc: [
+      'Crea una cultura laboral donde todos quieran trabajar.',
+      'Create a workplace culture where everyone wants to work.',
+    ],
   },
 ];
 
 const PASOS_TOUR: Record<InicioLang, TourStep[]> = {
   es: [
     { selector: '#inicio-title', title: 'Inicio', description: '¡Hola! Aquí empieza tu viaje con MBE: nosotros transformamos tu empresa y tú el mundo.' },
-    { selector: '#inicio-agentes', title: 'Tus Corpilotos de IA', description: 'Conoce a los 5 agentes que te ayudarán a recorrer varios mundos empresariales. Pasa el cursor sobre su imagen para verla en grande.' },
-    { selector: '#inicio-mundos', title: 'El universo MBE', description: 'Viaja por el universo empresarial de MBE Corp: cada mundo te conecta con tu equipo de especialistas, herramientas, mentoría y nuevas formas de hacer dinero.' },
+    { selector: '#inicio-agentes', title: 'Tus Corporativos de IA', description: 'Conoce a los 5 agentes que te ayudarán a impulsar tu crecimiento. Toca su avatar para verlo en grande.' },
+    { selector: '#inicio-mundos', title: 'El universo MBE', description: 'Viaja por el universo empresarial de MBE Corp: cada mundo te conecta con tu equipo de especialistas, herramientas, mentoría y más clientes.' },
   ],
   en: [
     { selector: '#inicio-title', title: 'Home', description: 'Hi! Your journey with MBE starts here: we transform your company and you transform the world.' },
-    { selector: '#inicio-agentes', title: 'Your AI Copilots', description: 'Meet the 5 AI agents who will help you explore several business worlds. Hover their image to view it big.' },
-    { selector: '#inicio-mundos', title: 'The MBE universe', description: 'Travel across the business universe of MBE Corp: every world connects you with your specialist team, tools and new ways to make money.' },
+    { selector: '#inicio-agentes', title: 'Your AI Copilots', description: "Meet the 5 AI agents who help you boost your growth. Tap their avatar to view it big." },
+    { selector: '#inicio-mundos', title: 'The MBE universe', description: 'Travel across the business universe of MBE Corp: every world connects you with your specialist team, tools, mentoring and more customers.' },
   ],
 };
 
@@ -102,6 +178,7 @@ export default function InicioBuilder({ lang }: { lang: InicioLang }) {
 
   const [nombre, setNombre] = React.useState('');
   const [recorrido, setRecorrido] = React.useState<string[]>([]);
+  const [zoomAgente, setZoomAgente] = React.useState<AgenteAvatarId | null>(null);
 
   // Nombre del usuario: profile users/{uid}.name, fallback displayName.
   React.useEffect(() => {
@@ -161,11 +238,11 @@ export default function InicioBuilder({ lang }: { lang: InicioLang }) {
       <div className="flex items-center gap-3">
         <AgentAvatar size={56} className="shrink-0" />
         <div>
-          <h3 id="inicio-title" className="text-2xl font-bold text-slate-800">
+          <h3 id="inicio-title" className="text-2xl font-bold text-slate-800 dark:text-slate-100">
             {t(['¡Hola ', 'Hi '])}
             {nombre ? `${nombre}!` : '!'}
           </h3>
-          <p className="mt-1 text-sm font-semibold text-slate-500">
+          <p className="mt-1 text-sm font-semibold text-teal-700 dark:text-teal-300">
             {t(['Nosotros transformamos tu empresa y tú el mundo', 'We transform your company and you transform the world'])}
           </p>
         </div>
@@ -173,8 +250,8 @@ export default function InicioBuilder({ lang }: { lang: InicioLang }) {
 
       <section id="inicio-dual" className="mt-8">
         <div className="rounded-3xl border border-glass-border bg-glass p-6 text-center shadow-[0_10px_40px_rgba(13,148,136,0.12),inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur-2xl backdrop-saturate-150">
-          <p className="text-base font-semibold text-slate-600 dark:text-slate-300">
-            {t(['Ninguna empresa puede crecer sin', 'No business can grow without'])}
+          <p className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">
+            {t(['Tu empresa para crecer solo necesita dos cosas', 'Your business only needs two things to grow'])}
           </p>
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="flex items-center gap-3 rounded-2xl border border-teal-200/70 bg-teal-50 p-4 text-left dark:border-teal-800/50 dark:bg-teal-900/30">
@@ -182,7 +259,7 @@ export default function InicioBuilder({ lang }: { lang: InicioLang }) {
                 <Coins className="h-5 w-5" />
               </span>
               <p className="text-sm font-bold leading-snug text-slate-800 dark:text-slate-100">
-                {t(['Dinero para invertir en ella', 'Money to invest in it'])}
+                {t(['Dinero para reinvertir', 'Money to reinvest'])}
               </p>
             </div>
             <div className="flex items-center gap-3 rounded-2xl border border-teal-200/70 bg-teal-50 p-4 text-left dark:border-teal-800/50 dark:bg-teal-900/30">
@@ -190,12 +267,12 @@ export default function InicioBuilder({ lang }: { lang: InicioLang }) {
                 <UsersRound className="h-5 w-5" />
               </span>
               <p className="text-sm font-bold leading-snug text-slate-800 dark:text-slate-100">
-                {t(['Ayuda de Especialistas en todos los temas', 'Expert help in every topic'])}
+                {t(['Especialistas en todas las áreas', 'Specialists in every area'])}
               </p>
             </div>
           </div>
           <p className="mt-5 text-2xl font-extrabold text-teal-700 dark:text-teal-300">
-            {t(['¡Aquí encontrarás ambos!', 'You will find both here!'])}
+            {t(['¡Aquí encontrarás ambos!', 'You will find both right here!'])}
           </p>
         </div>
       </section>
@@ -207,8 +284,8 @@ export default function InicioBuilder({ lang }: { lang: InicioLang }) {
           </span>
           <h4 className="text-lg font-bold text-teal-800 dark:text-teal-200">
             {t([
-              'Conoce a tus Corpilotos de IA que te ayudarán a recorrer varios mundos empresariales',
-              'Meet your AI Copilots that will help you explore several business worlds',
+              'Conoce a tus Corpilotos de IA que te ayudarán a impulsar tu crecimiento',
+              'Meet your AI Copilots that will help you boost your growth',
             ])}
           </h4>
         </div>
@@ -217,31 +294,12 @@ export default function InicioBuilder({ lang }: { lang: InicioLang }) {
           {CORPILOTES.map((ag) => (
             <div
               key={ag.agente}
-              className="group relative flex h-full flex-col items-center rounded-2xl border border-glass-border bg-glass p-4 text-center shadow-[0_8px_32px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur-2xl backdrop-saturate-150 transition-all duration-200 ease-executive hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/30"
+              className="relative flex h-full flex-col items-center rounded-2xl border border-glass-border bg-glass p-4 text-center shadow-[0_8px_32px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur-2xl backdrop-saturate-150 transition-all duration-200 ease-executive hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/30"
             >
-              <div className="group/zoom">
-                <AgentAvatar agente={ag.agente} size={96} className="ring-2 ring-teal-300/40" />
-              </div>
+              <AgentAvatar agente={ag.agente} size={96} className="ring-2 ring-teal-300/40" onClick={() => setZoomAgente(ag.agente)} />
               <h5 className="mt-3 text-base font-extrabold text-slate-800 dark:text-slate-100">{ag.agente}</h5>
               <p className="mt-1 text-xs font-semibold leading-relaxed text-teal-700 dark:text-teal-300">{t(ag.temas)}</p>
               <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{t(ag.rasgo)}</p>
-
-              {/* Zoom por hover: solo la imagen, sin nombre ni pose. */}
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute left-1/2 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 opacity-0 transition-all duration-200 ease-out group-hover/zoom:scale-110 group-hover/zoom:opacity-100"
-              >
-                <div className="h-56 w-56 overflow-hidden rounded-full shadow-2xl shadow-black/40 ring-4 ring-teal-300/70">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={`/avatars/${ag.agente.toLowerCase()}-reposando.png`}
-                    alt=""
-                    width={224}
-                    height={224}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-              </div>
             </div>
           ))}
         </div>
@@ -258,59 +316,94 @@ export default function InicioBuilder({ lang }: { lang: InicioLang }) {
         </div>
         <p className="mt-1 text-sm text-slate-600">
           {t([
-            'En cada mundo podrás conectar con tu nuevo equipo de especialistas que trabajarán para ayudarte a crecer con herramientas, mentoría y nuevas formas de enamorar clientes y hacer dinero.',
-            'In every world you can connect with your new team of specialists who will work to help you grow with tools, mentoring and new ways to win over clients and make money.',
+            'En cada mundo podrás conectar con tu nuevo equipo de especialistas, encontrar herramientas, mentoría y más clientes. Subes de nivel, ganas puntos e insignias en cada paso y te diviertes.',
+            'In every world you will connect with your new specialist team, find tools, mentoring and more customers. Level up, earn points and badges at every step, and have fun.',
           ])}
         </p>
 
         <div className="mt-4">
-          <WorldMap lang={lang} doneIds={recorrido} onNavegar={navegarPunto} onCompletar={completarPunto} />
+          <WorldMap lang={lang} doneIds={recorrido} onNavegar={navegarPunto} onCompletar={completarPunto} hideHeader />
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {MUNDOS_ACCESO.map((m) => (
             <button
               key={m.id}
               type="button"
-              onClick={() => router.push(`/${lang}/worlds?v=${m.v}`)}
-              className="relative flex h-full flex-col rounded-2xl border border-glass-border bg-glass p-4 text-left shadow-[0_8px_32px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur-2xl backdrop-saturate-150 transition-all duration-200 ease-executive hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/30"
+              onClick={() => router.push(`/${lang}${m.href}`)}
+              className="relative flex h-full flex-col items-center rounded-2xl border border-glass-border bg-glass p-5 text-center shadow-[0_8px_32px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur-2xl backdrop-saturate-150 transition-all duration-200 ease-executive hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/30"
             >
-              <div className="text-3xl">{m.icono}</div>
-              <h5 className="mt-2 text-sm font-bold text-slate-800 dark:text-slate-100">{t(m.titulo)}</h5>
-              <p className="mt-0.5 flex-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{t(m.desc)}</p>
-              <span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-teal-700 dark:text-teal-300">
-                {t(['Entrar al mundo', 'Enter the world'])} →
+              <AgentAvatar agente={m.agente} size={72} className="ring-2 ring-teal-300/40" />
+              <h5 className="mt-3 flex items-center gap-1.5 text-base font-bold text-slate-800 dark:text-slate-100">
+                <span className="text-lg leading-none">{m.icono}</span> {t(m.titulo)}
+              </h5>
+              <p className="mt-1 flex-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{t(m.desc)}</p>
+              <span className="mt-3 rounded-full bg-teal-100 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-teal-800 dark:bg-teal-500/20 dark:text-teal-200">
+                {t(m.tag)}
               </span>
             </button>
           ))}
         </div>
 
-        <h5 className="mb-3 mt-5 text-sm font-bold text-slate-700 dark:text-slate-200">
+        <h5 className="mb-3 mt-8 text-lg font-extrabold text-slate-800 dark:text-white">
           {t(['Mundos Premium', 'Premium Worlds'])}{' '}
           <span className="ml-1 inline-block rounded-full border border-amber-300/70 bg-amber-100 px-2 py-0.5 align-middle text-[10px] font-bold text-amber-700 dark:border-amber-700 dark:bg-amber-900 dark:text-amber-200">
             🔑 {t(['plan_mensual', 'monthly plan'])}
           </span>
         </h5>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {MUNDOS_PREMIUM_LABELS.map((m) => (
-            <div key={m.id} className="rounded-2xl border border-glass-border bg-glass p-4 opacity-75">
-              <div className="text-3xl">{m.icon}</div>
-              <div className="mt-2 flex items-center gap-2">
-                <AgentAvatar agente={m.agente} size={28} className="ring-2 ring-teal-300/60" />
-                <h6 className="text-sm font-extrabold text-slate-800 dark:text-white">
-                  {lang === 'en' ? m.en : m.es}
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {MUNDOS_PREMIUM.map((m) => {
+            const inner = (
+              <>
+                <AgentAvatar agente={m.agente} size={72} className="ring-2 ring-teal-300/40" />
+                <h6 className="mt-3 flex items-center gap-1.5 text-sm font-extrabold text-slate-800 dark:text-white">
+                  <span className="text-base leading-none">{m.icono}</span> {lang === 'en' ? m.titulo[1] : m.titulo[0]}
                 </h6>
+                <p className="mt-1 flex-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{lang === 'es' ? m.desc[0] : m.desc[1]}</p>
+                {!m.href && (
+                  <span className="mt-3 rounded-full bg-slate-200 px-2.5 py-1 text-center text-[10px] font-extrabold uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    {t(['En construcción', 'Under construction'])}
+                  </span>
+                )}
+              </>
+            );
+            const cls =
+              'relative flex h-full flex-col items-center rounded-2xl border border-glass-border bg-glass p-5 text-center shadow-[0_8px_32px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur-2xl backdrop-saturate-150 transition-all duration-200 ease-executive hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/30';
+            return m.href ? (
+              <button key={m.id} type="button" onClick={() => router.push(`/${lang}${m.href}`)} className={cls}>
+                {inner}
+              </button>
+            ) : (
+              <div key={m.id} className={cls + ' opacity-80'}>
+                {inner}
               </div>
-              <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-300">
-                {t(['Anfitrión', 'Host'])} <b>{m.agente}</b> · {m.subs} {t(['submundos', 'subworlds'])}
-              </p>
-              <p className="mt-2 rounded-full bg-slate-200 px-2 py-0.5 text-center text-[10px] font-extrabold uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                {t(['En construcción', 'Under construction'])}
-              </p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
+
+      {zoomAgente && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setZoomAgente(null)}
+          onKeyDown={(ev) => {
+            if (ev.key === 'Escape') setZoomAgente(null);
+          }}
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+        >
+          <div className="h-64 w-64 overflow-hidden rounded-full shadow-2xl shadow-black/50 ring-4 ring-teal-300/70">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`/avatars/${zoomAgente.toLowerCase()}-reposando.png`}
+              alt=""
+              width={256}
+              height={256}
+              className="h-full w-full object-cover"
+            />
+          </div>
+        </div>
+      )}
 
       <div className="mt-6">
         <PageTour pageId="inicio" steps={PASOS_TOUR[lang]} lang={lang} />

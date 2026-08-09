@@ -55,6 +55,7 @@ type WorldMapProps = {
   doneIds: string[];
   onNavegar: (p: PuntoRecorrido) => void;
   onCompletar: (id: PuntoRecorridoId) => void;
+  hideHeader?: boolean;
 };
 
 function esEtiqueta(p: PuntoRecorrido, lang: 'es' | 'en'): string {
@@ -64,7 +65,7 @@ function esEtiqueta(p: PuntoRecorrido, lang: 'es' | 'en'): string {
 // Mapa estilo Mario World: camino serpenteante con cada sección de la app como
 // un punto. El avatar de Babel avanza de punto en punto (transición CSS) a
 // medida que el usuario completa secciones.
-export function WorldMap({ lang, doneIds, onNavegar, onCompletar }: WorldMapProps) {
+export function WorldMap({ lang, doneIds, onNavegar, onCompletar, hideHeader = false }: WorldMapProps) {
   const contRef = React.useRef<HTMLDivElement>(null);
   const [mover, setMover] = React.useState(false);
 
@@ -90,19 +91,21 @@ export function WorldMap({ lang, doneIds, onNavegar, onCompletar }: WorldMapProp
   return (
     <div className="world-glass world-grain overflow-hidden">
       {/* Encabezado del mapa */}
-      <div className="flex flex-wrap items-center gap-3 px-4 py-3 pr-14">
-        <div className="text-lg font-extrabold text-slate-800 dark:text-white">🗺️ {lang === 'es' ? 'Tu recorrido MBE' : 'Your MBE journey'}</div>
-        <div className="ml-auto flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-100">
-          <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200">
-            ✓ {doneIds.length}/{PUNTOS_RECORRIDO.length} {lang === 'es' ? 'completados' : 'completed'}
-          </span>
-          {meta && (
-            <span className="rounded-full bg-amber-100 px-2.5 py-1 text-amber-700 dark:bg-amber-900 dark:text-amber-200">
-              🏆 {lang === 'es' ? '¡Recorrido completo!' : 'Journey complete!'}
+      {!hideHeader && (
+        <div className="flex flex-wrap items-center gap-3 px-4 py-3 pr-14">
+          <div className="text-lg font-extrabold text-slate-800 dark:text-white">🗺️ {lang === 'es' ? 'Tu recorrido MBE' : 'Your MBE journey'}</div>
+          <div className="ml-auto flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-100">
+            <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200">
+              ✓ {doneIds.length}/{PUNTOS_RECORRIDO.length} {lang === 'es' ? 'completados' : 'completed'}
             </span>
-          )}
+            {meta && (
+              <span className="rounded-full bg-amber-100 px-2.5 py-1 text-amber-700 dark:bg-amber-900 dark:text-amber-200">
+                🏆 {lang === 'es' ? '¡Recorrido completo!' : 'Journey complete!'}
+              </span>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Escenario (scroll horizontal) */}
       <div ref={contRef} className="overflow-x-auto">
