@@ -158,7 +158,7 @@ const MUNDOS_PREMIUM: MundoPremium[] = [
 const PASOS_TOUR: Record<InicioLang, TourStep[]> = {
   es: [
     { selector: '#inicio-title', title: 'Inicio', description: '¡Hola! Aquí empieza tu viaje con MBE: nosotros transformamos tu empresa y tú el mundo.' },
-    { selector: '#inicio-agentes', title: 'Tus Agentes de IA', description: 'Conoce a los 5 agentes que te ayudarán a impulsar tu crecimiento. Toca su avatar para verlo en grande.' },
+    { selector: '#inicio-agentes', title: 'Tus especialistas de IA', description: 'Conoce a los 5 agentes que te ayudarán a impulsar tu crecimiento. Toca su avatar para verlo en grande.' },
     { selector: '#inicio-mundos', title: 'El universo MBE', description: 'Viaja por el universo empresarial de MBE Corp: cada mundo te conecta con tu equipo de especialistas, herramientas, mentoría y más clientes.' },
   ],
   en: [
