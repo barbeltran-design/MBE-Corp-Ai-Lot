@@ -7,7 +7,6 @@ import { doc, getDoc } from 'firebase/firestore';
 import { getFirebaseAuth, getFirebaseDb } from '@/lib/firebase';
 import AgentAvatar, { type AgenteAvatarId } from '@/components/agentes/AgentAvatar';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
-import { WorldMap, PUNTOS_RECORRIDO, type PuntoRecorrido } from '@/components/worlds/WorldMap';
 
 type InicioLang = 'es' | 'en';
 type Params = readonly [string, string];
@@ -55,7 +54,6 @@ type MundoAcceso = {
   agente: AgenteAvatarId;
   titulo: Params;
   desc: Params;
-  tag: Params;
   href: string;
 };
 
@@ -69,7 +67,6 @@ const MUNDOS_ACCESO: MundoAcceso[] = [
       'Queremos saber de dónde partes: evalúa el nivel de tu empresa, define cuánto necesitas ganar en dinero y qué objetivos debes alcanzar.',
       'We want to know where you come from: assess your company level, define how much money you need to earn and the objectives you must reach.',
     ],
-    tag: ['Gratis · Activo', 'Free · Active'],
     href: '/worlds?v=partida',
   },
   {
@@ -78,10 +75,9 @@ const MUNDOS_ACCESO: MundoAcceso[] = [
     agente: 'Babel',
     titulo: ['Mundo de Retos', 'Challenges World'],
     desc: [
-      'Retos semanales y mensuales sobre tus 11 temas de madurez. Abre la Mejora del Nivel de Madurez para avanzar tus prácticas.',
-      'Weekly and monthly challenges over your 11 maturity topics. Open the Maturity Level Improvement to advance your practices.',
+      'Retos semanales para incrementar tu nivel de madurez.',
+      'Weekly challenges to increase your maturity level.',
     ],
-    tag: ['Abrir Mejora del Nivel de Madurez', 'Open Maturity Level Improvement'],
     href: '/babel/madurez',
   },
 ];
@@ -177,7 +173,6 @@ export default function InicioBuilder({ lang }: { lang: InicioLang }) {
   const t = T(lang);
 
   const [nombre, setNombre] = React.useState('');
-  const [recorrido, setRecorrido] = React.useState<string[]>([]);
   const [zoomAgente, setZoomAgente] = React.useState<AgenteAvatarId | null>(null);
 
   // Nombre del usuario: profile users/{uid}.name, fallback displayName.
@@ -195,43 +190,6 @@ export default function InicioBuilder({ lang }: { lang: InicioLang }) {
     });
     return () => unsub();
   }, []);
-
-  // Recorrido del mapa de mundos (mismo storage que Worlds).
-  React.useEffect(() => {
-    try {
-      const guardado = window.localStorage.getItem('babel_worlds_recorrido_v1');
-      if (guardado) {
-        const ids = JSON.parse(guardado) as string[];
-        if (Array.isArray(ids)) setRecorrido(ids.filter((id) => PUNTOS_RECORRIDO.some((p) => p.id === id)));
-      }
-    } catch {
-      // localStorage no disponible
-    }
-  }, []);
-
-  React.useEffect(() => {
-    try {
-      window.localStorage.setItem('babel_worlds_recorrido_v1', JSON.stringify(recorrido));
-    } catch {
-      // noop
-    }
-  }, [recorrido]);
-
-  const navegarPunto = (p: PuntoRecorrido) => {
-    if (p.interno) {
-      const v = p.id === 'partida' ? 'partida' : p.id === 'tablero' ? 'tablero' : 'estrategia';
-      router.push(`/${lang}/worlds?v=${v}`);
-      return;
-    }
-    router.push(`/${lang}${p.ruta}`);
-  };
-
-  const completarPunto = (id: string) => {
-    setRecorrido((prev) => {
-      if (prev.includes(id)) return prev;
-      return [...prev, id];
-    });
-  };
 
   return (
     <div>
@@ -258,7 +216,7 @@ export default function InicioBuilder({ lang }: { lang: InicioLang }) {
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-500/15 text-teal-700">
                 <Coins className="h-5 w-5" />
               </span>
-              <p className="text-sm font-bold leading-snug text-slate-800 dark:text-slate-100">
+              <p className="text-lg font-bold leading-snug text-slate-800 dark:text-slate-100">
                 {t(['Dinero para reinvertir', 'Money to reinvest'])}
               </p>
             </div>
@@ -266,7 +224,7 @@ export default function InicioBuilder({ lang }: { lang: InicioLang }) {
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-500/15 text-teal-700">
                 <UsersRound className="h-5 w-5" />
               </span>
-              <p className="text-sm font-bold leading-snug text-slate-800 dark:text-slate-100">
+              <p className="text-lg font-bold leading-snug text-slate-800 dark:text-slate-100">
                 {t(['Especialistas en todas las áreas', 'Specialists in every area'])}
               </p>
             </div>
@@ -322,27 +280,25 @@ export default function InicioBuilder({ lang }: { lang: InicioLang }) {
         </p>
 
         <div className="mt-4">
-          <WorldMap lang={lang} doneIds={recorrido} onNavegar={navegarPunto} onCompletar={completarPunto} hideHeader />
-        </div>
-
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          {MUNDOS_ACCESO.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              onClick={() => router.push(`/${lang}${m.href}`)}
-              className="relative flex h-full flex-col items-center rounded-2xl border border-glass-border bg-glass p-5 text-center shadow-[0_8px_32px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur-2xl backdrop-saturate-150 transition-all duration-200 ease-executive hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/30"
-            >
-              <AgentAvatar agente={m.agente} size={72} className="ring-2 ring-teal-300/40" />
-              <h5 className="mt-3 flex items-center gap-1.5 text-base font-bold text-slate-800 dark:text-slate-100">
-                <span className="text-lg leading-none">{m.icono}</span> {t(m.titulo)}
-              </h5>
-              <p className="mt-1 flex-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{t(m.desc)}</p>
-              <span className="mt-3 rounded-full bg-teal-100 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-teal-800 dark:bg-teal-500/20 dark:text-teal-200">
-                {t(m.tag)}
-              </span>
-            </button>
-          ))}
+          <h5 className="mb-3 text-lg font-extrabold text-slate-800 dark:text-white">
+            {t(['Mundos Gratis', 'Free Worlds'])}
+          </h5>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {MUNDOS_ACCESO.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => router.push(`/${lang}${m.href}`)}
+                className="relative flex h-full flex-col items-center rounded-2xl border border-glass-border bg-glass p-5 text-center shadow-[0_8px_32px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur-2xl backdrop-saturate-150 transition-all duration-200 ease-executive hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/30"
+              >
+                <AgentAvatar agente={m.agente} size={72} className="ring-2 ring-teal-300/40" />
+                <h6 className="mt-3 flex items-center gap-1.5 text-base font-bold text-slate-800 dark:text-slate-100">
+                  <span className="text-lg leading-none">{m.icono}</span> {t(m.titulo)}
+                </h6>
+                <p className="mt-1 flex-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{t(m.desc)}</p>
+              </button>
+            ))}
+          </div>
         </div>
 
         <h5 className="mb-3 mt-8 text-lg font-extrabold text-slate-800 dark:text-white">
