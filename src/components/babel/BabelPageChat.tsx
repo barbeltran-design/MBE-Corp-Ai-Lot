@@ -930,7 +930,11 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
             </div>
             <div id="babel-chat" className="max-h-[40vh] flex-1 space-y-3 overflow-y-auto rounded-xl border border-slate-200 bg-white/60 p-4 dark:border-slate-700 dark:bg-white/5">
               {session.messages.slice(0, 2).map(function (m, i) {
-                const displayContent = limpiarMarkdown(m.content);
+                const limpio = limpiarMarkdown(m.content);
+                const displayContent =
+                  i === 0
+                    ? limpio.replace(/^Fase 0 completada:\s*/i, '').replace(/^Phase 0 completed:\s*/i, '')
+                    : limpio;
                 const isLong = displayContent.length > 300;
                 const isExpanded = chatExpanded.has(i);
                 return (
@@ -1007,6 +1011,8 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
     );
   }
   const rangoFase = faseInicial !== undefined && faseInicial >= 1 ? rangoDeFase(session, faseInicial) : null;
+  const faseCompletada = faseInicial !== undefined && (session.phases ?? []).some(function (p) { return p.phase === faseInicial && p.approved; });
+  const RUTA_SIGUIENTE_FASE: Record<number, string> = { 1: 'entorno', 2: 'capacidades', 3: 'enfoque' };
   return (
     <React.Fragment>
     <div className="mx-auto flex max-w-4xl flex-col gap-4 p-4 sm:p-6">
@@ -1154,6 +1160,20 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
         )}
         <div ref={bottomRef} />
       </div>
+      )}
+      {rangoFase && faseCompletada && (
+        <div className="flex justify-center">
+          <a
+            href={'/' + locale + (faseInicial >= BABEL_IMPLEMENTED_PHASES - 1 ? '/babel' : '/babel/' + (RUTA_SIGUIENTE_FASE[faseInicial ?? 1] ?? ''))}
+            className="rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 px-4 py-2 text-sm font-extrabold text-white shadow-md shadow-teal-500/30 transition hover:opacity-90"
+          >
+            {faseInicial >= BABEL_IMPLEMENTED_PHASES - 1
+              ? (dispLang === 'en' ? 'Open your complete plan →' : 'Ver tu plan completo →')
+              : (dispLang === 'en'
+                  ? 'Continue to Phase ' + ((faseInicial ?? 0) + 1) + ' →'
+                  : 'Continuar a la Fase ' + ((faseInicial ?? 0) + 1) + ' →')}
+          </a>
+        </div>
       )}
       {(!rangoFase || rangoFase.alcanzada) && (
         <>
