@@ -1,7 +1,7 @@
 'use client';
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import { Bot, Coins, UsersRound } from 'lucide-react';
+import { Bot, Coins, UsersRound, Wrench } from 'lucide-react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { getFirebaseAuth, getFirebaseDb } from '@/lib/firebase';
@@ -155,6 +155,43 @@ const MUNDOS_PREMIUM: MundoPremium[] = [
   },
 ];
 
+type ToolboxItem = {
+  icono: string;
+  titulo: Params;
+  desc: Params;
+  href: string;
+};
+
+const TOOLBOX: ToolboxItem[] = [
+  {
+    icono: '📣',
+    titulo: ['Convocatorias y Fondos', 'Calls & Grants'],
+    desc: [
+      'Encuentra fondos, becas y convocatorias que encajen con tu perfil de empresa.',
+      'Find funds, grants and calls that fit your business profile.',
+    ],
+    href: '/babel/convocatorias',
+  },
+  {
+    icono: '🏪',
+    titulo: ['Reference Place', 'Reference Place'],
+    desc: [
+      'Comunidad certificada: mercado de referencias, reuniones B2B y más clientes.',
+      'Certified community: referrals marketplace, B2B meetings and more clients.',
+    ],
+    href: '/refplace',
+  },
+  {
+    icono: '📅',
+    titulo: ['Juntas de Mentoría', 'Mentoring Meetings'],
+    desc: [
+      'Juntas semanales de 90 minutos con mentores, agenda y puntos del club.',
+      'Weekly 90-minute meetings with mentors, agenda and club points.',
+    ],
+    href: '/club',
+  },
+];
+
 const PASOS_TOUR: Record<InicioLang, TourStep[]> = {
   es: [
     { selector: '#inicio-title', title: 'Inicio', description: '¡Hola! Aquí empieza tu viaje con MBE: nosotros transformamos tu empresa y tú el mundo.' },
@@ -296,6 +333,37 @@ export default function InicioBuilder({ lang }: { lang: InicioLang }) {
                   <span className="text-lg leading-none">{m.icono}</span> {t(m.titulo)}
                 </h6>
                 <p className="mt-1 flex-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{t(m.desc)}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-8">
+          <div className="flex items-center gap-2">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-500/15 text-teal-700">
+              <Wrench className="h-5 w-5" />
+            </span>
+            <h5 className="text-lg font-bold text-teal-800 dark:text-teal-200">
+              {t(['Toolbox', 'Toolbox'])}
+            </h5>
+          </div>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+            {t([
+              'Las herramientas de apoyo para hacer crecer tu negocio: fondos, comunidad y mentoría.',
+              'The support tools to grow your business: funds, community and mentoring.',
+            ])}
+          </p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            {TOOLBOX.map((h) => (
+              <button
+                key={h.titulo[0]}
+                type="button"
+                onClick={() => router.push(`/${lang}${h.href}`)}
+                className="relative flex h-full flex-col items-center rounded-2xl border border-glass-border bg-glass p-5 text-center shadow-[0_8px_32px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur-2xl backdrop-saturate-150 transition-all duration-200 ease-executive hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/30"
+              >
+                <div className="text-3xl">{h.icono}</div>
+                <h6 className="mt-2 text-sm font-extrabold text-slate-800 dark:text-white">{t(h.titulo)}</h6>
+                <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{t(h.desc)}</p>
               </button>
             ))}
           </div>

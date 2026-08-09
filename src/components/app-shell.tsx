@@ -43,7 +43,7 @@ function AppShellInner({
   // Reference Place: comunidad certificada, mercado de referencias y B2B.
   navItems.push({ href: `/${locale}/refplace`, label: navLabel('Reference Place', 'Reference Place'), icon: Store });
   // Comunidad de Mentoría Semanal.
-  navItems.push({ href: `/${locale}/club`, label: navLabel('Comunidad de Mentoría Semanal', 'Weekly Mentoring Community'), icon: CalendarRange });
+  navItems.push({ href: `/${locale}/club`, label: navLabel('Juntas de Mentoría', 'Mentoring Meetings'), icon: CalendarRange });
   // Agendar con mentores: visible para todos los usuarios autenticados.
   navItems.push({ href: `/${locale}/agendar`, label: navLabel('Agenda con mentores', 'Book a mentor'), icon: CalendarClock });
 
