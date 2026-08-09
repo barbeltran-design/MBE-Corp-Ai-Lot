@@ -4,6 +4,7 @@ import { requireAuth, readUserRoles } from '@/lib/server-roles';
 import {
   NIVELES_COMUNIDAD,
   nivelIndex,
+  nivelPorPuntos,
   type MiembroComunidad,
   type OfertaRepSale,
   type SolicitudReferencia,
@@ -38,7 +39,7 @@ export async function GET(req: NextRequest) {
   try {
     const db = getAdminDb();
 
-    // --- Comunidad: usuarios con nivelComunidad asignado + su empresa ---
+    // --- Comunidad: usuarios con nivel (automático por puntos o asignado) + su empresa ---
     const usersSnap = await db.collection('users').limit(400).get();
     const companiesSnap = await db.collection('companies').get();
     const companiesById = new Map<string, Record<string, unknown>>();
@@ -69,9 +70,12 @@ export async function GET(req: NextRequest) {
       const nivelRaw = typeof data.nivelComunidad === 'string' ? data.nivelComunidad : '';
       const esRep = roles.includes('rep_sale');
       const esAdmin = roles.includes('admin');
-      const nivelValido = NIVELES_COMUNIDAD.some((n) => n.id === nivelRaw);
-      // Solo usuarios con nivel asignado (incluye Godín Wannabe) o Rep Sales.
-      if (!nivelValido && !esRep) continue;
+      const puntosClub = parseNum(data.puntosClub, 0);
+      const nivelAuto = puntosClub > 0 ? nivelPorPuntos(puntosClub) : '';
+      const nivelManual = NIVELES_COMUNIDAD.some((n) => n.id === nivelRaw) ? nivelRaw : '';
+      const nivelFinal = nivelAuto || nivelManual;
+      // Solo usuarios con nivel (automático por puntos acumulados o asignado) o Rep Sales.
+      if (!nivelFinal && !esRep) continue;
 
       const company = companiesById.get(doc.id) as Record<string, unknown> | undefined;
       const stats = statsReunion.get(doc.id) || { completadas: 0, monto: 0 };
@@ -93,7 +97,7 @@ export async function GET(req: NextRequest) {
         empresa: (company?.name as string) || '',
         giro: GIRO_LABELS[String(company?.industry ?? '')] ?? '',
         pais: (data.country as string) || ((company?.country as string) || ''),
-        nivel: nivelValido ? (nivelRaw as MiembroComunidad['nivel']) : '',
+        nivel: nivelFinal as MiembroComunidad['nivel'],
         certificado: data.certificado === true,
         madurez,
         rolRepSale: esRep,
@@ -167,9 +171,12 @@ export async function GET(req: NextRequest) {
     const yoSnap = await db.collection('users').doc(uid).get();
     const yoData = yoSnap.exists ? (yoSnap.data() as Record<string, unknown>) : {};
     const yoRoles = Array.isArray(yoData.roles) ? (yoData.roles as unknown[]).map(String) : [];
-    const yoNivel = NIVELES_COMUNIDAD.some((n) => n.id === yoData.nivelComunidad)
-      ? (yoData.nivelComunidad as string)
-      : 'godin_wannabe';
+    const yoPuntos = parseNum(yoData.puntosClub, 0);
+    const yoNivel = yoPuntos > 0
+      ? nivelPorPuntos(yoPuntos)
+      : NIVELES_COMUNIDAD.some((n) => n.id === yoData.nivelComunidad)
+        ? (yoData.nivelComunidad as string)
+        : 'godin_wannabe';
 
     return NextResponse.json({
       yo: {
@@ -225,7 +232,9 @@ export async function POST(req: NextRequest) {
     const nombre = (userData.name as string) || '';
 
     if (accion === 'crear-solicitud') {
-      const nivelRaw = typeof userData.nivelComunidad === 'string' ? userData.nivelComunidad : '';
+      const nivelClub = parseNum(userData.puntosClub, 0);
+      const nivelAuto = nivelClub > 0 ? nivelPorPuntos(nivelClub) : '';
+      const nivelRaw = nivelAuto || (typeof userData.nivelComunidad === 'string' ? userData.nivelComunidad : '');
       if (!esRep && nivelIndex(nivelRaw) < 3) {
         return NextResponse.json(
           { error: 'Tu nivel aún no permite solicitar referencias. Necesitas ser al menos Empresario Orquesta.' },

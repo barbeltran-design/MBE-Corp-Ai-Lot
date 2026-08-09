@@ -234,7 +234,7 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
     navItems.push({ href: `/${routeLocale}/especialista`, label: t('Panel de Mentor', 'Mentor Panel'), icon: NAV_ICON_MAP.UserCheck2 });
   }
   navItems.push({ href: `/${routeLocale}/refplace`, label: t('Reference Place', 'Reference Place'), icon: NAV_ICON_MAP.Store });
-  navItems.push({ href: `/${routeLocale}/club`, label: t('Juntas de mentoria', 'Mentoring meetings'), icon: NAV_ICON_MAP.CalendarRange });
+  navItems.push({ href: `/${routeLocale}/club`, label: t('Comunidad de Mentoría Semanal', 'Weekly Mentoring Community'), icon: NAV_ICON_MAP.CalendarRange });
   navItems.push({ href: `/${routeLocale}/agendar`, label: t('Agenda con mentores', 'Book a mentor'), icon: NAV_ICON_MAP.CalendarClock });
 
   const [user, setUser] = React.useState<User | null | undefined>(undefined);

@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { useDisplayLang } from '@/components/display-lang-provider';
 import { AVATAR_COLORS, avatarBgColor, initialsOf } from '@/lib/avatar';
 import { TEMAS_ESPECIALISTA, TEMA_LABELS, ROLE_LABELS } from '@/lib/roles';
-import { NIVELES_COMUNIDAD, nivelLabel, nivelPorPuntos } from '@/lib/refplace';
+import { nivelLabel, nivelPorPuntos } from '@/lib/refplace';
 import type { CompanySize, Industry, Language, UserDoc } from '@/types/firestore';
 
 const COUNTRIES = ['MX', 'CO', 'AR', 'CL', 'PE', 'US', 'ES', 'OTHER'] as const;
@@ -67,7 +67,6 @@ function ProfilePageInner() {
   const [website, setWebsite] = React.useState('');
   const [language, setLanguage] = React.useState<Language>('es');
   const [telefono, setTelefono] = React.useState('');
-  const [nivelComunidad, setNivelComunidad] = React.useState('godin_wannabe');
 
   const [saving, setSaving] = React.useState(false);
   const [savedMsg, setSavedMsg] = React.useState('');
@@ -126,7 +125,6 @@ function ProfilePageInner() {
           setCountry(data.country || 'MX');
           setLanguage(data.language || 'es');
           setTelefono((data.telefono as string) || '');
-          setNivelComunidad((data.nivelComunidad as string) || 'godin_wannabe');
           setPuntosClub(typeof data.puntosClub === 'number' ? data.puntosClub : 0);
           setSemanasJunta(typeof data.semanasJunta === 'number' ? data.semanasJunta : 0);
           setPrimerJuntaAt((data.primerJuntaAt as string) || '');
@@ -170,7 +168,6 @@ function ProfilePageInner() {
             language,
             country,
             telefono: telefono.trim(),
-            nivelComunidad,
           },
           { merge: true }
         ),
@@ -189,6 +186,16 @@ function ProfilePageInner() {
       setSaveError(t('No se pudieron guardar los datos. Intenta de nuevo.', 'Could not save your data. Try again.'));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleSaveTelefono() {
+    if (!user) return;
+    try {
+      const db = getFirebaseDb();
+      await setDoc(doc(db, 'users', user.uid), { telefono: telefono.trim() }, { merge: true });
+    } catch (err) {
+      console.error('[perfil] telefono save failed', err);
     }
   }
 
@@ -464,38 +471,34 @@ function ProfilePageInner() {
                   id="perfil-telefono"
                   value={telefono}
                   onChange={(e) => setTelefono(e.target.value)}
+                  onBlur={handleSaveTelefono}
                   placeholder="+52 55 0000 0000"
                 />
+                <p className="text-xs text-muted-foreground">
+                  {t('Se guarda automáticamente al salir del campo.', 'It is saved automatically when you leave the field.')}
+                </p>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="perfil-nivel">
                   {t('Nivel en la comunidad', 'Community level')}
                 </Label>
-                <Select id="perfil-nivel" value={nivelComunidad} onChange={(e) => setNivelComunidad(e.target.value)}>
-                  {NIVELES_COMUNIDAD.map((n) => (
-                    <option key={n.id} value={n.id}>
-                      {nivelLabel(n.id, dispLang)}
-                    </option>
-                  ))}
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  {t(
-                    'Tu nivel se muestra en el Reference Place y habilita reuniones B2B (todos los niveles), solicitar referencias (desde Empresario Orquesta) e inversiones (desde Director General).',
-                    'Your level is shown in the Reference Place and unlocks B2B meetings (all levels), requesting referrals (from Orchestra Business Owner) and investments (from CEO).'
-                  )}
-                </p>
+                <div className="rounded-lg border border-glass-border bg-glass p-3 text-sm">
+                  <span className="font-semibold text-teal-700 dark:text-teal-300">{nivelLabel(nivelPorPuntos(puntosClub), dispLang)}</span>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t(
+                      'Se calcula automáticamente con los puntos acumulados en la app y las juntas semanales. No se elige manualmente.',
+                      'It is calculated automatically with the points you earn in the app and the weekly meetings. It is not chosen manually.'
+                    )}
+                  </p>
+                </div>
               </div>
               <div className="space-y-1 sm:col-span-2">
-                <Label>{t('Club de juntas semanales', 'Weekly meetings club')}</Label>
+                <Label>{t('Comunidad de Mentoría Semanal', 'Weekly Mentoring Community')}</Label>
                 <div className="rounded-lg border border-glass-border bg-glass p-3 text-sm">
                   <div className="flex flex-wrap gap-x-6 gap-y-1">
                     <span className="text-muted-foreground">
-                      {t('Puntos del club:', 'Club points:')}{' '}
+                      {t('Puntos de la comunidad:', 'Community points:')}{' '}
                       <span className="font-semibold text-foreground">{puntosClub}</span>
-                    </span>
-                    <span className="text-muted-foreground">
-                      {t('Nivel automático:', 'Automatic level:')}{' '}
-                      <span className="font-semibold text-teal-700 dark:text-teal-300">{nivelLabel(nivelPorPuntos(puntosClub), dispLang)}</span>
                     </span>
                     {semanasJunta > 0 && (
                       <span className="text-muted-foreground">
@@ -514,8 +517,8 @@ function ProfilePageInner() {
                   </div>
                   <p className="mt-1.5 text-xs text-muted-foreground">
                     {t(
-                      'Al acumular puntos en las juntas tu nivel avanza automaticamente: 50 Freelancero, 200 Emprendedor, 500 Empresario Orquesta, 900 Director General, 1,500 Presidente, 2,500 Inversionista y 4,000 Mentor.',
-                      'Earning points at meetings automatically advances your level: 50 Freelancer, 200 Entrepreneur, 500 Orchestra Business Owner, 900 CEO, 1,500 President, 2,500 Investor and 4,000 Mentor.'
+                      'Al acumular puntos en la app y en las juntas semanales tu nivel avanza automáticamente: 50 Freelancero, 200 Emprendedor, 500 Empresario Orquesta, 900 Director General, 1,500 Presidente, 2,500 Inversionista y 4,000 Mentor.',
+                      'Earning points in the app and at weekly meetings automatically advances your level: 50 Freelancer, 200 Entrepreneur, 500 Orchestra Business Owner, 900 CEO, 1,500 President, 2,500 Investor and 4,000 Mentor.'
                     )}
                   </p>
                 </div>
@@ -613,7 +616,7 @@ function ProfilePageInner() {
           <Card className="p-6">
             <h2 className="text-sm font-semibold text-foreground">{t('Mi rol en la plataforma', 'My platform role')}</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {t('Solicita convertirte en Especialista (para asesorar a otros usuarios por tema) o en Rep Sale (para vender el Reference Place). Administración aprobará tu solicitud.', 'Request to become a Specialist (to advise other users per theme) or a Rep Sale (to sell the Reference Place). Administration will approve your request.')}
+              {t('Solicita convertirte en Especialista (para dar apoyo On Demand a otros usuarios por tema) o en Rep Sale (para publicar necesidades de grandes empresas en el Reference Place). Administración aprobará tu solicitud.', 'Request to become a Specialist (to give On-Demand support to other users per topic) or a Rep Sale (to publish large-company needs in the Reference Place). Administration will approve your request.')}
             </p>
 
             {roles.length > 0 && (

@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebase-admin';
 import { requireAuth } from '@/lib/server-roles';
-import { nivelLabel } from '@/lib/refplace';
+import { nivelLabel, nivelPorPuntos } from '@/lib/refplace';
 
 function parseNum(v: unknown, dflt: number): number {
   const n = typeof v === 'number' ? v : Number(v);
   return Number.isFinite(n) ? n : dflt;
+}
+
+function nivelAuto(u: Record<string, unknown>): string {
+  const puntos = parseNum(u.puntosClub, 0);
+  if (puntos > 0) return nivelPorPuntos(puntos);
+  const manual = typeof u.nivelComunidad === 'string' ? u.nivelComunidad : '';
+  return manual || 'godin_wannabe';
 }
 
 // GET /api/refplace/perfil?uid=xxx — perfil público de un miembro de la
@@ -84,9 +91,9 @@ export async function GET(req: NextRequest) {
         giro: (c.industry as string) || '',
         pais: (u.country as string) || ((c.country as string) || ''),
         nivel: {
-          id: (u.nivelComunidad as string) || 'godin_wannabe',
-          es: nivelLabel((u.nivelComunidad as string) || 'godin_wannabe', 'es'),
-          en: nivelLabel((u.nivelComunidad as string) || 'godin_wannabe', 'en'),
+          id: nivelAuto(u),
+          es: nivelLabel(nivelAuto(u), 'es'),
+          en: nivelLabel(nivelAuto(u), 'en'),
         },
         certificado: u.certificado === true,
         rolRepSale: roles.includes('rep_sale'),

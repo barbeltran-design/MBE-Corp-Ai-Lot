@@ -178,7 +178,7 @@ export function ClubBuilder() {
         .then(async (token) => { aplicar(await cargar(token)); })
         .catch((err) => {
           console.error('[club] load failed', err);
-          if (!cancelled) setError(t('No se pudo cargar el Club.', 'Could not load the Club.'));
+          if (!cancelled) setError(t('No se pudo cargar la Comunidad de Mentoría Semanal.', 'Could not load the Weekly Mentoring Community.'));
         })
         .finally(() => { if (!cancelled) setLoading(false); });
     });
@@ -458,7 +458,7 @@ export function ClubBuilder() {
       {/* Proximos eventos */}
       {eventos.length > 0 && (
         <div className="glass-panel p-4">
-          <p className="text-sm font-semibold text-foreground">{t('Eventos del club', 'Club events')}</p>
+          <p className="text-sm font-semibold text-foreground">{t('Eventos de la comunidad', 'Community events')}</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {eventos.map((ev) => (
               <div key={ev.id} className="rounded-lg border border-glass-border bg-glass p-3">
@@ -818,7 +818,7 @@ export function ClubBuilder() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">{t('Juntas semanales de mentoria', 'Weekly mentoring meetings')}</h1>
+          <h1 className="text-xl font-semibold text-foreground">{t('Comunidad de Mentoría Semanal', 'Weekly Mentoring Community')}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {t('Juntas de 90 minutos cada semana, con temas, roles, puntos y niveles.', '90-minute meetings every week, with topics, roles, points and levels.')}
             {data && (
@@ -846,7 +846,7 @@ export function ClubBuilder() {
       {!loading && !user && (
         <div className="glass-panel p-10 text-center">
           <LogIn className="mx-auto h-10 w-10 text-muted-foreground/50" />
-          <p className="mt-3 text-sm text-muted-foreground">{t('Inicia sesion para ver el Club.', 'Log in to see the Club.')}</p>
+          <p className="mt-3 text-sm text-muted-foreground">{t('Inicia sesion para ver la Comunidad de Mentoría Semanal.', 'Log in to see the Weekly Mentoring Community.')}</p>
         </div>
       )}
 
