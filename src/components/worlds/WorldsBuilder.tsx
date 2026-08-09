@@ -17,6 +17,8 @@ import {
 } from '@/lib/worlds';
 import { WorldsBg } from '@/components/worlds/worlds-bg';
 import { WorldMap, PUNTOS_RECORRIDO, type PuntoRecorrido } from '@/components/worlds/WorldMap';
+import PageTour from '@/components/ui/executive/PageTour';
+import type { TourStep } from '@/components/ui/executive/PageTour';
 
 type Vista = 'mapa' | 'partida' | 'tablero' | 'estrategia';
 
@@ -355,8 +357,8 @@ export function WorldsBuilder() {
           </div>
         </div>
 
-        <div className="world-glass mb-6 flex items-start gap-4 p-5">
-          <AgentAvatar agente="Babel" pose="guiando" size={56} className="shrink-0" onClick={() => undefined} />
+        <div id="worlds-saludo" className="world-glass mb-6 flex items-start gap-4 p-5">
+          <AgentAvatar agente="Babel" pose="guiando" size={56} className="shrink-0" />
           <div className="min-w-0 flex-1 text-sm leading-relaxed text-slate-700 dark:text-slate-100">
             <p>
               <b className="text-teal-700 dark:text-teal-300">
@@ -395,7 +397,7 @@ export function WorldsBuilder() {
                   onCompletar={(id: string) => completarPunto(id)}
                 />
 
-                <div className="world-glass world-grain mb-5 p-5">
+                <div id="worlds-progreso" className="world-glass world-grain mb-5 p-5">
                   <h2 className="text-lg font-extrabold text-slate-800 dark:text-white">🗺️ {en(I.progreso)}</h2>
                   <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-400/25">
                     <div
@@ -410,7 +412,7 @@ export function WorldsBuilder() {
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <button className="world-glass world-glass-hover world-grain p-5 text-left" onClick={() => setVista('partida')}>
+                  <button id="worlds-mundo-partida" className="world-glass world-glass-hover world-grain p-5 text-left" onClick={() => setVista('partida')}>
                     <span className="mb-2 inline-block rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200">
                       {en(I.gratisTag)}
                     </span>
@@ -486,7 +488,7 @@ export function WorldsBuilder() {
 
             {vista === 'partida' && (
               <>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div id="worlds-misiones" className="grid gap-4 sm:grid-cols-2">
                   {MISIONES_PART_LABELS.map((m) => {
                     const done = hechas.includes(m.n);
                     const bloqueada = m.n > 1 && !hechas.includes(m.n - 1);
@@ -718,6 +720,34 @@ export function WorldsBuilder() {
           </>
         )}
       </div>
+
+      <PageTour
+        pageId="worlds-vista"
+        lang={lang === 'es' ? 'es' : 'en'}
+        steps={[
+          {
+            selector: '#worlds-saludo',
+            title: lang === 'es' ? 'Mundo de Partida' : 'Starting World',
+            description: lang === 'es'
+              ? 'Babel te da la bienvenida. Aquí calibras tu empresa: completa las misiones en orden y desbloquearás el Tablero de Retos.'
+              : 'Babel welcomes you. Calibrate your company here: complete the missions in order and you will unlock the Challenges Board.',
+          },
+          {
+            selector: '#worlds-progreso',
+            title: lang === 'es' ? 'Tu progreso' : 'Your progress',
+            description: lang === 'es'
+              ? 'Este medidor avanza con cada misión completada; cuando llegues a 3/3 se desbloquea el Tablero de Retos.'
+              : 'This bar advances with each completed mission; at 3/3 the Challenges Board unlocks.',
+          },
+          {
+            selector: '#worlds-mundo-partida',
+            title: lang === 'es' ? 'Las 3 misiones' : 'The 3 missions',
+            description: lang === 'es'
+              ? 'Cada misión abre una herramienta real (Dashboard, Objetivos estratégicos o Calibración). Puedes repetirlas cuando cambie tu empresa.'
+              : 'Each mission opens a real tool (Dashboard, Strategic Objectives or Calibration). You can redo them whenever your company changes.',
+          },
+        ]}
+      />
     </div>
   );
 }

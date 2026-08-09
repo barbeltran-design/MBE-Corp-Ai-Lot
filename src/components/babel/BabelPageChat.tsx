@@ -110,19 +110,45 @@ function limpiarMarkdown(texto: string): string {
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
+/** Rango [inicio, fin] de mensajes que pertenecen a una fase (1-4) en la
+ * conversación continua de la sesión. El límite de cada fase es el mensaje
+ * cuyo contenido coincide con el resumen aprobado y guardado en phases[];
+ * la fase 0 es el par [0, 1] (mensaje de usuario + resumen de Babel). */
+function rangoDeFase(session: SessionDoc, fase: number): { inicio: number; fin: number; alcanzada: boolean } {
+  const msgs = session.messages;
+  const indiceDelResumen = function (phase: number): number {
+    const rec = (session.phases ?? []).find(function (p) { return p.phase === phase; });
+    if (!rec) return -1;
+    const s = rec.summary;
+    for (let i = 0; i < msgs.length; i++) {
+      const c = msgs[i].content;
+      if (c === s || (s.length > 40 && c.startsWith(s))) return i;
+    }
+    return -1;
+  };
+  const fin = indiceDelResumen(fase);
+  const inicio = fase <= 0 ? 0 : indiceDelResumen(fase - 1) + 1;
+  const alcanzada = fin >= 0 || (session.currentPhase ?? 0) >= fase;
+  return { inicio: Math.max(0, inicio), fin: fin >= 0 ? fin : msgs.length - 1, alcanzada };
+}
 function PhaseStepper({
   currentPhase,
   approved,
   lang,
+  solo,
 }: {
   currentPhase: number;
   approved: BabelPhaseRecord[];
   lang: 'es' | 'en';
+  solo?: number | null;
 }) {
   const topics = babelPhaseTopics(lang);
+  const fases = solo !== undefined && solo !== null ? [solo] : topics.map(function (_t, i) { return i; });
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      {topics.map((topic, phase) => {
+      {fases.map((phase) => {
+        const topic = topics[phase];
+        if (!topic) return null;
         const isApproved = approved.some(function (p) { return p.phase === phase; });
         const isCurrent = !isApproved && phase === currentPhase;
         const label = topic.split(':')[1]?.trim() ?? topic;
@@ -865,7 +891,6 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
   // Completada la Fase 0, el usuario continúa cada fase en su propia página
   // (/babel/proposito, /babel/entorno, /babel/capacidades, /babel/enfoque).
   if (faseInicial === 0) {
-    const fase0Record = (session.phases ?? []).find(function (pP) { return pP.phase === 0; });
     const pasosCalibracion: TourStep[] = [
       {
         selector: '#babel-calibracion-portal',
@@ -893,20 +918,74 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
               <p className="text-sm text-slate-500">{dispLang === 'en' ? 'Phase 0: Initial Calibration' : 'Fase 0: Calibración Inicial'}</p>
             </div>
           </div>
-          <div id="babel-calibracion-portal" className="glass-panel flex flex-col items-center gap-3 p-8 text-center">
-            <div className="text-5xl">🎉</div>
-            <h2 className="text-xl font-semibold text-slate-900">{dispLang === 'en' ? 'Phase 0 completed' : 'Fase 0 completada'}</h2>
-            <p className="text-sm text-slate-600">
-              {dispLang === 'en'
-                ? 'Your initial calibration is ready. Each remaining phase lives in its own page — continue there.'
-                : 'Tu calibración inicial quedó lista. Cada fase restante vive en su propia página — continúa ahí.'}
-            </p>
-            {fase0Record && fase0Record.summary && (
-              <div className="w-full rounded-lg border border-slate-200 bg-white/60 p-4 text-left text-sm text-slate-700 whitespace-pre-wrap">
-                <div className="mb-1 font-bold text-slate-900">{dispLang === 'en' ? 'Calibration summary' : 'Resumen de la calibración'}</div>
-                {limpiarMarkdown(fase0Record.summary)}
-              </div>
-            )}
+          <div id="babel-calibracion-portal" className="glass-panel flex flex-col gap-4 p-6">
+            <div className="flex flex-col items-center gap-3 text-center">
+              <div className="text-5xl">🎉</div>
+              <h2 className="text-xl font-semibold text-slate-900">{dispLang === 'en' ? 'Phase 0 completed' : 'Fase 0 completada'}</h2>
+              <p className="text-sm text-slate-600">
+                {dispLang === 'en'
+                  ? 'Your initial calibration is ready. Each remaining phase lives in its own page — continue there.'
+                  : 'Tu calibración inicial quedó lista. Cada fase restante vive en su propia página — continúa ahí.'}
+              </p>
+            </div>
+            <div id="babel-chat" className="max-h-[40vh] flex-1 space-y-3 overflow-y-auto rounded-xl border border-slate-200 bg-white/60 p-4 dark:border-slate-700 dark:bg-white/5">
+              {session.messages.slice(0, 2).map(function (m, i) {
+                const displayContent = limpiarMarkdown(m.content);
+                const isLong = displayContent.length > 300;
+                const isExpanded = chatExpanded.has(i);
+                return (
+                  <div
+                    key={i}
+                    className={'max-w-[85%] rounded-xl px-3.5 py-2 text-sm ' + (m.role === 'user' ? 'ml-auto bg-slate-900 text-white' : 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100')}
+                  >
+                    {editingMessageIndex === i ? (
+                      <div className="space-y-2">
+                        <textarea
+                          value={editContent}
+                          onChange={function (e) { setEditContent(e.target.value); }}
+                          rows={12}
+                          className="w-full resize-y rounded border border-blue-300 bg-white p-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" onClick={handleCancelEdit} disabled={sending}>
+                            {dispLang === 'en' ? 'Cancel' : 'Cancelar'}
+                          </Button>
+                          <Button size="sm" onClick={handleSaveEdit} disabled={sending || !editContent.trim()}>
+                            {sending ? (dispLang === 'en' ? 'Saving...' : 'Guardando...') : (dispLang === 'en' ? 'Save' : 'Guardar')}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className={'whitespace-pre-wrap ' + (isLong && !isExpanded ? 'max-h-32 overflow-y-auto' : '')}>{displayContent}</div>
+                    )}
+                    {isLong && !(editingMessageIndex === i) && (
+                      <div className="mt-1 flex gap-3">
+                        <button
+                          onClick={function () {
+                            setChatExpanded(function (prev) {
+                              const next = new Set(prev);
+                              if (next.has(i)) { next.delete(i); } else { next.add(i); }
+                              return next;
+                            });
+                          }}
+                          className="text-xs font-medium text-blue-600 underline underline-offset-2 hover:text-blue-800"
+                        >
+                          {isExpanded ? (dispLang === 'en' ? 'See less' : 'Ver menos') : (dispLang === 'en' ? 'See all' : 'Ver todo')}
+                        </button>
+                        {m.role === 'assistant' && (
+                          <button
+                            onClick={function () { handleStartEdit(i, m.content); }}
+                            className="text-xs font-medium text-blue-600 underline underline-offset-2 hover:text-blue-800"
+                          >
+                            {dispLang === 'en' ? 'Edit' : 'Editar'}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
             <div id="babel-calibracion-siguiente" className="mt-2 flex flex-wrap items-center justify-center gap-2">
               <a
                 href={`/${locale}/babel/proposito`}
@@ -927,6 +1006,7 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
       </React.Fragment>
     );
   }
+  const rangoFase = faseInicial !== undefined && faseInicial >= 1 ? rangoDeFase(session, faseInicial) : null;
   return (
     <React.Fragment>
     <div className="mx-auto flex max-w-4xl flex-col gap-4 p-4 sm:p-6">
@@ -937,10 +1017,12 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
           <div>
             <h1 className="text-xl font-semibold text-slate-900">{dispLang === locale ? t('title') : UI_FALLBACK[dispLang].title}</h1>
             <p className="text-sm text-slate-500">
-              {currentPhaseTopic ??
-              (dispLang === 'en'
-                ? 'All phases completed — compile your full plan with /compilar'
-                : 'Todas las fases completadas — compila tu plan completo con /compilar')}
+              {faseInicial !== undefined && phaseTopics[faseInicial]
+                ? phaseTopics[faseInicial]
+                : currentPhaseTopic ??
+                  (dispLang === 'en'
+                    ? 'All phases completed — compile your full plan with /compilar'
+                    : 'Todas las fases completadas — compila tu plan completo con /compilar')}
           </p>
           </div>
         </div>
@@ -950,9 +1032,30 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
           </div>
         </div>
       </div>
-      <PhaseStepper currentPhase={currentPhase} approved={session.phases ?? []} lang={dispLang} />
+      <PhaseStepper currentPhase={currentPhase} approved={session.phases ?? []} lang={dispLang} solo={rangoFase ? faseInicial : null} />
+      {rangoFase && !rangoFase.alcanzada ? (
+        <div className="glass-panel flex flex-col items-center gap-3 p-8 text-center text-sm text-slate-600 dark:text-slate-300">
+          <div className="text-4xl">🔒</div>
+          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+            {dispLang === 'en' ? 'This phase is not unlocked yet' : 'Esta fase aún no está desbloqueada'}
+          </h2>
+          <p className="max-w-md">
+            {dispLang === 'en'
+              ? 'Complete the previous phases of the Strategic Reflection to unlock Fase ' + faseInicial + '.'
+              : 'Completa las fases anteriores de la Reflexión Estratégica para desbloquear la Fase ' + faseInicial + '.'}
+          </p>
+          <a
+            href={'/' + locale + '/babel'}
+            className="rounded-lg border border-teal-400/60 bg-white/40 px-4 py-2 text-xs font-bold text-teal-700 backdrop-blur-md transition hover:bg-white/70 dark:bg-white/10 dark:text-teal-200 dark:hover:bg-white/20"
+          >
+            {dispLang === 'es' ? '← Volver a la Reflexión Estratégica' : '← Back to Strategic Reflection'}
+          </a>
+        </div>
+      ) : (
       <div id="babel-chat" className="glass-panel flex-1 space-y-3 overflow-y-auto p-4 min-h-[60vh]">
-        {session.messages.map(function (m, i) {
+        {Array.from({ length: rangoFase ? rangoFase.fin - rangoFase.inicio + 1 : session.messages.length }).map(function (_unused, k) {
+          const i = rangoFase ? rangoFase.inicio + k : k;
+          const m = session.messages[i] as ChatMessage;
           const isStoredPhase0SummaryUser =
             m.role === 'user' && (m.content.startsWith('Fase 0 completada:') || m.content.startsWith('Phase 0 completed:'));
           if (isStoredPhase0SummaryUser) return null;
@@ -1051,6 +1154,9 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
         )}
         <div ref={bottomRef} />
       </div>
+      )}
+      {(!rangoFase || rangoFase.alcanzada) && (
+        <>
         {error && (
         <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600 border border-red-200">
           <div className="mb-1">{friendlyError(error)}</div>
@@ -1168,6 +1274,8 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
           </Button>
         </form>
       </div>
+        </>
+      )}
       <PageTour pageId="babel-reflexion" steps={pasosTour} lang={dispLang} />
     </div>
     </React.Fragment>
