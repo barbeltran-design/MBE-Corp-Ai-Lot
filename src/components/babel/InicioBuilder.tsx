@@ -211,6 +211,8 @@ export default function InicioBuilder({ lang }: { lang: InicioLang }) {
 
   const [nombre, setNombre] = React.useState('');
   const [zoomAgente, setZoomAgente] = React.useState<AgenteAvatarId | null>(null);
+  const [partida, setPartida] = React.useState<number[]>([]);
+  const [toolboxCargando, setToolboxCargando] = React.useState(true);
 
   // Nombre del usuario: profile users/{uid}.name, fallback displayName.
   React.useEffect(() => {
@@ -227,6 +229,28 @@ export default function InicioBuilder({ lang }: { lang: InicioLang }) {
     });
     return () => unsub();
   }, []);
+
+  // Progreso del Mundo de Partida (users/{uid}.worlds.partida) para decidir
+  // si el Toolbox está desbloqueado (3 misiones completadas).
+  React.useEffect(() => {
+    const auth = getFirebaseAuth();
+    const unsub = onAuthStateChanged(auth, async (usr: User | null) => {
+      if (!usr) return;
+      try {
+        const token = await usr.getIdToken();
+        const res = await fetch('/api/worlds', { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        setPartida(Array.isArray(data?.yo?.partida) ? data.yo.partida.map(Number) : []);
+      } catch {
+        setPartida([]);
+      } finally {
+        setToolboxCargando(false);
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  const toolboxActivo = partida.length >= 3;
 
   return (
     <div>
@@ -354,18 +378,50 @@ export default function InicioBuilder({ lang }: { lang: InicioLang }) {
             ])}
           </p>
           <div className="mt-3 grid gap-3 sm:grid-cols-3">
-            {TOOLBOX.map((h) => (
-              <button
-                key={h.titulo[0]}
-                type="button"
-                onClick={() => router.push(`/${lang}${h.href}`)}
-                className="relative flex h-full flex-col items-center rounded-2xl border border-glass-border bg-glass p-5 text-center shadow-[0_8px_32px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur-2xl backdrop-saturate-150 transition-all duration-200 ease-executive hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/30"
-              >
-                <div className="text-3xl">{h.icono}</div>
-                <h6 className="mt-2 text-sm font-extrabold text-slate-800 dark:text-white">{t(h.titulo)}</h6>
-                <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{t(h.desc)}</p>
-              </button>
-            ))}
+            {TOOLBOX.map((h) => {
+              const cls = 'relative flex h-full flex-col items-center rounded-2xl border border-glass-border bg-glass p-5 text-center shadow-[0_8px_32px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur-2xl backdrop-saturate-150 transition-all duration-200 ease-executive ' + (toolboxActivo ? 'hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/30' : 'opacity-60');
+              const inner = (
+                <>
+                  <div className="text-3xl">{h.icono}</div>
+                  <h6 className="mt-2 text-sm font-extrabold text-slate-800 dark:text-white">{t(h.titulo)}</h6>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{t(h.desc)}</p>
+                  {!toolboxActivo && (
+                    <span className="mt-3 rounded-full bg-slate-200 px-2.5 py-1 text-center text-[10px] font-extrabold uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                      🔒 {t(['Bloqueada', 'Locked'])}
+                    </span>
+                  )}
+                </>
+              );
+              return toolboxActivo ? (
+                <button key={h.titulo[0]} type="button" onClick={() => router.push(`/${lang}${h.href}`)} className={cls}>
+                  {inner}
+                </button>
+              ) : (
+                <div key={h.titulo[0]} className={cls + ' cursor-not-allowed'}>
+                  {inner}
+                </div>
+              );
+            })}
+          </div>
+          <div
+            className={
+              'mt-3 rounded-xl border px-4 py-3 text-xs font-semibold ' +
+              (toolboxActivo
+                ? 'border-emerald-200/70 bg-emerald-50 text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-900/30 dark:text-emerald-200'
+                : 'border-amber-200/70 bg-amber-50 text-amber-800 dark:border-amber-800/60 dark:bg-amber-900/30 dark:text-amber-200')
+            }
+          >
+            {toolboxCargando
+              ? t(['Revisando tu progreso…', 'Checking your progress…'])
+              : toolboxActivo
+                ? t([
+                    '✓ Toolbox desbloqueado por completar el Mundo de Partida.',
+                    '✓ Toolbox unlocked by completing the Starting World.',
+                  ])
+                : t([
+                    '🔒 Toolbox bloqueado: completa las 3 misiones del Mundo de Partida (M1 Dashboard, M2 Objetivos estratégicos y M3 Calibración) para desbloquear estas herramientas.',
+                    '🔒 Toolbox locked: complete the 3 Starting World missions (M1 Dashboard, M2 Strategic Objectives and M3 Calibration) to unlock these tools.',
+                  ])}
           </div>
         </div>
 
