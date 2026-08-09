@@ -72,7 +72,8 @@ function LangToggle() {
     if (segments[1] === 'es' || segments[1] === 'en') {
       segments[1] = newLang;
     }
-    router.replace(segments.join('/'));
+    const qs = typeof window !== 'undefined' ? window.location.search : '';
+    router.replace(segments.join('/') + (qs || ''));
   };
   return (
     <div className="flex gap-0.5 rounded-full border border-glass-border bg-glass p-0.5 text-xs">

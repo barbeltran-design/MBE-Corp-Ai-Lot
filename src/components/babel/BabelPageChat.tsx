@@ -749,7 +749,7 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
           </div>
         </div>
       </div>
-      <PhaseStepper currentPhase={currentPhase} approved={session.phases ?? []} lang={dispLang} />
+      {faseInicial !== 0 && <PhaseStepper currentPhase={currentPhase} approved={session.phases ?? []} lang={dispLang} />}
       {currentQuestionIndex > 0 && (
           <div id="babel-chat" className="glass-panel flex-1 space-y-3 overflow-y-auto p-4 max-h-[40vh]">
             {Array.from({ length: currentQuestionIndex }).map(function (_unused, k) {
@@ -849,6 +849,48 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
         </div>
       </div>
       <PageTour pageId="babel-reflexion" steps={pasosTour} lang={dispLang} />
+      </React.Fragment>
+    );
+  }
+  // Página de Calibración (fase 0): NUNCA muestra las fases posteriores.
+  // Completada la Fase 0, el usuario continúa cada fase en su propia página
+  // (/babel/proposito, /babel/entorno, /babel/capacidades, /babel/enfoque).
+  if (faseInicial === 0) {
+    const fase0Record = (session.phases ?? []).find(function (pP) { return pP.phase === 0; });
+    return (
+      <React.Fragment>
+        <div className="mx-auto flex max-w-2xl flex-col gap-4 p-4 sm:p-6">
+          <FaseBanner fase={0} lang={dispLang} locale={locale} />
+          <div className="glass-panel flex flex-col items-center gap-3 p-8 text-center">
+            <div className="text-5xl">🎉</div>
+            <h1 className="text-xl font-semibold text-slate-900">{dispLang === 'en' ? 'Phase 0 completed' : 'Fase 0 completada'}</h1>
+            <p className="text-sm text-slate-600">
+              {dispLang === 'en'
+                ? 'Your initial calibration is ready. Each remaining phase lives in its own page — continue there.'
+                : 'Tu calibración inicial quedó lista. Cada fase restante vive en su propia página — continúa ahí.'}
+            </p>
+            {fase0Record && fase0Record.summary && (
+              <div className="w-full rounded-lg border border-slate-200 bg-white/60 p-4 text-left text-sm text-slate-700 whitespace-pre-wrap">
+                <div className="mb-1 font-bold text-slate-900">{dispLang === 'en' ? 'Calibration summary' : 'Resumen de la calibración'}</div>
+                {fase0Record.summary}
+              </div>
+            )}
+            <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+              <a
+                href={`/${locale}/babel/proposito`}
+                className="rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 px-4 py-2 text-sm font-extrabold text-white shadow-md shadow-teal-500/30 transition hover:opacity-90"
+              >
+                {dispLang === 'en' ? 'Continue to Phase 1 — Purpose & Value Proposition →' : 'Continuar a la Fase 1 — Propósito y Propuesta de Valor →'}
+              </a>
+              <a
+                href={`/${locale}/babel`}
+                className="rounded-lg border border-teal-400/60 bg-white/40 px-4 py-2 text-sm font-bold text-teal-700 backdrop-blur-md transition hover:bg-white/70 dark:bg-white/10 dark:text-teal-200 dark:hover:bg-white/20"
+              >
+                {dispLang === 'en' ? 'Open the full Strategic Reflection' : 'Abrir la Reflexión Estratégica completa'}
+              </a>
+            </div>
+          </div>
+        </div>
       </React.Fragment>
     );
   }

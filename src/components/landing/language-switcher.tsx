@@ -12,7 +12,8 @@ export function LanguageSwitcher() {
   function switchTo(next: Locale) {
     if (next === locale) return;
     const rest = pathname.split('/').slice(2).join('/');
-    router.push(`/${next}/${rest}`);
+    const qs = typeof window !== 'undefined' ? window.location.search : '';
+    router.push(`/${next}/${rest}${qs}`);
   }
 
   return (

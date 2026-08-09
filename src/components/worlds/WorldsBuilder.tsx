@@ -446,7 +446,7 @@ export function WorldsBuilder() {
                     </span>
                     <div className="text-4xl">🧭</div>
                     <div className="mt-3 flex items-center gap-2">
-                      <AgentAvatar agente="Babel" size={28} className="ring-2 ring-fuchsia-300/60" />
+                      <AgentAvatar agente="Babel" size={28} className="ring-2 ring-fuchsia-300/60" onClick={() => undefined} />
                       <h3 className="text-base font-extrabold text-slate-800 dark:text-white">Estrategia</h3>
                     </div>
                     <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
@@ -462,7 +462,7 @@ export function WorldsBuilder() {
                       </span>
                       <div className="text-4xl">{m.icon}</div>
                       <div className="mt-3 flex items-center gap-2">
-                        <AgentAvatar agente={m.agente} size={28} className="ring-2 ring-teal-300/60" />
+                        <AgentAvatar agente={m.agente} size={28} className="ring-2 ring-teal-300/60" onClick={() => undefined} />
                         <h3 className="text-base font-extrabold text-slate-800 dark:text-white">{lang === 'en' ? m.en : m.es}</h3>
                       </div>
                       <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
