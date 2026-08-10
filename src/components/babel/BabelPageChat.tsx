@@ -124,12 +124,32 @@ function rangoDeFase(session: SessionDoc, fase: number): { inicio: number; fin: 
       const c = msgs[i].content;
       if (c === s || (s.length > 40 && c.startsWith(s))) return i;
     }
+    // Fallback estructural para la fase 0: si el resumen guardado ya no
+    // coincide con los mensajes (p. ej. fue editado después de aprobarse),
+    // el par de la calibración vive en [0, 1].
+    if (phase === 0 && msgs.length >= 2 && msgs[0].role === 'user' &&
+      (msgs[0].content.startsWith('Fase 0 completada:') || msgs[0].content.startsWith('Phase 0 completed:'))) {
+      return 1;
+    }
     return -1;
   };
   const fin = indiceDelResumen(fase);
   const inicio = fase <= 0 ? 0 : indiceDelResumen(fase - 1) + 1;
   const alcanzada = fin >= 0 || (session.currentPhase ?? 0) >= fase;
   return { inicio: Math.max(0, inicio), fin: fin >= 0 ? fin : msgs.length - 1, alcanzada };
+}
+/** Ubica el mensaje asistente que contiene el resumen de la Fase 0 (el par
+ * guardado por la calibración), priorizando el que lleva el encabezado del
+ * resumen; evita aprobar con el último mensaje de la conversación. */
+function resumenFase0En(mensajes: ChatMessage[]): ChatMessage | null {
+  for (let i = 1; i < Math.min(4, mensajes.length); i++) {
+    const m = mensajes[i];
+    if (m.role === 'assistant' && (m.content.startsWith('### Resumen de Fase 0') || m.content.startsWith('### Phase 0 Summary'))) return m;
+  }
+  const primero = mensajes[1];
+  if (primero && primero.role === 'assistant') return primero;
+  const ultimo = mensajes[mensajes.length - 1];
+  return ultimo && ultimo.role === 'assistant' ? ultimo : null;
 }
 function PhaseStepper({
   currentPhase,
@@ -224,6 +244,7 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
   const [translatedCache, setTranslatedCache] = React.useState<Record<string, string>>({});
   const [translatingSet, setTranslatingSet] = React.useState<Set<number>>(new Set());
   const bottomRef = React.useRef<HTMLDivElement>(null);
+  const seedRef = React.useRef(new Set<string>());
   // Parte en false: al entrar nadie esta "cerca del fondo". Solo se activa
   // cuando el usuario de verdad scrollea hasta el final del chat.
   const nearBottomRef = React.useRef(false);
@@ -397,11 +418,17 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
       setIsPhase0Complete(true);
       (async () => {
         try {
-          const ultimo = session.messages[session.messages.length - 1];
-          if (ultimo && ultimo.role === 'assistant') {
-            await approveBabelPhase(uid, 0, ultimo.content, locale);
+          const resumen = resumenFase0En(session.messages);
+          if (!resumen) return;
+          const record = (session.phases ?? []).find(function (p) { return p.phase === 0; });
+          if (!record) {
+            await approveBabelPhase(uid, 0, resumen.content, locale);
             const refreshed = await getOrCreateBabelSession(uid, locale);
             setSession(refreshed);
+          } else if (record.summary !== resumen.content) {
+            // El resumen aprobado no coincide con el par guardado (pudo quedar
+            // registrado el mensaje equivocado): se repara con el real.
+            await updateBabelPhaseSummary(uid, 0, resumen.content);
           }
         } catch (err) {
           console.error('[babel] Auto-aprobar Fase 0:', err);
@@ -409,6 +436,54 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
       })();
     }
   }, [session, uid]);
+  // Si una página de misión (1-4) está desbloqueada pero no tiene contenido
+  // (sesiones viejas o calibración aprobada sin generar la introducción),
+  // Babel genera la introducción de esa misión para que la página nunca
+  // quede vacía.
+  React.useEffect(() => {
+    if (!uid || !session || sending) return;
+    if (faseInicial === undefined || faseInicial < 1) return;
+    if ((session.currentPhase ?? 0) < faseInicial) return;
+    const aprobada = (session.phases ?? []).some(function (p) { return p.phase === faseInicial && p.approved; });
+    const tieneContenido = session.messages.length > 2;
+    if (aprobada || tieneContenido) return;
+    const clave = 'f' + faseInicial;
+    if (seedRef.current.has(clave)) return;
+    seedRef.current.add(clave);
+    (async () => {
+      try {
+        const userSeed: ChatMessage = {
+          role: 'user',
+          content: dispLang === 'en' ? 'Begin this mission: please present its starting template.' : 'Inicia esta misión: por favor presenta su plantilla de inicio.',
+          timestamp: Timestamp.now(),
+        };
+        const historyForApi = [...session.messages, userSeed];
+        const res = await fetch('/api/babel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: historyForApi.map(function (m) { return { role: m.role, content: m.content }; }),
+            language: locale,
+            phase: faseInicial,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) throw new Error(data.error || 'Error generico');
+        const assistantMsg: ChatMessage = {
+          role: 'assistant',
+          content: data.reply as string,
+          timestamp: Timestamp.now(),
+        };
+        const finalMessages = [...historyForApi, assistantMsg];
+        setSession(function (prev) { return prev ? { ...prev, messages: finalMessages } : prev; });
+        await saveBabelMessages(uid, finalMessages);
+      } catch (err) {
+        console.error('[babel] Sembrar introducción de misión:', err);
+        seedRef.current.delete(clave);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uid, session, faseInicial, sending]);
   async function guardarFase0() {
     if (!uid || !session) return;
     setSending(true);
@@ -420,9 +495,9 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
       const aprobada = (session.phases ?? []).some(function (p) { return p.phase === 0 && p.approved; });
       if (!aprobada) {
         const refreshed = await getOrCreateBabelSession(uid, locale);
-        const ultimo = refreshed.messages[refreshed.messages.length - 1];
-        if (ultimo && ultimo.role === 'assistant') {
-          await approveBabelPhase(uid, 0, ultimo.content, locale);
+        const resumen = resumenFase0En(refreshed.messages);
+        if (resumen) {
+          await approveBabelPhase(uid, 0, resumen.content, locale);
         }
         const final = await getOrCreateBabelSession(uid, locale);
         setSession(final);
@@ -467,7 +542,17 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
           content: built.assistantContent,
           timestamp: Timestamp.now(),
         };
-        const cleanMessages: ChatMessage[] = [summaryMsg, assistantMsg];
+        // Si la conversación ya tenía el par de la Fase 0 (usuario que repite
+        // la calibración), se actualiza el par SIN borrar los mensajes de las
+        // misiones posteriores que ya se hubieran generado.
+        const anterior = session.messages;
+        const hayParFase0 =
+          anterior.length >= 2 &&
+          anterior[0].role === 'user' &&
+          (anterior[0].content.startsWith('Fase 0 completada:') || anterior[0].content.startsWith('Phase 0 completed:'));
+        const cleanMessages = hayParFase0
+          ? anterior.map(function (m, i) { return i === 0 ? summaryMsg : i === 1 ? assistantMsg : m; })
+          : [summaryMsg, assistantMsg];
         setSession(function (prev) { return prev ? { ...prev, messages: cleanMessages } : prev; });
         await saveBabelMessages(uid, cleanMessages);
         setIsPhase0Complete(true);
