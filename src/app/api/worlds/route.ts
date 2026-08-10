@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
 
     if (accion === 'completar-mision') {
       const mision = Math.round(parseNum(body?.mision, 0));
-      const misionesValidas = MISIONES_PART_LABELS.map((m) => m.n);
+      const misionesValidas: number[] = MISIONES_PART_LABELS.map((m) => m.n);
       if (!misionesValidas.includes(mision)) {
         return NextResponse.json({ error: 'Misión inválida.' }, { status: 400 });
       }

@@ -7,6 +7,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { getFirebaseAuth, getFirebaseDb } from '@/lib/firebase';
 import AgentAvatar, { type AgenteAvatarId } from '@/components/agentes/AgentAvatar';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
+import { MISIONES_PART_LABELS } from '@/lib/worlds';
 
 type InicioLang = 'es' | 'en';
 type Params = readonly [string, string];
@@ -67,7 +68,7 @@ const MUNDOS_ACCESO: MundoAcceso[] = [
       'Queremos saber de dónde partes: evalúa el nivel de tu empresa, define cuánto necesitas ganar en dinero y qué objetivos debes alcanzar.',
       'We want to know where you come from: assess your company level, define how much money you need to earn and the objectives you must reach.',
     ],
-    href: '/worlds?v=partida',
+    href: '/worlds/partida',
   },
   {
     id: 'retos',
@@ -231,7 +232,7 @@ export default function InicioBuilder({ lang }: { lang: InicioLang }) {
   }, []);
 
   // Progreso del Mundo de Partida (users/{uid}.worlds.partida) para decidir
-  // si el Toolbox está desbloqueado (3 misiones completadas).
+  // si el Toolbox está desbloqueado (todas las misiones completadas).
   React.useEffect(() => {
     const auth = getFirebaseAuth();
     const unsub = onAuthStateChanged(auth, async (usr: User | null) => {
@@ -250,7 +251,7 @@ export default function InicioBuilder({ lang }: { lang: InicioLang }) {
     return () => unsub();
   }, []);
 
-  const toolboxActivo = partida.length >= 3;
+  const toolboxActivo = partida.length >= MISIONES_PART_LABELS.length;
 
   return (
     <div>
@@ -419,8 +420,8 @@ export default function InicioBuilder({ lang }: { lang: InicioLang }) {
                     '✓ Toolbox unlocked by completing the Starting World.',
                   ])
                 : t([
-                    '🔒 Toolbox bloqueado: completa las 3 misiones del Mundo de Partida (M1 Dashboard, M2 Objetivos estratégicos y M3 Calibración) para desbloquear estas herramientas.',
-                    '🔒 Toolbox locked: complete the 3 Starting World missions (M1 Dashboard, M2 Strategic Objectives and M3 Calibration) to unlock these tools.',
+                    `🔒 Toolbox bloqueado: completa las ${MISIONES_PART_LABELS.length} misiones del Mundo de Partida (M1 Dashboard y M2 Objetivos estratégicos) para desbloquear estas herramientas.`,
+                    `🔒 Toolbox locked: complete the ${MISIONES_PART_LABELS.length} Starting World missions (M1 Dashboard and M2 Strategic Objectives) to unlock these tools.`,
                   ])}
           </div>
         </div>
