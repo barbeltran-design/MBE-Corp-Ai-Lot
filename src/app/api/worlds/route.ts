@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
     const uData = uSnap.exists ? (uSnap.data() as Record<string, unknown>) : {};
     const worldsRaw = (uData.worlds as WorldsDoc | undefined) ?? {};
     const partida = Array.isArray(worldsRaw.partida)
-      ? worldsRaw.partida.map((n) => Number(n)).filter((n) => Number.isFinite(n) && n >= 1 && n <= 3)
+      ? worldsRaw.partida.map((n) => Number(n)).filter((n) => Number.isFinite(n) && n >= 1 && n <= MISIONES_PART_LABELS.length)
       : [];
     const puntos = parseNum(uData.puntosClub, 0);
     return NextResponse.json({
@@ -57,9 +57,9 @@ export async function GET(req: NextRequest) {
 }
 
 // POST /api/worlds
-//   completar-mision  {mision: 1..3}  — autenticado; valida secuencia, otorga
+//   completar-mision  {mision: 1..2}  — autenticado; valida secuencia, otorga
 //     los puntos de la misión una sola vez y desbloquea el Tablero al cerrar
-//     la Calibración Inicial (misión 3).
+//     la última misión del Mundo de Partida (misión 2, Objetivos Estratégicos).
 export async function POST(req: NextRequest) {
   let uid: string;
   try {
@@ -79,7 +79,8 @@ export async function POST(req: NextRequest) {
 
     if (accion === 'completar-mision') {
       const mision = Math.round(parseNum(body?.mision, 0));
-      if (![1, 2, 3].includes(mision)) {
+      const misionesValidas = MISIONES_PART_LABELS.map((m) => m.n);
+      if (!misionesValidas.includes(mision)) {
         return NextResponse.json({ error: 'Misión inválida.' }, { status: 400 });
       }
       const userRef = db.collection('users').doc(uid);
@@ -100,7 +101,8 @@ export async function POST(req: NextRequest) {
 
       const pts = puntosDeMision(mision);
       const nuevaPartida = [...partida, mision].sort((a, b) => a - b);
-      const tablero = mision === 3 ? true : worldsRaw.tablero === true;
+      const esFinalPartida = mision === MISIONES_PART_LABELS.length;
+      const tablero = esFinalPartida ? true : worldsRaw.tablero === true;
       const uDataPuntos = parseNum(uData.puntosClub, 0);
 
       // Puntos + log + progreso en un solo batch.
@@ -130,7 +132,7 @@ export async function POST(req: NextRequest) {
         partida: nuevaPartida,
         tablero,
         puntos: uDataPuntos + pts,
-        desbloqueo: tablero ? (mision === 3 ? { tablero: true } : {}) : {},
+        desbloqueo: tablero ? (esFinalPartida ? { tablero: true } : {}) : {},
       });
     }
 

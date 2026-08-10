@@ -54,8 +54,8 @@ export interface UserDoc {
   puntosClub?: number;
   semanasJunta?: number;
   primerJuntaAt?: string;
-  // MBE Worlds: misiones completadas del Mundo de Partida (1-5) y desbloqueo
-  // del Tablero de Retos (true al cerrar la Calibración Inicial).
+  // MBE Worlds: misiones completadas del Mundo de Partida (1-2) y desbloqueo
+  // del Tablero de Retos (true al cerrar la misión 2, Objetivos Estratégicos).
   worlds?: { partida?: number[]; tablero?: boolean };
 }
 

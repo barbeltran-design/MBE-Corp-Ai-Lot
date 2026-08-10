@@ -374,14 +374,73 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
   }
 
   React.useEffect(() => {
-    if (session && (session.currentPhase ?? 0) > 0) {
+    if (!session || !uid) return;
+    if ((session.currentPhase ?? 0) > 0) {
       // isPhase0Complete se sincroniza cuando una sesion existente carga con
       // fase ya avanzada (usuario que regresa); isPhase0Complete tambien se
       // escribe desde varios manejadores de eventos, no es un valor derivable.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsPhase0Complete(true);
+      return;
     }
-  }, [session]);
+    // Sesiones que completaron la calibracion pero NUNCA la aprobaron
+    // (currentPhase sigue en 0): se auto-aprueba la Fase 0 para que la
+    // informacion se conserve y las demas paginas no la vuelvan a pedir.
+    const primerMensaje = session.messages[0];
+    const calibracionGuardada =
+      session.messages.length >= 2 &&
+      primerMensaje &&
+      primerMensaje.role === 'user' &&
+      (primerMensaje.content.startsWith('Fase 0 completada:') || primerMensaje.content.startsWith('Phase 0 completed:'));
+    if (calibracionGuardada) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsPhase0Complete(true);
+      (async () => {
+        try {
+          const ultimo = session.messages[session.messages.length - 1];
+          if (ultimo && ultimo.role === 'assistant') {
+            await approveBabelPhase(uid, 0, ultimo.content, locale);
+            const refreshed = await getOrCreateBabelSession(uid, locale);
+            setSession(refreshed);
+          }
+        } catch (err) {
+          console.error('[babel] Auto-aprobar Fase 0:', err);
+        }
+      })();
+    }
+  }, [session, uid]);
+  async function guardarFase0() {
+    if (!uid || !session) return;
+    setSending(true);
+    setError(null);
+    try {
+      if (input.trim()) {
+        await handlePhase0Answer();
+      }
+      const aprobada = (session.phases ?? []).some(function (p) { return p.phase === 0 && p.approved; });
+      if (!aprobada) {
+        const refreshed = await getOrCreateBabelSession(uid, locale);
+        const ultimo = refreshed.messages[refreshed.messages.length - 1];
+        if (ultimo && ultimo.role === 'assistant') {
+          await approveBabelPhase(uid, 0, ultimo.content, locale);
+        }
+        const final = await getOrCreateBabelSession(uid, locale);
+        setSession(final);
+      }
+      setIsPhase0Complete(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al guardar la calibración inicial');
+    } finally {
+      setSending(false);
+    }
+  }
+  async function continuarAlMundo() {
+    const aprobada = (session?.phases ?? []).some(function (p) { return p.phase === 0 && p.approved; });
+    if (!aprobada) {
+      await guardarFase0();
+    }
+    router.push('/' + locale + '/worlds/estrategia');
+  }
   async function handlePhase0Answer() {
     if (!input.trim() || !uid || !session) return;
     const answer = input.trim();
@@ -881,6 +940,16 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
               {sending ? (dispLang === 'en' ? 'Sending...' : 'Enviando...') : (dispLang === locale ? t('send') : UI_FALLBACK[dispLang].send)}
             </Button>
           </form>
+          {currentQuestionIndex === questions.length - 1 && (
+            <Button
+              type="button"
+              onClick={function () { guardarFase0(); }}
+              disabled={sending || !input.trim()}
+              className="mt-3 w-full bg-gradient-to-r from-teal-500 to-cyan-400 hover:opacity-90"
+            >
+              {sending ? (dispLang === 'en' ? 'Saving...' : 'Guardando...') : (dispLang === 'en' ? 'Save initial calibration' : 'Guardar calibración inicial')}
+            </Button>
+          )}
         </div>
       </div>
       <PageTour pageId="babel-reflexion" steps={pasosTour} lang={dispLang} />
@@ -903,8 +972,8 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
         selector: '#babel-calibracion-siguiente',
         title: dispLang === 'en' ? 'Keep going' : 'Continúa tu camino',
         description: dispLang === 'en'
-          ? 'Each phase lives in its own page: continue to Phase 1 (Purpose) or open the full Strategic Reflection.'
-          : 'Cada fase vive en su propia página: continúa con la Fase 1 (Propósito) o abre la Reflexión Estratégica completa.',
+          ? 'Continue to the Strategy World to build your phases, or go back to the map.'
+          : 'Continúa al Mundo de la Estrategia para construir tus fases, o regresa al mapa.',
       },
     ];
     return (
@@ -1003,17 +1072,19 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
               })}
             </div>
             <div id="babel-calibracion-siguiente" className="mt-2 flex flex-wrap items-center justify-center gap-2">
-              <a
-                href={`/${locale}/babel/proposito`}
-                className="rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 px-4 py-2 text-sm font-extrabold text-white shadow-md shadow-teal-500/30 transition hover:opacity-90"
+              <button
+                type="button"
+                onClick={function () { continuarAlMundo(); }}
+                disabled={sending}
+                className="rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 px-4 py-2 text-sm font-extrabold text-white shadow-md shadow-teal-500/30 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {dispLang === 'en' ? 'Continue to Phase 1 — Purpose & Value Proposition →' : 'Continuar a la Fase 1 — Propósito y Propuesta de Valor →'}
-              </a>
+                {sending ? (dispLang === 'en' ? 'Saving...' : 'Guardando...') : (dispLang === 'en' ? 'Continue to the Strategy World →' : 'Continuar al Mundo de la Estrategia →')}
+              </button>
               <a
-                href={`/${locale}/babel`}
+                href={`/${locale}/worlds`}
                 className="rounded-lg border border-teal-400/60 bg-white/40 px-4 py-2 text-sm font-bold text-teal-700 backdrop-blur-md transition hover:bg-white/70 dark:bg-white/10 dark:text-teal-200 dark:hover:bg-white/20"
               >
-                {dispLang === 'en' ? 'Open the full Strategic Reflection' : 'Abrir la Reflexión Estratégica completa'}
+                {dispLang === 'en' ? '← Back to the map' : '← Regresar al mapa'}
               </a>
             </div>
           </div>

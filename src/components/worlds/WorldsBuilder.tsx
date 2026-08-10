@@ -9,6 +9,7 @@ import AgentAvatar from '@/components/agentes/AgentAvatar';
 import { getLatestAssessmentAnswers } from '@/lib/assessment';
 import { getMaturityDimensions } from '@/lib/maturity-dimensions';
 import { nivelDesdePuntos } from '@/lib/club';
+import { getBabelSessionIfExists } from '@/lib/babel-session';
 import {
   MISIONES_PART_LABELS,
   SUBMUNDOS_ESTRATEGIA_LABELS,
@@ -49,8 +50,8 @@ const I = {
   gratisTag: ['Gratis · Activo', 'Free · Active'],
   mundoPartida: ['Mundo de Partida', 'Starting World'],
   mundoPartidaDesc: [
-    'Anfitrión Babel · 3 misiones para calibrar tu empresa antes de la aventura. Al completarlas desbloqueas el Tablero de Retos.',
-    'Hosted by Babel · 3 missions to calibrate your company before the adventure. Completing them unlocks the Challenges Board.',
+    'Anfitrión Babel · 2 misiones para calibrar tu empresa antes de la aventura. Al completarlas desbloqueas el Tablero de Retos.',
+    'Hosted by Babel · 2 missions to calibrate your company before the adventure. Completing them unlocks the Challenges Board.',
   ],
   entrarPartida: ['► Entrar al mundo', '► Enter the world'],
   tableroCard: ['Tablero de Retos', 'Challenges Board'],
@@ -58,7 +59,7 @@ const I = {
     'Retos semanales y mensuales sobre tus 11 temas de madurez. Se desbloquea terminando el Mundo de Partida.',
     'Weekly and monthly challenges over your 11 maturity topics. Unlocks by finishing the Starting World.',
   ],
-  reqTablero: ['🔒 Requisito: «Calibración Inicial»', '🔒 Requirement: «Initial Calibration»'],
+  reqTablero: ['🔒 Requisito: «Objetivos Estratégicos»', '🔒 Requirement: «Strategic Objectives»'],
   tagUnlock: ['Desbloqueado', 'Unlocked'],
   tagLock: ['Bloqueado', 'Locked'],
   premTitle: ['Mundos Premium', 'Premium Worlds'],
@@ -122,10 +123,10 @@ const I = {
   ],
   tableroLockedTitle: ['Tablero bloqueado', 'Board locked'],
   tableroLockedDesc: [
-    'Completa el Mundo de Partida (incluida la Calibración Inicial) para desbloquear el Tablero de Retos.',
-    'Complete the Starting World (including the Initial Calibration) to unlock the Challenges Board.',
+    'Completa el Mundo de Partida para desbloquear el Tablero de Retos.',
+    'Complete the Starting World to unlock the Challenges Board.',
   ],
-  irCalibracion: ['→ Ir a la Calibración Inicial', '→ Go to the Initial Calibration'],
+  irCalibracion: ['→ Ir al Mundo de Partida', '→ Go to the Starting World'],
   misionCompleta: ['¡Misión completada!', 'Mission complete!'],
   tableroGanado: ['¡Tablero de Retos desbloqueado!', 'Challenges Board unlocked!'],
   errorProcesar: ['No se pudo procesar la acción.', 'Could not process the action.'],
@@ -175,6 +176,9 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
   const [uid, setUid] = React.useState<string | null>(null);
   const [respuestas, setRespuestas] = React.useState<Record<string, string[]> | null>(null);
   const [recorrido, setRecorrido] = React.useState<string[]>([]);
+  // Misión 0 del Mundo de Estrategia (Calibración): se marca COMPLETADA cuando
+  // la Fase 0 de Babel ya fue aprobada por el usuario en su sesión.
+  const [fase0Aprobada, setFase0Aprobada] = React.useState(false);
 
   const notificar = React.useCallback((msg: string) => {
     setToast(msg);
@@ -228,6 +232,23 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
     };
   }, [uid, yo?.tablero]);
 
+  // Misión 0 (Calibración) del Mundo de Estrategia: lee la sesión de Babel del
+  // usuario y marca COMPLETADA si la Fase 0 ya fue aprobada.
+  React.useEffect(() => {
+    if (!uid) return;
+    let vivo = true;
+    getBabelSessionIfExists(uid)
+      .then((session) => {
+        if (!vivo || !session) return;
+        const aprobada = (session.phases ?? []).some((p) => p.phase === 0 && p.approved);
+        setFase0Aprobada(aprobada);
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, [uid]);
+
   async function completarMision(n: number) {
     if (!yo || completando !== null) return;
     if (n > 1 && !yo.partida.includes(n - 1)) {
@@ -259,8 +280,9 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
             : prev
         );
         festejar();
-        notificar(`+${data.pts} ${en(I.pts)} · ${n === 3 ? en(I.tableroGanado) : en(I.misionCompleta)}`);
-        if (n === 3) setVista('mapa');
+        const esFinalPartida = n === MISIONES_PART_LABELS.length;
+        notificar(`+${data.pts} ${en(I.pts)} · ${esFinalPartida ? en(I.tableroGanado) : en(I.misionCompleta)}`);
+        if (esFinalPartida) setVista('mapa');
       } else {
         notificar(String(data.error ?? en(I.errorProcesar)));
       }
@@ -402,11 +424,12 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
                   <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-400/25">
                     <div
                       className="h-full rounded-full bg-gradient-to-r from-teal-400 via-cyan-400 to-fuchsia-500 transition-all duration-500"
-                      style={{ width: `${Math.min(100, (hechas.length / 3) * 100)}%` }}
+                      style={{ width: `${Math.min(100, (hechas.length / MISIONES_PART_LABELS.length) * 100)}%` }}
                     />
                   </div>
                   <p className="mt-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                    {hechas.length}/3 {en(I.misionesDe)} · {hechas.length === 3 ? en(I.partidaCompleta) : en(I.partidaEnCurso)} ·{' '}
+                    {hechas.length}/{MISIONES_PART_LABELS.length} {en(I.misionesDe)} ·{' '}
+                    {hechas.length === MISIONES_PART_LABELS.length ? en(I.partidaCompleta) : en(I.partidaEnCurso)} ·{' '}
                     {yo.tablero ? en(I.tableroListo) : en(I.tableroBloqueado)} · {en(I.estrategiaCurso)}
                   </p>
                 </div>
@@ -420,7 +443,7 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
                     <h3 className="mt-2 text-base font-extrabold text-slate-800 dark:text-white">{en(I.mundoPartida)}</h3>
                     <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{en(I.mundoPartidaDesc)}</p>
                     <p className="mt-2 text-xs font-bold text-teal-700 dark:text-teal-300">
-                      {en(I.entrarPartida)} · {hechas.length}/3
+                      {en(I.entrarPartida)} · {hechas.length}/{MISIONES_PART_LABELS.length}
                     </p>
                   </button>
 
@@ -666,37 +689,51 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
             {vista === 'estrategia' && (
               <>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {SUBMUNDOS_ESTRATEGIA_LABELS.map((s) => (
-                    <div key={s.n} className="world-glass world-grain p-5">
-                      <div className="flex items-center justify-between">
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide ${
-                            s.estado === 'listo'
-                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200'
-                              : s.estado === 'wip'
-                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-200'
-                                : 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
-                          }`}
+                  {SUBMUNDOS_ESTRATEGIA_LABELS.map((s) => {
+                    // Misión 0 (Calibración) es la única con estado dinámico:
+                    // COMPLETADA si la Fase 0 de Babel ya fue aprobada. Las
+                    // demás misiones conservan su estado estático de worlds.ts.
+                    const estadoEfectivo = s.n === 0 && fase0Aprobada ? 'completada' : s.estado;
+                    return (
+                      <div key={s.n} className="world-glass world-grain p-5">
+                        <div className="flex items-center justify-between">
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide ${
+                              estadoEfectivo === 'completada'
+                                ? 'bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-200'
+                                : estadoEfectivo === 'listo'
+                                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200'
+                                  : estadoEfectivo === 'wip'
+                                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-200'
+                                    : 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                            }`}
+                          >
+                            {estadoEfectivo === 'completada'
+                              ? en(I.completadaTag)
+                              : estadoEfectivo === 'listo'
+                                ? en(I.listoTag)
+                                : estadoEfectivo === 'wip'
+                                  ? en(I.enCursoTag)
+                                  : en(I.pendienteTag)}
+                          </span>
+                          <span className="text-xs font-extrabold text-amber-600 dark:text-amber-300">
+                            +{s.pts} {en(I.pts)}
+                          </span>
+                        </div>
+                        <div className="mt-3 text-4xl">{s.icon}</div>
+                        <h3 className="mt-1 text-sm font-extrabold text-slate-800 dark:text-white">
+                          {s.n}. {lang === 'en' ? s.en : s.es}
+                        </h3>
+                        <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{lang === 'en' ? s.enDesc : s.esDesc}</p>
+                        <button
+                          className="mt-3 rounded-lg border border-teal-400/60 bg-white/40 px-3 py-1.5 text-xs font-extrabold text-teal-700 backdrop-blur-md transition hover:bg-white/70 dark:bg-white/10 dark:text-teal-200 dark:hover:bg-white/20"
+                          onClick={() => router.push(s.ruta)}
                         >
-                          {s.estado === 'listo' ? en(I.listoTag) : s.estado === 'wip' ? en(I.enCursoTag) : en(I.pendienteTag)}
-                        </span>
-                        <span className="text-xs font-extrabold text-amber-600 dark:text-amber-300">
-                          +{s.pts} {en(I.pts)}
-                        </span>
+                          {en(I.abrirSub)} →
+                        </button>
                       </div>
-                      <div className="mt-3 text-4xl">{s.icon}</div>
-                      <h3 className="mt-1 text-sm font-extrabold text-slate-800 dark:text-white">
-                        {s.n}. {lang === 'en' ? s.en : s.es}
-                      </h3>
-                      <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{lang === 'en' ? s.enDesc : s.esDesc}</p>
-                      <button
-                        className="mt-3 rounded-lg border border-teal-400/60 bg-white/40 px-3 py-1.5 text-xs font-extrabold text-teal-700 backdrop-blur-md transition hover:bg-white/70 dark:bg-white/10 dark:text-teal-200 dark:hover:bg-white/20"
-                        onClick={() => router.push(s.ruta)}
-                      >
-                        {en(I.abrirSub)} →
-                      </button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 <div className="world-glass world-grain mt-6 p-5">
@@ -736,15 +773,15 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
             selector: '#worlds-progreso',
             title: lang === 'es' ? 'Tu progreso' : 'Your progress',
             description: lang === 'es'
-              ? 'Este medidor avanza con cada misión completada; cuando llegues a 3/3 se desbloquea el Tablero de Retos.'
-              : 'This bar advances with each completed mission; at 3/3 the Challenges Board unlocks.',
+              ? `Este medidor avanza con cada misión completada; cuando llegues a ${MISIONES_PART_LABELS.length}/${MISIONES_PART_LABELS.length} se desbloquea el Tablero de Retos.`
+              : `This bar advances with each completed mission; at ${MISIONES_PART_LABELS.length}/${MISIONES_PART_LABELS.length} the Challenges Board unlocks.`,
           },
           {
             selector: '#worlds-mundo-partida',
-            title: lang === 'es' ? 'Las 3 misiones' : 'The 3 missions',
+            title: lang === 'es' ? `Las ${MISIONES_PART_LABELS.length} misiones` : `The ${MISIONES_PART_LABELS.length} missions`,
             description: lang === 'es'
-              ? 'Cada misión abre una herramienta real (Dashboard, Objetivos estratégicos o Calibración). Puedes repetirlas cuando cambie tu empresa.'
-              : 'Each mission opens a real tool (Dashboard, Strategic Objectives or Calibration). You can redo them whenever your company changes.',
+              ? 'Cada misión abre una herramienta real (Dashboard u Objetivos estratégicos). Puedes repetirlas cuando cambie tu empresa.'
+              : 'Each mission opens a real tool (Dashboard or Strategic Objectives). You can redo them whenever your company changes.',
           },
         ]}
       />
