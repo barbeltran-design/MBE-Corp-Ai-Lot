@@ -353,7 +353,7 @@ export default function InicioBuilder({ lang }: { lang: InicioLang }) {
                 onClick={() => router.push(`/${lang}${m.href}`)}
                 className="relative flex h-full flex-col items-center rounded-2xl border border-glass-border bg-glass p-5 text-center shadow-[0_8px_32px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.25)] backdrop-blur-2xl backdrop-saturate-150 transition-all duration-200 ease-executive hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/30"
               >
-                <AgentAvatar agente={m.agente} size={72} className="ring-2 ring-teal-300/40" />
+                <AgentAvatar agente={m.agente} size={72} className="ring-2 ring-teal-300/40" onClick={function () {}} />
                 <h6 className="mt-3 flex items-center gap-1.5 text-base font-bold text-slate-800 dark:text-slate-100">
                   <span className="text-lg leading-none">{m.icono}</span> {t(m.titulo)}
                 </h6>
@@ -436,7 +436,7 @@ export default function InicioBuilder({ lang }: { lang: InicioLang }) {
           {MUNDOS_PREMIUM.map((m) => {
             const inner = (
               <>
-                <AgentAvatar agente={m.agente} size={72} className="ring-2 ring-teal-300/40" />
+                <AgentAvatar agente={m.agente} size={72} className="ring-2 ring-teal-300/40" onClick={function () {}} />
                 <h6 className="mt-3 flex items-center gap-1.5 text-sm font-extrabold text-slate-800 dark:text-white">
                   <span className="text-base leading-none">{m.icono}</span> {lang === 'en' ? m.titulo[1] : m.titulo[0]}
                 </h6>

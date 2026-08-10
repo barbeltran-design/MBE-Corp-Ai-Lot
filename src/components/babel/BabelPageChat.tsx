@@ -184,13 +184,13 @@ function FaseBanner({ fase, lang, locale }: { fase: number; lang: 'es' | 'en'; l
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-teal-300/70 bg-teal-50/90 px-4 py-2.5 text-sm dark:border-teal-800 dark:bg-teal-950/40">
       <span className="font-medium text-teal-900 dark:text-teal-100">
-        {lang === 'en' ? 'Focused view' : 'Vista enfocada'}: <span className="font-bold">Fase {fase} — {label}</span>
+        {lang === 'en' ? 'Focused view' : 'Vista enfocada'}: <span className="font-bold">Misión {fase} — {label}</span>
       </span>
       <a
-        href={'/' + locale + '/babel'}
+        href={'/' + locale + '/worlds/estrategia'}
         className="text-xs font-bold text-teal-700 underline underline-offset-2 hover:text-teal-900 dark:text-teal-300"
       >
-        {lang === 'en' ? 'Open full Strategic Reflection →' : 'Abrir Reflexión Estratégica completa →'}
+        {lang === 'en' ? '← Back to the Strategy map' : '← Regresar al mapa de la Estrategia'}
       </a>
     </div>
   );
@@ -834,7 +834,7 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
             <AgentAvatar size={56} className="shrink-0" />
             <div>
               <h1 className="text-xl font-semibold text-slate-900">{dispLang === locale ? t('title') : UI_FALLBACK[dispLang].title}</h1>
-              <p className="text-sm text-slate-500">{dispLang === 'en' ? 'Phase 0: Initial Calibration' : 'Fase 0: Calibración Inicial'}</p>
+              <p className="text-sm text-slate-500">{dispLang === 'en' ? 'Mission 0: Initial Calibration' : 'Misión 0: Calibración'}</p>
             </div>
           </div>
         <div className="flex flex-col items-end gap-2">
@@ -985,7 +985,7 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
               <AgentAvatar size={56} className="shrink-0" />
               <div>
                 <h1 className="text-xl font-semibold text-slate-900">{dispLang === locale ? t('title') : UI_FALLBACK[dispLang].title}</h1>
-                <p className="text-sm text-slate-500">{dispLang === 'en' ? 'Phase 0: Initial Calibration' : 'Fase 0: Calibración Inicial'}</p>
+                <p className="text-sm text-slate-500">{dispLang === 'en' ? 'Mission 0: Initial Calibration' : 'Misión 0: Calibración'}</p>
               </div>
             </div>
             <div className="flex flex-col items-end gap-2">
@@ -1005,7 +1005,7 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
           <div id="babel-calibracion-portal" className="glass-panel flex flex-col gap-4 p-6">
             <div className="flex flex-col items-center gap-3 text-center">
               <div className="text-5xl">🎉</div>
-              <h2 className="text-xl font-semibold text-slate-900">{dispLang === 'en' ? 'Phase 0 completed' : 'Fase 0 completada'}</h2>
+              <h2 className="text-xl font-semibold text-slate-900">{dispLang === 'en' ? 'Mission 0 completed' : 'Misión 0 completada'}</h2>
               <p className="text-sm text-slate-600">
                 {dispLang === 'en'
                   ? 'Your initial calibration is ready. Each remaining phase lives in its own page — continue there.'
@@ -1095,6 +1095,9 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
   }
   const rangoFase = faseInicial !== undefined && faseInicial >= 1 ? rangoDeFase(session, faseInicial) : null;
   const faseCompletada = faseInicial !== undefined && (session.phases ?? []).some(function (p) { return p.phase === faseInicial && p.approved; });
+  const resumenMision = faseInicial !== undefined && faseInicial >= 1
+    ? ((session.phases ?? []).find(function (p) { return p.phase === faseInicial && p.approved; })?.summary ?? null)
+    : null;
   const RUTA_SIGUIENTE_FASE: Record<number, string> = { 1: 'entorno', 2: 'capacidades', 3: 'enfoque' };
   return (
     <React.Fragment>
@@ -1107,7 +1110,7 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
             <h1 className="text-xl font-semibold text-slate-900">{dispLang === locale ? t('title') : UI_FALLBACK[dispLang].title}</h1>
             <p className="text-sm text-slate-500">
               {faseInicial !== undefined && phaseTopics[faseInicial]
-                ? phaseTopics[faseInicial]
+                ? phaseTopics[faseInicial].replace(/^Fase/, 'Misión').replace(/^Phase/, 'Mission')
                 : currentPhaseTopic ??
                   (dispLang === 'en'
                     ? 'All phases completed — compile your full plan with /compilar'
@@ -1122,22 +1125,40 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
         </div>
       </div>
       <PhaseStepper currentPhase={currentPhase} approved={session.phases ?? []} lang={dispLang} solo={rangoFase ? faseInicial : null} />
+      {resumenMision && (
+        <div id="babel-mision-completada" className="glass-panel flex flex-col gap-4 p-6">
+          <div className="flex flex-col items-center gap-3 text-center">
+            <div className="text-5xl">🎉</div>
+            <h2 className="text-xl font-semibold text-slate-900">
+              {dispLang === 'en' ? 'Mission ' + faseInicial + ' completed' : 'Misión ' + faseInicial + ' completada'}
+            </h2>
+            <p className="text-sm text-slate-600">
+              {dispLang === 'en'
+                ? 'This is what Babel generated for this mission; it stays saved here.'
+                : 'Esto es lo que Babel generó para esta misión; queda guardado aquí.'}
+            </p>
+          </div>
+          <div className="max-h-[45vh] overflow-y-auto whitespace-pre-wrap rounded-xl border border-slate-200 bg-white/60 p-4 text-sm text-slate-900 dark:border-slate-700 dark:bg-white/5 dark:text-slate-100">
+            {limpiarMarkdown(resumenMision)}
+          </div>
+        </div>
+      )}
       {rangoFase && !rangoFase.alcanzada ? (
         <div className="glass-panel flex flex-col items-center gap-3 p-8 text-center text-sm text-slate-600 dark:text-slate-300">
           <div className="text-4xl">🔒</div>
           <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-            {dispLang === 'en' ? 'This phase is not unlocked yet' : 'Esta fase aún no está desbloqueada'}
+            {dispLang === 'en' ? 'This mission is not unlocked yet' : 'Esta misión aún no está desbloqueada'}
           </h2>
           <p className="max-w-md">
             {dispLang === 'en'
-              ? 'Complete the previous phases of the Strategic Reflection to unlock Fase ' + faseInicial + '.'
-              : 'Completa las fases anteriores de la Reflexión Estratégica para desbloquear la Fase ' + faseInicial + '.'}
+              ? 'Complete the previous missions of the Strategic Reflection to unlock Mission ' + faseInicial + '.'
+              : 'Completa las misiones anteriores de la Reflexión Estratégica para desbloquear la Misión ' + faseInicial + '.'}
           </p>
           <a
-            href={'/' + locale + '/babel'}
+            href={'/' + locale + '/worlds/estrategia'}
             className="rounded-lg border border-teal-400/60 bg-white/40 px-4 py-2 text-xs font-bold text-teal-700 backdrop-blur-md transition hover:bg-white/70 dark:bg-white/10 dark:text-teal-200 dark:hover:bg-white/20"
           >
-            {dispLang === 'es' ? '← Volver a la Reflexión Estratégica' : '← Back to Strategic Reflection'}
+            {dispLang === 'es' ? '← Regresar al mapa de la Estrategia' : '← Back to the Strategy map'}
           </a>
         </div>
       ) : (
@@ -1253,8 +1274,8 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
             {faseInicial >= BABEL_IMPLEMENTED_PHASES - 1
               ? (dispLang === 'en' ? 'Open your complete plan →' : 'Ver tu plan completo →')
               : (dispLang === 'en'
-                  ? 'Continue to Phase ' + ((faseInicial ?? 0) + 1) + ' →'
-                  : 'Continuar a la Fase ' + ((faseInicial ?? 0) + 1) + ' →')}
+                  ? 'Continue to Mission ' + ((faseInicial ?? 0) + 1) + ' →'
+                  : 'Continuar a la Misión ' + ((faseInicial ?? 0) + 1) + ' →')}
           </a>
         </div>
       )}
@@ -1286,7 +1307,7 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
       )}
       {showManualEditor && !awaitingApproval && (
         <div className="glass-panel p-4 space-y-2">
-          <p className="text-sm font-medium text-slate-700">{dispLang === 'en' ? 'Write your conclusion for Phase ' + currentPhase + ' manually:' : 'Escribe tu conclusion para la Fase ' + currentPhase + ' manualmente:'}</p>
+          <p className="text-sm font-medium text-slate-700">{dispLang === 'en' ? 'Write your conclusion for Mission ' + currentPhase + ' manually:' : 'Escribe tu conclusion para la Misión ' + currentPhase + ' manualmente:'}</p>
           <textarea
             value={manualContent}
             onChange={function (e) { setManualContent(e.target.value); }}
@@ -1327,7 +1348,7 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
                 {dispLang === 'en' ? 'Cancel' : 'Cancelar'}
               </Button>
               <Button onClick={function () { manualApprovePhase(currentPhase, manualContent); }} disabled={sending || !manualContent.trim()} size="sm">
-                {sending ? (dispLang === 'en' ? 'Saving...' : 'Guardando...') : (dispLang === 'en' ? 'Save and approve Phase ' + currentPhase : 'Guardar y aprobar Fase ' + String(currentPhase))}
+              {sending ? (dispLang === 'en' ? 'Saving...' : 'Guardando...') : (dispLang === 'en' ? 'Save and approve Mission ' + currentPhase : 'Guardar y aprobar Misión ' + String(currentPhase))}
               </Button>
             </div>
           </div>
