@@ -434,7 +434,7 @@ async function tryOpenAICompatible(
         model,
         messages: msgs,
         temperature: 0.7,
-        max_tokens: 4096,
+        max_tokens: 8192,
       }),
     });
 

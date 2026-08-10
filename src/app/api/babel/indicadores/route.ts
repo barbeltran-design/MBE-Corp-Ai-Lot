@@ -209,7 +209,7 @@ async function tryOpenAICompatible(
           { role: 'user', content: userMessage },
         ],
         temperature: 0.4,
-        max_tokens: 4096,
+        max_tokens: 8192,
       }),
     });
     const data = await res.json();
