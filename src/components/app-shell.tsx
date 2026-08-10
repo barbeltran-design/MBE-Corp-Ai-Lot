@@ -1,12 +1,13 @@
 'use client';
 
 import * as React from 'react';
-import { CalendarClock, CalendarRange, ClipboardList, Gauge, Home, LayoutDashboard, LineChart, Megaphone, ShieldCheck, Sparkles, Store, TrendingUp, UserCheck2, Users } from 'lucide-react';
+import { Compass, Crown, Globe, Home, LayoutDashboard, Medal, ShieldCheck, UserCheck2, Wrench } from 'lucide-react';
 import { ExecutiveShell, type ExecutiveNavItem } from '@/components/executive-shell';
 import { BackgroundBlobs } from '@/components/ui/executive/background-blobs';
 import { DisplayLangProvider, useDisplayLang } from '@/components/display-lang-provider';
 import { WorkspaceSyncer } from '@/components/workspace-syncer';
 import { useUserRoles } from '@/lib/use-user-roles';
+import { MISIONES_PART_LABELS, SUBMUNDOS_ESTRATEGIA_LABELS } from '@/lib/worlds';
 
 function AppShellInner({
   children,
@@ -17,35 +18,69 @@ function AppShellInner({
 }) {
   const { lang } = useDisplayLang();
   const { administracion, especialista } = useUserRoles();
-  const navLabel = (es: string, en: string) => lang === 'en' ? en : es;
+  const navLabel = (es: string, en: string) => (lang === 'en' ? en : es);
+  const misionLabel = (n: number, es: string, en: string) => navLabel(`Misión ${n}: ${es}`, `Mission ${n}: ${en}`);
 
+  // Orden del menú = orden de la página de Inicio: Inicio → Resumen ejecutivo →
+  // Mundo de Partida (misiones) → Mundo de Retos → Toolbox (herramientas) →
+  // Mundos Premium (Estrategia con sus misiones + los demás mundos).
   const navItems: ExecutiveNavItem[] = [
     { href: `/${locale}/inicio`, label: navLabel('Inicio', 'Home'), icon: Home },
-    { href: `/${locale}/babel/convocatorias`, label: navLabel('Convocatorias y fondos', 'Calls & Grants'), icon: Megaphone },
     { href: `/${locale}/executive-preview`, label: navLabel('Resumen ejecutivo', 'Executive Summary'), icon: LayoutDashboard },
-    { href: `/${locale}/babel/indicadores`, label: navLabel('Objetivos estratégicos', 'Strategic Objectives'), icon: TrendingUp },
-    { href: `/${locale}/dashboard`, label: navLabel('Evaluación de madurez', 'Maturity Assessment'), icon: Gauge },
-    { href: `/${locale}/babel/madurez`, label: navLabel('Mejora del Nivel de Madurez', 'Maturity Level Improvement'), icon: LineChart },
-    { href: `/${locale}/babel`, label: navLabel('Reflexión estratégica', 'Strategic Reflection'), icon: Sparkles, group: navLabel('Estrategia Socioambiental', 'Socio-environmental Strategy') },
-    { href: `/${locale}/babel/organigrama`, label: navLabel('Organigrama y roles', 'Org Chart & Roles'), icon: Users, group: navLabel('Estrategia Socioambiental', 'Socio-environmental Strategy') },
-    { href: `/${locale}/babel/plan-accion`, label: navLabel('Plan de acción estratégico', 'Strategic Action Plan'), icon: ClipboardList, group: navLabel('Estrategia Socioambiental', 'Socio-environmental Strategy') },
+    {
+      href: `/${locale}/worlds/partida`,
+      label: navLabel('Mundo de Partida', 'Starting World'),
+      icon: Globe,
+      children: MISIONES_PART_LABELS.map((m) => ({
+        href: `/${locale}${m.ruta}`,
+        label: misionLabel(m.n, m.es, m.en),
+      })),
+    },
+    { href: `/${locale}/babel/madurez`, label: navLabel('Mundo de Retos', 'Challenges World'), icon: Medal },
+    {
+      label: navLabel('Toolbox', 'Toolbox'),
+      icon: Wrench,
+      titleOnly: true,
+      children: [
+        { href: `/${locale}/babel/convocatorias`, label: navLabel('Convocatorias y fondos', 'Calls & Grants') },
+        { href: `/${locale}/refplace`, label: navLabel('Reference Place', 'Reference Place') },
+        { href: `/${locale}/club`, label: navLabel('Juntas de Mentoría', 'Mentoring Meetings') },
+      ],
+    },
+    {
+      label: navLabel('Mundos Premium', 'Premium Worlds'),
+      icon: Crown,
+      titleOnly: true,
+      children: [
+        {
+          href: `/${locale}/worlds?v=estrategia`,
+          label: navLabel('Mundo de la Estrategia', 'Strategy World'),
+          icon: Compass,
+          children: [
+            ...SUBMUNDOS_ESTRATEGIA_LABELS.map((m) => ({
+              href: `/${locale}${m.ruta}`,
+              label: misionLabel(m.n, m.es, m.en),
+            })),
+            { href: `/${locale}/agendar`, label: misionLabel(7, 'Apoyo de Especialistas', 'Specialist Support') },
+          ],
+        },
+        { href: `/${locale}/worlds?v=dinero`, label: navLabel('Mundo del Dinero', 'Money World') },
+        { href: `/${locale}/worlds?v=cliente`, label: navLabel('Mundo del Cliente', 'Customer World') },
+        { href: `/${locale}/worlds?v=normativo`, label: navLabel('Mundo Normativo', 'Compliance World') },
+        { href: `/${locale}/worlds?v=operativo`, label: navLabel('Mundo Operativo', 'Operations World') },
+        { href: `/${locale}/worlds?v=cultura`, label: navLabel('Mundo de la Cultura', 'Culture World') },
+      ],
+    },
   ];
 
   // Grupo "Admin" solo para administradores; "Mentor" para usuarios con
-  // rol de mentor. Se agregan DESPUÉS del grupo socioambiental, como
-  // grupo propio al final del menú.
+  // rol de mentor. Se agregan al final del menú.
   if (administracion) {
     navItems.push({ href: `/${locale}/admin`, label: navLabel('Administración', 'Administration'), icon: ShieldCheck });
   }
   if (especialista) {
     navItems.push({ href: `/${locale}/especialista`, label: navLabel('Panel de Mentor', 'Mentor Panel'), icon: UserCheck2 });
   }
-  // Reference Place: comunidad certificada, mercado de referencias y B2B.
-  navItems.push({ href: `/${locale}/refplace`, label: navLabel('Reference Place', 'Reference Place'), icon: Store });
-  // Comunidad de Mentoría Semanal.
-  navItems.push({ href: `/${locale}/club`, label: navLabel('Juntas de Mentoría', 'Mentoring Meetings'), icon: CalendarRange });
-  // Agendar con mentores: visible para todos los usuarios autenticados.
-  navItems.push({ href: `/${locale}/agendar`, label: navLabel('Agenda con mentores', 'Book a mentor'), icon: CalendarClock });
 
   return (
     <ExecutiveShell navItems={navItems} brandLabel="MBE Corpilot AI" logoSrc="/logo-mbe.png">

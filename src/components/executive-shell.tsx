@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Moon, PanelLeftClose, PanelLeftOpen, Search, Sun } from 'lucide-react';
+import { ChevronRight, Moon, PanelLeftClose, PanelLeftOpen, Search, Sun } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/theme-provider';
 import { CommandPalette, type CommandPaletteItem } from '@/components/ui/executive/command-palette';
@@ -11,10 +11,13 @@ import { useDisplayLang } from '@/components/display-lang-provider';
 import { UserMenu } from '@/components/user-menu';
 
 export interface ExecutiveNavItem {
-  href: string;
+  href?: string;
   label: string;
-  icon: React.ComponentType<{ className?: string; strokeWidth?: number | string }>;
+  icon?: React.ComponentType<{ className?: string; strokeWidth?: number | string }>;
   group?: string;
+  children?: ExecutiveNavItem[];
+  // Solo título (no navega); sus hijos se despliegan con el chevron.
+  titleOnly?: boolean;
 }
 
 export interface ExecutiveShellProps {
@@ -24,6 +27,38 @@ export interface ExecutiveShellProps {
   brandLabel?: string;
   logoSrc?: string;
   headerRight?: React.ReactNode;
+}
+
+/** ¿El ítem coincide con la ruta actual? (quita el query; para /worlds?v=X compara v). */
+function isItemActive(item: ExecutiveNavItem, pathname: string, search: string): boolean {
+  if (!item.href) return false;
+  const idx = item.href.indexOf('?');
+  const base = idx === -1 ? item.href : item.href.slice(0, idx);
+  const qs = idx === -1 ? '' : item.href.slice(idx + 1);
+  if (pathname === base || pathname === `${base}/`) {
+    if (qs.startsWith('v=')) {
+      try {
+        return new URLSearchParams(search).get('v') === qs.slice(2);
+      } catch {
+        return false;
+      }
+    }
+    return true;
+  }
+  return false;
+}
+
+function hasActiveDescendant(item: ExecutiveNavItem, pathname: string, search: string): boolean {
+  return isItemActive(item, pathname, search) || (item.children ?? []).some((c) => hasActiveDescendant(c, pathname, search));
+}
+
+/** Aplana la navegación (padres + hijos) para la paleta de comandos. */
+function flattenNav(items: ExecutiveNavItem[], group?: string): ExecutiveNavItem[] {
+  return items.flatMap((item) => {
+    const g = item.group ?? group ?? 'Navegación';
+    const self = item.href && !item.titleOnly ? [{ ...item, group: g }] : [];
+    return [...self, ...flattenNav(item.children ?? [], g)];
+  });
 }
 
 const SIDEBAR_STORAGE_KEY = 'mbe-sidebar-collapsed';
@@ -120,14 +155,135 @@ export function ExecutiveShell({
   const router = useRouter();
   const paletteItems: CommandPaletteItem[] = React.useMemo(() => {
     if (commandItems.length > 0) return commandItems;
-    return navItems.map((item) => ({
-      id: item.href,
+    return flattenNav(navItems).map((item) => ({
+      id: item.href ?? item.label,
       label: item.label,
       group: item.group ?? 'Navegación',
       icon: item.icon,
-      onSelect: () => router.push(item.href),
+      onSelect: () => item.href && router.push(item.href),
     }));
   }, [commandItems, navItems, router]);
+
+  const search = typeof window !== 'undefined' ? window.location.search : '';
+  const [openSections, setOpenSections] = React.useState<Record<string, boolean>>({});
+  const toggleSection = (label: string) => setOpenSections((prev) => ({ ...prev, [label]: !prev[label] }));
+
+  // Al navegar, abre automáticamente la sección que contiene la ruta activa.
+  React.useEffect(() => {
+    setOpenSections((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      const scan = (items: ExecutiveNavItem[]) => {
+        for (const it of items) {
+          if ((it.children?.length ?? 0) > 0 && hasActiveDescendant(it, pathname, search)) {
+            if (!next[it.label]) {
+              next[it.label] = true;
+              changed = true;
+            }
+          }
+          scan(it.children ?? []);
+        }
+      };
+      scan(navItems);
+      return changed ? next : prev;
+    });
+  }, [pathname, search, navItems]);
+
+  const renderNav = (item: ExecutiveNavItem, depth: number): React.ReactNode => {
+    const hasChildren = (item.children?.length ?? 0) > 0;
+    const expanded = Boolean(openSections[item.label]);
+    const active = isItemActive(item, pathname, search);
+    const Icon = item.icon;
+
+    const arrow = hasChildren ? (
+      <button
+        type="button"
+        aria-label={expanded ? 'Contraer subsección' : 'Expandir subsección'}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleSection(item.label);
+        }}
+        className="ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded transition-colors hover:bg-accent"
+      >
+        <ChevronRight className={cn('h-3.5 w-3.5 transition-transform duration-150', expanded && 'rotate-90')} strokeWidth={1.75} />
+      </button>
+    ) : null;
+
+    // Fila tipo título (no navega): encabezado de sección con chevron.
+    if (item.titleOnly) {
+      if (collapsed) return null;
+      return (
+        <React.Fragment key={item.label}>
+          <div
+            className={cn(
+              'flex w-full items-center gap-2 rounded-md text-muted-foreground/70',
+              depth > 0 ? 'px-2.5 py-1 text-xs font-semibold normal-case tracking-normal' : 'px-2.5 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider'
+            )}
+            role={hasChildren ? 'button' : undefined}
+            tabIndex={hasChildren ? 0 : undefined}
+            onClick={hasChildren ? () => toggleSection(item.label) : undefined}
+            onKeyDown={hasChildren ? (e) => { if (e.key === 'Enter' || e.key === ' ') toggleSection(item.label); } : undefined}
+          >
+            {Icon ? <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={2} /> : null}
+            <span className="flex-1 truncate">{item.label}</span>
+            {arrow}
+          </div>
+          {hasChildren && expanded ? <div className="space-y-0.5">{item.children!.map((c) => renderNav(c, depth + 1))}</div> : null}
+        </React.Fragment>
+      );
+    }
+
+    const rowClass = cn(
+      'group relative flex w-full items-center gap-3 rounded-md font-medium transition-colors duration-150',
+      depth > 0 ? 'py-1.5 text-[13px]' : 'py-2 text-sm',
+      collapsed ? 'justify-center px-2.5' : depth > 0 ? 'pl-6 pr-2.5' : 'px-2.5',
+      active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+    );
+
+    const content = (
+      <>
+        {Icon ? (
+          <Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+        ) : (
+          <span className={cn('shrink-0', collapsed ? 'w-0' : 'w-4')} />
+        )}
+        {!collapsed ? <span className="truncate">{item.label}</span> : null}
+        {!collapsed && hasChildren ? arrow : null}
+        {collapsed ? (
+          <span className="pointer-events-none absolute left-full ml-2 whitespace-nowrap rounded-md border border-border bg-popover px-2 py-1 text-xs text-popover-foreground opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100">
+            {item.label}
+          </span>
+        ) : null}
+      </>
+    );
+
+    return (
+      <React.Fragment key={item.label}>
+        {item.href ? (
+          <Link
+            href={item.href}
+            title={collapsed ? item.label : undefined}
+            onClick={hasChildren ? () => toggleSection(item.label) : undefined}
+            className={rowClass}
+          >
+            {content}
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={hasChildren ? () => toggleSection(item.label) : undefined}
+            className={rowClass}
+          >
+            {content}
+          </button>
+        )}
+        {hasChildren && expanded && !collapsed ? (
+          <div className="space-y-0.5">{item.children!.map((c) => renderNav(c, depth + 1))}</div>
+        ) : null}
+      </React.Fragment>
+    );
+  };
 
   return (
       <div className="flex min-h-screen text-foreground">
@@ -154,33 +310,14 @@ export function ExecutiveShell({
             {navItems.map((item, index) => {
               const prev = navItems[index - 1];
               const groupLabel = item.group && (!prev || prev.group !== item.group) ? item.group : null;
-              const active = pathname === item.href || pathname === `${item.href}/`;
-              const Icon = item.icon;
               return (
-                <React.Fragment key={item.href}>
+                <React.Fragment key={item.label}>
                   {groupLabel && !collapsed ? (
                     <div className="px-2.5 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
                       {groupLabel}
                     </div>
                   ) : null}
-                  <Link
-                    href={item.href}
-                    title={collapsed ? item.label : undefined}
-                    className={cn(
-                      'group relative flex items-center gap-3 rounded-md px-2.5 py-2 text-sm font-medium transition-colors duration-150',
-                      active
-                        ? 'bg-primary/10 text-primary'
-                        : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-                    )}
-                  >
-                    <Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} />
-                    {!collapsed ? <span className="truncate">{item.label}</span> : null}
-                    {collapsed ? (
-                      <span className="pointer-events-none absolute left-full ml-2 whitespace-nowrap rounded-md border border-border bg-popover px-2 py-1 text-xs text-popover-foreground opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100">
-                        {item.label}
-                      </span>
-                    ) : null}
-                  </Link>
+                  {renderNav(item, 0)}
                 </React.Fragment>
               );
             })}
