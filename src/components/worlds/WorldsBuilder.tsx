@@ -7,9 +7,10 @@ import { getFirebaseAuth } from '@/lib/firebase';
 import { useDisplayLang } from '@/components/display-lang-provider';
 import AgentAvatar from '@/components/agentes/AgentAvatar';
 import { getLatestAssessmentAnswers } from '@/lib/assessment';
-import { getMaturityDimensions } from '@/lib/maturity-dimensions';
+import { getMaturityDimensions, DIMENSION_IDS, type DimensionId } from '@/lib/maturity-dimensions';
 import { nivelDesdePuntos } from '@/lib/club';
 import { getBabelSessionIfExists } from '@/lib/babel-session';
+import { MENTORES, PRACTICAS_POR_TEMA, type MentorAgente } from '@/lib/madurez-practicas';
 import {
   MISIONES_PART_LABELS,
   SUBMUNDOS_ESTRATEGIA_LABELS,
@@ -20,7 +21,10 @@ import { WorldsBg } from '@/components/worlds/worlds-bg';
 import PageTour from '@/components/ui/executive/PageTour';
 import type { TourStep } from '@/components/ui/executive/PageTour';
 
-type Vista = 'mapa' | 'partida' | 'tablero' | 'estrategia';
+type Vista = 'mapa' | 'partida' | 'tablero' | 'estrategia' | 'dinero' | 'cliente' | 'normativo' | 'operativo' | 'cultura';
+type VistaPremium = 'dinero' | 'cliente' | 'normativo' | 'operativo' | 'cultura';
+
+const VISTAS_PREMIUM: VistaPremium[] = ['dinero', 'cliente', 'normativo', 'operativo', 'cultura'];
 
 interface Progreso {
   nombre: string;
@@ -130,10 +134,268 @@ const I = {
   tableroGanado: ['¡Tablero de Retos desbloqueado!', 'Challenges Board unlocked!'],
   errorProcesar: ['No se pudo procesar la acción.', 'Could not process the action.'],
   temaAria: ['Cambiar tema claro/oscuro', 'Toggle light/dark theme'],
+  misApoyo: ['Apoyo de Especialistas', 'Specialist Support'],
+  misApoyoDesc: [
+    'Agenda una sesión con un mentor experto (Babel, Fisnando, Karmetin, Normau o Atech) para desatorar tu misión y avanzar con acompañamiento.',
+    'Book a session with an expert mentor (Babel, Fisnando, Karmetin, Normau or Atech) to unblock your mission and move forward with support.',
+  ],
+  agendarMentor: ['Agendar con un mentor', 'Book a mentor session'],
+  misPA: ['Misión de Plan de Acción', 'Action Plan Mission'],
+  misPADesc: [
+    'Se desbloquea cuando defines tu Plan de Acción. Conecta los temas de cada agente con las buenas prácticas a trabajar, mes a mes.',
+    "Unlocks once you define your Action Plan. It connects each agent's topics with the practices to work on, month by month.",
+  ],
+  bloqueadaTag: ['Bloqueada', 'Locked'],
+  paLockDesc: [
+    'Define primero tu Plan de Acción (Plan de Acción Socioambiental de la Reflexión Estratégica) para desbloquear esta misión y ver tus actividades por agente.',
+    'Define your Action Plan first (Socioenvironmental Action Plan of the Strategic Reflection) to unlock this mission and see your activities per agent.',
+  ],
+  crearMiPA: ['Definir mi Plan de Acción', 'Define my Action Plan'],
+  verPA: ['Abrir el Plan de Acción', 'Open the Action Plan'],
+  panelAgente: ['Agente', 'Agent'],
+  panelTemas: ['Temas asignados a', 'Topics assigned to'],
+  panelTodos: ['Actividades por agente', 'Activities per agent'],
+  temaCol: ['Tema', 'Topic'],
+  practicaCol: ['Siguiente práctica', 'Next practice'],
+  nivelCol: ['Nivel', 'Level'],
+  mesCol: ['Este mes', 'This month'],
+  dominadoTag: ['Dominado', 'Mastered'],
+  sinPend: ['Sin prácticas pendientes', 'No pending practices'],
+  notaPanel: [
+    'Las actividades parten de tu Evaluación de Madurez (el nivel más bajo no completado de cada tema) y del Plan de Madurez del mes actual.',
+    "Activities come from your Maturity Assessment (the lowest incomplete level of each topic) and this month's Maturity Plan.",
+  ],
 } as const;
 
 type Params = readonly [string, string];
 const t2 = (lang: 'es' | 'en') => (p: Params) => (lang === 'en' ? p[1] : p[0]);
+
+// ── Misiones "Plan de Acción" de los mundos: panel de actividades por agente ─
+// Los temas asignados a cada agente salen del catálogo de prácticas de madurez
+// (PRACTICAS_POR_TEMA: mentor por tema) y las actividades del nivel más bajo
+// no completado de la evaluación + el Plan de Madurez del mes actual.
+
+const NIVELES_ACT: Record<'es' | 'en', string[]> = {
+  es: ['Ejecución', 'Estándar', 'Control', 'Optimización', 'Excelencia', 'Influencer'],
+  en: ['Execution', 'Standard', 'Control', 'Optimization', 'Excellence', 'Influencer'],
+};
+
+interface CompromisoLeido {
+  themeId?: string;
+  estatus?: 'pendiente' | 'en_progreso' | 'completada';
+}
+
+interface PlanMadurezLeido {
+  completados: Record<string, number>;
+  compromisos: Record<string, CompromisoLeido[]>;
+}
+
+interface Actividad {
+  themeId: DimensionId;
+  terminado: boolean;
+  practica: string | null;
+  nivel: number;
+  comp: CompromisoLeido | undefined;
+}
+
+function monthKeyOf(date: Date): string {
+  return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+}
+
+function baseNivelDe(respuestas: Record<string, string[]> | null, themeId: DimensionId): number {
+  const arr = respuestas?.[themeId];
+  if (!arr) return 0;
+  for (let i = 0; i < 6; i++) {
+    if (arr[i] !== 'yes') return i;
+  }
+  return 6;
+}
+
+function PanelActividades({
+  agente,
+  lang,
+  respuestas,
+  plan,
+}: {
+  agente: MentorAgente | 'todos';
+  lang: 'es' | 'en';
+  respuestas: Record<string, string[]> | null;
+  plan: PlanMadurezLeido;
+}) {
+  const en = t2(lang);
+  const dims = React.useMemo(() => getMaturityDimensions(lang), [lang]);
+  const temaDe = React.useMemo(() => {
+    const m: Record<string, string> = {};
+    dims.forEach((d) => {
+      m[d.id] = d.tema;
+    });
+    return m;
+  }, [dims]);
+  const mesKey = monthKeyOf(new Date());
+  const agentes: MentorAgente[] = agente === 'todos' ? MENTORES : [agente];
+
+  const filas = React.useMemo(() => {
+    const comps = plan.compromisos[mesKey] ?? [];
+    return agentes.map((a) => {
+      const fs: Actividad[] = [];
+      for (const id of DIMENSION_IDS) {
+        const prs = PRACTICAS_POR_TEMA[id];
+        if (!prs.some((p) => p.mentor === a)) continue;
+        const n = Math.min(6, baseNivelDe(respuestas, id) + (plan.completados[id] ?? 0));
+        fs.push({
+          themeId: id,
+          terminado: n >= 6,
+          practica: n < 6 ? prs[n].practica : null,
+          nivel: n < 6 ? n : -1,
+          comp: comps.find((c) => c.themeId === id),
+        });
+      }
+      return { agente: a, filas: fs };
+    });
+  }, [agentes, plan, respuestas, mesKey]);
+
+  const colSpan = agente === 'todos' ? 5 : 4;
+
+  const chip = (c: CompromisoLeido | undefined) => {
+    if (!c) {
+      return <span className="text-slate-400 dark:text-slate-500">—</span>;
+    }
+    const cls =
+      c.estatus === 'completada'
+        ? 'border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900 dark:text-emerald-200'
+        : c.estatus === 'en_progreso'
+          ? 'border-amber-300 bg-amber-100 text-amber-700 dark:border-amber-700 dark:bg-amber-900 dark:text-amber-200'
+          : 'border-slate-300 bg-slate-100 text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300';
+    const lbl =
+      c.estatus === 'completada' ? en(I.completadaTag) : c.estatus === 'en_progreso' ? en(I.enCursoTag) : en(I.pendienteTag);
+    return <span className={`rounded-full border px-2 py-0.5 text-[10px] font-extrabold ${cls}`}>{lbl}</span>;
+  };
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[560px] text-xs">
+        <thead>
+          <tr className="text-left text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            {agente === 'todos' && <th className="pb-2">{en(I.panelAgente)}</th>}
+            <th className="pb-2">{en(I.temaCol)}</th>
+            <th className="pb-2">{en(I.practicaCol)}</th>
+            <th className="pb-2 text-center">{en(I.nivelCol)}</th>
+            <th className="pb-2">{en(I.mesCol)}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filas.map(({ agente: a, filas: fs }) => (
+            <React.Fragment key={a}>
+              {agente === 'todos' && (
+                <tr className="border-t border-slate-300/40 dark:border-slate-600/40">
+                  <td colSpan={colSpan} className="py-1.5 pt-2.5">
+                    <span className="flex items-center gap-2 font-extrabold text-slate-700 dark:text-slate-200">
+                      <AgentAvatar agente={a} size={20} className="shrink-0" onClick={() => undefined} />
+                      {a}
+                    </span>
+                  </td>
+                </tr>
+              )}
+              {fs.length === 0 && (
+                <tr className="border-t border-slate-300/40 dark:border-slate-600/40">
+                  <td colSpan={colSpan} className="py-1.5 text-slate-500 dark:text-slate-400">
+                    {en(I.sinPend)}
+                  </td>
+                </tr>
+              )}
+              {fs.map((f) => (
+                <tr key={f.themeId} className="border-t border-slate-300/40 dark:border-slate-600/40">
+                  {agente === 'todos' && <td className="py-1.5 pr-2" />}
+                  <td className="py-1.5 pr-2 font-bold text-slate-700 dark:text-slate-200">{temaDe[f.themeId] ?? f.themeId}</td>
+                  <td className="py-1.5 pr-2 text-slate-600 dark:text-slate-300">
+                    {f.terminado ? (
+                      <span className="font-extrabold text-emerald-600 dark:text-emerald-400">✓ {en(I.dominadoTag)}</span>
+                    ) : (
+                      f.practica
+                    )}
+                  </td>
+                  <td className="py-1.5 text-center">
+                    {f.terminado ? (
+                      <span className="font-extrabold text-emerald-600 dark:text-emerald-400">6/6</span>
+                    ) : (
+                      <span className="rounded-full bg-teal-100 px-2 py-0.5 text-[10px] font-extrabold text-teal-700 dark:bg-teal-900 dark:text-teal-200">
+                        {NIVELES_ACT[lang][f.nivel]}
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-1.5 pl-2">{chip(f.comp)}</td>
+                </tr>
+              ))}
+            </React.Fragment>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function MisionPlanAccion({
+  agente,
+  lang,
+  planAccionDefinido,
+  respuestas,
+  plan,
+  onIrPlan,
+}: {
+  agente: MentorAgente;
+  lang: 'es' | 'en';
+  planAccionDefinido: boolean;
+  respuestas: Record<string, string[]> | null;
+  plan: PlanMadurezLeido;
+  onIrPlan: () => void;
+}) {
+  const en = t2(lang);
+  return (
+    <div className="world-glass world-grain p-5">
+      <div className="flex items-center justify-between gap-2">
+        <span
+          className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide ${
+            planAccionDefinido
+              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200'
+              : 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+          }`}
+        >
+          {planAccionDefinido ? `✓ ${en(I.listoTag)}` : `🔒 ${en(I.bloqueadaTag)}`}
+        </span>
+      </div>
+      <div className="mt-3 text-4xl">📋</div>
+      <h3 className="mt-1 text-base font-extrabold text-slate-800 dark:text-white">{en(I.misPA)}</h3>
+      <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{en(I.misPADesc)}</p>
+      {!planAccionDefinido ? (
+        <div className="mt-3 rounded-xl border border-slate-300/50 bg-white/40 p-4 dark:bg-white/5">
+          <p className="text-xs font-bold text-slate-600 dark:text-slate-300">🔒 {en(I.paLockDesc)}</p>
+          <button
+            className="mt-2 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 px-3 py-1.5 text-xs font-extrabold text-white shadow-md shadow-teal-500/30 transition hover:opacity-90"
+            onClick={onIrPlan}
+          >
+            {en(I.crearMiPA)}
+          </button>
+        </div>
+      ) : (
+        <>
+          <p className="mt-3 text-xs font-extrabold text-slate-700 dark:text-slate-200">
+            {en(I.panelTemas)}{' '}
+            <b className="text-teal-700 dark:text-teal-300">{agente}</b>
+          </p>
+          <div className="mt-2">
+            <PanelActividades agente={agente} lang={lang} respuestas={respuestas} plan={plan} />
+          </div>
+          <button
+            className="mt-3 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 px-3 py-1.5 text-xs font-extrabold text-white shadow-md shadow-teal-500/30 transition hover:opacity-90"
+            onClick={onIrPlan}
+          >
+            {en(I.verPA)} →
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
 
 function Confetti({ seed }: { seed: number }) {
   const hosts = React.useMemo(() => {
@@ -177,6 +439,8 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
   // Misión 0 del Mundo de Estrategia (Calibración): se marca COMPLETADA cuando
   // la Fase 0 de Babel ya fue aprobada por el usuario en su sesión.
   const [fase0Aprobada, setFase0Aprobada] = React.useState(false);
+  const [planMadurez, setPlanMadurez] = React.useState<PlanMadurezLeido>({ completados: {}, compromisos: {} });
+  const [planAccionDefinido, setPlanAccionDefinido] = React.useState(false);
 
   const notificar = React.useCallback((msg: string) => {
     setToast(msg);
@@ -213,7 +477,7 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
   }, []);
 
   React.useEffect(() => {
-    if (!uid || !yo?.tablero) return;
+    if (!uid) return;
     let vivo = true;
     getLatestAssessmentAnswers(uid)
       .then((answers) => {
@@ -228,7 +492,7 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
     return () => {
       vivo = false;
     };
-  }, [uid, yo?.tablero]);
+  }, [uid]);
 
   // Misión 0 (Calibración) del Mundo de Estrategia: lee la sesión de Babel del
   // usuario y marca COMPLETADA si la Fase 0 ya fue aprobada.
@@ -246,6 +510,38 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
       vivo = false;
     };
   }, [uid]);
+
+  const irAgendar = React.useCallback(() => {
+    router.push(`/${lang === 'es' ? 'es' : 'en'}/agendar`);
+  }, [router, lang]);
+
+  const irPlanAccion = React.useCallback(() => {
+    router.push(`/${lang === 'es' ? 'es' : 'en'}/babel/plan-accion`);
+  }, [router, lang]);
+
+  // Lee el Plan de Madurez y el Plan de Acción del usuario (localStorage) para
+  // las misiones "Plan de Acción" de cada mundo (panel de actividades por
+  // agente). El plan de acción se considera DEFINIDO cuando ya tiene acciones.
+  React.useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem('babel_madurez_plan_v1');
+      if (raw) {
+        const p = JSON.parse(raw) as { completados?: Record<string, number>; compromisos?: Record<string, CompromisoLeido[]> };
+        setPlanMadurez({ completados: p?.completados ?? {}, compromisos: p?.compromisos ?? {} });
+      }
+    } catch (err) {
+      console.error('[worlds] plan de madurez', err);
+    }
+    try {
+      const raw = window.localStorage.getItem('babel_plan_accion_v2');
+      if (raw) {
+        const p = JSON.parse(raw) as { acciones?: unknown[] };
+        setPlanAccionDefinido(Array.isArray(p?.acciones) && p.acciones.length > 0);
+      }
+    } catch (err) {
+      console.error('[worlds] plan de accion', err);
+    }
+  }, []);
 
   async function completarMision(n: number) {
     if (!yo || completando !== null) return;
@@ -295,10 +591,13 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
   // (los enlaces del Inicio llevan este parámetro).
   React.useEffect(() => {
     const v = new URLSearchParams(window.location.search).get('v');
-    if (v === 'partida' || v === 'tablero' || v === 'estrategia') setVista(v);
+    const validas: string[] = ['partida', 'tablero', 'estrategia', ...VISTAS_PREMIUM];
+    if (v && validas.includes(v)) setVista(v as Vista);
   }, []);
 
   const hechas = yo?.partida ?? [];
+  const mundoVista = MUNDOS_PREMIUM_LABELS.find((m) => m.id === vista);
+  const vistaPremium = mundoVista?.id;
 
   return (
     <div className="relative min-h-screen">
@@ -314,16 +613,18 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
         <div className="world-glass world-grain mb-6 flex flex-wrap items-center gap-3 p-4">
           <div className="flex items-center gap-2 text-lg font-extrabold text-slate-800 dark:text-white">
             <span className="text-2xl">🌍</span>{' '}
-            {en([
-              vista === 'partida' ? 'Universo MBE - Mundo de partida'
-                : vista === 'tablero' ? 'Universo MBE - Tablero de retos'
-                : vista === 'estrategia' ? 'Universo MBE - Mundo de la Estrategia'
-                : 'Universo MBE - Mundos',
-              vista === 'partida' ? 'MBE Universe - Starting World'
-                : vista === 'tablero' ? 'MBE Universe - Challenges Board'
-                : vista === 'estrategia' ? 'MBE Universe - Strategy World'
-                : 'MBE Universe - Worlds',
-            ])}
+            {vistaPremium && mundoVista
+              ? `${en(['Universo MBE - ', 'MBE Universe - '])}${lang === 'en' ? mundoVista.en : mundoVista.es}`
+              : en([
+                  vista === 'partida' ? 'Universo MBE - Mundo de partida'
+                    : vista === 'tablero' ? 'Universo MBE - Tablero de retos'
+                    : vista === 'estrategia' ? 'Universo MBE - Mundo de la Estrategia'
+                    : 'Universo MBE - Mundos',
+                  vista === 'partida' ? 'MBE Universe - Starting World'
+                    : vista === 'tablero' ? 'MBE Universe - Challenges Board'
+                    : vista === 'estrategia' ? 'MBE Universe - Strategy World'
+                    : 'MBE Universe - Worlds',
+                ])}
           </div>
           <div className="ml-auto flex flex-wrap items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-100">
             <span className="rounded-full border border-teal-300/60 bg-white/50 px-3 py-1.5 backdrop-blur-md dark:bg-white/10">
@@ -428,19 +729,24 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
                   </button>
 
                   {MUNDOS_PREMIUM_LABELS.map((m) => (
-                    <div key={m.id} className="world-glass world-grain p-5 opacity-75">
-                      <span className="mb-2 inline-block rounded-full bg-slate-200 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                        {en(I.enConstruccion)}
+                    <button
+                      key={m.id}
+                      className="world-glass world-glass-hover world-grain p-5 text-left"
+                      onClick={() => setVista(m.id)}
+                    >
+                      <span className="mb-2 inline-block rounded-full bg-fuchsia-100 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-fuchsia-700 dark:bg-fuchsia-900 dark:text-fuchsia-200">
+                        Premium
                       </span>
                       <div className="text-4xl">{m.icon}</div>
                       <div className="mt-3 flex items-center gap-2">
-                        <AgentAvatar agente={m.agente} size={28} className="ring-2 ring-teal-300/60" onClick={() => undefined} />
+                        <AgentAvatar agente={m.agente} size={28} className="ring-2 ring-fuchsia-300/60" onClick={() => undefined} />
                         <h3 className="text-base font-extrabold text-slate-800 dark:text-white">{lang === 'en' ? m.en : m.es}</h3>
                       </div>
                       <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                        {en(I.host)} <b>{m.agente}</b> · {m.subs} {en(I.submundos)} · {lang === 'en' ? m.enDesc : m.esDesc}
+                        {en(I.host)} <b>{m.agente}</b> · {en(I.misNum)} 1 · {en(I.misApoyo)} + {en(I.misPA)}.
                       </p>
-                    </div>
+                      <p className="mt-2 text-xs font-bold text-teal-700 dark:text-teal-300">{en(I.verMundo)}</p>
+                    </button>
                   ))}
                 </div>
               </>
@@ -623,6 +929,56 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
               </>
             )}
 
+            {vistaPremium && mundoVista && (
+              <>
+                <div className="world-glass world-glass-hover world-grain mb-5 flex items-start gap-4 p-5">
+                  <AgentAvatar agente={mundoVista.agente} pose="guiando" size={56} className="shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-base font-extrabold text-slate-800 dark:text-white">
+                      {mundoVista.icon} {lang === 'en' ? mundoVista.en : mundoVista.es}
+                    </h2>
+                    <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                      {lang === 'en' ? mundoVista.enDesc : mundoVista.esDesc}
+                    </p>
+                    <p className="mt-2 text-xs font-bold text-teal-700 dark:text-teal-300">
+                      {en(I.host)} <b>{mundoVista.agente}</b>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <button
+                    className="world-glass world-glass-hover world-grain p-5 text-left"
+                    onClick={irAgendar}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="rounded-full bg-fuchsia-100 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-fuchsia-700 dark:bg-fuchsia-900 dark:text-fuchsia-200">
+                        {en(I.misNum)} 1
+                      </span>
+                      <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-extrabold text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200">
+                        {en(I.listoTag)}
+                      </span>
+                    </div>
+                    <div className="mt-3 text-4xl">🤝</div>
+                    <h3 className="mt-1 text-base font-extrabold text-slate-800 dark:text-white">
+                      {lang === 'es' ? 'Misión 1. Apoyo de Especialistas' : 'Mission 1. Specialist Support'}
+                    </h3>
+                    <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{en(I.misApoyoDesc)}</p>
+                    <p className="mt-2 text-xs font-bold text-teal-700 dark:text-teal-300">{en(I.agendarMentor)} →</p>
+                  </button>
+
+                  <MisionPlanAccion
+                    agente={mundoVista.agente}
+                    lang={lang === 'es' ? 'es' : 'en'}
+                    planAccionDefinido={planAccionDefinido}
+                    respuestas={respuestas}
+                    plan={planMadurez}
+                    onIrPlan={irPlanAccion}
+                  />
+                </div>
+              </>
+            )}
+
             {vista === 'estrategia' && (
               <>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -671,6 +1027,51 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
                       </div>
                     );
                   })}
+                <div key="apoyo-especialistas" className="world-glass world-grain p-5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="rounded-full bg-fuchsia-100 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-fuchsia-700 dark:bg-fuchsia-900 dark:text-fuchsia-200">
+                        {en(I.misNum)} 7
+                      </span>
+                      <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-extrabold text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200">
+                        {en(I.listoTag)}
+                      </span>
+                    </div>
+                    <div className="mt-3 text-4xl">🤝</div>
+                    <h3 className="mt-1 text-sm font-extrabold text-slate-800 dark:text-white">
+                      {lang === 'es' ? 'Misión 7. Apoyo de Especialistas' : 'Mission 7. Specialist Support'}
+                    </h3>
+                    <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{en(I.misApoyoDesc)}</p>
+                    <button
+                      className="mt-3 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 px-3 py-1.5 text-xs font-extrabold text-white shadow-md shadow-teal-500/30 transition hover:opacity-90"
+                      onClick={irAgendar}
+                    >
+                      {en(I.agendarMentor)} →
+                    </button>
+                  </div>
+                </div>
+
+                <div id="estrategia-plan-accion" className="world-glass world-grain mt-6 p-5">
+                  <h2 className="text-base font-extrabold text-slate-800 dark:text-white">📋 {en(I.misPA)}</h2>
+                  <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{en(I.misPADesc)}</p>
+                  {!planAccionDefinido ? (
+                    <div className="mt-3 rounded-xl border border-slate-300/50 bg-white/40 p-4 dark:bg-white/5">
+                      <p className="text-xs font-bold text-slate-600 dark:text-slate-300">🔒 {en(I.paLockDesc)}</p>
+                      <button
+                        className="mt-2 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 px-3 py-1.5 text-xs font-extrabold text-white shadow-md shadow-teal-500/30 transition hover:opacity-90"
+                        onClick={irPlanAccion}
+                      >
+                        {en(I.crearMiPA)}
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="mt-3 text-xs font-extrabold text-slate-700 dark:text-slate-200">🌐 {en(I.panelTodos)}</p>
+                      <div className="mt-2">
+                        <PanelActividades agente="todos" lang={lang === 'es' ? 'es' : 'en'} respuestas={respuestas} plan={planMadurez} />
+                      </div>
+                      <p className="mt-3 text-[11px] text-slate-500 dark:text-slate-400">{en(I.notaPanel)}</p>
+                    </>
+                  )}
                 </div>
 
                 <div className="world-glass world-grain mt-6 p-5">
