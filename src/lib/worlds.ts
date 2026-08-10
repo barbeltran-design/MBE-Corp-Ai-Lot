@@ -26,8 +26,8 @@ export const SUBMUNDOS_ESTRATEGIA_LABELS = [
   { n: 2, icon: '🌐', ruta: '/babel/entorno', es: 'El Entorno', en: 'The Environment', estado: 'listo', esDesc: 'Se toma de la Misión 2: amenazas y oportunidades.', enDesc: 'Taken from Mission 2: threats and opportunities.', pts: 25, sello: '' },
   { n: 3, icon: '⚖️', ruta: '/babel/capacidades', es: 'Mis Capacidades', en: 'My Capabilities', estado: 'listo', esDesc: 'Se toma de la Misión 3: fortalezas y debilidades.', enDesc: 'Taken from Mission 3: strengths and weaknesses.', pts: 25, sello: '' },
   { n: 4, icon: '🧭', ruta: '/babel/enfoque', es: 'El Enfoque Estratégico', en: 'Strategic Focus', estado: 'listo', esDesc: 'Se toma de la Misión 4: rumbo y prioridades.', enDesc: 'Taken from Mission 4: course and priorities.', pts: 25, sello: '' },
-  { n: 5, icon: '🏢', ruta: '/babel/organigrama', es: 'Organigrama y Roles', en: 'Organigram and Roles', estado: 'wip', esDesc: 'Define tu estructura y los responsables de cada acción.', enDesc: 'Define your structure and who owns each action.', pts: 25, sello: '' },
-  { n: 6, icon: '📋', ruta: '/babel/plan-accion', es: 'Plan de Acción Socioambiental', en: 'Socioenvironmental Action Plan', estado: 'pendiente', esDesc: 'Cumplimiento de acciones del plan (el pegamento que conecta todos los mundos).', enDesc: 'Compliance with the plan actions (the glue connecting every world).', pts: 25, sello: 'Mundo' },
+  { n: 5, icon: '🏢', ruta: '/babel/organigrama', es: 'Organigrama y Roles', en: 'Organigram and Roles', estado: 'listo', esDesc: 'Define tu estructura y los responsables de cada acción.', enDesc: 'Define your structure and who owns each action.', pts: 25, sello: '' },
+  { n: 6, icon: '📋', ruta: '/babel/plan-accion', es: 'Plan de Acción Socioambiental', en: 'Socioenvironmental Action Plan', estado: 'listo', esDesc: 'Cumplimiento de acciones del plan (el pegamento que conecta todos los mundos).', enDesc: 'Compliance with the plan actions (the glue connecting every world).', pts: 25, sello: 'Mundo' },
 ] as const;
 
 export const MUNDOS_PREMIUM_LABELS = [

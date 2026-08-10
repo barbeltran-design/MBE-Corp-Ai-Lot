@@ -1565,6 +1565,12 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
           <h3 id="plan-accion-title" className="text-xl font-bold text-slate-800">{t.title}</h3>
           <p className="mt-1 text-sm text-slate-500">{t.subtitle}</p>
         </div>
+        <a
+          href={'/' + (lang === 'en' ? 'en' : 'es') + '/worlds/estrategia'}
+          className="ml-auto rounded-lg border border-teal-400/60 bg-white/40 px-4 py-2 text-sm font-bold text-teal-700 backdrop-blur-md transition hover:bg-white/70 dark:bg-white/10 dark:text-teal-200 dark:hover:bg-white/20"
+        >
+          {lang === 'en' ? '← Back to the Strategy map' : '← Regresar al mapa de la Estrategia'}
+        </a>
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">

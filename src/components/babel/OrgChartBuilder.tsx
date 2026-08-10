@@ -1225,6 +1225,12 @@ export default function OrgChartBuilder({ lang }: { lang: OrgLang }) {
           <h3 id="organigrama-title" className="text-xl font-bold text-slate-800">{t.title}</h3>
           <p className="mt-1 text-sm text-slate-500">{t.subtitle}</p>
         </div>
+        <a
+          href={'/' + (lang === 'en' ? 'en' : 'es') + '/worlds/estrategia'}
+          className="ml-auto rounded-lg border border-teal-400/60 bg-white/40 px-4 py-2 text-sm font-bold text-teal-700 backdrop-blur-md transition hover:bg-white/70 dark:bg-white/10 dark:text-teal-200 dark:hover:bg-white/20"
+        >
+          {lang === 'en' ? '← Back to the Strategy map' : '← Regresar al mapa de la Estrategia'}
+        </a>
       </div>
       <p className="mt-3 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-800">{t.repeatNote}</p>
       <div id="organigrama-resumen" className="glass-panel mt-4 p-4">
