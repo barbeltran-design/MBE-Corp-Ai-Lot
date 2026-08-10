@@ -17,7 +17,6 @@ import {
   nivelLabelPuntos,
 } from '@/lib/worlds';
 import { WorldsBg } from '@/components/worlds/worlds-bg';
-import { WorldMap, PUNTOS_RECORRIDO, type PuntoRecorrido } from '@/components/worlds/WorldMap';
 import PageTour from '@/components/ui/executive/PageTour';
 import type { TourStep } from '@/components/ui/executive/PageTour';
 
@@ -175,7 +174,6 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
   const [completando, setCompletando] = React.useState<number | null>(null);
   const [uid, setUid] = React.useState<string | null>(null);
   const [respuestas, setRespuestas] = React.useState<Record<string, string[]> | null>(null);
-  const [recorrido, setRecorrido] = React.useState<string[]>([]);
   // Misión 0 del Mundo de Estrategia (Calibración): se marca COMPLETADA cuando
   // la Fase 0 de Babel ya fue aprobada por el usuario en su sesión.
   const [fase0Aprobada, setFase0Aprobada] = React.useState(false);
@@ -300,45 +298,6 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
     if (v === 'partida' || v === 'tablero' || v === 'estrategia') setVista(v);
   }, []);
 
-  React.useEffect(() => {
-    try {
-      const guardado = window.localStorage.getItem('babel_worlds_recorrido_v1');
-      if (guardado) {
-        const ids = JSON.parse(guardado) as string[];
-        if (Array.isArray(ids)) setRecorrido(ids.filter((id) => PUNTOS_RECORRIDO.some((p) => p.id === id)));
-      }
-    } catch {
-      // localStorage no disponible
-    }
-  }, []);
-
-  React.useEffect(() => {
-    try {
-      window.localStorage.setItem('babel_worlds_recorrido_v1', JSON.stringify(recorrido));
-    } catch {
-      // noop
-    }
-  }, [recorrido]);
-
-  const navegarPunto = (p: PuntoRecorrido) => {
-    if (p.interno) {
-      if (p.id === 'partida') setVista('partida');
-      else if (p.id === 'tablero') setVista(yo?.tablero ? 'tablero' : 'mapa');
-      else if (p.id === 'estrategia') setVista('estrategia');
-      return;
-    }
-    router.push(`/${lang === 'es' ? 'es' : 'en'}${p.ruta}`);
-  };
-
-  const completarPunto = (id: string) => {
-    setRecorrido((prev) => {
-      if (prev.includes(id)) return prev;
-      const siguiente = [...prev, id];
-      festejar();
-      return siguiente;
-    });
-  };
-
   const hechas = yo?.partida ?? [];
 
   return (
@@ -412,28 +371,6 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
 
             {vista === 'mapa' && (
               <>
-                <WorldMap
-                  lang={lang === 'es' ? 'es' : 'en'}
-                  doneIds={recorrido}
-                  onNavegar={navegarPunto}
-                  onCompletar={(id: string) => completarPunto(id)}
-                />
-
-                <div id="worlds-progreso" className="world-glass world-grain mb-5 p-5">
-                  <h2 className="text-lg font-extrabold text-slate-800 dark:text-white">🗺️ {en(I.progreso)}</h2>
-                  <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-400/25">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-teal-400 via-cyan-400 to-fuchsia-500 transition-all duration-500"
-                      style={{ width: `${Math.min(100, (hechas.length / MISIONES_PART_LABELS.length) * 100)}%` }}
-                    />
-                  </div>
-                  <p className="mt-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                    {hechas.length}/{MISIONES_PART_LABELS.length} {en(I.misionesDe)} ·{' '}
-                    {hechas.length === MISIONES_PART_LABELS.length ? en(I.partidaCompleta) : en(I.partidaEnCurso)} ·{' '}
-                    {yo.tablero ? en(I.tableroListo) : en(I.tableroBloqueado)} · {en(I.estrategiaCurso)}
-                  </p>
-                </div>
-
                 <div className="grid gap-4 sm:grid-cols-2">
                   <button id="worlds-mundo-partida" className="world-glass world-glass-hover world-grain p-5 text-left" onClick={() => setVista('partida')}>
                     <span className="mb-2 inline-block rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200">
@@ -722,7 +659,7 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
                         </div>
                         <div className="mt-3 text-4xl">{s.icon}</div>
                         <h3 className="mt-1 text-sm font-extrabold text-slate-800 dark:text-white">
-                          {s.n}. {lang === 'en' ? s.en : s.es}
+                          {lang === 'en' ? `Mission ${s.n}. ${s.en}` : `Misión ${s.n}. ${s.es}`}
                         </h3>
                         <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{lang === 'en' ? s.enDesc : s.esDesc}</p>
                         <button
@@ -768,13 +705,6 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
             description: lang === 'es'
               ? 'Babel te da la bienvenida. Aquí calibras tu empresa: completa las misiones en orden y desbloquearás el Tablero de Retos.'
               : 'Babel welcomes you. Calibrate your company here: complete the missions in order and you will unlock the Challenges Board.',
-          },
-          {
-            selector: '#worlds-progreso',
-            title: lang === 'es' ? 'Tu progreso' : 'Your progress',
-            description: lang === 'es'
-              ? `Este medidor avanza con cada misión completada; cuando llegues a ${MISIONES_PART_LABELS.length}/${MISIONES_PART_LABELS.length} se desbloquea el Tablero de Retos.`
-              : `This bar advances with each completed mission; at ${MISIONES_PART_LABELS.length}/${MISIONES_PART_LABELS.length} the Challenges Board unlocks.`,
           },
           {
             selector: '#worlds-mundo-partida',

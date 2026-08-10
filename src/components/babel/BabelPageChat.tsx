@@ -439,7 +439,7 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
     if (!aprobada) {
       await guardarFase0();
     }
-    router.push('/' + locale + '/worlds/estrategia');
+    router.push('/' + locale + '/babel/proposito');
   }
   async function handlePhase0Answer() {
     if (!input.trim() || !uid || !session) return;
@@ -972,8 +972,8 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
         selector: '#babel-calibracion-siguiente',
         title: dispLang === 'en' ? 'Keep going' : 'Continúa tu camino',
         description: dispLang === 'en'
-          ? 'Continue to the Strategy World to build your phases, or go back to the map.'
-          : 'Continúa al Mundo de la Estrategia para construir tus fases, o regresa al mapa.',
+          ? 'Continue to Mission 1 (Purpose & Value Proposition) to keep building, or go back to the Strategy map.'
+          : 'Continúa a la Misión 1 (Propósito y Propuesta de Valor) para seguir construyendo, o regresa al mapa de la Estrategia.',
       },
     ];
     return (
@@ -1078,13 +1078,13 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
                 disabled={sending}
                 className="rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 px-4 py-2 text-sm font-extrabold text-white shadow-md shadow-teal-500/30 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {sending ? (dispLang === 'en' ? 'Saving...' : 'Guardando...') : (dispLang === 'en' ? 'Continue to the Strategy World →' : 'Continuar al Mundo de la Estrategia →')}
+                {sending ? (dispLang === 'en' ? 'Saving...' : 'Guardando...') : (dispLang === 'en' ? 'Continue to Mission 1 — Purpose & Value Proposition →' : 'Continuar a la Misión 1 — Propósito y Propuesta de Valor →')}
               </button>
               <a
-                href={`/${locale}/worlds`}
+                href={`/${locale}/worlds/estrategia`}
                 className="rounded-lg border border-teal-400/60 bg-white/40 px-4 py-2 text-sm font-bold text-teal-700 backdrop-blur-md transition hover:bg-white/70 dark:bg-white/10 dark:text-teal-200 dark:hover:bg-white/20"
               >
-                {dispLang === 'en' ? '← Back to the map' : '← Regresar al mapa'}
+                {dispLang === 'en' ? '← Back to the Strategy map' : '← Regresar al mapa de la Estrategia'}
               </a>
             </div>
           </div>
