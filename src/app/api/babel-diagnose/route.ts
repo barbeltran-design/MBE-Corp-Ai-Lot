@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 const PROVIDERS = [
   { label: 'Groq', endpoint: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama3-70b-8192', key: process.env.FALLBACK_API_KEY },
   { label: 'OpenRouter', endpoint: 'https://openrouter.ai/api/v1/chat/completions', model: process.env.TERTIARY_MODEL || 'auto', key: process.env.TERTIARY_API_KEY },
-  { label: '9Router', endpoint: (process.env.ROUTER_ENDPOINT || 'http://localhost:20128/v1') + '/chat/completions', model: process.env.ROUTER_MODEL || 'oc/qwen3-coder-plus', key: process.env.ROUTER_API_KEY || '' },
+  { label: 'DeepSeek', endpoint: (process.env.DEEPSEEK_ENDPOINT || 'https://api.deepseek.com/chat/completions'), model: process.env.DEEPSEEK_MODEL || 'deepseek-chat', key: process.env.DEEPSEEK_API_KEY },
 ];
 
 const TEST_MESSAGES = [
@@ -81,11 +81,11 @@ export async function GET() {
       detail: r.ok ? `Respuesta: "${r.error}"` : `Error: ${r.error.slice(0, 120)}`,
     })),
     env_check: {
+      GEMINI_API_KEY: process.env.GEMINI_API_KEY ? '✓ configurada' : '✗ faltante',
       FALLBACK_API_KEY: process.env.FALLBACK_API_KEY ? '✓ configurada' : '✗ faltante',
       TERTIARY_API_KEY: process.env.TERTIARY_API_KEY ? '✓ configurada' : '✗ faltante',
-      GEMINI_API_KEY: process.env.GEMINI_API_KEY ? '✓ configurada' : '✗ faltante',
-      ROUTER_ENDPOINT: process.env.ROUTER_ENDPOINT ? '✓ configurado' : '✗ faltante',
-      TERTIARY_MODEL: process.env.TERTIARY_MODEL || '(usando default: gpt-4o-mini)',
+      DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY ? '✓ configurada' : '✗ faltante',
+      TERTIARY_MODEL: process.env.TERTIARY_MODEL || '(usando default: openai/gpt-oss-20b:free)',
       GEMINI_MODEL: process.env.GEMINI_MODEL || '(usando default: gemini-2.5-flash)',
     },
   });

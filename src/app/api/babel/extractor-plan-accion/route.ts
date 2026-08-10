@@ -22,10 +22,10 @@ import { BUENAS_PRACTICAS } from '@/lib/buenas-practicas';
 //
 // Reutiliza los MISMOS nombres de variables de entorno que las otras rutas
 // de Babel (nada nuevo que configurar en Vercel):
-//   FALLBACK_ENDPOINT / FALLBACK_MODEL / FALLBACK_API_KEY  -> Groq (1er intento)
-//   TERTIARY_ENDPOINT / TERTIARY_MODEL / TERTIARY_API_KEY  -> OpenRouter (2do)
-//   GEMINI_MODEL / GEMINI_API_KEY                           -> Gemini (3ro)
-//   ROUTER_ENDPOINT / ROUTER_MODEL / ROUTER_API_KEY         -> 9Router opcional
+//   FALLBACK_ENDPOINT / FALLBACK_MODEL / FALLBACK_API_KEY  -> Groq (2do intento)
+//   TERTIARY_ENDPOINT / TERTIARY_MODEL / TERTIARY_API_KEY  -> OpenRouter (3ro)
+//   GEMINI_MODEL / GEMINI_API_KEY                           -> Gemini (1ro, paga)
+//   DEEPSEEK_ENDPOINT / DEEPSEEK_MODEL / DEEPSEEK_API_KEY        -> DeepSeek (4to intento, paga)
 // ---------------------------------------------------------------------------
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
@@ -37,8 +37,8 @@ const FALLBACK_MODEL = process.env.FALLBACK_MODEL || 'llama-3.3-70b-versatile';
 const TERTIARY_ENDPOINT = process.env.TERTIARY_ENDPOINT || 'https://openrouter.ai/api/v1/chat/completions';
 const TERTIARY_MODEL = process.env.TERTIARY_MODEL || 'openai/gpt-oss-20b:free';
 
-const ROUTER_ENDPOINT = process.env.ROUTER_ENDPOINT || '';
-const ROUTER_MODEL = process.env.ROUTER_MODEL || 'oc/qwen3-coder-plus';
+const DEEPSEEK_ENDPOINT = process.env.DEEPSEEK_ENDPOINT || 'https://api.deepseek.com/chat/completions';
+const DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
 
 type PlanLang = 'es' | 'en';
 type PlanPaso = 'entornos' | 'fds' | 'acciones';
@@ -399,15 +399,19 @@ export async function POST(req: NextRequest) {
 
   const diagnostics: Diagnostic[] = [];
 
-  let result: unknown[] | null = await tryOpenAICompatible(
-    systemPrompt,
-    userMessage,
-    FALLBACK_ENDPOINT,
-    FALLBACK_MODEL,
-    process.env.FALLBACK_API_KEY,
-    'groq',
-    diagnostics,
-  );
+  let result: unknown[] | null = await tryGemini(systemPrompt, userMessage, diagnostics);
+
+  if (!result) {
+    result = await tryOpenAICompatible(
+      systemPrompt,
+      userMessage,
+      FALLBACK_ENDPOINT,
+      FALLBACK_MODEL,
+      process.env.FALLBACK_API_KEY,
+      'groq',
+      diagnostics,
+    );
+  }
 
   if (!result) {
     result = await tryOpenAICompatible(
@@ -422,17 +426,13 @@ export async function POST(req: NextRequest) {
   }
 
   if (!result) {
-    result = await tryGemini(systemPrompt, userMessage, diagnostics);
-  }
-
-  if (!result && ROUTER_ENDPOINT) {
     result = await tryOpenAICompatible(
       systemPrompt,
       userMessage,
-      ROUTER_ENDPOINT.replace(/\/$/, '') + '/chat/completions',
-      ROUTER_MODEL,
-      process.env.ROUTER_API_KEY || 'no-key-needed',
-      '9router',
+      DEEPSEEK_ENDPOINT,
+      DEEPSEEK_MODEL,
+      process.env.DEEPSEEK_API_KEY,
+      'deepseek',
       diagnostics,
     );
   }
@@ -447,8 +447,8 @@ export async function POST(req: NextRequest) {
         diagnostics: diagnostics,
         tip:
           language === 'en'
-            ? 'Check that FALLBACK_API_KEY (Groq), TERTIARY_API_KEY (OpenRouter) or GEMINI_API_KEY are set in Vercel.'
-            : 'Verifica que FALLBACK_API_KEY (Groq), TERTIARY_API_KEY (OpenRouter) o GEMINI_API_KEY esten configuradas en Vercel.',
+            ? 'Check that GEMINI_API_KEY, FALLBACK_API_KEY (Groq), TERTIARY_API_KEY (OpenRouter) or DEEPSEEK_API_KEY are set in Vercel.'
+            : 'Verifica que GEMINI_API_KEY, FALLBACK_API_KEY (Groq), TERTIARY_API_KEY (OpenRouter) o DEEPSEEK_API_KEY esten configuradas en Vercel.',
       },
       { status: 502 },
     );

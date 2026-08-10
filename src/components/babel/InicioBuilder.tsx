@@ -113,6 +113,7 @@ const MUNDOS_PREMIUM: MundoPremium[] = [
       'Ten claridad en tus obligaciones fiscales, finanzas y cómo potenciarlas.',
       'Get clarity on your tax obligations, finance and how to boost them.',
     ],
+    href: '/worlds?v=dinero',
   },
   {
     id: 'cliente',
@@ -123,6 +124,7 @@ const MUNDOS_PREMIUM: MundoPremium[] = [
       'Identifica quién es tu cliente ideal, atráelo, enamóralo y que te recomiende.',
       'Identify who your ideal customer is, attract them, delight them and get referrals.',
     ],
+    href: '/worlds?v=cliente',
   },
   {
     id: 'normativo',
@@ -133,6 +135,7 @@ const MUNDOS_PREMIUM: MundoPremium[] = [
       'Protege tu empresa cumpliendo con las reglas que le corresponden.',
       'Protect your company by meeting the rules that apply to it.',
     ],
+    href: '/worlds?v=normativo',
   },
   {
     id: 'operativo',
@@ -143,6 +146,7 @@ const MUNDOS_PREMIUM: MundoPremium[] = [
       'Digitaliza tu toma de decisiones.',
       'Digitalize your decision making.',
     ],
+    href: '/worlds?v=operativo',
   },
   {
     id: 'cultura',
@@ -153,6 +157,7 @@ const MUNDOS_PREMIUM: MundoPremium[] = [
       'Crea una cultura laboral donde todos quieran trabajar.',
       'Create a workplace culture where everyone wants to work.',
     ],
+    href: '/worlds?v=cultura',
   },
 ];
 

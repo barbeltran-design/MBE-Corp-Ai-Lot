@@ -17,14 +17,14 @@ import { NextRequest, NextResponse } from 'next/server';
 
 // Proveedores de IA con fallback.
 //
-// Nivel 1 — Gemini (cuota limitada):
-//   API key: aistudio.google.com/apikey | Modelo: gemini-3.5-flash
+// Nivel 1 — Gemini (paga):
+//   API key: aistudio.google.com/apikey | Modelo: gemini-3.5-flash (GEMINI_MODEL)
 // Nivel 2 — Groq (gratis, 30 req/min):
 //   API key: console.groq.com | Modelo: llama-3.3-70b-versatile
 // Nivel 3 — OpenRouter (auto = OpenRouter elige el mejor modelo gratuito disponible):
 //   API key: openrouter.ai/keys | Modelo: auto
-// Nivel 4 — 9Router (router local, requiere túnel o VPS):
-//   npm install -g 9router && 9router | Endpoint: http://localhost:20128/v1
+// Nivel 4 — DeepSeek (paga):
+//   API key: platform.deepseek.com | Modelo: deepseek-chat (DEEPSEEK_MODEL)
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
@@ -35,11 +35,8 @@ const FALLBACK_MODEL = process.env.FALLBACK_MODEL || 'llama-3.3-70b-versatile';
 const TERTIARY_ENDPOINT = process.env.TERTIARY_ENDPOINT || 'https://openrouter.ai/api/v1/chat/completions';
 const TERTIARY_MODEL = process.env.TERTIARY_MODEL || 'openai/gpt-oss-20b:free';
 
-// 9Router — proxy local con 40+ providers gratuitos.
-// Configura ROUTER_ENDPOINT con la URL pública de tu 9Router (túnel o VPS).
-// Ejemplo: https://tu-tunel.cloudflare.dev/v1
-const ROUTER_ENDPOINT = process.env.ROUTER_ENDPOINT || 'http://localhost:20128/v1';
-const ROUTER_MODEL = process.env.ROUTER_MODEL || 'oc/qwen3-coder-plus';
+const DEEPSEEK_ENDPOINT = process.env.DEEPSEEK_ENDPOINT || 'https://api.deepseek.com/chat/completions';
+const DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
 
 interface IncomingMessage {
   role: 'user' | 'assistant';
@@ -577,7 +574,15 @@ export async function POST(req: NextRequest) {
       phase0Complete: !!phase0Complete,
     };
 
-    // 1. Groq (más fiable, gratis, 30 req/min)
+    // 1. Gemini (paga, respuestas largas sin trunco)
+    if (process.env.GEMINI_API_KEY) {
+      const result = await tryGemini(compactMessages, lang, currentPhase, diagnostics);
+      if (result) return NextResponse.json(result);
+      const geminiDiag = diagnostics[diagnostics.length - 1];
+      if (geminiDiag?.error?.includes('image.png')) console.error('[babel] *** image.png ERROR from Gemini ***');
+    }
+
+    // 2. Groq (gratis, 30 req/min)
     const resultGroq = await tryOpenAICompatible(
       compactMessages, lang, currentPhase,
       FALLBACK_ENDPOINT, FALLBACK_MODEL,
@@ -586,7 +591,7 @@ export async function POST(req: NextRequest) {
     if (resultGroq) return NextResponse.json(resultGroq);
     diagnostics[diagnostics.length - 1]?.error?.includes('image.png') && console.error('[babel] *** image.png ERROR from Groq ***');
 
-    // 2. OpenRouter + Qwen3 (gratis)
+    // 3. OpenRouter + Qwen3 (gratis)
     const resultTertiary = await tryOpenAICompatible(
       compactMessages, lang, currentPhase,
       TERTIARY_ENDPOINT, TERTIARY_MODEL,
@@ -596,38 +601,29 @@ export async function POST(req: NextRequest) {
     const openRouterDiag = diagnostics[diagnostics.length - 1];
     if (openRouterDiag?.error?.includes('image.png')) console.error('[babel] *** image.png ERROR from OpenRouter ***');
 
-    // 3. Gemini
-    if (process.env.GEMINI_API_KEY) {
-      const result = await tryGemini(compactMessages, lang, currentPhase, diagnostics);
-      if (result) return NextResponse.json(result);
-      const geminiDiag = diagnostics[diagnostics.length - 1];
-      if (geminiDiag?.error?.includes('image.png')) console.error('[babel] *** image.png ERROR from Gemini ***');
-    }
-
-    // 4. 9Router (proxy local con túnel, o VPS)
-    // Solo se intenta si configuraste ROUTER_ENDPOINT explícitamente en Vercel
-    if (process.env.ROUTER_ENDPOINT) {
-      const resultRouter = await tryOpenAICompatible(
+    // 4. DeepSeek (paga)
+    if (process.env.DEEPSEEK_API_KEY) {
+      const resultDeepSeek = await tryOpenAICompatible(
         compactMessages, lang, currentPhase,
-        ROUTER_ENDPOINT, ROUTER_MODEL,
-        process.env.ROUTER_API_KEY || 'no-key-needed', '9Router', diagnostics,
+        DEEPSEEK_ENDPOINT, DEEPSEEK_MODEL,
+        process.env.DEEPSEEK_API_KEY, 'DeepSeek', diagnostics,
       );
-      if (resultRouter) return NextResponse.json(resultRouter);
-      const routerDiag = diagnostics[diagnostics.length - 1];
-      if (routerDiag?.error?.includes('image.png')) console.error('[babel] *** image.png ERROR from 9Router ***');
+      if (resultDeepSeek) return NextResponse.json(resultDeepSeek);
+      const deepSeekDiag = diagnostics[diagnostics.length - 1];
+      if (deepSeekDiag?.error?.includes('image.png')) console.error('[babel] *** image.png ERROR from DeepSeek ***');
     }
 
     // 5. Todos fallaron — devolver diagnóstico
     const configuredProviders = [
+      { name: 'Gemini', key: process.env.GEMINI_API_KEY, hasKey: !!process.env.GEMINI_API_KEY },
       { name: 'Groq', key: process.env.FALLBACK_API_KEY, hasKey: !!process.env.FALLBACK_API_KEY },
       { name: 'OpenRouter', key: process.env.TERTIARY_API_KEY, hasKey: !!process.env.TERTIARY_API_KEY },
-      { name: 'Gemini', key: process.env.GEMINI_API_KEY, hasKey: !!process.env.GEMINI_API_KEY },
-      { name: '9Router', key: process.env.ROUTER_API_KEY, hasKey: !!process.env.ROUTER_ENDPOINT },
+      { name: 'DeepSeek', key: process.env.DEEPSEEK_API_KEY, hasKey: !!process.env.DEEPSEEK_API_KEY },
     ].filter((p) => p.hasKey);
 
     if (configuredProviders.length === 0) {
       return NextResponse.json(
-        { error: 'No hay API key configurada. Configura al menos FALLBACK_API_KEY (Groq gratis) en Vercel > Settings > Environment Variables.' },
+        { error: 'No hay API key configurada. Configura al menos GEMINI_API_KEY o FALLBACK_API_KEY (Groq gratis) en Vercel > Settings > Environment Variables.' },
         { status: 500 },
       );
     }
@@ -638,7 +634,7 @@ export async function POST(req: NextRequest) {
         error: mainError,
         debug: debugInfo,
         providers: diagnostics.map(d => ({ provider: d.provider, status: d.status, error: d.error.slice(0, 500) })),
-        tip: 'API keys gratis: Groq (console.groq.com) | OpenRouter (openrouter.ai/keys) | Gemini (aistudio.google.com/apikey)',
+        tip: 'Paga: Gemini (aistudio.google.com/apikey) | DeepSeek (platform.deepseek.com) | Gratis: Groq (console.groq.com) | OpenRouter (openrouter.ai/keys)',
       },
       { status: 502 },
     );
