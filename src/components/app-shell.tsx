@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Compass, Crown, Globe, Home, LayoutDashboard, Medal, ShieldCheck, UserCheck2, Wrench } from 'lucide-react';
+import { Coins, Cog, Compass, Crown, Globe, Handshake, Home, Landmark, LayoutDashboard, Medal, Scale, ShieldCheck, UserCheck2, Wrench } from 'lucide-react';
 import { ExecutiveShell, type ExecutiveNavItem } from '@/components/executive-shell';
 import { BackgroundBlobs } from '@/components/ui/executive/background-blobs';
 import { DisplayLangProvider, useDisplayLang } from '@/components/display-lang-provider';
@@ -20,6 +20,11 @@ function AppShellInner({
   const { administracion, especialista } = useUserRoles();
   const navLabel = (es: string, en: string) => (lang === 'en' ? en : es);
   const misionLabel = (n: number, es: string, en: string) => navLabel(`Misión ${n}: ${es}`, `Mission ${n}: ${en}`);
+  // Misiones comunes de los mundos premium: Apoyo de Especialistas y Plan de Acción.
+  const premiumMisiones = () => [
+    { href: `/${locale}/agendar`, label: navLabel('Misión 1: Apoyo de Especialistas', 'Mission 1: Specialist Support') },
+    { href: `/${locale}/babel/plan-accion`, label: navLabel('Misión de Plan de Acción', 'Action Plan Mission') },
+  ];
 
   // Orden del menú = orden de la página de Inicio: Inicio → Resumen ejecutivo →
   // Mundo de Partida (misiones) → Mundo de Retos → Toolbox (herramientas) →
@@ -64,11 +69,11 @@ function AppShellInner({
             { href: `/${locale}/agendar`, label: misionLabel(7, 'Apoyo de Especialistas', 'Specialist Support') },
           ],
         },
-        { href: `/${locale}/worlds?v=dinero`, label: navLabel('Mundo del Dinero', 'Money World') },
-        { href: `/${locale}/worlds?v=cliente`, label: navLabel('Mundo del Cliente', 'Customer World') },
-        { href: `/${locale}/worlds?v=normativo`, label: navLabel('Mundo Normativo', 'Compliance World') },
-        { href: `/${locale}/worlds?v=operativo`, label: navLabel('Mundo Operativo', 'Operations World') },
-        { href: `/${locale}/worlds?v=cultura`, label: navLabel('Mundo de la Cultura', 'Culture World') },
+        { href: `/${locale}/worlds?v=dinero`, label: navLabel('Mundo del Dinero', 'Money World'), icon: Coins, children: premiumMisiones() },
+        { href: `/${locale}/worlds?v=cliente`, label: navLabel('Mundo del Cliente', 'Customer World'), icon: Handshake, children: premiumMisiones() },
+        { href: `/${locale}/worlds?v=normativo`, label: navLabel('Mundo Normativo', 'Compliance World'), icon: Scale, children: premiumMisiones() },
+        { href: `/${locale}/worlds?v=operativo`, label: navLabel('Mundo Operativo', 'Operations World'), icon: Cog, children: premiumMisiones() },
+        { href: `/${locale}/worlds?v=cultura`, label: navLabel('Mundo de la Cultura', 'Culture World'), icon: Landmark, children: premiumMisiones() },
       ],
     },
   ];

@@ -13,15 +13,20 @@ import {
   CircleDashed,
   ClipboardList,
   Clock,
+  Coins,
+  Cog,
   Compass,
   Crown,
   FileCheck2,
   Gauge,
   Globe,
+  Handshake,
   Home,
+  Landmark,
   LayoutDashboard,
   Medal,
   MessagesSquare,
+  Scale,
   ShieldCheck,
   Sparkles,
   TrendingUp,
@@ -66,7 +71,7 @@ interface PhaseRow {
   deliverables: string[];
 }
 
-const NAV_ICON_MAP = { Home, LayoutDashboard, Globe, Medal, Wrench, Crown, Compass, ShieldCheck, UserCheck2 };
+const NAV_ICON_MAP = { Home, LayoutDashboard, Globe, Medal, Wrench, Crown, Compass, ShieldCheck, UserCheck2, Coins, Handshake, Scale, Cog, Landmark };
 
 const STATUS_CLASS: Record<PhaseStatus, string> = {
   completado: 'text-success',
@@ -233,6 +238,12 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
     },
   ];
 
+  // Misiones comunes de los mundos premium: Apoyo de Especialistas y Plan de Acción.
+  const premiumMisiones = () => [
+    { href: `/${routeLocale}/agendar`, label: t('Misión 1: Apoyo de Especialistas', 'Mission 1: Specialist Support') },
+    { href: `/${routeLocale}/babel/plan-accion`, label: t('Misión de Plan de Acción', 'Action Plan Mission') },
+  ];
+
   const navItems: ExecutiveNavItem[] = [
     { href: `/${routeLocale}/inicio`, label: t('Inicio', 'Home'), icon: NAV_ICON_MAP.Home },
     { href: `/${routeLocale}/executive-preview`, label: t('Resumen ejecutivo', 'Executive Summary'), icon: NAV_ICON_MAP.LayoutDashboard },
@@ -273,11 +284,11 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
             { href: `/${routeLocale}/agendar`, label: t('Misión 7: Apoyo de Especialistas', 'Mission 7: Specialist Support') },
           ],
         },
-        { href: `/${routeLocale}/worlds?v=dinero`, label: t('Mundo del Dinero', 'Money World') },
-        { href: `/${routeLocale}/worlds?v=cliente`, label: t('Mundo del Cliente', 'Customer World') },
-        { href: `/${routeLocale}/worlds?v=normativo`, label: t('Mundo Normativo', 'Compliance World') },
-        { href: `/${routeLocale}/worlds?v=operativo`, label: t('Mundo Operativo', 'Operations World') },
-        { href: `/${routeLocale}/worlds?v=cultura`, label: t('Mundo de la Cultura', 'Culture World') },
+        { href: `/${routeLocale}/worlds?v=dinero`, label: t('Mundo del Dinero', 'Money World'), icon: NAV_ICON_MAP.Coins, children: premiumMisiones() },
+        { href: `/${routeLocale}/worlds?v=cliente`, label: t('Mundo del Cliente', 'Customer World'), icon: NAV_ICON_MAP.Handshake, children: premiumMisiones() },
+        { href: `/${routeLocale}/worlds?v=normativo`, label: t('Mundo Normativo', 'Compliance World'), icon: NAV_ICON_MAP.Scale, children: premiumMisiones() },
+        { href: `/${routeLocale}/worlds?v=operativo`, label: t('Mundo Operativo', 'Operations World'), icon: NAV_ICON_MAP.Cog, children: premiumMisiones() },
+        { href: `/${routeLocale}/worlds?v=cultura`, label: t('Mundo de la Cultura', 'Culture World'), icon: NAV_ICON_MAP.Landmark, children: premiumMisiones() },
       ],
     },
   ];
