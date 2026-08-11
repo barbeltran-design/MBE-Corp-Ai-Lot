@@ -122,6 +122,8 @@ function limpiarMarkdown(texto: string): string {
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
+/** Ruta de la misión siguiente a cada misión (1-3); la misión 4 lleva a /babel. */
+const RUTA_SIGUIENTE_FASE: Record<number, string> = { 1: 'entorno', 2: 'capacidades', 3: 'enfoque' };
 /** Rango [inicio, fin] de mensajes que pertenecen a una fase (1-4) en la
  * conversación continua de la sesión. El límite de cada fase es el mensaje
  * cuyo contenido coincide con el resumen aprobado y guardado en phases[];
@@ -744,6 +746,10 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
       const finalMessages = [...refreshed.messages, assistantMsg];
       setSession({ ...refreshed, messages: finalMessages });
       await saveBabelMessages(uid, finalMessages);
+      if (faseInicial !== undefined && faseInicial >= 1 && faseInicial < BABEL_IMPLEMENTED_PHASES - 1) {
+        router.push('/' + locale + '/babel/' + (RUTA_SIGUIENTE_FASE[faseInicial] ?? ''));
+        return;
+      }
       if ((refreshed.currentPhase ?? 0) >= BABEL_IMPLEMENTED_PHASES) {
       await upsertCompiledPlan(finalMessages, refreshed.phases);
       }
@@ -1135,7 +1141,6 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
   }
   const rangoFase = faseInicial !== undefined && faseInicial >= 1 ? rangoDeFase(session, faseInicial) : null;
   const faseCompletada = faseInicial !== undefined && (session.phases ?? []).some(function (p) { return p.phase === faseInicial && p.approved; });
-  const RUTA_SIGUIENTE_FASE: Record<number, string> = { 1: 'entorno', 2: 'capacidades', 3: 'enfoque' };
   return (
     <React.Fragment>
     <div className="mx-auto flex max-w-4xl flex-col gap-4 p-4 sm:p-6">
