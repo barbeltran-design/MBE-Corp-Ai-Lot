@@ -26,18 +26,18 @@ import type { BabelPhaseRecord, ChatMessage, SessionDoc } from '@/types/firestor
 // pide el prompt de Fase 0 en src/app/api/babel/route.ts.
 const PHASE_0_QUESTIONS = {
   es: [
-    { key: 'ubicacion', question: '### 1. Lugar de operación\n\n¿En qué ciudad, estado y país operará el negocio?' },
-    { key: 'giro', question: '### 2. Giro y mercado objetivo\n\n¿Qué productos o servicios ofreces y a quién van dirigidos?' },
-    { key: 'resultado_cliente', question: '### 3. Resultado al cliente\n\n¿Qué resultado obtienen tus clientes y qué necesidad les satisface tu producto o servicio?' },
-    { key: 'madurez', question: '### 4. Etapa actual\n\n¿Es una idea en papel, un producto o servicio ya validado, o un negocio en escalamiento?' },
-    { key: 'recursos', question: '### 5. Recursos disponibles\n\n¿Con qué recursos humanos, materiales, intelectuales y financieros cuentas actualmente?' },
+    { key: 'ubicacion', question: '1. Lugar de operación\n\n¿En qué ciudad, estado y país operará el negocio?' },
+    { key: 'giro', question: '2. Giro y mercado objetivo\n\n¿Qué productos o servicios ofreces y a quién van dirigidos?' },
+    { key: 'resultado_cliente', question: '3. Resultado al cliente\n\n¿Qué resultado obtienen tus clientes y qué necesidad les satisface tu producto o servicio?' },
+    { key: 'madurez', question: '4. Etapa actual\n\n¿Es una idea en papel, un producto o servicio ya validado, o un negocio en escalamiento?' },
+    { key: 'recursos', question: '5. Recursos disponibles\n\n¿Con qué recursos humanos, materiales, intelectuales y financieros cuentas actualmente?' },
   ],
   en: [
-    { key: 'ubicacion', question: '### 1. Location\n\nIn which city, state and country will the business operate?' },
-    { key: 'giro', question: '### 2. Business Type and Target Market\n\nWhat products or services do you offer, and who are they for?' },
-    { key: 'resultado_cliente', question: '### 3. Client Outcome\n\nWhat outcome do your clients get, and what need does your product or service satisfy?' },
-    { key: 'madurez', question: '### 4. Current Stage\n\nIs it a paper idea, an already validated product or service, or a business scaling up?' },
-    { key: 'recursos', question: '### 5. Available Resources\n\nWhat human, material, intellectual and financial resources do you currently have?' },
+    { key: 'ubicacion', question: '1. Location\n\nIn which city, state and country will the business operate?' },
+    { key: 'giro', question: '2. Business Type and Target Market\n\nWhat products or services do you offer, and who are they for?' },
+    { key: 'resultado_cliente', question: '3. Client Outcome\n\nWhat outcome do your clients get, and what need does your product or service satisfy?' },
+    { key: 'madurez', question: '4. Current Stage\n\nIs it a paper idea, an already validated product or service, or a business scaling up?' },
+    { key: 'recursos', question: '5. Available Resources\n\nWhat human, material, intellectual and financial resources do you currently have?' },
   ],
 };
 // Textos de interfaz que normalmente vienen de next-intl (t()), pero que
@@ -60,7 +60,7 @@ const UI_FALLBACK: Record<'es' | 'en', {
     loading: 'Cargando...',
     send: 'Enviar',
     approveFinalButton: 'Aprobar y finalizar plan',
-    approveButton: function (phase: number) { return 'Aprobar Fase ' + phase + ' y continuar'; },
+    approveButton: function (phase: number) { return 'Aprobar Misión ' + phase + ' y continuar'; },
     downloadDeliverable: 'Descargar entregable',
     loadingReply: 'Babel está escribiendo...',
     placeholder: 'Escribe tu mensaje...',
@@ -71,7 +71,7 @@ const UI_FALLBACK: Record<'es' | 'en', {
     loading: 'Loading...',
     send: 'Send',
     approveFinalButton: 'Approve and finish plan',
-    approveButton: function (phase: number) { return 'Approve Phase ' + phase + ' and continue'; },
+    approveButton: function (phase: number) { return 'Approve Mission ' + phase + ' and continue'; },
     downloadDeliverable: 'Download deliverable',
     loadingReply: 'Babel is typing...',
     placeholder: 'Type your message...',
@@ -95,14 +95,26 @@ function buildFase0Summary(answers: Record<string, string>, lang: 'es' | 'en'): 
     .map(function (k) { return '**' + (labels[k] ?? k) + ':** ' + answers[k]; });
   const summaryLabel = lang === 'en' ? 'Phase 0 completed:' : 'Fase 0 completada:';
   const conclusionHeader = lang === 'en' ? '### Phase 0 Summary — Initial Calibration' : '### Resumen de Fase 0 — Calibración Inicial';
-  const conclusionQuestion = lang === 'en' ? 'Do you approve this Phase 0 summary to continue to Phase 1?' : '¿Apruebas este resumen de la Fase 0 para continuar a la Fase 1?';
   const userContent = summaryLabel + '\n\n' + conclusionLines.join('\n\n');
-  const assistantContent = conclusionHeader + '\n\n' + conclusionLines.join('\n\n---\n\n') + '\n\n---\n\n*' + conclusionQuestion + '*';
+  const assistantContent = conclusionHeader + '\n\n' + conclusionLines.join('\n\n---\n\n');
   return { userContent: userContent, assistantContent: assistantContent };
+}
+/** Quita del CONTENIDO A MOSTRAR la pregunta de aprobación de fase (el botón
+ * de aprobar ya está debajo; se conserva en el contenido real para que el
+ * flujo de aprobación siga funcionando). */
+function quitarPreguntaAprobacion(texto: string): string {
+  return texto
+    .replace(/\*?\s*¿Apruebas este resumen de la Fase[^\n]*/g, '')
+    .replace(/\*?\s*Do you approve this Phase[^\n]*/g, '');
+}
+/** Convierte los <br> que a veces escribe la IA en saltos de línea reales. */
+function normalizarBr(texto: string): string {
+  return texto.replace(/<br\s*\/?>/gi, '\n');
 }
 /** Indicador compacto de las 5 fases de Babel (0-4): aprobada / actual / pendiente. */
 function limpiarMarkdown(texto: string): string {
-  return texto
+  return quitarPreguntaAprobacion(texto)
+    .replace(/<br\s*\/?>/gi, '\n')
     .replace(/\*\*(.*?)\*\*/g, '$1')
     .replace(/\*([^*]*)\*/g, '$1')
     .replace(/(^|\n)\s*#{1,6}[ \t]*/g, '\n')
@@ -224,6 +236,9 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
   const [session, setSession] = React.useState<SessionDoc | null>(null);
   const [input, setInput] = React.useState('');
   const [sending, setSending] = React.useState(false);
+  // true mientras Babel genera la introducción de la misión enfocada (página
+  // /babel/fase): muestra "Babel está pensando..." y deshabilita entrada/botones.
+  const [generandoIntro, setGenerandoIntro] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const retryRef = React.useRef<(() => Promise<void>) | null>(null);
   const [editingMessageIndex, setEditingMessageIndex] = React.useState<number | null>(null);
@@ -450,6 +465,7 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
     const clave = 'f' + faseInicial;
     if (seedRef.current.has(clave)) return;
     seedRef.current.add(clave);
+    setGenerandoIntro(true);
     (async () => {
       try {
         const userSeed: ChatMessage = {
@@ -480,6 +496,8 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
       } catch (err) {
         console.error('[babel] Sembrar introducción de misión:', err);
         seedRef.current.delete(clave);
+      } finally {
+        setGenerandoIntro(false);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -824,13 +842,6 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
           break;
         }
       }
-      if (compiled) {
-        try {
-          await downloadCompiledPlanPdf({ sessionTopic: session.topic, compiledText: compiled, language: locale });
-        } catch (pdfErr) {
-          console.error('[babel] No se pudo generar el PDF del plan compilado', pdfErr);
-        }
-      }
       let finalMessages: ChatMessage[];
       if (existingIdx >= 0) {
         finalMessages = baseMessages.map(function (m, i) {
@@ -853,6 +864,16 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
     setError(null);
     try {
       await upsertCompiledPlan();
+      const compiled = (session.phases ?? []).length > 0
+        ? [...(session.phases ?? [])].sort((a, b) => a.phase - b.phase).map((p) => p.summary).join('\n\n---\n\n')
+        : '';
+      if (compiled) {
+        try {
+          await downloadCompiledPlanPdf({ sessionTopic: session.topic, compiledText: compiled, language: locale });
+        } catch (pdfErr) {
+          console.error('[babel] No se pudo generar el PDF del plan compilado', pdfErr);
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al compilar');
     } finally {
@@ -929,24 +950,26 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
         </div>
       </div>
       {faseInicial !== 0 && <PhaseStepper currentPhase={currentPhase} approved={session.phases ?? []} lang={dispLang} />}
-      {currentQuestionIndex > 0 && (
-          <div id="babel-chat" className="glass-panel flex-1 space-y-3 overflow-y-auto p-4 max-h-[40vh]">
-            {Array.from({ length: currentQuestionIndex }).map(function (_unused, k) {
-              const qText = (k === 0 ? fase0IntroText(dispLang) : '') + questions[k].question;
-              const answerText = phase0Answers[questions[k].key] ?? '';
-              return (
-                <React.Fragment key={k}>
-                  <div className="max-w-[85%] rounded-xl bg-slate-100 px-3.5 py-2 text-sm text-slate-900 whitespace-pre-wrap">
-                    {limpiarMarkdown(qText)}
-                  </div>
-                  <div className="ml-auto max-w-[85%] rounded-xl bg-slate-900 px-3.5 py-2 text-sm text-white whitespace-pre-wrap">
-                    {answerText}
-                  </div>
-                </React.Fragment>
-              );
-            })}
+        <div id="babel-chat" className="glass-panel flex-1 space-y-3 overflow-y-auto p-4 max-h-[40vh]">
+          <div className="max-w-[85%] rounded-xl bg-slate-100 px-3.5 py-2 text-sm text-slate-900 whitespace-pre-wrap">
+            {limpiarMarkdown(fase0IntroText(dispLang) + questions[0].question)}
           </div>
-        )}
+          {Array.from({ length: currentQuestionIndex }).map(function (_unused, k) {
+            const answerText = phase0Answers[questions[k].key] ?? '';
+            return (
+              <React.Fragment key={k}>
+                {k > 0 && (
+                  <div className="max-w-[85%] rounded-xl bg-slate-100 px-3.5 py-2 text-sm text-slate-900 whitespace-pre-wrap">
+                    {limpiarMarkdown(questions[k].question)}
+                  </div>
+                )}
+                <div className="ml-auto max-w-[85%] rounded-xl bg-slate-900 px-3.5 py-2 text-sm text-white whitespace-pre-wrap">
+                  {answerText}
+                </div>
+              </React.Fragment>
+            );
+          })}
+        </div>
         <div className="w-full bg-slate-200 rounded-full h-2">
           <div className="bg-blue-600 h-2 rounded-full transition-all" style={{ width: String(((currentQuestionIndex + 1) / questions.length) * 100) + '%' }} />
         </div>
@@ -992,7 +1015,7 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
                 {dispLang === 'en' ? 'Cancel' : 'Cancelar'}
               </Button>
               <Button onClick={function () { manualApprovePhase(0, manualContent); }} disabled={sending || !manualContent.trim()} size="sm">
-                {sending ? (dispLang === 'en' ? 'Saving...' : 'Guardando...') : (dispLang === 'en' ? 'Save and approve Phase 0' : 'Guardar y aprobar Fase 0')}
+                {sending ? (dispLang === 'en' ? 'Saving...' : 'Guardando...') : (dispLang === 'en' ? 'Save and approve Mission 0' : 'Guardar y aprobar Misión 0')}
               </Button>
             </div>
           </div>
@@ -1021,9 +1044,11 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
               rows={3}
               className="flex-1 resize-none rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 min-h-[80px]"
             />
-            <Button type="submit" disabled={sending || !input.trim()} className="mb-0 h-10">
-              {sending ? (dispLang === 'en' ? 'Sending...' : 'Enviando...') : (dispLang === locale ? t('send') : UI_FALLBACK[dispLang].send)}
-            </Button>
+            {currentQuestionIndex < questions.length - 1 && (
+              <Button type="submit" disabled={sending || !input.trim()} className="mb-0 h-10">
+                {sending ? (dispLang === 'en' ? 'Sending...' : 'Enviando...') : (dispLang === locale ? t('send') : UI_FALLBACK[dispLang].send)}
+              </Button>
+            )}
           </form>
           {currentQuestionIndex === questions.length - 1 && (
             <Button
@@ -1180,9 +1205,6 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
   }
   const rangoFase = faseInicial !== undefined && faseInicial >= 1 ? rangoDeFase(session, faseInicial) : null;
   const faseCompletada = faseInicial !== undefined && (session.phases ?? []).some(function (p) { return p.phase === faseInicial && p.approved; });
-  const resumenMision = faseInicial !== undefined && faseInicial >= 1
-    ? ((session.phases ?? []).find(function (p) { return p.phase === faseInicial && p.approved; })?.summary ?? null)
-    : null;
   const RUTA_SIGUIENTE_FASE: Record<number, string> = { 1: 'entorno', 2: 'capacidades', 3: 'enfoque' };
   return (
     <React.Fragment>
@@ -1210,24 +1232,6 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
         </div>
       </div>
       <PhaseStepper currentPhase={currentPhase} approved={session.phases ?? []} lang={dispLang} solo={rangoFase ? faseInicial : null} />
-      {resumenMision && (
-        <div id="babel-mision-completada" className="glass-panel flex flex-col gap-4 p-6">
-          <div className="flex flex-col items-center gap-3 text-center">
-            <div className="text-5xl">🎉</div>
-            <h2 className="text-xl font-semibold text-slate-900">
-              {dispLang === 'en' ? 'Mission ' + faseInicial + ' completed' : 'Misión ' + faseInicial + ' completada'}
-            </h2>
-            <p className="text-sm text-slate-600">
-              {dispLang === 'en'
-                ? 'This is what Babel generated for this mission; it stays saved here.'
-                : 'Esto es lo que Babel generó para esta misión; queda guardado aquí.'}
-            </p>
-          </div>
-          <div className="max-h-[45vh] overflow-y-auto whitespace-pre-wrap rounded-xl border border-slate-200 bg-white/60 p-4 text-sm text-slate-900 dark:border-slate-700 dark:bg-white/5 dark:text-slate-100">
-            {limpiarMarkdown(resumenMision)}
-          </div>
-        </div>
-      )}
       {rangoFase && !rangoFase.alcanzada ? (
         <div className="glass-panel flex flex-col items-center gap-3 p-8 text-center text-sm text-slate-600 dark:text-slate-300">
           <div className="text-4xl">🔒</div>
@@ -1254,6 +1258,11 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
           const isStoredPhase0SummaryUser =
             m.role === 'user' && (m.content.startsWith('Fase 0 completada:') || m.content.startsWith('Phase 0 completed:'));
           if (isStoredPhase0SummaryUser) return null;
+          const isSeedIntroUser =
+            m.role === 'user' &&
+            (m.content === 'Inicia esta misión: por favor presenta su plantilla de inicio.' ||
+              m.content === 'Begin this mission: please present its starting template.');
+          if (isSeedIntroUser) return null;
           const isFase0SummaryPair = currentPhase === 0 && i <= 1 && Object.keys(phase0Answers).length > 0;
           if (isFase0SummaryPair && i === 0) return null;
           const translationKey = i + '::' + dispLang;
@@ -1342,7 +1351,7 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
             </div>
           );
         })}
-        {sending && (
+        {(sending || generandoIntro) && (
           <div className="max-w-[85%] rounded-xl bg-slate-100 px-3.5 py-2 text-sm text-slate-500 animate-pulse">
             {dispLang === locale ? t('loadingReply') : UI_FALLBACK[dispLang].loadingReply}
           </div>
@@ -1405,7 +1414,7 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
               {dispLang === 'en' ? 'Cancel' : 'Cancelar'}
             </Button>
             <Button onClick={function () { manualApprovePhase(currentPhase, manualContent); }} disabled={sending || !manualContent.trim()} size="sm">
-              {sending ? (dispLang === 'en' ? 'Saving...' : 'Guardando...') : (dispLang === 'en' ? 'Save and approve Phase ' + currentPhase : 'Guardar y aprobar Fase ' + String(currentPhase))}
+              {sending ? (dispLang === 'en' ? 'Saving...' : 'Guardando...') : (dispLang === 'en' ? 'Save and approve Mission ' + currentPhase : 'Guardar y aprobar Misión ' + String(currentPhase))}
             </Button>
           </div>
         </div>
@@ -1448,9 +1457,9 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
             </Button>
           </div>
         )}
-        {allPhasesDone && !awaitingApproval && (
+        {allPhasesDone && !awaitingApproval && faseInicial === undefined && (
           <Button onClick={handleCompile} disabled={compiling} variant="outline" className="w-full">
-            {compiling ? (dispLang === 'en' ? 'Updating...' : 'Actualizando...') : (dispLang === 'en' ? 'Update compiled plan' : 'Actualizar plan compilado')}
+            {compiling ? (dispLang === 'en' ? 'Generating...' : 'Generando...') : (dispLang === 'en' ? 'Download your Strategic Plan' : 'Descarga tu Plan Estratégico')}
           </Button>
         )}
         <form
@@ -1474,11 +1483,11 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
               }
             }}
             placeholder={dispLang === locale ? t('placeholder') : UI_FALLBACK[dispLang].placeholder}
-            disabled={sending || (awaitingApproval && editingMessageIndex === null && !showManualEditor)}
+            disabled={sending || generandoIntro || (awaitingApproval && editingMessageIndex === null && !showManualEditor)}
             rows={3}
             className="flex-1 resize-none rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 min-h-[80px]"
           />
-          <Button type="submit" disabled={sending || (awaitingApproval && editingMessageIndex === null && !showManualEditor) || !input.trim()} className="mb-0 h-10">
+          <Button type="submit" disabled={sending || generandoIntro || (awaitingApproval && editingMessageIndex === null && !showManualEditor) || !input.trim()} className="mb-0 h-10">
             {dispLang === locale ? t('send') : UI_FALLBACK[dispLang].send}
           </Button>
         </form>
@@ -1502,8 +1511,7 @@ function MarkdownMessage({ content }: { content: string }) {
     <div className="text-sm leading-relaxed">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        components={{
-          h1: ({ children }) => <h1 className="mb-2 mt-4 text-base font-bold first:mt-0">{children}</h1>,
+        components={{          h1: ({ children }) => <h1 className="mb-2 mt-4 text-base font-bold first:mt-0">{children}</h1>,
           h2: ({ children }) => <h2 className="mb-2 mt-4 text-base font-bold first:mt-0">{children}</h2>,
           h3: ({ children }) => <h3 className="mb-1.5 mt-3 text-sm font-semibold first:mt-0">{children}</h3>,
           h4: ({ children }) => <h4 className="mb-1.5 mt-3 text-sm font-semibold first:mt-0">{children}</h4>,
@@ -1546,8 +1554,14 @@ function MarkdownMessage({ content }: { content: string }) {
           ),
         }}
       >
-        {content}
+        {normalizarContenidoMarkdown(content)}
       </ReactMarkdown>
     </div>
   );
+}
+
+/** Prepara el contenido de Babel para render Markdown: convierte <br> a saltos
+ * de línea y quita la pregunta de aprobación de fase (ya hay botón propio). */
+function normalizarContenidoMarkdown(texto: string): string {
+  return quitarPreguntaAprobacion(normalizarBr(texto));
 }

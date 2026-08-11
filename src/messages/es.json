@@ -123,7 +123,7 @@
     "loadingReply": "Babel está pensando...",
     "placeholder": "Escribe tu respuesta...",
     "send": "Enviar",
-    "approveButton": "Aprobar Fase {phase} y continuar",
+    "approveButton": "Aprobar Misión {phase} y continuar",
     "approveFinalButton": "Aprobar Fase 4 y finalizar",
     "allPhasesDone": "¡Completaste las 5 fases con Babel AI! Escribe /compilar para armar tu Plan de Negocio Estratégico Socioambiental completo, con todas las fases aprobadas, sin resumir nada.",
     "compileHeader": "### Tu Plan de Negocio Estratégico Socioambiental — Compilado",

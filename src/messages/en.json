@@ -123,7 +123,7 @@
     "loadingReply": "Babel is thinking...",
     "placeholder": "Type your answer...",
     "send": "Send",
-    "approveButton": "Approve Phase {phase} and continue",
+    "approveButton": "Approve Mission {phase} and continue",
     "approveFinalButton": "Approve Phase 4 and finish",
     "allPhasesDone": "You've completed all 5 phases with Babel AI! Type /compilar to assemble your complete Socio-Environmental Strategic Business Plan, with every approved phase, nothing summarized.",
     "compileHeader": "### Your Socio-Environmental Strategic Business Plan — Compiled",
