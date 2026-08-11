@@ -1308,15 +1308,24 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
       </div>
       )}
       {rangoFase && faseCompletada && (
-        <div className="flex justify-center">
+        <div className="flex flex-wrap justify-center gap-3">
           {faseInicial >= BABEL_IMPLEMENTED_PHASES - 1 ? (
-            <button
-              type="button"
-              onClick={function () { router.push('/' + locale + '/babel/organigrama'); }}
-              className="rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 px-4 py-2 text-sm font-extrabold text-white shadow-md shadow-teal-500/30 transition hover:opacity-90"
-            >
-              {dispLang === 'en' ? 'Continue to Mission 5: Organization Chart →' : 'Continuar a la Misión 5: Organigrama →'}
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={function () { router.push('/' + locale + '/babel'); }}
+                className="rounded-lg border-2 border-teal-500 px-4 py-2 text-sm font-extrabold text-teal-600 shadow-sm transition hover:bg-teal-50"
+              >
+                {dispLang === 'en' ? 'View the full Strategic Plan →' : 'Ver el Plan Estratégico completo →'}
+              </button>
+              <button
+                type="button"
+                onClick={function () { router.push('/' + locale + '/babel/organigrama'); }}
+                className="rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 px-4 py-2 text-sm font-extrabold text-white shadow-md shadow-teal-500/30 transition hover:opacity-90"
+              >
+                {dispLang === 'en' ? 'Continue to Mission 5: Organization Chart and Roles →' : 'Continuar a la Misión 5: Organigrama y Roles →'}
+              </button>
+            </>
           ) : (
             <a
               href={'/' + locale + '/babel/' + (RUTA_SIGUIENTE_FASE[faseInicial ?? 1] ?? '')}
@@ -1371,9 +1380,17 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
           </div>
         )}
         {allPhasesDone && !awaitingApproval && faseInicial === undefined && (
-          <Button onClick={handleCompile} disabled={compiling} variant="outline" className="w-full">
-            {compiling ? (dispLang === 'en' ? 'Generating...' : 'Generando...') : (dispLang === 'en' ? 'Download your Strategic Plan' : 'Descarga tu Plan Estratégico')}
-          </Button>
+          <>
+            <Button onClick={function () { router.push('/' + locale + '/worlds/estrategia'); }} variant="outline" className="w-full">
+              {dispLang === 'en' ? '← Back to the Strategy map' : '← Regresar al mapa de la Estrategia'}
+            </Button>
+            <Button onClick={function () { router.push('/' + locale + '/babel/organigrama'); }} className="w-full bg-gradient-to-r from-teal-500 to-cyan-400 hover:opacity-90">
+              {dispLang === 'en' ? 'Continue to Mission 5: Organization Chart and Roles →' : 'Continuar a la Misión 5: Organigrama y Roles →'}
+            </Button>
+            <Button onClick={handleCompile} disabled={compiling} variant="outline" className="w-full">
+              {compiling ? (dispLang === 'en' ? 'Generating...' : 'Generando...') : (dispLang === 'en' ? 'Download your Strategic Plan' : 'Descarga tu Plan Estratégico')}
+            </Button>
+          </>
         )}
         {faseInicial === undefined && (
         <form
