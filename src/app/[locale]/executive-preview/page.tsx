@@ -7,17 +7,12 @@
 // usa los mismos componentes ExecutiveShell + ui/executive del dashboard.
 import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import type { ColumnDef } from '@tanstack/react-table';
 import {
-  CheckCircle2,
-  CircleDashed,
   ClipboardList,
-  Clock,
   Coins,
   Cog,
   Compass,
   Crown,
-  FileCheck2,
   Gauge,
   Globe,
   Handshake,
@@ -25,27 +20,21 @@ import {
   Landmark,
   LayoutDashboard,
   Medal,
-  MessagesSquare,
   Scale,
   ShieldCheck,
-  Sparkles,
   TrendingUp,
   UserCheck2,
-  Users,
   Wrench,
 } from 'lucide-react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { Timestamp, doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { ExecutiveShell, type ExecutiveNavItem } from '@/components/executive-shell';
 import {
   BackgroundBlobs,
-  DataTable,
   GlassCard,
   MetricCard,
-  ProgressRing,
   type CommandPaletteItem,
 } from '@/components/ui/executive';
-import { babelPhaseTopics } from '@/lib/babel-constants';
 import { cn } from '@/lib/utils';
 import { DisplayLangProvider, useDisplayLang } from '@/components/display-lang-provider';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
@@ -60,30 +49,7 @@ import type { BabelPhaseRecord, MaturityLevel, SessionDoc, UserDoc } from '@/typ
 import type { FinancialGoalsInput, FinancialGoalsResult } from '@/lib/deliverables';
 import { MISIONES_PART_LABELS, SUBMUNDOS_ESTRATEGIA_LABELS, nivelLabelPuntos } from '@/lib/worlds';
 
-type PhaseStatus = 'completado' | 'en_progreso' | 'pendiente';
-
-interface PhaseRow {
-  id: string;
-  phase: number;
-  topic: string;
-  status: PhaseStatus;
-  approvedAt: string | null;
-  deliverables: string[];
-}
-
 const NAV_ICON_MAP = { Home, LayoutDashboard, Globe, Medal, Wrench, Crown, Compass, ShieldCheck, UserCheck2, Coins, Handshake, Scale, Cog, Landmark };
-
-const STATUS_CLASS: Record<PhaseStatus, string> = {
-  completado: 'text-success',
-  en_progreso: 'text-warning',
-  pendiente: 'text-muted-foreground',
-};
-
-const STATUS_ICON: Record<PhaseStatus, React.ComponentType<{ className?: string; strokeWidth?: number | string }>> = {
-  completado: CheckCircle2,
-  en_progreso: Clock,
-  pendiente: CircleDashed,
-};
 
 const MATURITY_LEVEL_LABEL: Record<MaturityLevel, [string, string]> = {
   execution: ['Ejecución', 'Execution'],
@@ -96,70 +62,6 @@ const MATURITY_LEVEL_LABEL: Record<MaturityLevel, [string, string]> = {
 
 const PLAN_STORAGE_KEY = 'babel_plan_accion_v2';
 const FIN_GOALS_LAST_KEY = 'babel_financial_goals_v1';
-
-function TopicCell({ topic }: { topic: string }) {
-  return <span className="font-medium text-foreground">{topic}</span>;
-}
-
-function StatusCell({ status }: { status: PhaseStatus }) {
-  const { lang } = useDisplayLang();
-  const labels: Record<PhaseStatus, string> = {
-    completado: lang === 'en' ? 'Completed' : 'Completado',
-    en_progreso: lang === 'en' ? 'In progress' : 'En progreso',
-    pendiente: lang === 'en' ? 'Pending' : 'Pendiente',
-  };
-  const Icon = STATUS_ICON[status];
-  return (
-    <span className={cn('inline-flex items-center gap-1.5 text-sm font-medium', STATUS_CLASS[status])}>
-      <Icon className="h-3.5 w-3.5" strokeWidth={2} />
-      {labels[status]}
-    </span>
-  );
-}
-
-const phaseColumns: ColumnDef<PhaseRow>[] = [
-  {
-    id: 'topic',
-    header: 'Fase',
-    accessorFn: (row) => row.topic,
-    cell: ({ row }) => <TopicCell topic={row.original.topic} />,
-  },
-  {
-    id: 'status',
-    header: 'Estado',
-    accessorFn: (row) => row.status,
-    cell: ({ row }) => <StatusCell status={row.original.status} />,
-  },
-  {
-    id: 'approvedAt',
-    header: 'Aprobada el',
-    accessorFn: (row) => row.approvedAt ?? '',
-  },
-];
-
-/** Extrae los títulos `### `/`## ` del resumen aprobado como entregables. */
-function extractDeliverables(summary: string, lang: 'es' | 'en'): string[] {
-  const headings = summary
-    .split('\n')
-    .map((line) => line.trim().match(/^#{2,3}\s+(.+)$/)?.[1])
-    .filter((h): h is string => Boolean(h))
-    .map((h) => h.replace(/\*\*/g, '').trim())
-    .filter((h) => h.length > 0);
-  if (headings.length > 0) return Array.from(new Set(headings)).slice(0, 6);
-  const firstLine = summary.split('\n').map((l) => l.trim()).find((l) => l.length > 0);
-  return firstLine ? [firstLine.slice(0, 80)] : [lang === 'en' ? 'Approved summary' : 'Resumen aprobado'];
-}
-
-function formatDate(ts: Timestamp | undefined, locale: string): string | null {
-  if (!ts) return null;
-  const date = ts instanceof Timestamp ? ts.toDate() : new Date(ts as unknown as string);
-  if (Number.isNaN(date.getTime())) return null;
-  return date.toLocaleDateString(locale === 'en' ? 'en-US' : 'es-MX', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
-}
 
 export default function ExecutivePreviewPage() {
   const params = useParams<{ locale: string }>();
@@ -184,16 +86,24 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
       selector: '#resumen-titulo',
       title: t('Resumen ejecutivo', 'Executive Summary'),
       description: t(
-        'Vista general de tu avance: madurez, fases aprobadas y conversaciones con Babel.',
-        'Overview of your progress: maturity, approved phases and conversations with Babel.'
+        'Vista general de tu avance: madurez, avance por mundo e insignias.',
+        'Overview of your progress: maturity, progress by world and badges.'
       ),
     },
     {
       selector: '#resumen-metricas',
-      title: t('Métricas clave', 'Key metrics'),
+      title: t('Madurez global', 'Overall maturity'),
       description: t(
-        'Tu madurez global, la fase actual, las fases aprobadas y los mensajes intercambiados con Babel.',
-        'Your overall maturity, current phase, approved phases and messages exchanged with Babel.'
+        'Tu puntaje de madurez global y su tendencia entre diagnósticos.',
+        'Your overall maturity score and its trend across assessments.'
+      ),
+    },
+    {
+      selector: '#resumen-madurez',
+      title: t('Diagnóstico de madurez', 'Maturity assessment'),
+      description: t(
+        'Puntaje por tema y tus fortalezas y áreas de oportunidad para priorizar mejoras.',
+        'Score per topic plus your strengths and areas of opportunity to prioritize improvements.'
       ),
     },
     {
@@ -208,24 +118,8 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
       selector: '#resumen-insignias',
       title: t('Mis insignias', 'My badges'),
       description: t(
-        'Logros desbloqueados por tus avances: misiones, madurez, plan de acción y comunidad.',
-        'Achievements unlocked by your progress: missions, maturity, action plan and community.'
-      ),
-    },
-    {
-      selector: '#resumen-fases',
-      title: t('Avance por fase', 'Progress by phase'),
-      description: t(
-        'Las 5 fases del diagnóstico Babel y su estado. La tabla debajo muestra entregables de cada fase.',
-        'The 5 phases of the Babel diagnostic and their status. The table below shows deliverables per phase.'
-      ),
-    },
-    {
-      selector: '#resumen-madurez',
-      title: t('Diagnóstico de madurez', 'Maturity assessment'),
-      description: t(
-        'Puntaje por tema y tus fortalezas y áreas de oportunidad para priorizar mejoras.',
-        'Score per topic plus your strengths and areas of opportunity to prioritize improvements.'
+        'Logros desbloqueados por tus avances: perfil, misiones, madurez, plan de acción y comunidad.',
+        'Achievements unlocked by your progress: profile, missions, maturity, action plan and community.'
       ),
     },
     {
@@ -309,6 +203,7 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
   const [worldsYo, setWorldsYo] = React.useState<{ puntos: number; nivel: string; partida: number[]; tablero: boolean } | null>(null);
   const [madurezPlan, setMadurezPlan] = React.useState<{ cumplidas: number; compromisosMes: number } | null>(null);
   const [orgRoles, setOrgRoles] = React.useState(0);
+  const [companyName, setCompanyName] = React.useState('');
 
   React.useEffect(() => {
     const auth = getFirebaseAuth();
@@ -321,17 +216,20 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
     let cancelled = false;
     (async () => {
       try {
-        const [latestAnswers, historyData, userSnap, session] = await Promise.all([
+        const [latestAnswers, historyData, userSnap, session, companySnap] = await Promise.all([
           getLatestAssessmentAnswers(user.uid),
           getAssessmentHistory(user.uid),
           getDoc(doc(getFirebaseDb(), 'users', user.uid)),
           getBabelSessionIfExists(user.uid),
+          getDoc(doc(getFirebaseDb(), 'companies', user.uid)),
         ]);
         if (cancelled) return;
         setAnswers(latestAnswers);
         setHistory(historyData);
         setUserDoc(userSnap.exists() ? (userSnap.data() as UserDoc) : null);
         setSessionDoc(session);
+        const compData = companySnap.exists() ? (companySnap.data() as { name?: string }) : null;
+        setCompanyName(typeof compData?.name === 'string' ? compData.name : '');
       } catch (err) {
         console.error('[MBE ExecutivePreview] failed to load data', err);
       }
@@ -419,46 +317,47 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
     }
   }, []);
 
-  // Organigrama guardado (localStorage) para la Misión 5 de Estrategia.
+  // Organigrama guardado (localStorage) para la Misión 5 de Estrategia:
+  // cuenta los ROLES con responsable (persona) asignado, no solo los roles creados.
   React.useEffect(() => {
     try {
+      let conPersona = 0;
       const raw = window.localStorage.getItem('babel_orgchart_v1');
       const parsed = raw ? JSON.parse(raw) : null;
-      setOrgRoles(Array.isArray(parsed?.roles) ? parsed.roles.length : 0);
+      if (parsed && typeof parsed === 'object') {
+        conPersona = Object.values(parsed as Record<string, unknown>).filter(
+          (a) =>
+            a !== null &&
+            typeof a === 'object' &&
+            !Array.isArray(a) &&
+            Boolean((a as { person?: string }).person && String((a as { person?: string }).person).trim())
+        ).length;
+      }
+      const boardRaw = window.localStorage.getItem('babel_orgchart_board_v1');
+      const board = boardRaw ? JSON.parse(boardRaw) : null;
+      if (board && typeof board === 'object') {
+        if (board.presidente && String(board.presidente).trim()) conPersona += 1;
+        if (board.secretario && String(board.secretario).trim()) conPersona += 1;
+        if (Array.isArray(board.consejeros)) {
+          conPersona += board.consejeros.filter((c: unknown) => typeof c === 'string' && c.trim()).length;
+        }
+      }
+      setOrgRoles(conPersona);
     } catch (err) {
       console.error('[MBE ExecutivePreview] failed to read org chart', err);
     }
   }, []);
 
-  const phaseTopics = babelPhaseTopics(locale);
   const approvedPhases: BabelPhaseRecord[] = [...(sessionDoc?.phases ?? [])]
     .filter((p) => p.phase >= 0 && p.phase <= 4)
     .sort((a, b) => a.phase - b.phase);
   const currentPhase = Math.min(Math.max(sessionDoc?.currentPhase ?? 0, 0), 5);
   const approvedCount = approvedPhases.length;
-  const messageCount = sessionDoc?.messages?.length ?? 0;
   const allPhasesDone = currentPhase >= 5;
-
-  const PHASE_ROWS: PhaseRow[] = phaseTopics.map((topic, phase) => {
-    const record = approvedPhases.find((p) => p.phase === phase);
-    const status: PhaseStatus = record ? 'completado' : phase === currentPhase ? 'en_progreso' : 'pendiente';
-    return {
-      id: `fase-${phase}`,
-      phase,
-      topic,
-      status,
-      approvedAt: formatDate(record?.approvedAt, locale),
-      deliverables: record ? extractDeliverables(record.summary, locale) : [],
-    };
-  });
 
   const maturityTrend = [...history].reverse().slice(-7).map((h) => h.totalScore);
   const maturityDelta =
     history.length >= 2 ? Math.round((history[0].totalScore - history[1].totalScore) * 10) / 10 : undefined;
-  const approvalsTrend = approvedPhases
-    .slice()
-    .sort((a, b) => (a.approvedAt?.toMillis?.() ?? 0) - (b.approvedAt?.toMillis?.() ?? 0))
-    .map((_, i) => i + 1);
 
   // ── Avance por mundo ─────────────────────────────────────────────
   const partidaHechas = new Set((worldsYo?.partida ?? []).map(Number));
@@ -479,8 +378,17 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
   const estrategiaTotalPts = SUBMUNDOS_ESTRATEGIA_LABELS.length * 25;
   const retosNivel = result ? MATURITY_LEVEL_LABEL[result.overallLevel][0] : '—';
 
+  const perfilCompleto = Boolean(
+    userDoc?.name &&
+    String(userDoc.name).trim() &&
+    userDoc?.telefono &&
+    String(userDoc.telefono).trim() &&
+    companyName.trim()
+  );
+
   const insignias = React.useMemo(() => {
     const arr: { id: string; icono: string; titulo: [string, string]; desc: [string, string]; earned: boolean }[] = [
+      { id: 'perfil', icono: '👤', titulo: ['Perfil completo', 'Complete profile'], desc: ['Completa tu perfil: nombre, teléfono y empresa', 'Complete your profile: name, phone and company'], earned: perfilCompleto },
       { id: 'primerPaso', icono: '🎓', titulo: ['Primer paso', 'First step'], desc: ['Completa la Misión 1 del Mundo de Partida', 'Complete Starting World Mission 1'], earned: partidaHechas.has(1) },
       { id: 'tablero', icono: '🎯', titulo: ['Tablero de retos', 'Challenges board'], desc: ['Completa la Misión 2 del Mundo de Partida', 'Complete Starting World Mission 2'], earned: worldsYo?.tablero === true },
       { id: 'partidaCompleta', icono: '🗺️', titulo: ['Partida completada', 'Starting World complete'], desc: [`Completa las ${MISIONES_PART_LABELS.length} misiones del Mundo de Partida`, `Complete all ${MISIONES_PART_LABELS.length} Starting World missions`], earned: mundoPartidaCompleto },
@@ -499,16 +407,10 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
       { id: 'orquesta', icono: '🎻', titulo: ['Empresario Orquesta', 'Orchestra Business Owner'], desc: ['Alcanza 500 puntos', 'Reach 500 points'], earned: (worldsYo?.puntos ?? 0) >= 500 },
     ];
     return arr;
-  }, [partidaHechas, worldsYo, mundoPartidaCompleto, history.length, result, mE0, mE1, mE2, mE3, mE4, mE5, mE6, madurezPlan]);
+  }, [partidaHechas, worldsYo, mundoPartidaCompleto, history.length, result, mE0, mE1, mE2, mE3, mE4, mE5, mE6, madurezPlan, perfilCompleto]);
   const insigniasGanadas = insignias.filter((b) => b.earned).length;
 
   const commandItems: CommandPaletteItem[] = [
-    ...PHASE_ROWS.map((row) => ({
-      id: row.id,
-      label: row.topic,
-      group: t('Fases Babel', 'Babel Phases'),
-      onSelect: () => {},
-    })),
     {
       id: 'go-babel',
       label: t('Ir a Babel AI', 'Go to Babel AI'),
@@ -635,41 +537,141 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
             icon={Gauge}
             variant={result && result.overallScore >= 60 ? 'success' : 'default'}
           />
-          <MetricCard
-            className="animate-slide-up"
-            style={{ animationDelay: '60ms' }}
-            label={t('Fase actual', 'Current phase')}
-            value={`${t('Fase', 'Phase')} ${currentPhase}`}
-            unit={
-              currentPhase < 5
-                ? phaseTopics[currentPhase]?.split(':')[1]?.trim()
-                : t('completado', 'completed')
-            }
-            icon={Sparkles}
-            variant="default"
-          />
-          <MetricCard
-            className="animate-slide-up"
-            style={{ animationDelay: '120ms' }}
-            label={t('Fases aprobadas', 'Approved phases')}
-            value={approvedCount}
-            unit={`/5`}
-            trend={approvalsTrend.length > 1 ? approvalsTrend : undefined}
-            icon={FileCheck2}
-            variant={allPhasesDone ? 'success' : 'default'}
-          />
-          <MetricCard
-            className="animate-slide-up"
-            style={{ animationDelay: '180ms' }}
-            label={t('Mensajes con Babel', 'Messages with Babel')}
-            value={messageCount}
-            unit={t('mensajes', 'messages')}
-            icon={MessagesSquare}
-            variant="default"
-          />
         </div>
 
-        <div id="resumen-mundos" className="animate-slide-up" style={{ animationDelay: '220ms' }}>
+        {finGoals ? (
+          <GlassCard className="animate-slide-up" style={{ animationDelay: '60ms' }}>
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">
+                  {t('Objetivos financieros', 'Financial goals')}
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  {t(
+                    'Metas de tu punto de equilibrio y proyección (última versión guardada).',
+                    'Break-even and projection goals (last saved version).'
+                  )}
+                </p>
+              </div>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <MetricCard
+                label={t('Utilidad deseada', 'Desired profit')}
+                value={fmtMoney(finGoals.input.desiredProfit)}
+                icon={TrendingUp}
+                variant="default"
+              />
+              <MetricCard
+                label={t('Punto de equilibrio', 'Break-even point')}
+                value={fmtMoney(finGoals.result.breakEvenWithMarketing)}
+                icon={TrendingUp}
+                variant="default"
+              />
+              <MetricCard
+                label={t('Ingreso meta', 'Goal revenue')}
+                value={fmtMoney(finGoals.result.targetRevenueWithMarketing)}
+                icon={TrendingUp}
+                variant="success"
+              />
+              <MetricCard
+                label={t('% Costos variables', '% Variable costs')}
+                value={((finGoals.result.totalVariablePctWithMarketing ?? 0) * 100).toFixed(1).replace('.', ',')}
+                unit="%"
+                icon={TrendingUp}
+                variant="default"
+              />
+            </div>
+            {finGoalsDateLabel ? (
+              <p className="mt-3 text-xs text-muted-foreground">
+                {t('Última actualización', 'Last updated')}: {finGoalsDateLabel}
+              </p>
+            ) : null}
+          </GlassCard>
+        ) : null}
+
+        <GlassCard id="resumen-madurez" className="animate-slide-up" style={{ animationDelay: '100ms' }}>
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">{t('Diagnóstico de madurez', 'Maturity assessment')}</h2>
+              <p className="text-xs text-muted-foreground">
+                {result
+                  ? t(
+                      `Tu nivel general es ${MATURITY_LEVEL_LABEL[result.overallLevel][0]}.`,
+                      `Your overall level is ${MATURITY_LEVEL_LABEL[result.overallLevel][1]}.`
+                    )
+                  : t('Aún no has completado tu evaluación de madurez.', 'You have not completed your maturity assessment yet.')}
+              </p>
+            </div>
+            <Gauge className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
+          </div>
+          {result ? (
+            <>
+              <div className="space-y-2.5">
+                {[...result.dimensions]
+                  .sort((a, b) => b.score - a.score)
+                  .map((d) => (
+                    <div key={d.id} className="flex items-center gap-3">
+                      <span className="w-40 shrink-0 text-xs font-medium text-foreground">{d.tema}</span>
+                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-accent/60">
+                        <div
+                          className="h-full rounded-full bg-primary"
+                          style={{ width: `${Math.min(Math.round((d.score / 120) * 100), 100)}%` }}
+                        />
+                      </div>
+                      <span className="w-24 shrink-0 text-right font-mono text-xs text-muted-foreground">
+                        {Math.round(d.score)} · {MATURITY_LEVEL_LABEL[d.level][0]}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+              <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-success">
+                    {t('Fortalezas', 'Strengths')}
+                  </h3>
+                  <ul className="space-y-1.5 text-sm">
+                    {strengths.map((d) => (
+                      <li key={d.id} className="text-muted-foreground">
+                        <span className="font-medium text-foreground">{d.tema}</span> · {Math.round(d.score)}/120
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-warning">
+                    {t('Áreas de oportunidad', 'Areas of opportunity')}
+                  </h3>
+                  <ul className="space-y-1.5 text-sm">
+                    {opportunities.map((d) => (
+                      <li key={d.id} className="text-muted-foreground">
+                        <span className="font-medium text-foreground">{d.tema}</span> · {Math.round(d.score)}/120
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center gap-4 py-6 text-center">
+              <p className="max-w-md text-sm text-muted-foreground">
+                {t(
+                  'Completa el diagnóstico inicial para ver tu madurez por tema, fortalezas y áreas de oportunidad.',
+                  'Complete the initial assessment to see your maturity by topic, strengths and areas of opportunity.'
+                )}
+              </p>
+              <button
+                type="button"
+                onClick={() => router.push(`/${routeLocale}/onboarding`)}
+                className="rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+              >
+                {t('Hacer mi diagnóstico', 'Take my assessment')}
+              </button>
+            </div>
+          )}
+        </GlassCard>
+
+        <div id="resumen-mundos" className="animate-slide-up" style={{ animationDelay: '180ms' }}>
           <GlassCard>
             <div className="mb-4 flex items-center justify-between">
               <div>
@@ -889,207 +891,7 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
           </div>
         </GlassCard>
 
-        {finGoals ? (
-          <GlassCard className="animate-slide-up" style={{ animationDelay: '220ms' }}>
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h2 className="text-sm font-semibold text-foreground">
-                  {t('Objetivos financieros', 'Financial goals')}
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  {t(
-                    'Metas de tu punto de equilibrio y proyección (última versión guardada).',
-                    'Break-even and projection goals (last saved version).'
-                  )}
-                </p>
-              </div>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
-            </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <MetricCard
-                label={t('Utilidad deseada', 'Desired profit')}
-                value={fmtMoney(finGoals.input.desiredProfit)}
-                icon={TrendingUp}
-                variant="default"
-              />
-              <MetricCard
-                label={t('Punto de equilibrio', 'Break-even point')}
-                value={fmtMoney(finGoals.result.breakEvenWithMarketing)}
-                icon={TrendingUp}
-                variant="default"
-              />
-              <MetricCard
-                label={t('Ingreso meta', 'Goal revenue')}
-                value={fmtMoney(finGoals.result.targetRevenueWithMarketing)}
-                icon={TrendingUp}
-                variant="success"
-              />
-              <MetricCard
-                label={t('% Costos variables', '% Variable costs')}
-                value={((finGoals.result.totalVariablePctWithMarketing ?? 0) * 100).toFixed(1).replace('.', ',')}
-                unit="%"
-                icon={TrendingUp}
-                variant="default"
-              />
-            </div>
-            {finGoalsDateLabel ? (
-              <p className="mt-3 text-xs text-muted-foreground">
-                {t('Última actualización', 'Last updated')}: {finGoalsDateLabel}
-              </p>
-            ) : null}
-          </GlassCard>
-        ) : null}
-
-        <GlassCard id="resumen-fases" className="animate-slide-up" style={{ animationDelay: '260ms' }}>
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h2 className="text-sm font-semibold text-foreground">{t('Avance por fase', 'Progress by phase')}</h2>
-              <p className="text-xs text-muted-foreground">{t('5 fases del diagnóstico Babel (0 a 4)', '5 phases of the Babel diagnostic (0 to 4)')}</p>
-            </div>
-            <Users className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
-          </div>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-            {PHASE_ROWS.map((row) => (
-              <div key={row.id} className="flex flex-col items-center gap-2">
-                <ProgressRing
-                  value={row.status === 'completado' ? 100 : row.status === 'en_progreso' ? 55 : 0}
-                  size={72}
-                  thickness={6}
-                  variant={
-                    row.status === 'completado' ? 'success' : row.status === 'en_progreso' ? 'warning' : 'default'
-                  }
-                  label={`${t('Fase', 'Phase')} ${row.phase}`}
-                />
-                <span className="max-w-[7.5rem] text-center text-[11px] leading-tight text-muted-foreground">
-                  {row.topic.split(':')[1]?.trim() ?? row.topic}
-                </span>
-              </div>
-            ))}
-          </div>
-        </GlassCard>
-
-        <div className="animate-slide-up" style={{ animationDelay: '300ms' }}>
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-foreground">{t('Detalle de fases', 'Phase details')}</h2>
-          </div>
-          <DataTable<PhaseRow>
-            columns={phaseColumns.map((col) => {
-              if (col.id === 'topic') return { ...col, header: t('Fase', 'Phase') };
-              if (col.id === 'status') return { ...col, header: t('Estado', 'Status') };
-              if (col.id === 'approvedAt') return { ...col, header: t('Aprobada el', 'Approved on') };
-              return col;
-            })}
-            data={PHASE_ROWS}
-            enableExport
-            exportFileName={t('babel-fases', 'babel-phases')}
-            exportLabel={t('Exportar CSV', 'Export CSV')}
-            emptyMessage={t('Sin fases registradas.', 'No phases registered.')}
-            expandLabel={t('Expandir fila', 'Expand row')}
-            collapseLabel={t('Contraer fila', 'Collapse row')}
-            renderSubRow={(row) => (
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-medium text-muted-foreground">{t('Entregables:', 'Deliverables:')}</span>
-                {row.deliverables.length > 0 ? (
-                  row.deliverables.map((d) => (
-                    <span
-                      key={d}
-                      className="rounded-full border border-border bg-background px-2.5 py-0.5 text-xs text-foreground"
-                    >
-                      {d}
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-xs text-muted-foreground">
-                    {t('Aún no hay entregables en esta fase.', 'No deliverables yet in this phase.')}
-                  </span>
-                )}
-              </div>
-            )}
-          />
-        </div>
-
-        <GlassCard id="resumen-madurez" className="animate-slide-up" style={{ animationDelay: '340ms' }}>
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h2 className="text-sm font-semibold text-foreground">{t('Diagnóstico de madurez', 'Maturity assessment')}</h2>
-              <p className="text-xs text-muted-foreground">
-                {result
-                  ? t(
-                      `Tu nivel general es ${MATURITY_LEVEL_LABEL[result.overallLevel][0]}.`,
-                      `Your overall level is ${MATURITY_LEVEL_LABEL[result.overallLevel][1]}.`
-                    )
-                  : t('Aún no has completado tu evaluación de madurez.', 'You have not completed your maturity assessment yet.')}
-              </p>
-            </div>
-            <Gauge className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
-          </div>
-          {result ? (
-            <>
-              <div className="space-y-2.5">
-                {[...result.dimensions]
-                  .sort((a, b) => b.score - a.score)
-                  .map((d) => (
-                    <div key={d.id} className="flex items-center gap-3">
-                      <span className="w-40 shrink-0 text-xs font-medium text-foreground">{d.tema}</span>
-                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-accent/60">
-                        <div
-                          className="h-full rounded-full bg-primary"
-                          style={{ width: `${Math.min(Math.round((d.score / 120) * 100), 100)}%` }}
-                        />
-                      </div>
-                      <span className="w-24 shrink-0 text-right font-mono text-xs text-muted-foreground">
-                        {Math.round(d.score)} · {MATURITY_LEVEL_LABEL[d.level][0]}
-                      </span>
-                    </div>
-                  ))}
-              </div>
-              <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-success">
-                    {t('Fortalezas', 'Strengths')}
-                  </h3>
-                  <ul className="space-y-1.5 text-sm">
-                    {strengths.map((d) => (
-                      <li key={d.id} className="text-muted-foreground">
-                        <span className="font-medium text-foreground">{d.tema}</span> · {Math.round(d.score)}/120
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-warning">
-                    {t('Áreas de oportunidad', 'Areas of opportunity')}
-                  </h3>
-                  <ul className="space-y-1.5 text-sm">
-                    {opportunities.map((d) => (
-                      <li key={d.id} className="text-muted-foreground">
-                        <span className="font-medium text-foreground">{d.tema}</span> · {Math.round(d.score)}/120
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="flex flex-col items-center gap-4 py-6 text-center">
-              <p className="max-w-md text-sm text-muted-foreground">
-                {t(
-                  'Completa el diagnóstico inicial para ver tu madurez por tema, fortalezas y áreas de oportunidad.',
-                  'Complete the initial assessment to see your maturity by topic, strengths and areas of opportunity.'
-                )}
-              </p>
-              <button
-                type="button"
-                onClick={() => router.push(`/${routeLocale}/onboarding`)}
-                className="rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
-              >
-                {t('Hacer mi diagnóstico', 'Take my assessment')}
-              </button>
-            </div>
-          )}
-        </GlassCard>
-
-        <GlassCard id="resumen-plan" className="animate-slide-up" style={{ animationDelay: '380ms' }}>
+        <GlassCard id="resumen-plan" className="animate-slide-up" style={{ animationDelay: '260ms' }}>
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="text-sm font-semibold text-foreground">{t('Tu plan de negocio', 'Your business plan')}</h2>

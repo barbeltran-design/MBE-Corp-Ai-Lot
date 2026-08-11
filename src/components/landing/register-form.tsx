@@ -54,10 +54,10 @@ export function RegisterForm() {
     // Picks up sign-in that finished via signInWithRedirect (the fallback used
     // when signInWithPopup gets blocked). This runs on every mount of this
     // page/component, so if the user is already authenticated when it lands
-    // here it routes them straight to onboarding.
+    // here it routes them straight to Inicio.
     const unsubscribe = subscribeToPendingGoogleRedirect(
       () => {
-        router.push(`/${locale}/onboarding`);
+        router.push(`/${locale}/inicio`);
       },
       (err) => {
         console.error('[MBE Auth Error - google redirect]', err);
@@ -80,7 +80,7 @@ export function RegisterForm() {
         country: values.country,
         language: locale,
       });
-      router.push(`/${locale}/onboarding`);
+      router.push(`/${locale}/inicio`);
     } catch (err) {
       setServerError(t(`errors.${mapAuthErrorToMessageKey(err)}`));
     } finally {
@@ -107,12 +107,12 @@ export function RegisterForm() {
       if (user) {
         // signInWithPopup completed right here — no redirect happened, so we
         // navigate directly instead of waiting on the redirect-handling effect.
-        router.push(`/${locale}/onboarding`);
+        router.push(`/${locale}/inicio`);
       }
       // If user is undefined, the popup was blocked and registerWithGoogle
       // fell back to signInWithRedirect, which navigates the browser away —
       // the useEffect above (subscribeToPendingGoogleRedirect) handles routing
-      // to onboarding once that redirect comes back.
+      // to Inicio once that redirect comes back.
     } catch (err) {
       setServerError(t(`errors.${mapAuthErrorToMessageKey(err)}`));
     } finally {
