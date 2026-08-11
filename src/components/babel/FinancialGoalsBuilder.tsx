@@ -656,7 +656,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                           <div className="mt-2 rounded-lg border border-slate-200 bg-white p-2">
                             <div className="flex items-center justify-between gap-2">
                               <p className="text-[10px] uppercase tracking-wide text-slate-500">
-                                {lang === 'en' ? 'Goal revenue by channel' : 'Ingreso meta por canal de ingreso'}
+                                {lang === 'en' ? 'Monthly goal revenue by channel' : 'Ingreso meta mensual por canal de ingreso'}
                               </p>
                               <p className="text-xs font-bold text-slate-900">{fmtMoney(targetRevenue)}</p>
                             </div>
