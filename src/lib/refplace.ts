@@ -100,6 +100,7 @@ export interface SolicitudReferencia {
   uid: string;
   nombre: string;
   empresaObjetivo: string;
+  rubro: string;
   descripcion: string;
   comisionPct: number;
   repSaleUid: string | null;

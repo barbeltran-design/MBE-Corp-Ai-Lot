@@ -88,6 +88,7 @@ interface UserRow {
   email?: string;
   roles?: string[];
   especialistaTemas?: string[];
+  certificado?: boolean;
   companyName?: string;
   totalMaturity?: number | null;
   subscription?: string;
@@ -117,6 +118,7 @@ export default function AdminPage() {
   const [selUid, setSelUid] = React.useState('');
   const [selRoles, setSelRoles] = React.useState<string[]>([]);
   const [selTemas, setSelTemas] = React.useState<string[]>([]);
+  const [selCert, setSelCert] = React.useState(false);
   const [rolesMsg, setRolesMsg] = React.useState('');
 
   // Pagos
@@ -221,7 +223,7 @@ export default function AdminPage() {
     const res = await fetch('/api/admin/users', {
       method: 'POST',
       headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ uid: selUid, roles: selRoles, especialistaTemas: selTemas }),
+      body: JSON.stringify({ uid: selUid, roles: selRoles, especialistaTemas: selTemas, certificado: selCert }),
     });
     if (!res.ok) {
       setRolesMsg(t('No se pudieron guardar los roles.', 'Could not save roles.'));
@@ -357,6 +359,11 @@ export default function AdminPage() {
                         <div className="flex flex-wrap gap-1">
                           {Array.isArray(u.roles) && u.roles.map((r) => <RoleBadge key={r} role={r} lang={dispLang} />)}
                           {(!u.roles || u.roles.length === 0) && <span className="text-xs text-muted-foreground">{t('Usuario', 'User')}</span>}
+                          {u.certificado && (
+                            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200">
+                              ✓ {t('Certificación MBE Corp', 'MBE Corp Certification')}
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="px-3 py-2 text-muted-foreground">
@@ -383,6 +390,7 @@ export default function AdminPage() {
                             setSelUid(u.uid);
                             setSelRoles(Array.isArray(u.roles) ? u.roles : []);
                             setSelTemas(Array.isArray(u.especialistaTemas) ? u.especialistaTemas : []);
+                            setSelCert(u.certificado === true);
                           }}
                         >
                           {t('Asignar roles', 'Assign roles')}
@@ -448,6 +456,26 @@ export default function AdminPage() {
                         </button>
                       ))}
                     </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{t('Certificación MBE Corp', 'MBE Corp Certification')}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {t('Marca la empresa como Empresa con Certificación MBE Corp (se muestra con insignia ✓ en Reference Place).', 'Mark the company as an MBE Corp Certified Company (shown with a ✓ badge in Reference Place).')}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelCert((prev) => !prev)}
+                      className={
+                        'inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold transition-colors ' +
+                        (selCert
+                          ? 'border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                          : 'border-slate-300 text-muted-foreground hover:border-emerald-400 dark:border-slate-600')
+                      }
+                    >
+                      {selCert ? '✓ ' + t('Certificado', 'Certified') : t('Sin certificación', 'Not certified')}
+                    </button>
                   </div>
                   {rolesMsg && <p className="text-sm text-emerald-700">{rolesMsg}</p>}
                   <div className="flex gap-2">

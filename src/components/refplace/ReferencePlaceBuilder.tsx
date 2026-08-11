@@ -138,6 +138,7 @@ export function ReferencePlaceBuilder() {
 
   // Forms solicitud
   const [solEmpresa, setSolEmpresa] = React.useState('');
+  const [solRubro, setSolRubro] = React.useState('');
   const [solDesc, setSolDesc] = React.useState('');
   const [solComision, setSolComision] = React.useState('5');
   const [solRepUid, setSolRepUid] = React.useState('');
@@ -224,7 +225,7 @@ export function ReferencePlaceBuilder() {
       const data2 = await cargarTodo(token);
       aplicar(data2);
       // Limpia forms
-      setSolEmpresa(''); setSolDesc(''); setSolComision('5'); setSolRepUid('');
+      setSolEmpresa(''); setSolRubro(''); setSolDesc(''); setSolComision('5'); setSolRepUid('');
       setOfEmpresa(''); setOfRubro(''); setOfDesc(''); setOfComision('5');
       setReTitulo(''); setReTipo('asesoria'); setReDesc(''); setReParticipantes([]); setReFechaLbl('');
     } catch (err) {
@@ -378,9 +379,22 @@ export function ReferencePlaceBuilder() {
                     <Target className="h-4 w-4 text-teal-600" />
                     <h2 className="text-sm font-semibold text-foreground">{t('Solicitar referencia', 'Request a reference')}</h2>
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-200">
                     {t('Pide a la comunidad certificada (o a un Rep Sale) que te consiga una cita con una empresa, a cambio de una comisión al concretar.', 'Ask the certified community (or a Rep Sale) to get you a meeting with a company, for a success fee.')}
                   </p>
+                </div>
+
+                <div className="glass-panel space-y-2 p-4">
+                  <p className="text-xs text-slate-500 dark:text-slate-200">
+                    {t('¿Quieres saber más de la certificación? Agenda una cita de orientación GRATIS con un mentor de nivel directivo.', 'Want to learn more about certification? Book a FREE orientation session with a director-level mentor.')}
+                  </p>
+                  <a
+                    href={`/${routeLocale}/agendar#certificacion`}
+                    className="inline-flex items-center gap-2 rounded-lg border border-teal-600 px-3 py-2 text-xs font-semibold text-teal-700 transition-colors hover:bg-teal-50 dark:text-teal-300 dark:hover:bg-teal-500/10"
+                  >
+                    <CalendarClock className="h-4 w-4" />
+                    {t('Agendar cita de Orientación Gratis', 'Book FREE orientation session')}
+                  </a>
                 </div>
 
                 {yo.puedeReferencias ? (
@@ -391,6 +405,12 @@ export function ReferencePlaceBuilder() {
                       onChange={(e) => setSolEmpresa(e.target.value)}
                       placeholder={t('Empresa objetivo', 'Target company')}
                     />
+                    <input
+                      className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                      value={solRubro}
+                      onChange={(e) => setSolRubro(e.target.value)}
+                      placeholder={t('Rubro / giro', 'Industry')}
+                    />
                     <textarea
                       className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
                       rows={2}
@@ -399,13 +419,16 @@ export function ReferencePlaceBuilder() {
                       placeholder={t('¿Qué buscas conseguir?', 'What do you want to achieve?')}
                     />
                     <div className="grid grid-cols-2 gap-3">
-                      <input
-                        type="number"
-                        className="rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
-                        value={solComision}
-                        onChange={(e) => setSolComision(e.target.value)}
-                        placeholder="% comisión"
-                      />
+                      <div>
+                        <p className="mb-1 text-xs font-medium text-muted-foreground">{t('% de Comisión Ofrecida', 'Offered fee %')}</p>
+                        <input
+                          type="number"
+                          className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                          value={solComision}
+                          onChange={(e) => setSolComision(e.target.value)}
+                          placeholder="% comisión"
+                        />
+                      </div>
                       <select
                         className="rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
                         value={solRepUid}
@@ -419,7 +442,7 @@ export function ReferencePlaceBuilder() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => act('crear-solicitud', { empresaObjetivo: solEmpresa, descripcion: solDesc, comisionPct: Number(solComision) || 0, repSaleUid: solRepUid || null }, t('Solicitud creada.', 'Request created.'))}
+                      onClick={() => act('crear-solicitud', { empresaObjetivo: solEmpresa, rubro: solRubro, descripcion: solDesc, comisionPct: Number(solComision) || 0, repSaleUid: solRepUid || null }, t('Solicitud creada.', 'Request created.'))}
                       disabled={busy === 'crear-solicitud'}
                       className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:opacity-60"
                     >
@@ -440,6 +463,7 @@ export function ReferencePlaceBuilder() {
                     {solicitudes.map((s) => (
                       <div key={s.id} className="glass-panel p-3">
                         <p className="text-sm font-semibold text-foreground">{s.empresaObjetivo}</p>
+                        {s.rubro && <p className="text-xs text-slate-500 dark:text-slate-200">· {s.rubro}</p>}
                         <p className="mt-0.5 text-xs text-muted-foreground">
                           {s.nombre} · {t('comisión', 'fee')} {s.comisionPct}%
                           {s.repSaleNombre && <> · {s.repSaleNombre}</>}
@@ -475,8 +499,11 @@ export function ReferencePlaceBuilder() {
                     <Store className="h-4 w-4 text-teal-600" />
                     <h2 className="text-sm font-semibold text-foreground">{t('Rep Sales de la comunidad', 'Community Rep Sales')}</h2>
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-200">
                     {t('Cada Rep Sale ofrece con qué empresas puede referirte. Solicita una reunión B2B para contactarlo.', 'Each Rep Sale lists companies they can refer you to. Request a B2B meeting to get in touch.')}
+                  </p>
+                  <p className="mt-2 rounded-lg bg-teal-600/10 px-3 py-2 text-xs text-teal-800 dark:text-teal-200">
+                    {t('Solicitar una cita está abierto a toda la comunidad (cualquier nivel). Las empresas con Certificación MBE Corp muestran su insignia ✓ y tienen prioridad para agendar.', 'Requesting a meeting is open to the whole community (any level). Companies with MBE Corp Certification show their ✓ badge and get priority scheduling.')}
                   </p>
                 </div>
 
@@ -496,20 +523,23 @@ export function ReferencePlaceBuilder() {
                         onChange={(e) => setOfRubro(e.target.value)}
                         placeholder={t('Rubro / giro', 'Industry')}
                       />
-                      <input
-                        type="number"
-                        className="rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
-                        value={ofComision}
-                        onChange={(e) => setOfComision(e.target.value)}
-                        placeholder="% comisión"
-                      />
+                      <div>
+                        <p className="mb-1 text-xs font-medium text-muted-foreground">{t('% de Comisión solicitada', 'Requested fee %')}</p>
+                        <input
+                          type="number"
+                          className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                          value={ofComision}
+                          onChange={(e) => setOfComision(e.target.value)}
+                          placeholder="% comisión"
+                        />
+                      </div>
                     </div>
                     <textarea
                       className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
                       rows={2}
                       value={ofDesc}
                       onChange={(e) => setOfDesc(e.target.value)}
-                      placeholder={t('¿A quién le conviene?', 'Who is it for?')}
+                      placeholder={t('¿Qué productos / servicios busca?', 'What products / services is it looking for?')}
                     />
                     <button
                       type="button"

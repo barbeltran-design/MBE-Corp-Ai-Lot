@@ -284,6 +284,7 @@ export default function AgendarPage() {
               return (
                 <div
                   key={area.id}
+                  id={area.id}
                   className="glass-panel overflow-hidden"
                 >
                   <div className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">

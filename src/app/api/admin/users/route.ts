@@ -31,6 +31,7 @@ export async function GET(req: NextRequest) {
           email: data.email ?? '',
           roles: Array.isArray(data.roles) ? data.roles : [],
           especialistaTemas: Array.isArray(data.especialistaTemas) ? data.especialistaTemas : [],
+          certificado: data.certificado === true,
           subscription: data.subscription ?? 'free',
           planStatus: data.planStatus ?? '',
           totalMaturity: typeof data.totalMaturity === 'number' ? data.totalMaturity : null,
@@ -81,11 +82,15 @@ export async function POST(req: NextRequest) {
     if (roles.length === 0 && !body?.roles) {
       return NextResponse.json({ error: 'Faltan los roles.' }, { status: 400 });
     }
+    const certificado = typeof body?.certificado === 'boolean' ? body.certificado : undefined;
 
-    await getAdminDb().collection('users').doc(uid).set(
-      { roles: roles.length ? roles : ['usuario'], especialistaTemas: temas },
-      { merge: true }
-    );
+    const patch: Record<string, unknown> = {
+      roles: roles.length ? roles : ['usuario'],
+      especialistaTemas: temas,
+    };
+    if (certificado !== undefined) patch.certificado = certificado;
+
+    await getAdminDb().collection('users').doc(uid).set(patch, { merge: true });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('[admin/users/roles] POST error', err);
