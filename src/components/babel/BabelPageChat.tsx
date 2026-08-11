@@ -719,6 +719,9 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
         setCompiling(true);
         await upsertCompiledPlan(refreshed.messages, refreshed.phases);
         setCompiling(false);
+        if (faseInicial !== undefined) {
+          router.push('/' + locale + '/babel');
+        }
         return;
       }
       const approvalMsg: ChatMessage = {
@@ -819,6 +822,7 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
         finalMessages = [...baseMessages, assistantMsg];
       }
       setSession(function (prev) { return prev ? { ...prev, messages: finalMessages } : prev; });
+      await saveBabelMessages(uid, finalMessages);
       setInput('');
     } catch (err) {
       console.error('[babel] Error en upsertCompiledPlan:', err);
