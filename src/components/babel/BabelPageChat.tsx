@@ -245,8 +245,6 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
   const [editContent, setEditContent] = React.useState('');
   const [chatExpanded, setChatExpanded] = React.useState<Set<number>>(new Set());
   const [compiling, setCompiling] = React.useState(false);
-  const [showManualEditor, setShowManualEditor] = React.useState(false);
-  const [manualContent, setManualContent] = React.useState('');
   const [currentQuestionIndex, setCurrentQuestionIndex] = React.useState(0);
   const [phase0Answers, setPhase0Answers] = React.useState<Record<string, string>>({});
   const [isPhase0Complete, setIsPhase0Complete] = React.useState(false);
@@ -392,16 +390,6 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispLang, session?.messages, locale, currentPhase]);
-  const phaseTemplate = function (phase: number): string {
-    if (phase <= 0) return '';
-    const templates: Record<number, string> = {
-      1: '### 1. Circulo Dorado\n\n**Why (Proposito):** \n\n**How (Diferenciacion):** \n\n**What (Que vendes):** \n\n---\n\n### 2. ODS y Fondos\n\n**ODS vinculados:** \n\n**Fondos sugeridos:** \n\n---\n\n### 3. Propuesta de Valor (Jobs-to-be-Done)\n\n**Beneficios funcionales:** \n\n**Beneficios emocionales:** \n\n**Beneficios sociales:** \n\n---\n\n### 4. Segmentacion de clientes\n\n**Arquetipo 1:** \n\n**Oceano Azul:** \n\n**Impacto social:**',
-      2: '### 1. Analisis PESTEL Localizado\n\n**Politico:** \n\n**Economico:** \n\n**Social:** \n\n**Tecnologico:** \n\n**Ecologico:** \n\n**Legal:** \n\n---\n\n### 2. Fuerzas del Mercado\n\n**Panorama competitivo:** \n\n**Nuevos entrantes:** \n\n**Sustitutos:** \n\n**Proveedores:** \n\n---\n\n### 3. Matriz de Impacto en Stakeholders\n\n**Colaboradores:** \n\n**Accionistas:** \n\n**Clientes:** \n\n**Proveedores:** \n\n**Medio ambiente:** \n\n**Sociedad:** \n\n**Gobierno:**',
-      3: '### 1. Capacidades Clave\n\n**Capacidades basicas:** \n\n**Capacidades diferenciadoras:** \n\n---\n\n### 2. Plan Operativo\n\n**Infraestructura:** \n\n**Cadena de suministro:** \n\n**Personal requerido:** \n\n**Insumos fijos:**',
-      4: '### 1. Prospectiva Estrategica a 5 Anos\n\n**Incertidumbres criticas:** \n\n**Escenarios de Peter Schwartz:** \n\n**Configuracion morfologica disruptiva:** \n\n**Backcasting (de hoy a 5 anos):** \n\n---\n\n### 2. Estrategia enfocada al Cliente (Modelo Delta)\n\n**Estrategia seleccionada:** \n\n**Customer Journey:** \n\n**Fricciones y oportunidades:**',
-    };
-    return templates[phase] ?? '### Escribe aqui tu analisis para esta fase...';
-  };
   function friendlyError(raw: string): string {
     if (raw.includes('image.png')) {
       return 'Error de formato al contactar la IA. Revisa que las API keys en Vercel sean validas (Groq, OpenRouter, Gemini). Detalle: ' + raw.slice(0, 300);
@@ -762,8 +750,6 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
       } catch (err) {
       const refreshedCatch = await getOrCreateBabelSession(uid, locale);
       setError(err instanceof Error ? err.message : 'Error generico');
-      setShowManualEditor(true);
-      setManualContent(phaseTemplate(refreshedCatch.currentPhase ?? 0));
       setSession(refreshedCatch);
     } finally {
       setSending(false);
@@ -798,34 +784,6 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
       await upsertCompiledPlan(refreshed.messages, refreshed.phases);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al guardar');
-    }
-  }
-  async function manualApprovePhase(phase: number, text: string) {
-    if (!uid || !session) return;
-    setSending(true);
-    setError(null);
-    setShowManualEditor(false);
-    try {
-      await approveBabelPhase(uid, phase, text, locale);
-      const refreshed = await getOrCreateBabelSession(uid, locale);
-      const isLastPhase = phase >= BABEL_IMPLEMENTED_PHASES - 1;
-      const nextPhaseContent = text + (isLastPhase ? '' : '\n\n' + babelApprovalMarker(locale));
-      const assistantMsg: ChatMessage = {
-        role: 'assistant',
-        content: nextPhaseContent,
-        timestamp: Timestamp.now(),
-      };
-      const finalMessages = [...refreshed.messages, assistantMsg];
-      setSession({ ...refreshed, messages: finalMessages });
-      await saveBabelMessages(uid, finalMessages);
-      setManualContent('');
-      if (isLastPhase) {
-      await upsertCompiledPlan(finalMessages, refreshed.phases);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al guardar');
-    } finally {
-      setSending(false);
     }
   }
   async function upsertCompiledPlan(overrideMessages?: ChatMessage[], overridePhases?: BabelPhaseRecord[]) {
@@ -989,34 +947,6 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
                   {sending ? (dispLang === 'en' ? 'Retrying...' : 'Reintentando...') : (dispLang === 'en' ? 'Retry' : 'Reintentar')}
                 </button>
               )}
-              {currentQuestionIndex === questions.length - 1 && !showManualEditor && (
-                <button
-                  onClick={function () { setShowManualEditor(true); }}
-                  className="text-xs font-medium text-blue-700 underline underline-offset-2 hover:text-blue-900"
-                >
-                  {dispLang === 'en' ? 'Write my own conclusion' : 'Escribir mi propia conclusion'}
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-        {showManualEditor && (
-          <div className="glass-panel p-4 space-y-2">
-            <p className="text-sm font-medium text-slate-700">{dispLang === 'en' ? 'Write your Phase 0 conclusion manually:' : 'Escribe tu conclusion de la Fase 0 manualmente:'}</p>
-            <textarea
-              value={manualContent}
-              onChange={function (e) { setManualContent(e.target.value); }}
-              rows={10}
-              placeholder={dispLang === 'en' ? 'Describe your business summary here...' : 'Describe aqui el resumen de tu negocio...'}
-              className="w-full resize-y rounded border border-slate-300 bg-white p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <div className="flex gap-2">
-              <Button onClick={function () { setShowManualEditor(false); setManualContent(''); }} variant="outline" size="sm">
-                {dispLang === 'en' ? 'Cancel' : 'Cancelar'}
-              </Button>
-              <Button onClick={function () { manualApprovePhase(0, manualContent); }} disabled={sending || !manualContent.trim()} size="sm">
-                {sending ? (dispLang === 'en' ? 'Saving...' : 'Guardando...') : (dispLang === 'en' ? 'Save and approve Mission 0' : 'Guardar y aprobar Misión 0')}
-              </Button>
             </div>
           </div>
         )}
@@ -1388,64 +1318,16 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
                 {sending ? (dispLang === 'en' ? 'Retrying...' : 'Reintentando...') : (dispLang === 'en' ? 'Retry' : 'Reintentar')}
               </button>
             )}
-            {!showManualEditor && (
-              <button
-                onClick={function () { setShowManualEditor(true); }}
-                className="text-xs font-medium text-blue-700 underline underline-offset-2 hover:text-blue-900"
-              >
-                {dispLang === 'en' ? 'Write my own conclusion' : 'Escribir mi propia conclusion'}
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-      {showManualEditor && !awaitingApproval && (
-        <div className="glass-panel p-4 space-y-2">
-          <p className="text-sm font-medium text-slate-700">{dispLang === 'en' ? 'Write your conclusion for Mission ' + currentPhase + ' manually:' : 'Escribe tu conclusion para la Misión ' + currentPhase + ' manualmente:'}</p>
-          <textarea
-            value={manualContent}
-            onChange={function (e) { setManualContent(e.target.value); }}
-            rows={10}
-            placeholder={dispLang === 'en' ? 'Describe your analysis for this phase here...' : 'Describe aqui tu analisis para esta fase...'}
-            className="w-full resize-y rounded border border-slate-300 bg-white p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <div className="flex gap-2">
-            <Button onClick={function () { setShowManualEditor(false); setManualContent(''); }} variant="outline" size="sm">
-              {dispLang === 'en' ? 'Cancel' : 'Cancelar'}
-            </Button>
-            <Button onClick={function () { manualApprovePhase(currentPhase, manualContent); }} disabled={sending || !manualContent.trim()} size="sm">
-              {sending ? (dispLang === 'en' ? 'Saving...' : 'Guardando...') : (dispLang === 'en' ? 'Save and approve Mission ' + currentPhase : 'Guardar y aprobar Misión ' + String(currentPhase))}
-            </Button>
           </div>
         </div>
       )}
       <div className="flex flex-col gap-2">
-        {awaitingApproval && editingMessageIndex === null && !showManualEditor && (
+        {awaitingApproval && editingMessageIndex === null && (
           <Button onClick={function () { handleApprove(); }} disabled={sending}>
             {allPhasesDone
               ? (dispLang === locale ? t('approveFinalButton') : UI_FALLBACK[dispLang].approveFinalButton)
               : (dispLang === locale ? t('approveButton', { phase: currentPhase }) : UI_FALLBACK[dispLang].approveButton(currentPhase))}
           </Button>
-        )}
-        {awaitingApproval && showManualEditor && (
-          <div className="glass-panel p-4 space-y-2">
-            <p className="text-sm font-medium text-slate-700">{dispLang === 'en' ? 'Write your own conclusion for Phase ' + currentPhase + ':' : 'Escribe tu propia conclusion para la Fase ' + currentPhase + ':'}</p>
-            <textarea
-              value={manualContent}
-              onChange={function (e) { setManualContent(e.target.value); }}
-              rows={10}
-              placeholder={dispLang === 'en' ? 'Describe your analysis for this phase here...' : 'Describe aqui tu analisis para esta fase...'}
-              className="w-full resize-y rounded border border-slate-300 bg-white p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <div className="flex gap-2">
-              <Button onClick={function () { setShowManualEditor(false); setManualContent(''); }} variant="outline" size="sm">
-                {dispLang === 'en' ? 'Cancel' : 'Cancelar'}
-              </Button>
-              <Button onClick={function () { manualApprovePhase(currentPhase, manualContent); }} disabled={sending || !manualContent.trim()} size="sm">
-              {sending ? (dispLang === 'en' ? 'Saving...' : 'Guardando...') : (dispLang === 'en' ? 'Save and approve Mission ' + currentPhase : 'Guardar y aprobar Misión ' + String(currentPhase))}
-              </Button>
-            </div>
-          </div>
         )}
         {awaitingApproval && editingMessageIndex !== null && (
           <div className="flex gap-2">
@@ -1483,11 +1365,11 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
               }
             }}
             placeholder={dispLang === locale ? t('placeholder') : UI_FALLBACK[dispLang].placeholder}
-            disabled={sending || generandoIntro || (awaitingApproval && editingMessageIndex === null && !showManualEditor)}
+            disabled={sending || generandoIntro || (awaitingApproval && editingMessageIndex === null)}
             rows={3}
             className="flex-1 resize-none rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 min-h-[80px]"
           />
-          <Button type="submit" disabled={sending || generandoIntro || (awaitingApproval && editingMessageIndex === null && !showManualEditor) || !input.trim()} className="mb-0 h-10">
+          <Button type="submit" disabled={sending || generandoIntro || (awaitingApproval && editingMessageIndex === null) || !input.trim()} className="mb-0 h-10">
             {dispLang === locale ? t('send') : UI_FALLBACK[dispLang].send}
           </Button>
         </form>
