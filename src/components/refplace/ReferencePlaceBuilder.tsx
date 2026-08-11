@@ -9,6 +9,7 @@ import {
   BadgeCheck,
   CalendarClock,
   Check,
+  Globe,
   Handshake,
   Loader2,
   LogIn,
@@ -26,6 +27,8 @@ import {
 import {
   NIVELES_COMUNIDAD,
   nivelLabel,
+  puedeInversiones,
+  puedeSolicitarReferencias,
   TIPOS_REUNION,
   TIPOS_RESULTADO,
   montoRequerido,
@@ -57,7 +60,10 @@ interface PerfilPublico {
     telefono: string;
     empresa: string;
     giro: string;
+    website: string;
     pais: string;
+    puntosClub: number;
+    juntasAsistidas: number;
     nivel: { id: string; es: string; en: string };
     certificado: boolean;
     rolRepSale: boolean;
@@ -384,19 +390,6 @@ export function ReferencePlaceBuilder() {
                   </p>
                 </div>
 
-                <div className="glass-panel space-y-2 p-4">
-                  <p className="text-xs text-slate-500 dark:text-slate-200">
-                    {t('¿Quieres saber más de la certificación? Agenda una cita de orientación GRATIS con un mentor de nivel directivo.', 'Want to learn more about certification? Book a FREE orientation session with a director-level mentor.')}
-                  </p>
-                  <a
-                    href={`/${routeLocale}/agendar#certificacion`}
-                    className="inline-flex items-center gap-2 rounded-lg border border-teal-600 px-3 py-2 text-xs font-semibold text-teal-700 transition-colors hover:bg-teal-50 dark:text-teal-300 dark:hover:bg-teal-500/10"
-                  >
-                    <CalendarClock className="h-4 w-4" />
-                    {t('Agendar cita de Orientación Gratis', 'Book FREE orientation session')}
-                  </a>
-                </div>
-
                 {yo.puedeReferencias ? (
                   <div className="glass-panel space-y-3 p-4">
                     <input
@@ -505,6 +498,19 @@ export function ReferencePlaceBuilder() {
                   <p className="mt-2 rounded-lg bg-teal-600/10 px-3 py-2 text-xs text-teal-800 dark:text-teal-200">
                     {t('Solicitar una cita está abierto a toda la comunidad (cualquier nivel). Las empresas con Certificación MBE Corp muestran su insignia ✓ y tienen prioridad para agendar.', 'Requesting a meeting is open to the whole community (any level). Companies with MBE Corp Certification show their ✓ badge and get priority scheduling.')}
                   </p>
+                </div>
+
+                <div className="glass-panel space-y-2 p-4">
+                  <p className="text-xs text-slate-500 dark:text-slate-200">
+                    {t('¿Quieres saber más de la certificación? Agenda una cita de orientación GRATIS con un mentor de nivel directivo.', 'Want to learn more about certification? Book a FREE orientation session with a director-level mentor.')}
+                  </p>
+                  <a
+                    href={`/${routeLocale}/agendar#certificacion`}
+                    className="inline-flex items-center gap-2 rounded-lg border border-teal-600 px-3 py-2 text-xs font-semibold text-teal-700 transition-colors hover:bg-teal-50 dark:text-teal-300 dark:hover:bg-teal-500/10"
+                  >
+                    <CalendarClock className="h-4 w-4" />
+                    {t('Agendar cita de Orientación Gratis', 'Book FREE orientation session')}
+                  </a>
                 </div>
 
                 {esRep && (
@@ -779,7 +785,7 @@ export function ReferencePlaceBuilder() {
                         </div>
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold text-foreground">{m.nombre}</p>
-                          <p className="truncate text-xs text-muted-foreground">{m.empresa || m.giro || m.pais}</p>
+                          <p className="truncate text-xs text-slate-600 dark:text-slate-200">{m.empresa || m.giro || m.pais}</p>
                         </div>
                       </div>
                       <div className="mt-3 flex flex-wrap gap-1.5">
@@ -790,7 +796,7 @@ export function ReferencePlaceBuilder() {
                           <span className="rounded-full bg-emerald-600/10 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">✓ {t('Certificado', 'Certified')}</span>
                         )}
                         {m.madurez != null && (
-                          <span className="rounded-full bg-glass px-2 py-0.5 text-xs text-muted-foreground">{t('Madurez', 'Maturity')}: {m.madurez}/120</span>
+                          <span className="rounded-full bg-glass px-2 py-0.5 text-xs text-slate-600 dark:text-slate-200">{t('Madurez', 'Maturity')}: {Math.round(m.madurez)}/120</span>
                         )}
                         {m.rolRepSale && (
                           <span className="rounded-full bg-glass px-2 py-0.5 text-xs text-muted-foreground">{t('Rep Sale', 'Rep Sale')}</span>
@@ -820,33 +826,51 @@ export function ReferencePlaceBuilder() {
                     {perfilData.nombre.slice(0, 2).toUpperCase() || '?'}
                   </div>
                   <h2 className="mt-2 text-lg font-semibold text-foreground">{perfilData.nombre}</h2>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-slate-600 dark:text-slate-200">
                     {perfilData.empresa || perfilData.giro}
                     {perfilData.pais && <> · {perfilData.pais}</>}
                   </p>
                   <div className="mt-2 flex flex-wrap justify-center gap-1.5">
-                    <span className="rounded-full bg-teal-600/10 px-2 py-0.5 text-xs font-semibold text-teal-700 dark:text-teal-300">
+                    <span className="rounded-full bg-teal-600/10 px-2 py-0.5 text-xs font-semibold text-teal-800 dark:text-teal-300">
                       {dispLang === 'en' ? perfilData.nivel.en : perfilData.nivel.es}
                     </span>
                     {perfilData.certificado && (
-                      <span className="rounded-full bg-emerald-600/10 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                      <span className="rounded-full bg-emerald-600/10 px-2 py-0.5 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
                         ✓ {t('Certificado MBE', 'MBE Certified')}
                       </span>
                     )}
                     {perfilData.rolRepSale && (
-                      <span className="rounded-full bg-glass px-2 py-0.5 text-xs font-medium text-muted-foreground">{t('Rep Dales', 'Rep Sale')}</span>
+                      <span className="rounded-full bg-glass px-2 py-0.5 text-xs font-medium text-slate-600 dark:text-slate-200">{t('Rep Sale', 'Rep Sale')}</span>
+                    )}
+                    {puedeSolicitarReferencias(perfilData.nivel.id) && (
+                      <span className="rounded-full bg-glass px-2 py-0.5 text-xs font-medium text-slate-600 dark:text-slate-200">
+                        ✓ {t('Referencias', 'Referrals')}
+                      </span>
+                    )}
+                    {puedeInversiones(perfilData.nivel.id) && (
+                      <span className="rounded-full bg-glass px-2 py-0.5 text-xs font-medium text-slate-600 dark:text-slate-200">
+                        ✓ {t('Inversiones', 'Investments')}
+                      </span>
                     )}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 text-center">
                   <div className="rounded-lg border border-glass-border bg-glass p-3">
-                    <p className="text-xs text-muted-foreground">{t('Reuniones B2B', 'B2B meetings')}</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-200">{t('Reuniones B2B', 'B2B meetings')}</p>
                     <p className="mt-1 text-lg font-bold text-foreground">{perfilData.reunionesCompletadas}</p>
                   </div>
                   <div className="rounded-lg border border-glass-border bg-glass p-3">
-                    <p className="text-xs text-muted-foreground">{t('Resultados ($)', 'Results ($)')}</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-200">{t('Resultados ($)', 'Results ($)')}</p>
                     <p className="mt-1 text-lg font-bold text-emerald-700 dark:text-emerald-300">{fmtMoneda(perfilData.montoResultados)}</p>
+                  </div>
+                  <div className="rounded-lg border border-glass-border bg-glass p-3">
+                    <p className="text-xs text-slate-600 dark:text-slate-200">{t('Puntos del club (nivel)', 'Club points (level)')}</p>
+                    <p className="mt-1 text-lg font-bold text-foreground">{perfilData.puntosClub}</p>
+                  </div>
+                  <div className="rounded-lg border border-glass-border bg-glass p-3">
+                    <p className="text-xs text-slate-600 dark:text-slate-200">{t('Juntas del club', 'Club meetings')}</p>
+                    <p className="mt-1 text-lg font-bold text-foreground">{perfilData.juntasAsistidas}</p>
                   </div>
                 </div>
 
@@ -854,6 +878,12 @@ export function ReferencePlaceBuilder() {
                   <div className="flex items-center gap-2 rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground">
                     <Phone className="h-4 w-4 shrink-0 text-teal-600" />
                     <a href={`tel:${perfilData.telefono}`} className="truncate hover:underline">{perfilData.telefono}</a>
+                  </div>
+                )}
+                {perfilData.website && (
+                  <div className="flex items-center gap-2 rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground">
+                    <Globe className="h-4 w-4 shrink-0 text-teal-600" />
+                    <a href={perfilData.website} target="_blank" rel="noopener noreferrer" className="truncate hover:underline">{perfilData.website}</a>
                   </div>
                 )}
                 <div className="flex items-center gap-2 rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground">
@@ -869,18 +899,23 @@ export function ReferencePlaceBuilder() {
                     </div>
                     {perfilData.madurez.totalScore != null && (
                       <div className="mt-2 flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">{t('Puntaje', 'Score')}</span>
-                        <span className="font-bold text-foreground">{perfilData.madurez.totalScore} / 120</span>
+                        <span className="text-slate-600 dark:text-slate-200">{t('Puntaje', 'Score')}</span>
+                        <span className="font-bold text-foreground">
+                          {Math.round(perfilData.madurez.totalScore)} / 120
+                          <span className="ml-1 font-semibold text-slate-600 dark:text-slate-200">
+                            ({Math.round((perfilData.madurez.totalScore / 120) * 100)}%)
+                          </span>
+                        </span>
                       </div>
                     )}
                     {perfilData.madurez.nivelGlobal && (
                       <div className="mt-1 flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">{t('Nivel global', 'Global level')}</span>
+                        <span className="text-slate-600 dark:text-slate-200">{t('Nivel global', 'Global level')}</span>
                         <span className="font-bold text-foreground">{nivelGlobalLabel(perfilData.madurez.nivelGlobal, dispLang)}</span>
                       </div>
                     )}
                     {perfilData.madurez.fecha && (
-                      <p className="mt-2 text-xs text-muted-foreground">{t('Evaluación del', 'Assessed on')} {new Date(perfilData.madurez.fecha).toLocaleDateString()}</p>
+                      <p className="mt-2 text-xs text-slate-600 dark:text-slate-200">{t('Evaluación del', 'Assessed on')} {new Date(perfilData.madurez.fecha).toLocaleDateString()}</p>
                     )}
                   </div>
                 )}
@@ -890,7 +925,7 @@ export function ReferencePlaceBuilder() {
                     <h3 className="text-sm font-semibold text-foreground">{t('Resultados de reuniones', 'Meeting results')}</h3>
                     <div className="mt-2 space-y-2">
                       {perfilData.resultados.map((r, i) => (
-                        <div key={i} className="text-xs text-muted-foreground">
+                        <div key={i} className="text-xs text-slate-600 dark:text-slate-200">
                           <span className="font-medium text-foreground">{TIPOS_RESULTADO.find((x) => x.id === r.tipo)?.es || r.tipo}</span>
                           {r.monto > 0 && <span className="ml-1 font-semibold text-emerald-700 dark:text-emerald-300">{fmtMoneda(r.monto)}</span>}
                           {r.descripcion && <span> — {r.descripcion}</span>}

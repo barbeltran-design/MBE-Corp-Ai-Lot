@@ -89,7 +89,10 @@ export async function GET(req: NextRequest) {
         telefono: (u.telefono as string) || '',
         empresa: (c.name as string) || '',
         giro: (c.industry as string) || '',
+        website: (c.website as string) || '',
         pais: (u.country as string) || ((c.country as string) || ''),
+        puntosClub: parseNum(u.puntosClub, 0),
+        juntasAsistidas: parseNum(u.semanasJunta, 0),
         nivel: {
           id: nivelAuto(u),
           es: nivelLabel(nivelAuto(u), 'es'),
