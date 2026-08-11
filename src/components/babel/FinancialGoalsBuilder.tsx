@@ -296,6 +296,24 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
       });
     });
   }
+  function duplicarProducto(canalIndex: number, prodIndex: number) {
+    setFinCanales(function (prev) {
+      return prev.map(function (c, i) {
+        if (i !== canalIndex) return c;
+        const src = c.productos[prodIndex];
+        if (!src) return c;
+        const clone: FinProductoForm = {
+          nombre: src.nombre,
+          unidades: 1,
+          unidadMedida: src.unidadMedida,
+          precio: src.precio,
+          participacion: 0,
+          gastosVariables: src.gastosVariables.map(function (v) { return { name: v.name, value: v.value, mode: v.mode }; }),
+        };
+        return { ...c, productos: [...c.productos.slice(0, prodIndex + 1), clone, ...c.productos.slice(prodIndex + 1)] };
+      });
+    });
+  }
   function updateParticipacion(canalIndex: number, prodIndex: number, value: number) {
     setFinCanales(function (prev) {
       return prev.map(function (c, i) {
@@ -539,6 +557,12 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
   const finIngresosTotal = finCanales.reduce(function (s, c) {
     return s + c.productos.reduce(function (s2, p) { return s2 + productoIngresos(p); }, 0);
   }, 0);
+  const finProductosCount = finCanales.reduce(function (s, c) { return s + c.productos.length; }, 0);
+  const finPromedioPrecio = finProductosCount > 0
+    ? finCanales.reduce(function (s, c) {
+        return s + c.productos.reduce(function (s2, p) { return s2 + (p.precio || 0); }, 0);
+      }, 0) / finProductosCount
+    : 0;
   const finGastosVarPonderado = finCanales.reduce(function (s, c) {
     return s + c.productos.reduce(function (s2, p) { return s2 + productoIngresos(p) * productoVarPct(p); }, 0);
   }, 0);
@@ -594,7 +618,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                   const isLatest = idx === 0;
                   const marketingShown = entry.form?.marketingPct ?? Math.round((entry.input.marketingPct ?? 0) * 100);
                   return (
-                    <div key={entry.id} className={'rounded-lg border p-3 ' + (isLatest ? 'border-[#32BAD0] bg-[#E1F6FA]/50' : 'border-slate-200 bg-slate-50/70')}>
+                    <div key={entry.id} className={'rounded-lg border p-3 ' + (isLatest ? 'border-[#32BAD0] bg-[#E1F6FA]/50' : 'border-slate-200 bg-slate-50')}>
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-xs font-bold uppercase tracking-wide text-slate-700">{formatFinDate(entry.savedAt, lang)}</p>
                         {isLatest && (
@@ -666,6 +690,43 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                                 </div>
                               </div>
                             )}
+                            {(() => {
+                              const finChP = computeFinancialChannels(entry.input);
+                              const prodRows = finChP.products.map(function (p) {
+                                const pTarget = targetRevenue * p.pct;
+                                const src = entry.input.channels.find(function (c) { return c.name === p.channel; })?.products?.find(function (pr) { return pr.name === p.name; });
+                                const unitPrice = src?.unitPrice ?? 0;
+                                return { name: p.name, channel: p.channel, income: p.income, target: pTarget, units: unitPrice > 0 ? Math.ceil(pTarget / unitPrice) : null };
+                              });
+                              if (prodRows.length === 0) return null;
+                              return (
+                                <div className="mt-2 space-y-1 border-t border-slate-100 pt-1">
+                                  <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                                    {lang === 'en' ? 'Goal per product/service and required units' : 'Meta por producto/servicio y unidades requeridas'}
+                                  </p>
+                                  {prodRows.map(function (pr, prIdx) {
+                                    return (
+                                      <div key={prIdx} className="flex items-start justify-between gap-2 text-[11px]">
+                                        <div className="min-w-0">
+                                          <p className="truncate font-medium text-slate-800">{pr.name || (lang === 'en' ? '(unnamed product)' : '(producto sin nombre)')}</p>
+                                          <p className="text-[10px] text-slate-500">
+                                            {pr.channel} | {lang === 'en' ? 'Goal' : 'Meta'}: {fmtMoney(pr.target)}
+                                          </p>
+                                        </div>
+                                        <div className="shrink-0 text-right">
+                                          <p className="font-semibold text-slate-800">
+                                            {pr.units !== null
+                                              ? Math.round(pr.units).toLocaleString(undefined, { maximumFractionDigits: 0 }) + ' ' + (lang === 'en' ? 'units' : 'uds.')
+                                              : '—'}
+                                          </p>
+                                          <p className="text-[10px] text-slate-500">{lang === 'en' ? 'Revenue' : 'Ingresos'}: {fmtMoney(pr.income)}</p>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              );
+                            })()}
                           </div>
                         );
                       })()}
@@ -738,8 +799,11 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                     const ciVar = c.productos.reduce(function (s, p) { return s + productoIngresos(p) * productoVarPct(p); }, 0);
                     const ciVarPct = ciIngresos > 0 ? (ciVar / ciIngresos) * 100 : 0;
                     const ciPct = finIngresosTotal > 0 ? (ciIngresos / finIngresosTotal) * 100 : 0;
+                    const ciPromedio = c.productos.length > 0
+                      ? c.productos.reduce(function (s2, p) { return s2 + (p.precio || 0); }, 0) / c.productos.length
+                      : 0;
                     return (
-                      <div key={ci} className="space-y-2 rounded-lg border border-slate-200 bg-slate-50/70 p-3">
+                      <div key={ci} className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
                         <div className="flex items-center gap-2">
                           <input
                             type="text"
@@ -796,7 +860,9 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                               </div>
                               <div className="space-y-1.5">
                                 <p className="text-[11px] text-slate-600">
-                                  {lang === 'en' ? 'Variable expenses of this product' : 'Gastos variables del producto'}
+                                  {lang === 'en'
+                                    ? "Variable expenses (expenses needed to make and deliver the product/service). If you don't sell, you don't have these."
+                                    : 'Gastos variables (los gastos relacionados para realizar y entregar el producto/servicio). Si no vendes no tienes estos gastos.'}
                                 </p>
                                 {p.gastosVariables.map(function (v, vi) {
                                   return (
@@ -826,26 +892,43 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                                     </div>
                                   );
                                 })}
-                                <button type="button" onClick={function () { addGastoVar(ci, pi); }} className="text-xs font-medium text-blue-600 hover:text-blue-800 underline underline-offset-2">
-                                  {lang === 'en' ? '+ Add variable expense' : '+ Agregar gasto variable del producto'}
+                                <button
+                                  type="button"
+                                  onClick={function () { addGastoVar(ci, pi); }}
+                                  className="rounded-md border border-slate-300 bg-[#ffffff] px-3 py-1.5 text-xs font-semibold text-[#0F172A] transition-colors hover:bg-slate-100"
+                                >
+                                  {lang === 'en' ? '+ Add variable expense' : '+ Agregar gasto variable'}
                                 </button>
                               </div>
-                              <div className="rounded-md bg-slate-50 border border-slate-200 px-3 py-1.5 text-xs text-slate-600">
-                                {lang === 'en' ? 'Revenue: ' : 'Ingresos: '}
-                                <span className="font-semibold text-slate-800">{fmtMoney(pIngresos)}</span>
-                                <span className="mx-1.5">|</span>
-                                {lang === 'en' ? '% Variable: ' : '% Gastos variables: '}
-                                <span className="font-semibold text-slate-800">{(pVarPct * 100).toFixed(1)}%</span>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <div className="flex-1 rounded-md bg-slate-50 border border-slate-200 px-3 py-1.5 text-xs text-slate-600">
+                                  {lang === 'en' ? 'Revenue: ' : 'Ingresos: '}
+                                  <span className="font-semibold text-slate-800">{fmtMoney(pIngresos)}</span>
+                                  <span className="mx-1.5">|</span>
+                                  {lang === 'en' ? '% Variable: ' : '% Gastos variables: '}
+                                  <span className="font-semibold text-slate-800">{(pVarPct * 100).toFixed(1)}%</span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={function () { duplicarProducto(ci, pi); }}
+                                  className="rounded-md border border-slate-300 bg-[#ffffff] px-3 py-1.5 text-xs font-semibold text-[#0F172A] transition-colors hover:bg-slate-100"
+                                >
+                                  {lang === 'en' ? 'Duplicate product' : 'Duplicar producto'}
+                                </button>
                               </div>
                             </div>
                           );
                         })}
-                        <button type="button" onClick={function () { addProducto(ci); }} className="text-xs font-medium text-blue-600 hover:text-blue-800 underline underline-offset-2">
+                        <button
+                          type="button"
+                          onClick={function () { addProducto(ci); }}
+                          className="rounded-md border border-slate-300 bg-[#ffffff] px-3 py-1.5 text-xs font-semibold text-[#0F172A] transition-colors hover:bg-slate-100"
+                        >
                           {lang === 'en' ? '+ Add product/service' : '+ Agregar Producto/Servicio'}
                         </button>
-                        <div className="rounded-md bg-[#E1F6FA] border border-[#32BAD0]/30 px-3 py-1.5 text-xs text-slate-700">
-                          {lang === 'en' ? 'Channel revenue: ' : 'Ingresos del canal: '}
-                          <span className="font-semibold">{fmtMoney(ciIngresos)}</span>
+                        <div className="rounded-md bg-[#E1F6FA] border border-[#32BAD0]/30 px-3 py-1.5 text-xs text-[#0F172A]">
+                          {lang === 'en' ? 'Average price of Product(s)/Service(s): ' : 'Precio promedio de Producto(s)/Servicio(s): '}
+                          <span className="font-semibold">{fmtMoney(ciPromedio)}</span>
                           <span className="mx-1.5">|</span>
                           {lang === 'en' ? '% of total income: ' : '% del ingreso total: '}
                           <span className="font-semibold">{ciPct.toFixed(1)}%</span>
@@ -859,7 +942,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                   <button
                     type="button"
                     onClick={addCanal}
-                    className="w-full rounded-md border border-dashed border-[#32BAD0] px-3 py-2 text-sm font-semibold text-[#1D7686] transition-colors hover:bg-[#E1F6FA]/60"
+                    className="w-full rounded-md border-2 border-dashed border-[#32BAD0] bg-[#ffffff] px-3 py-2 text-sm font-semibold text-[#0F172A] transition-colors hover:bg-[#E1F6FA]/60"
                   >
                     {lang === 'en' ? '+ Add income channel' : '+ Agregar Canal de Ingreso'}
                   </button>
@@ -893,7 +976,11 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                           </div>
                         );
                       })}
-                      <button type="button" onClick={addFixedItem} className="text-xs font-medium text-blue-600 hover:text-blue-800 underline underline-offset-2">
+                      <button
+                        type="button"
+                        onClick={addFixedItem}
+                        className="rounded-md border border-slate-300 bg-[#ffffff] px-3 py-1.5 text-xs font-semibold text-[#0F172A] transition-colors hover:bg-slate-100"
+                      >
                         {lang === 'en' ? '+ Add fixed expense' : '+ Agregar gastos fijos'}
                       </button>
                     </div>
@@ -908,7 +995,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                     />
                   </label>
                   <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 space-y-1 text-slate-900">
-                    <p>{lang === 'en' ? 'Total monthly revenue' : 'Ingresos totales mensuales'}: {fmtMoney(finIngresosTotal)}</p>
+                    <p>{lang === 'en' ? 'Average income per Product(s)/Service(s)' : 'Ingreso promedio por Producto(s)/Servicio(s)'}: {fmtMoney(finPromedioPrecio)}</p>
                     <p>{lang === 'en' ? 'Total fixed expenses' : 'Total gastos fijos'}: {finItemizedFixedTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
                     <p>{lang === 'en' ? '% Variable costs (weighted)' : '% Costos variables (ponderado)'}: {(finTotalVarPct * 100).toFixed(1)}%</p>
                     {finStage1Invalid ? (
@@ -943,7 +1030,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                     const ciVarPct = ciIngresos > 0 ? (ciVar / ciIngresos) * 100 : 0;
                     const ciPart = c.productos.reduce(function (s, p) { return s + (p.participacion || 0); }, 0);
                     return (
-                      <div key={ci} className="space-y-2 rounded-lg border border-slate-200 bg-slate-50/70 p-3">
+                      <div key={ci} className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
                         <p className="font-semibold text-slate-800">{c.nombre || (lang === 'en' ? '(unnamed)' : '(sin nombre)')}</p>
                         {c.productos.map(function (p, pi) {
                           const pIngresos = productoIngresos(p);
@@ -961,7 +1048,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                             </div>
                           );
                         })}
-                        <div className="rounded-md bg-[#E1F6FA] border border-[#32BAD0]/30 px-3 py-1.5 text-xs text-slate-700">
+                        <div className="rounded-md bg-[#E1F6FA] border border-[#32BAD0]/30 px-3 py-1.5 text-xs text-[#0F172A]">
                           {lang === 'en' ? 'Channel participation: ' : 'Participación del canal: '}
                           <span className="font-semibold">{ciPart.toFixed(1)}%</span>
                           <span className="mx-1.5">|</span>
@@ -1023,6 +1110,66 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                       )}
                     </div>
                   )}
+                  {(() => {
+                    const targetRevenue = finResultLive?.targetRevenueWithMarketing ?? 0;
+                    if (targetRevenue <= 0) return null;
+                    const finCh = computeFinancialChannels(buildGoalsInput());
+                    const chRows = finCh.summaries.map(function (c) { return { name: c.name, pct: c.pct, varPct: c.varPct }; });
+                    const prodRows = finCh.products.map(function (p) {
+                      const pTarget = targetRevenue * p.pct;
+                      const src = finCanales.find(function (c) { return c.nombre === p.channel; })?.productos.find(function (pr) { return pr.nombre === p.name; });
+                      const unitPrice = src?.precio ?? 0;
+                      return { name: p.name, channel: p.channel, income: p.income, target: pTarget, units: unitPrice > 0 ? Math.ceil(pTarget / unitPrice) : null };
+                    });
+                    return (
+                      <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 space-y-2 text-slate-900">
+                        <p className="font-semibold">
+                          {lang === 'en' ? 'Your financial goals (before downloading)' : 'Objetivos financieros (antes de descargar)'}
+                        </p>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs text-slate-600">{lang === 'en' ? 'Goal revenue' : 'Ingreso meta'}</p>
+                          <p className="text-sm font-bold">{fmtMoney(targetRevenue)}</p>
+                        </div>
+                        {chRows.map(function (ch, chIdx) {
+                          return (
+                            <div key={'ch' + chIdx} className="flex items-start justify-between gap-2 border-b border-slate-100 py-1 text-xs">
+                              <div className="min-w-0">
+                                <p className="truncate font-medium">{ch.name || (lang === 'en' ? '(unnamed)' : '(sin nombre)')}</p>
+                                <p className="text-[10px] text-slate-500">
+                                  {lang === 'en' ? 'Share' : 'Participación'}: {(ch.pct * 100).toFixed(1)}% | {lang === 'en' ? 'Var.' : 'Var.'}: {(ch.varPct * 100).toFixed(1)}%
+                                </p>
+                              </div>
+                              <p className="shrink-0 font-semibold">{fmtMoney(targetRevenue * ch.pct)}</p>
+                            </div>
+                          );
+                        })}
+                        {prodRows.length > 0 && (
+                          <div className="space-y-1 border-t border-slate-200 pt-1">
+                            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-600">
+                              {lang === 'en' ? 'Per product/service: revenue and units to reach the goal' : 'Por producto/servicio: ingresos y unidades para llegar a la meta'}
+                            </p>
+                            {prodRows.map(function (pr, prIdx) {
+                              return (
+                                <div key={'pr' + prIdx} className="flex items-start justify-between gap-2 text-[11px]">
+                                  <div className="min-w-0">
+                                    <p className="truncate font-medium">{pr.name || (lang === 'en' ? '(unnamed product)' : '(producto sin nombre)')}</p>
+                                    <p className="text-[10px] text-slate-500">
+                                      {lang === 'en' ? 'Revenue' : 'Ingresos'}: {fmtMoney(pr.income)} | {lang === 'en' ? 'Goal' : 'Meta'}: {fmtMoney(pr.target)}
+                                    </p>
+                                  </div>
+                                  <p className="shrink-0 font-semibold">
+                                    {pr.units !== null
+                                      ? Math.round(pr.units).toLocaleString(undefined, { maximumFractionDigits: 0 }) + ' ' + (lang === 'en' ? 'units' : 'uds.')
+                                      : '—'}
+                                  </p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                   <div className="flex gap-2">
                     <Button onClick={handleFinBack} variant="outline" size="sm">{lang === 'en' ? 'Back' : 'Atrás'}</Button>
                     <Button onClick={handleFinNext} size="sm">{lang === 'en' ? 'Continue' : 'Continuar'}</Button>

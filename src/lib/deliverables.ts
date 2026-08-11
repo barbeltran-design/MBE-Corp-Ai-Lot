@@ -922,6 +922,8 @@ export async function downloadFinancialGoalsExcel(input: FinancialGoalsInput): P
           ingresosLabel: 'Revenue',
           gastosVarLabel: '% Variable Costs',
           totalIngresos: 'Total Monthly Revenue',
+          productsAtTargetHeader: 'Products/Services at Goal',
+          unitsNeeded: 'Units needed',
           marketingHeader: 'Marketing',
           marketingPct: '% Invested in Marketing',
           expectedGrowth: 'Expected Monthly Growth',
@@ -978,6 +980,8 @@ export async function downloadFinancialGoalsExcel(input: FinancialGoalsInput): P
           ingresosLabel: 'Ingresos',
           gastosVarLabel: '% Gastos Variables',
           totalIngresos: 'Ingresos Totales Mensuales',
+          productsAtTargetHeader: 'Productos/Servicios en Meta',
+          unitsNeeded: 'Unidades requeridas',
           marketingHeader: 'Mercadotecnia',
           marketingPct: '% Invertido en Mercadotecnia',
           expectedGrowth: 'Crecimiento Mensual Esperado',
@@ -1228,6 +1232,37 @@ export async function downloadFinancialGoalsExcel(input: FinancialGoalsInput): P
     tc.value = { formula: 'B' + targetRevenueRowNum + '*B' + r, result: result.targetRevenueWithMarketing * ch.pct };
     tc.numFmt = '#,##0.00';
     tc.alignment = { vertical: 'middle', horizontal: 'right' };
+  }
+
+  if (finCh.products.length > 0) {
+    sectionHeader(ws1, L.productsAtTargetHeader, 5);
+    const prodHdr2 = nextRow(ws1, [L.channel, L.productoLabel, L.ingresosLabel, L.atTarget, L.unitsNeeded]);
+    for (let cc = 1; cc <= 5; cc++) {
+      const c = ws1.getCell(prodHdr2, cc);
+      c.font = { name: 'Calibri', size: 11, bold: true, color: { argb: ARGB_WHITE } };
+      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ARGB_TEAL } };
+      c.border = borderAll();
+      c.alignment = { vertical: 'middle', horizontal: cc === 1 || cc === 2 ? 'left' : 'right' };
+    }
+    ws1.getRow(prodHdr2).height = 20;
+    finCh.products.forEach(function (p) {
+      const prodSource = input.channels
+        .find(function (c) { return c.name === p.channel; })
+        ?.products?.find(function (pr) { return pr.name === p.name; });
+      const unitPrice = prodSource?.unitPrice ?? 0;
+      const target = result.targetRevenueWithMarketing * p.pct;
+      const units = unitPrice > 0 ? Math.ceil(target / unitPrice) : 0;
+      const r = nextRow(ws1, [p.channel, p.name, p.income, target, units]);
+      for (let cc = 1; cc <= 5; cc++) {
+        const c = ws1.getCell(r, cc);
+        c.border = borderAll();
+        c.font = { name: 'Calibri', size: 11, color: { argb: ARGB_INK } };
+        c.alignment = { vertical: 'middle', horizontal: cc === 1 || cc === 2 ? 'left' : 'right' };
+      }
+      ws1.getCell(r, 3).numFmt = '#,##0.00';
+      ws1.getCell(r, 4).numFmt = '#,##0.00';
+      ws1.getCell(r, 5).numFmt = '#,##0';
+    });
   }
 
   sectionHeader(ws1, L.marketingHeader, 4);
