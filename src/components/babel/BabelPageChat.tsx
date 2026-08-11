@@ -865,7 +865,7 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
       setIsPhase0Complete(false);
       setTranslatedCache({});
       if (faseInicial !== undefined && faseInicial >= 1) {
-        router.push('/' + locale + '/babel/calibracion');
+        window.location.assign('/' + locale + '/babel/calibracion');
         return;
       }
     } catch (err) {
