@@ -504,10 +504,11 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
       }
       const aprobada = (session.phases ?? []).some(function (p) { return p.phase === 0 && p.approved; });
       if (!aprobada) {
-        const refreshed = await getOrCreateBabelSession(uid, locale);
-        const resumen = resumenFase0En(refreshed.messages);
-        if (resumen) {
-          await approveBabelPhase(uid, 0, resumen.content, locale);
+        const finalAnswers = { ...phase0Answers, [questions[currentQuestionIndex].key]: input.trim() };
+        const todas = FASE0_ORDERED_KEYS.every(function (k) { return finalAnswers[k] !== undefined && finalAnswers[k].trim() !== ''; });
+        if (todas) {
+          const built = buildFase0Summary(finalAnswers, locale);
+          await approveBabelPhase(uid, 0, built.assistantContent, locale);
         }
         const final = await getOrCreateBabelSession(uid, locale);
         setSession(final);
@@ -863,6 +864,10 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
       setPhase0Answers({});
       setIsPhase0Complete(false);
       setTranslatedCache({});
+      if (faseInicial !== undefined && faseInicial >= 1) {
+        router.push('/' + locale + '/babel/calibracion');
+        return;
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al reiniciar');
     } finally {
@@ -895,7 +900,7 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
   if (!session) {
     return <div className="flex min-h-[60vh] items-center justify-center text-slate-500">{dispLang === locale ? t('loading') : UI_FALLBACK[dispLang].loading}</div>;
   }
-  const isPhase0Active = currentPhase === 0 && currentQuestionIndex < questions.length && !isPhase0Complete;
+  const isPhase0Active = (faseInicial === undefined || faseInicial === 0) && currentPhase === 0 && currentQuestionIndex < questions.length && !isPhase0Complete;
   if (isPhase0Active) {
     return (
       <React.Fragment>
@@ -1339,6 +1344,11 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
         </div>
       )}
       <div className="flex flex-col gap-2">
+        {currentPhase === 1 && faseInicial === undefined && (
+          <Button onClick={continuarAlMundo} disabled={sending} className="w-full bg-gradient-to-r from-teal-500 to-cyan-400 hover:opacity-90">
+            {dispLang === 'en' ? 'Continue to Mission 1 — Purpose & Value Proposition →' : 'Continuar a la Misión 1 — Propósito y Propuesta de Valor →'}
+          </Button>
+        )}
         {awaitingApproval && editingMessageIndex === null && (
           <Button onClick={function () { handleApprove(); }} disabled={sending}>
             {allPhasesDone
