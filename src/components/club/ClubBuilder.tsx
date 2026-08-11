@@ -28,6 +28,12 @@ import {
 import { AGENDA_JUNTA, AGENDA_JUNTA_TOTAL, ROLES_JUNTA, rolLabel, nivelDesdePuntos } from '@/lib/club';
 import { nivelLabel } from '@/lib/refplace';
 
+// Liga tal cual la ingresó el usuario pero siempre con protocolo, para que el
+// navegador no la resuelva contra el origen de la app (ej. meet.google.com/...).
+function ligaHref(liga: string): string {
+  return /^https?:\/\//i.test(liga) ? liga : 'https://' + liga;
+}
+
 interface AgendaItemView {
   id: string;
   titulo: string;
@@ -140,6 +146,7 @@ export function ClubBuilder() {
   const [evObjetivo, setEvObjetivo] = React.useState('');
   const [evPrecio, setEvPrecio] = React.useState('');
   const [rolSel, setRolSel] = React.useState<Record<string, string>>({});
+  const [asignarOpen, setAsignarOpen] = React.useState(false);
   const [ptsMiembros, setPtsMiembros] = React.useState<Record<string, boolean>>({});
   const [ptsCats, setPtsCats] = React.useState<Record<string, boolean>>({});
   const [ptsNota, setPtsNota] = React.useState('');
@@ -310,8 +317,8 @@ export function ClubBuilder() {
                 <p className="mt-1 text-sm text-muted-foreground">
                   {fmtFecha(ja.fecha)} · {ja.hora} hs
                   {ja.liga && (
-                    <a href={ja.liga} target="_blank" rel="noreferrer" className="ml-2 inline-flex items-center gap-1 text-teal-700 hover:underline dark:text-teal-300">
-                      <Link2 className="h-3.5 w-3.5" /> {t('Liga de la junta', 'Meeting link')}
+                    <a href={ligaHref(ja.liga)} target="_blank" rel="noreferrer" className="ml-2 inline-flex items-center gap-1 text-teal-700 hover:underline dark:text-teal-300">
+                      <Link2 className="h-3.5 w-3.5" /> {ja.liga}
                     </a>
                   )}
                 </p>
@@ -370,7 +377,19 @@ export function ClubBuilder() {
 
           {/* Roles de la junta */}
           <div className="glass-panel p-4">
-            <p className="text-sm font-semibold text-foreground">{t('Roles de la junta directiva', 'Board roles')}</p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-semibold text-foreground">{t('Roles de la junta directiva', 'Board roles')}</p>
+              {(esAdmin || soyCoord) && (
+                <button
+                  type="button"
+                  onClick={() => setAsignarOpen((prev) => !prev)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-teal-600 px-3 py-1.5 text-xs font-semibold text-teal-700 transition-colors hover:bg-teal-50 dark:text-teal-300 dark:hover:bg-teal-500/10"
+                >
+                  <Crown className="h-3.5 w-3.5" />
+                  {asignarOpen ? t('Cerrar', 'Close') : t('Asignar roles', 'Assign roles')}
+                </button>
+              )}
+            </div>
             <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
               {ROLES_JUNTA.map((r) => {
                 const asignado = rolesJa ? rolesJa[r.id] ?? null : null;
@@ -394,6 +413,40 @@ export function ClubBuilder() {
                 );
               })}
             </div>
+
+            {asignarOpen && (esAdmin || soyCoord) && (
+              <div className="mt-4 rounded-lg border border-glass-border bg-glass p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {t('Asignar roles de la junta actual', 'Assign roles for the current meeting')}
+                </p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                  {ROLES_JUNTA.map((r) => (
+                    <div key={r.id} className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">{rolLabel(r.id, dispLang)}</label>
+                      <select
+                        value={rolSel[r.id] ?? ''}
+                        onChange={(e) => setRolSel((prev) => ({ ...prev, [r.id]: e.target.value }))}
+                        className="w-full rounded-lg border border-glass-border bg-background px-2 py-1.5 text-sm text-foreground focus:border-teal-500 focus:outline-none"
+                      >
+                        <option value="">{t('Sin asignar', 'Unassigned')}</option>
+                        {miembrosSel.map((m) => (
+                          <option key={m.uid} value={m.uid}>{m.nombre}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  disabled={busy === 'asignar-roles'}
+                  onClick={() => void act('asignar-roles', { juntaId: ja.id, roles: rolSel }, 'Roles asignados.', 'Roles assigned.')}
+                  className="mt-3 inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:opacity-50"
+                >
+                  {busy === 'asignar-roles' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  {t('Guardar roles', 'Save roles')}
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Agenda de 90 minutos */}

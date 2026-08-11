@@ -247,12 +247,14 @@ export async function POST(req: NextRequest) {
       const hora = String(body?.hora ?? '').trim();
       if (!fecha || !hora) return NextResponse.json({ error: 'Faltan fecha u hora.' }, { status: 400 });
       const semana = semanaDeMes(fecha);
+      let liga = String(body?.liga ?? '').trim();
+      if (liga && !/^https?:\/\//i.test(liga)) liga = 'https://' + liga;
       const doc: JuntaClubDoc = {
         tipo: 'junta',
         nombre: `Junta ${semana === 1 ? 'de Consejo' : 'semanal'} · Semana ${semana}`,
         fecha,
         hora,
-        liga: String(body?.liga ?? ''),
+        liga,
         semanaMes: semana,
         agenda: AGENDA_JUNTA.es.map((i) => ({ ...i })),
         roles: { coordinador: null, mentor_dinamica: null, mentor_crecimiento: null, mentor_b2b: null, mentor_calidad: null },
