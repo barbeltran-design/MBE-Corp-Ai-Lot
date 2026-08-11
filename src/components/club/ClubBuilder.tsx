@@ -71,7 +71,7 @@ interface ResumenDatos {
     primerJuntaAt: string;
     semanasJunta: number;
   };
-  miembros: { uid: string; nombre: string; puntos: number; nivel: string }[];
+  miembros: { uid: string; nombre: string; email: string; puntos: number; nivel: string }[];
   semanaActual: number;
   trimestre: string;
   tematicaSemana: { es: string; en: string };
@@ -430,7 +430,7 @@ export function ClubBuilder() {
                       >
                         <option value="">{t('Sin asignar', 'Unassigned')}</option>
                         {miembrosSel.map((m) => (
-                          <option key={m.uid} value={m.uid}>{m.nombre}</option>
+                          <option key={m.uid} value={m.uid}>{m.nombre || m.email}</option>
                         ))}
                       </select>
                     </div>
@@ -760,7 +760,7 @@ export function ClubBuilder() {
                           onChange={(e) => setPtsMiembros((prev) => ({ ...prev, [m.uid]: e.target.checked }))}
                           className="h-4 w-4 accent-teal-600"
                         />
-                        <span className="truncate">{m.nombre}</span>
+                        <span className="truncate">{m.nombre || m.email}</span>
                         <span className="ml-auto text-xs text-muted-foreground">{m.puntos} pts</span>
                       </label>
                     ))}
@@ -822,7 +822,7 @@ export function ClubBuilder() {
                 >
                   <option value="">{t('Selecciona un miembro...', 'Select a member...')}</option>
                   {miembrosSel.map((m) => (
-                    <option key={m.uid} value={m.uid}>{m.nombre} ({m.puntos} pts)</option>
+                    <option key={m.uid} value={m.uid}>{m.nombre || m.email} ({m.puntos} pts)</option>
                   ))}
                 </select>
                 <input

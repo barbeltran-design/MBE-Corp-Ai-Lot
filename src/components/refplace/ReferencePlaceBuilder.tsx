@@ -429,7 +429,7 @@ export function ReferencePlaceBuilder() {
                       >
                         <option value="">{t('Comunidad (cualquier rep)', 'Any rep in the community')}</option>
                         {repsSales.map((m) => (
-                          <option key={m.uid} value={m.uid}>{m.nombre}</option>
+                          <option key={m.uid} value={m.uid}>{m.nombre || m.email}</option>
                         ))}
                       </select>
                     </div>

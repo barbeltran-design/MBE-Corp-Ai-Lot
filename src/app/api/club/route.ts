@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
           roles: Object.fromEntries(
             Object.entries(rolesRaw).map(([k, v]) => {
               const u = users.get(String(v));
-              return [k, u ? { uid: String(v), nombre: String(u.name ?? '') } : null];
+              return [k, u ? { uid: String(v), nombre: String(u.name ?? '') || String(u.email ?? '') } : null];
             })
           ),
           asistentes: Object.fromEntries(
@@ -183,6 +183,7 @@ export async function GET(req: NextRequest) {
         .map(([id, u]) => ({
           uid: id,
           nombre: String(u.name ?? ''),
+          email: String(u.email ?? ''),
           puntos: parseNum(u.puntosClub, 0),
           nivel: nivelDesdePuntos(parseNum(u.puntosClub, 0)),
         }))
