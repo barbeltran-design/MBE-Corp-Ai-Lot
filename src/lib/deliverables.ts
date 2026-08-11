@@ -472,6 +472,21 @@ export interface DownloadCompiledPlanParams {
   language: 'es' | 'en';
 }
 
+/** Limpia el contenido compilado antes de renderizarlo: quita los <br> que la
+ * IA deja a veces, la pregunta de aprobación de fase (ya tiene su botón) y
+ * cualquier línea que mencione /compilar (recordatorios del prompt). */
+export function limpiarContenidoDocumento(texto: string): string {
+  return texto
+    .replace(/\*?\s*¿Apruebas este resumen de la Fase[^\n]*/gi, '')
+    .replace(/\*?\s*Do you approve this Phase[^\n]*/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .split('\n')
+    .filter(function (line) { return !/compilar/i.test(line); })
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 function logoDimensions(dataUrl: string): Promise<{ w: number; h: number }> {
   return new Promise((resolve) => {
     const img = new Image();
@@ -489,7 +504,7 @@ export function renderCompiledPlanPdf(params: DownloadCompiledPlanParams & { log
 
   renderer.cover(title, params.sessionTopic, params.logo);
 
-  const lines = params.compiledText.split('\n');
+  const lines = limpiarContenidoDocumento(params.compiledText).split('\n');
   let i = 0;
   while (i < lines.length) {
     const line = lines[i].trim();

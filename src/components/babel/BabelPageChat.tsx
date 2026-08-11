@@ -16,7 +16,7 @@ import {
   updateBabelPhaseSummary,
 } from '@/lib/babel-session';
 import { BABEL_IMPLEMENTED_PHASES, babelApprovalMarker, babelPhaseTopics } from '@/lib/babel-constants';
-import { downloadCompiledPlanPdf } from '@/lib/deliverables';
+import { downloadCompiledPlanPdf, limpiarContenidoDocumento } from '@/lib/deliverables';
 import { Button } from '@/components/ui/button';
 import { useDisplayLang } from '@/components/display-lang-provider';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
@@ -213,6 +213,7 @@ function PhaseStepper({
 // de Partida), muestra cual fase se esta consultando y permite volver a la
 // Reflexion Estrategica completa.
 function FaseBanner({ fase, lang, locale }: { fase: number; lang: 'es' | 'en'; locale: string }) {
+  const router = useRouter();
   const topics = babelPhaseTopics(lang);
   const label = fase >= 0 && fase < topics.length ? (topics[fase].split(':')[1]?.trim() ?? topics[fase]) : '';
   return (
@@ -220,12 +221,13 @@ function FaseBanner({ fase, lang, locale }: { fase: number; lang: 'es' | 'en'; l
       <span className="font-medium text-teal-900 dark:text-teal-100">
         {lang === 'en' ? 'Focused view' : 'Vista enfocada'}: <span className="font-bold">Misión {fase} — {label}</span>
       </span>
-      <a
-        href={'/' + locale + '/worlds/estrategia'}
-        className="text-xs font-bold text-teal-700 underline underline-offset-2 hover:text-teal-900 dark:text-teal-300"
+      <button
+        type="button"
+        onClick={function () { router.push('/' + locale + '/worlds/estrategia'); }}
+        className="rounded-lg border border-teal-400/60 bg-white/40 px-4 py-2 text-xs font-bold text-teal-700 backdrop-blur-md transition hover:bg-white/70 dark:bg-white/10 dark:text-teal-200 dark:hover:bg-white/20"
       >
         {lang === 'en' ? '← Back to the Strategy map' : '← Regresar al mapa de la Estrategia'}
-      </a>
+      </button>
     </div>
   );
 }
@@ -796,7 +798,7 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
     if (!uid || !session) return;
     try {
       const phases = overridePhases ?? session.phases ?? [];
-      const compiled = phases.length > 0 ? [...phases].sort((a, b) => a.phase - b.phase).map((p) => p.summary).join('\n\n---\n\n') : '';
+      const compiled = phases.length > 0 ? limpiarContenidoDocumento([...phases].sort((a, b) => a.phase - b.phase).map((p) => p.summary).join('\n\n---\n\n')) : '';
       const compiledText = compiled ? '### Plan Estrategico Compilado\n\n' + compiled : 'No hay fases aprobadas para compilar aun.';
       const baseMessages = overrideMessages ?? session.messages;
       let existingIdx = -1;
@@ -829,7 +831,7 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
     try {
       await upsertCompiledPlan();
       const compiled = (session.phases ?? []).length > 0
-        ? [...(session.phases ?? [])].sort((a, b) => a.phase - b.phase).map((p) => p.summary).join('\n\n---\n\n')
+        ? limpiarContenidoDocumento([...(session.phases ?? [])].sort((a, b) => a.phase - b.phase).map((p) => p.summary).join('\n\n---\n\n'))
         : '';
       if (compiled) {
         try {
@@ -882,13 +884,13 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
         ? 'Read Babel responses and edit any message with the pencil before approving the phase.'
         : 'Lee las respuestas de Babel y edita cualquier mensaje con el lápiz antes de aprobar la fase.',
     },
-    {
+    ...(faseInicial === undefined ? [{
       selector: '#babel-entrada',
       title: dispLang === 'en' ? 'Answer Babel' : 'Responde a Babel',
       description: dispLang === 'en'
         ? 'Type your answer here. Once you complete the 5 phases, use /compilar to build the full plan as PDF.'
         : 'Escribe tu respuesta aquí. Cuando completes las 5 fases, usa /compilar para armar el plan completo en PDF.',
-    },
+    }] as TourStep[] : []),
   ];
   if (!session) {
     return <div className="flex min-h-[60vh] items-center justify-center text-slate-500">{dispLang === locale ? t('loading') : UI_FALLBACK[dispLang].loading}</div>;
@@ -1126,12 +1128,13 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
               >
                 {sending ? (dispLang === 'en' ? 'Saving...' : 'Guardando...') : (dispLang === 'en' ? 'Continue to Mission 1 — Purpose & Value Proposition →' : 'Continuar a la Misión 1 — Propósito y Propuesta de Valor →')}
               </button>
-              <a
-                href={`/${locale}/worlds/estrategia`}
+              <button
+                type="button"
+                onClick={function () { router.push('/' + locale + '/worlds/estrategia'); }}
                 className="rounded-lg border border-teal-400/60 bg-white/40 px-4 py-2 text-sm font-bold text-teal-700 backdrop-blur-md transition hover:bg-white/70 dark:bg-white/10 dark:text-teal-200 dark:hover:bg-white/20"
               >
                 {dispLang === 'en' ? '← Back to the Strategy map' : '← Regresar al mapa de la Estrategia'}
-              </a>
+              </button>
             </div>
           </div>
         </div>
@@ -1178,12 +1181,13 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
               ? 'Complete the previous missions of the Strategic Reflection to unlock Mission ' + faseInicial + '.'
               : 'Completa las misiones anteriores de la Reflexión Estratégica para desbloquear la Misión ' + faseInicial + '.'}
           </p>
-          <a
-            href={'/' + locale + '/worlds/estrategia'}
+          <button
+            type="button"
+            onClick={function () { router.push('/' + locale + '/worlds/estrategia'); }}
             className="rounded-lg border border-teal-400/60 bg-white/40 px-4 py-2 text-xs font-bold text-teal-700 backdrop-blur-md transition hover:bg-white/70 dark:bg-white/10 dark:text-teal-200 dark:hover:bg-white/20"
           >
             {dispLang === 'es' ? '← Regresar al mapa de la Estrategia' : '← Back to the Strategy map'}
-          </a>
+          </button>
         </div>
       ) : (
       <div id="babel-chat" className="glass-panel flex-1 space-y-3 overflow-y-auto p-4 min-h-[60vh]">
@@ -1296,16 +1300,24 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
       )}
       {rangoFase && faseCompletada && (
         <div className="flex justify-center">
-          <a
-            href={'/' + locale + (faseInicial >= BABEL_IMPLEMENTED_PHASES - 1 ? '/babel' : '/babel/' + (RUTA_SIGUIENTE_FASE[faseInicial ?? 1] ?? ''))}
-            className="rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 px-4 py-2 text-sm font-extrabold text-white shadow-md shadow-teal-500/30 transition hover:opacity-90"
-          >
-            {faseInicial >= BABEL_IMPLEMENTED_PHASES - 1
-              ? (dispLang === 'en' ? 'Open your complete plan →' : 'Ver tu plan completo →')
-              : (dispLang === 'en'
+          {faseInicial >= BABEL_IMPLEMENTED_PHASES - 1 ? (
+            <button
+              type="button"
+              onClick={function () { router.push('/' + locale + '/babel/organigrama'); }}
+              className="rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 px-4 py-2 text-sm font-extrabold text-white shadow-md shadow-teal-500/30 transition hover:opacity-90"
+            >
+              {dispLang === 'en' ? 'Continue to Mission 5: Organization Chart →' : 'Continuar a la Misión 5: Organigrama →'}
+            </button>
+          ) : (
+            <a
+              href={'/' + locale + '/babel/' + (RUTA_SIGUIENTE_FASE[faseInicial ?? 1] ?? '')}
+              className="rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 px-4 py-2 text-sm font-extrabold text-white shadow-md shadow-teal-500/30 transition hover:opacity-90"
+            >
+              {dispLang === 'en'
                   ? 'Continue to Mission ' + ((faseInicial ?? 0) + 1) + ' →'
-                  : 'Continuar a la Misión ' + ((faseInicial ?? 0) + 1) + ' →')}
-          </a>
+                  : 'Continuar a la Misión ' + ((faseInicial ?? 0) + 1) + ' →'}
+            </a>
+          )}
         </div>
       )}
       {(!rangoFase || rangoFase.alcanzada) && (
@@ -1349,6 +1361,7 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
             {compiling ? (dispLang === 'en' ? 'Generating...' : 'Generando...') : (dispLang === 'en' ? 'Download your Strategic Plan' : 'Descarga tu Plan Estratégico')}
           </Button>
         )}
+        {faseInicial === undefined && (
         <form
           id="babel-entrada"
           onSubmit={function (e) {
@@ -1378,6 +1391,7 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
             {dispLang === locale ? t('send') : UI_FALLBACK[dispLang].send}
           </Button>
         </form>
+        )}
       </div>
         </>
       )}

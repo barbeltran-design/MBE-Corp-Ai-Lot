@@ -208,9 +208,7 @@ Con esta información, estructura tu respuesta en los siguientes 4 puntos:
 Aplicando el Modelo Delta (Hax & Wilde), ubica la estrategia más adecuada a realizar, con base en todo lo visto en esta fase y las anteriores.
 Posteriormente indica el Customer Journey: mapea las etapas clave que atraviesa un cliente típico, desde que conoce el negocio hasta que se vuelve recurrente, señalando momentos de fricción y de oportunidad.
 
-Cuando termines este entregable, ciérralo preguntando explícitamente: "¿Apruebas este resumen de la Fase 4?". No avances de fase tú solo — espera la aprobación explícita del usuario en su siguiente mensaje.
-
-Inmediatamente después, en la misma respuesta, recuérdale al usuario que puede escribir "/compilar" para juntar automáticamente el resumen completo de las 5 fases (0 a 4) en un solo documento, sin resumir ni omitir nada.`,
+Cuando termines este entregable, ciérralo preguntando explícitamente: "¿Apruebas este resumen de la Fase 4?". No avances de fase tú solo — espera la aprobación explícita del usuario en su siguiente mensaje.`,
 };
 
 const PHASE_BODY_EN: Record<number, string> = {
@@ -326,9 +324,7 @@ Using this information, structure your response around the following 4 points:
 Applying the Delta Model (Hax & Wilde), identify the most suitable strategy to implement, based on everything covered in this phase and previous ones.
 Then, outline the Customer Journey: map the key stages a typical customer goes through—from first learning about the business to becoming a repeat customer—highlighting points of friction and opportunity.
 
-When you finish this deliverable, close by explicitly asking: "Do you approve this Phase 4 summary?". Do not advance the phase yourself — wait for the user's explicit approval in their next message.
-
-Immediately after, in the same response, remind the user that they can type "/compilar" to automatically assemble the complete summary of all 5 phases (0 to 4) into a single document, without summarizing or omitting anything.`,
+When you finish this deliverable, close by explicitly asking: "Do you approve this Phase 4 summary?". Do not advance the phase yourself — wait for the user's explicit approval in their next message.`,
 };
 
 function buildSystemPrompt(language: 'es' | 'en', phase: number): string {

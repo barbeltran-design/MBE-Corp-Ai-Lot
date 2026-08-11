@@ -94,7 +94,7 @@ const I = {
   listoTag: ['Listo', 'Ready'],
   enCursoTag: ['En curso', 'In progress'],
   pendienteTag: ['Pendiente', 'Pending'],
-  abrirSub: ['Abrir submundo', 'Open subworld'],
+  abrirSub: ['Abrir misión', 'Open mission'],
   tiendaEstrategia: ['🛠️ Tienda del Mundo Estrategia', '🛒 Strategy World shop'],
   tiendaEstrategiaDesc: [
     'Herramientas para aplicar cada fase a tu empresa (demo en esta fase).',
