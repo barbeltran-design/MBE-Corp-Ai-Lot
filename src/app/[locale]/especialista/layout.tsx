@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react';
 import { AppShell } from '@/components/app-shell';
 
-export default function EspecialistaLayout({
+export default async function EspecialistaLayout({
   children,
-  params: { locale },
+  params,
 }: {
   children: ReactNode;
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 }) {
+  const { locale } = await params;
   return <AppShell locale={locale}>{children}</AppShell>;
 }

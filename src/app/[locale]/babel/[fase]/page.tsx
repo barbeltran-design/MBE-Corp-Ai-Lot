@@ -17,8 +17,9 @@ export function generateStaticParams() {
   return Object.keys(FASE_SLUGS).map((fase) => ({ fase }));
 }
 
-export default function BabelFasePage({ params }: { params: { fase: string } }) {
-  const fase = FASE_SLUGS[params.fase];
+export default async function BabelFasePage({ params }: { params: Promise<{ fase: string }> }) {
+  const { fase: faseSlug } = await params;
+  const fase = FASE_SLUGS[faseSlug];
   if (fase === undefined) return null;
   return <BabelPageChat faseInicial={fase} />;
 }

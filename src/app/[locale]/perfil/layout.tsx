@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react';
 import { AppShell } from '@/components/app-shell';
 
-export default function PerfilLayout({
+export default async function PerfilLayout({
   children,
-  params: { locale },
+  params,
 }: {
   children: ReactNode;
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 }) {
+  const { locale } = await params;
   return <AppShell locale={locale}>{children}</AppShell>;
 }

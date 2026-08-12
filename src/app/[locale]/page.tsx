@@ -1,14 +1,14 @@
-import { useTranslations } from 'next-intl';
-import { setRequestLocale } from 'next-intl/server';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { Hero } from '@/components/landing/hero';
 import { RegisterForm } from '@/components/landing/register-form';
 import { LanguageSwitcher } from '@/components/landing/language-switcher';
 
-export default function LandingPage({ params: { locale } }: { params: { locale: string } }) {
+export default async function LandingPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
   setRequestLocale(locale);
 
-  const tCommon = useTranslations('common');
-  const tFooter = useTranslations('footer');
+  const tCommon = await getTranslations('common');
+  const tFooter = await getTranslations('footer');
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-emerald-50/40 to-white">

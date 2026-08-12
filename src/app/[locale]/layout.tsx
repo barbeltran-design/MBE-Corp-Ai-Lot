@@ -1,4 +1,5 @@
-import { NextIntlClientProvider, useMessages } from 'next-intl';
+import { NextIntlClientProvider } from 'next-intl';
+import { getMessages, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import localFont from 'next/font/local';
 import { locales } from '@/i18n/routing';
@@ -30,18 +31,20 @@ export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
 }
 
-export default function LocaleLayout({
+export default async function LocaleLayout({
   children,
-  params: { locale }
+  params
 }: {
   children: React.ReactNode;
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 }) {
+  const { locale } = await params;
   if (!locales.includes(locale as any)) {
     notFound();
   }
+  setRequestLocale(locale);
 
-  const messages = useMessages();
+  const messages = await getMessages();
 
   return (
     <html
