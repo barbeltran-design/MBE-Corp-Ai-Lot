@@ -8,6 +8,42 @@ import { computeResults, type AssessmentResult } from '@/lib/maturity-scoring';
 import { getBabelSessionIfExists } from '@/lib/babel-session';
 import AgentAvatar from '@/components/agentes/AgentAvatar';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
+import Link from 'next/link';
+import {
+  type PlanLang,
+  type EntornoTipo,
+  type Objetivo,
+  type AmenazaOportunidad,
+  type FortalezaDebilidad,
+  type Proyecto,
+  type Accion,
+  type OrgAssignments,
+  type PerspectivaEstilo,
+  STORAGE_KEY,
+  ORG_KEY,
+  BOARD_KEY,
+  INDICADORES_KEY,
+  ROLE_OPTIONS,
+  priorityRank,
+  suggestedDate,
+  generateId,
+  isFactibilidad,
+  isImpacto,
+  isEntornoTipo,
+  objetivosDe,
+  entornosDe,
+  newEntorno,
+  newFD,
+  newProyecto,
+  newAccion,
+  newObjetivo,
+  daysUntil,
+  PERSPECTIVAS,
+  perspectivaEstilo,
+  perspectivaLabel,
+  resumenDeObjetivo,
+  LABELS,
+} from '@/lib/plan-accion';
 
 const MATURITY_LEVEL_LABEL: Record<string, { es: string; en: string }> = {
   execution: { es: 'Ejecucion', en: 'Execution' },
@@ -17,136 +53,6 @@ const MATURITY_LEVEL_LABEL: Record<string, { es: string; en: string }> = {
   excellence: { es: 'Excelencia', en: 'Excellence' },
   influencer: { es: 'Influencer', en: 'Influencer' },
 };
-
-type PlanLang = 'es' | 'en';
-type EntornoTipo = 'amenaza' | 'oportunidad';
-type FDTipo = 'fortaleza' | 'debilidad';
-type Factibilidad = 'alta' | 'media' | 'baja' | 'nula';
-type Impacto = 'alto' | 'medio' | 'bajo' | 'nulo';
-type Estatus = 'pendiente' | 'en_proceso' | 'terminado';
-
-type RoleOption = { key: string; nameEs: string; nameEn: string };
-
-type Objetivo = { id: string; texto: string; validado: boolean };
-type AmenazaOportunidad = { id: string; objetivoIds: string[]; tipo: EntornoTipo; descripcion: string; validado: boolean };
-type FortalezaDebilidad = { id: string; entornoIds: string[]; tipo: FDTipo; descripcion: string; validado: boolean };
-type Proyecto = { id: string; fdId: string; nombre: string; responsableRoleKey: string; responsableNombre: string; validado: boolean };
-type Accion = {
-  id: string;
-  proyectoId: string;
-  descripcion: string;
-  responsableRoleKey: string;
-  responsableNombre: string;
-  crossRoleKeys: string[];
-  entregable: string;
-  inversion: string;
-  factibilidad: Factibilidad;
-  impacto: Impacto;
-  fecha: string;
-  estatus: Estatus;
-  validado: boolean;
-};
-type Contacto = { id: string; nombre: string; celular: string; correo: string; roleKeys: string[] };
-type ExpandedMap = Record<string, boolean>;
-type OrgAssignments = Record<string, { person: string }>;
-
-const STORAGE_KEY = 'babel_plan_accion_v2';
-const CONTACTS_KEY = 'babel_plan_accion_contactos_v1';
-const ORG_KEY = 'babel_orgchart_v1';
-const BOARD_KEY = 'babel_orgchart_board_v1';
-const INDICADORES_KEY = 'babel_indicadores_v1';
-
-const ROLE_OPTIONS: RoleOption[] = [
-  { key: 'consejo_administrativo', nameEs: 'Consejo Administrativo', nameEn: 'Board of Directors' },
-  { key: 'planeacion_estrategica', nameEs: 'Planeacion Estrategica', nameEn: 'Strategic Planning' },
-  { key: 'finanzas', nameEs: 'Finanzas', nameEn: 'Finance' },
-  { key: 'cobranza', nameEs: 'Cobranza', nameEn: 'Collections' },
-  { key: 'facturacion', nameEs: 'Facturacion', nameEn: 'Invoicing' },
-  { key: 'contabilidad', nameEs: 'Contabilidad', nameEn: 'Accounting' },
-  { key: 'pago_proveedores', nameEs: 'Pago a Proveedores', nameEn: 'Vendor Payments' },
-  { key: 'administracion', nameEs: 'Administracion', nameEn: 'Administration' },
-  { key: 'recursos_humanos', nameEs: 'Recursos Humanos', nameEn: 'Human Resources' },
-  { key: 'legal', nameEs: 'Legal', nameEn: 'Legal' },
-  { key: 'comercial', nameEs: 'Comercial', nameEn: 'Commercial' },
-  { key: 'mercadotecnia', nameEs: 'Mercadotecnia', nameEn: 'Marketing' },
-  { key: 'relaciones_publicas', nameEs: 'Relaciones Publicas', nameEn: 'Public Relations' },
-  { key: 'servicio_clientes', nameEs: 'Servicio a Clientes', nameEn: 'Customer Service' },
-  { key: 'ventas', nameEs: 'Ventas', nameEn: 'Sales' },
-  { key: 'operacion', nameEs: 'Operacion', nameEn: 'Operations' },
-  { key: 'procesos', nameEs: 'Procesos', nameEn: 'Processes' },
-  { key: 'sistemas', nameEs: 'Sistemas', nameEn: 'Systems' },
-  { key: 'desarrollo_proveedores', nameEs: 'Desarrollo de Proveedores', nameEn: 'Vendor Development' },
-];
-
-const FACTIBILIDAD_OPTIONS: { value: Factibilidad; labelEs: string; labelEn: string }[] = [
-  { value: 'alta', labelEs: 'Alta', labelEn: 'High' },
-  { value: 'media', labelEs: 'Media', labelEn: 'Medium' },
-  { value: 'baja', labelEs: 'Baja', labelEn: 'Low' },
-  { value: 'nula', labelEs: 'Nula', labelEn: 'None' },
-];
-
-const IMPACTO_OPTIONS: { value: Impacto; labelEs: string; labelEn: string }[] = [
-  { value: 'alto', labelEs: 'Alto', labelEn: 'High' },
-  { value: 'medio', labelEs: 'Medio', labelEn: 'Medium' },
-  { value: 'bajo', labelEs: 'Bajo', labelEn: 'Low' },
-  { value: 'nulo', labelEs: 'Nulo', labelEn: 'None' },
-];
-
-const ESTATUS_OPTIONS: { value: Estatus; labelEs: string; labelEn: string }[] = [
-  { value: 'pendiente', labelEs: 'Pendiente', labelEn: 'Pending' },
-  { value: 'en_proceso', labelEs: 'En proceso', labelEn: 'In progress' },
-  { value: 'terminado', labelEs: 'Terminado', labelEn: 'Done' },
-];
-
-const PRIORITY_ORDER: [Factibilidad, Impacto][] = [
-  ['alta', 'alto'],
-  ['media', 'alto'],
-  ['alta', 'medio'],
-  ['media', 'medio'],
-  ['baja', 'alto'],
-  ['alta', 'bajo'],
-  ['baja', 'medio'],
-  ['media', 'bajo'],
-  ['baja', 'bajo'],
-  ['nula', 'alto'],
-  ['nula', 'medio'],
-  ['nula', 'bajo'],
-  ['alta', 'nulo'],
-  ['media', 'nulo'],
-  ['baja', 'nulo'],
-  ['nula', 'nulo'],
-];
-
-function priorityRank(factibilidad: Factibilidad, impacto: Impacto): number {
-  let idx = -1;
-  for (let i = 0; i < PRIORITY_ORDER.length; i++) {
-    if (PRIORITY_ORDER[i][0] === factibilidad && PRIORITY_ORDER[i][1] === impacto) {
-      idx = i;
-      break;
-    }
-  }
-  return idx === -1 ? 16 : idx + 1;
-}
-
-function priorityTier(rank: number, lang: PlanLang): { label: string; classes: string } {
-  if (rank <= 3) return { label: lang === 'en' ? 'Very high priority' : 'Prioridad muy alta', classes: 'bg-purple-100 text-purple-800' };
-  if (rank <= 6) return { label: lang === 'en' ? 'High priority' : 'Prioridad alta', classes: 'bg-blue-100 text-blue-800' };
-  if (rank <= 9) return { label: lang === 'en' ? 'Medium priority' : 'Prioridad media', classes: 'bg-yellow-100 text-yellow-800' };
-  if (rank <= 12) return { label: lang === 'en' ? 'Low priority' : 'Prioridad baja', classes: 'bg-orange-100 text-orange-800' };
-  return { label: lang === 'en' ? 'Not worth pursuing' : 'Prioridad nula', classes: 'bg-slate-100 text-slate-500' };
-}
-
-function isFactibilidad(value: string): value is Factibilidad {
-  return value === 'alta' || value === 'media' || value === 'baja' || value === 'nula';
-}
-
-function isImpacto(value: string): value is Impacto {
-  return value === 'alto' || value === 'medio' || value === 'bajo' || value === 'nulo';
-}
-
-function isEntornoTipo(value: string): value is EntornoTipo {
-  return value === 'amenaza' || value === 'oportunidad';
-}
 
 interface RawEntornoIA {
   objetivoIds?: string[];
@@ -176,25 +82,6 @@ interface RawPrioridadIA {
   justificacion?: string;
 }
 
-function addDays(base: Date, days: number): string {
-  const d = new Date(base);
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
-}
-
-function suggestedDate(rank: number): string {
-  const today = new Date();
-  if (rank <= 3) return addDays(today, 14);
-  if (rank <= 6) return addDays(today, 30);
-  if (rank <= 9) return addDays(today, 60);
-  if (rank <= 12) return addDays(today, 90);
-  return addDays(today, 180);
-}
-
-function generateId(): string {
-  return Math.random().toString(36).slice(2) + Date.now().toString(36);
-}
-
 // Extrae de un resumen de reflexion las secciones numeradas indicadas
 // (claves como "1.2" o "2"), apoyandose en marcadores como "1.2)" o "2.".
 // Si el texto no tiene marcadores numerados, devuelve un recorte plano.
@@ -218,42 +105,6 @@ function extraerSecciones(texto: string, claves: string[]): string {
   return textoTrim.slice(0, 4000);
 }
 
-function roleLabel(roleKey: string, lang: PlanLang): string {
-  let found: RoleOption | null = null;
-  for (let i = 0; i < ROLE_OPTIONS.length; i++) {
-    if (ROLE_OPTIONS[i].key === roleKey) {
-      found = ROLE_OPTIONS[i];
-      break;
-    }
-  }
-  if (!found) return '';
-  return lang === 'en' ? found.nameEn : found.nameEs;
-}
-
-function whatsappLink(celular: string, mensaje: string): string {
-  const clean = celular.replace(/[^0-9]/g, '');
-  return 'https://api.whatsapp.com/send?phone=' + clean + '&text=' + encodeURIComponent(mensaje);
-}
-
-function daysUntil(fecha: string): number {
-  if (!fecha) return 9999;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const target = new Date(fecha + 'T00:00:00');
-  const diffMs = target.getTime() - today.getTime();
-  return Math.round(diffMs / (1000 * 60 * 60 * 24));
-}
-
-function reminderMessage(lang: PlanLang, nombre: string, tarea: string, proyecto: string, fecha: string, entregable: string): string {
-  const entregableTxt = entregable ? entregable : (lang === 'en' ? 'not set' : 'sin definir');
-  const proyectoClauseEn = proyecto ? ' for project "' + proyecto + '"' : '';
-  const proyectoClauseEs = proyecto ? ' del proyecto "' + proyecto + '"' : '';
-  if (lang === 'en') {
-    return 'Hi ' + nombre + ', your task "' + tarea + '"' + proyectoClauseEn + ' is due ' + fecha + '. Expected deliverable: ' + entregableTxt + '. Please confirm your progress.';
-  }
-  return 'Hola ' + nombre + ', tu tarea "' + tarea + '"' + proyectoClauseEs + ' tiene fecha compromiso ' + fecha + '. Entregable esperado: ' + entregableTxt + '. Por favor confirma como vas.';
-}
-
 const PASOS_TOUR: Record<'es' | 'en', TourStep[]> = {
   es: [
     { selector: '#plan-accion-title', title: 'Plan de Acción Estratégico', description: 'Aquí construyes tu plan paso a paso: Babel te acompaña con sugerencias de IA y todo se guarda automáticamente.' },
@@ -262,7 +113,7 @@ const PASOS_TOUR: Record<'es' | 'en', TourStep[]> = {
     { selector: '#plan-paso-fds', title: '2. Fortalezas y Debilidades', description: 'Revisa tus capacidades internas y tu nivel de madurez para sustentar cada amenaza u oportunidad detectada.' },
     { selector: '#plan-paso-acciones', title: '3. Sugiere Acciones', description: 'Propone acciones concretas a partir de las fases, las pendientes de madurez y las buenas prácticas del catálogo.' },
     { selector: '#plan-paso-prioridad', title: '4. Factibilidad e Impacto', description: 'Asigna la factibilidad, el impacto y el responsable según tu organigrama para cada acción.' },
-    { selector: '#plan-accion-lista', title: 'Tu plan en detalle', description: 'Cada objetivo despliega sus amenazas, fortalezas, acciones y proyectos. Valida con la palomita, edita los textos y elimina lo que no aplique.' },
+    { selector: '#plan-accion-mapa', title: 'Tu plan en el mapa', description: 'Cada objetivo se agrupa por perspectiva del Balanced Scorecard. Toca "Ver plan" para abrir la pagina del objetivo con sus acciones y su diagnostico.' },
   ],
   en: [
     { selector: '#plan-accion-title', title: 'Strategic Action Plan', description: 'Build your plan step by step: Babel accompanies you with AI suggestions and everything is saved automatically.' },
@@ -271,198 +122,9 @@ const PASOS_TOUR: Record<'es' | 'en', TourStep[]> = {
     { selector: '#plan-paso-fds', title: '2. Strengths and Weaknesses', description: 'Review your internal capabilities and maturity level to support each detected threat or opportunity.' },
     { selector: '#plan-paso-acciones', title: '3. Suggest Actions', description: 'Proposes concrete actions from the phases, maturity pending items and the best practices catalog.' },
     { selector: '#plan-paso-prioridad', title: '4. Feasibility and Impact', description: 'Assigns feasibility, impact and the responsible role from your org chart for each action.' },
-    { selector: '#plan-accion-lista', title: 'Your plan in detail', description: 'Each objective unfolds its threats, strengths, actions and projects. Validate with the checkmark, edit texts and remove what does not apply.' },
+    { selector: '#plan-accion-mapa', title: 'Your plan on the map', description: 'Each objective is grouped by Balanced Scorecard perspective. Tap "View plan" to open the objective page with its actions and diagnosis.' },
   ],
 };
-
-const LABELS = {
-  es: {
-    title: 'Plan de Accion Estrategico',
-    subtitle: 'Por cada objetivo de negocio, registra las amenazas u oportunidades del entorno, tus fortalezas o debilidades frente a ellas, el proyecto que las atiende y las acciones concretas para lograrlo.',
-    summaryObjetivos: 'Objetivos',
-    summaryAcciones: 'Acciones totales',
-    summaryVencidas: 'Acciones vencidas',
-    summaryPorVencer: 'Por vencer en 7 dias',
-    summaryValidar: 'Elementos pendientes de validar',
-    sugerirPrioridadSubtitle:
-      'Babel revisara cada accion de tu plan y propondra su Factibilidad e Impacto economico, y asignara un Responsable segun tu organigrama; podras validar o corregir cada uno desde el menu correspondiente.',
-    sugerirPrioridadBtn: 'Sugerir Factibilidad e Impacto con IA',
-    sugerirPrioridadGenerando: 'Analizando acciones...',
-    sugerirPrioridadErrorHint: 'Puedes seguir asignando Factibilidad e Impacto manualmente mientras tanto.',
-    planIaTitle: 'Construye tu Plan de Accion con Babel',
-    planIaSubtitle:
-      'Sigue los pasos en orden: Babel detecta el entorno, sugiere fortalezas y debilidades, despues las acciones y finalmente prioriza. Puedes editar y validar cada sugerencia.',
-    detectaEntornosBtn: 'Detecta Amenazas y Oportunidades',
-    detectaEntornosSubtitle:
-      'Analiza las secciones 1.2, 1.4, 2.1, 2.2, 2.3 y 4.1 de tu reflexion estrategica y las relaciona con cada objetivo.',
-    detectaEntornosGenerando: 'Babel esta analizando el entorno...',
-    detectaEntornosNeed: 'Primero agrega al menos un Objetivo Estrategico (se llenan desde la pagina de Objetivos Estrategicos).',
-    fdsBtn: 'Sugiere Fortalezas y Debilidades',
-    fdsSubtitle:
-      'Revisa las secciones 1.1, 1.3, 3.1, 3.2, 3.3 y 4.2 de tu reflexion estrategica, junto con los niveles bajos de tu Evaluacion de Madurez.',
-    fdsGenerando: 'Babel esta revisando capacidades y madurez...',
-    fdsNeedEntornos: 'Primero detecta las Amenazas y Oportunidades, o agrega al menos una manualmente.',
-    accionesBtn: 'Sugiere Acciones',
-    accionesSubtitle:
-      'Diseña acciones para blindar fortalezas y mejorar debilidades, apoyandose en las fases, la madurez pendiente y un catalogo de buenas practicas.',
-    accionesGenerando: 'Babel esta construyendo el plan de acciones...',
-    accionesNeedFds: 'Primero sugiere las Fortalezas y Debilidades, o agrega al menos una manualmente.',
-    planErrorHint: 'Puedes seguir editando manualmente mientras tanto.',
-    addObjetivo: 'Agregar objetivo de negocio',
-    objetivoLabel: 'Objetivo de negocio',
-    objetivoPlaceholder: 'Ej. Incrementar utilidad a 10% anual',
-    validado: 'Validado',
-    pendienteValidar: 'Pendiente de validar',
-    eliminar: 'Eliminar',
-    mostrar: 'Mostrar',
-    ocultar: 'Ocultar',
-    addEntorno: 'Agregar amenaza u oportunidad',
-    entornoTipo: 'Tipo',
-    amenaza: 'Amenaza',
-    oportunidad: 'Oportunidad',
-    entornoDesc: 'Descripcion (que detectamos en el entorno)',
-    entornoPlaceholder: 'Ej. Inflacion en insumos importados',
-    addFD: 'Agregar fortaleza o debilidad',
-    fortaleza: 'Fortaleza',
-    debilidad: 'Debilidad',
-    fdDesc: 'Descripcion',
-    fdPlaceholder: 'Ej. Maquinaria propia con capacidad instalada',
-    definirProyecto: 'Definir proyecto',
-    proyectoLabel: 'Nombre del proyecto',
-    proyectoPlaceholder: 'Ej. Automatizar inteligencia de negocio (ERP)',
-    responsableLabel: 'Responsable (rol del organigrama)',
-    responsableNombreLabel: 'Nombre del responsable',
-    addAccion: 'Agregar accion',
-    accionDesc: 'Descripcion de la accion',
-    accionPlaceholder: 'Ej. Cotizar 3 proveedores de ERP',
-    entregableLabel: 'Entregable (evidencia de que se hizo)',
-    entregablePlaceholder: 'Ej. Lista de asistencia, cotizacion firmada',
-    inversionLabel: 'Inversion requerida',
-    inversionPlaceholder: 'Ej. 15000 pesos o Sin costo',
-    factibilidadLabel: 'Factibilidad',
-    impactoLabel: 'Impacto economico',
-    prioridadLabel: 'Prioridad calculada',
-    fechaLabel: 'Fecha de implementacion',
-    estatusLabel: 'Estatus',
-    sendReminder: 'Enviar recordatorio por WhatsApp',
-    noPhone: 'Agrega el celular de esta persona en el Directorio de Contactos para poder enviar el recordatorio.',
-    savedNote: 'Los cambios se guardan automaticamente en este navegador.',
-    dueSoon: 'Vence pronto',
-    overdue: 'Vencida',
-  },
-  en: {
-    title: 'Strategic Action Plan',
-    subtitle: 'For each business objective, log the threats or opportunities in the environment, your strengths or weaknesses facing them, the project that addresses them, and the concrete actions to get it done.',
-    summaryObjetivos: 'Objectives',
-    summaryAcciones: 'Total actions',
-    summaryVencidas: 'Overdue actions',
-    summaryPorVencer: 'Due within 7 days',
-    summaryValidar: 'Items pending validation',
-    sugerirPrioridadSubtitle:
-      'Babel will review every action in your plan, propose its Feasibility and Economic Impact, and assign a Responsible based on your org chart; you can validate or correct each one from its dropdown.',
-    sugerirPrioridadBtn: 'Suggest Feasibility & Impact with AI',
-    sugerirPrioridadGenerando: 'Analyzing actions...',
-    sugerirPrioridadErrorHint: 'You can keep assigning Feasibility and Impact manually in the meantime.',
-    planIaTitle: 'Build your Action Plan with Babel',
-    planIaSubtitle:
-      'Follow the steps in order: Babel detects the environment, suggests strengths and weaknesses, then the actions, and finally prioritizes. You can edit and validate every suggestion.',
-    detectaEntornosBtn: 'Detect Threats and Opportunities',
-    detectaEntornosSubtitle:
-      'Analyzes sections 1.2, 1.4, 2.1, 2.2, 2.3 and 4.1 of your strategic reflection and links them to each objective.',
-    detectaEntornosGenerando: 'Babel is analyzing the environment...',
-    detectaEntornosNeed: 'First add at least one Strategic Objective (they are filled from the Strategic Objectives page).',
-    fdsBtn: 'Suggest Strengths and Weaknesses',
-    fdsSubtitle:
-      'Reviews sections 1.1, 1.3, 3.1, 3.2, 3.3 and 4.2 of your strategic reflection, plus the low levels of your Maturity Assessment.',
-    fdsGenerando: 'Babel is reviewing capabilities and maturity...',
-    fdsNeedEntornos: 'First detect the Threats and Opportunities, or add at least one manually.',
-    accionesBtn: 'Suggest Actions',
-    accionesSubtitle:
-      'Designs actions to strengthen strengths and improve weaknesses, using the phases, pending maturity steps and a best practices catalog.',
-    accionesGenerando: 'Babel is building the action plan...',
-    accionesNeedFds: 'First suggest the Strengths and Weaknesses, or add at least one manually.',
-    planErrorHint: 'You can keep editing manually in the meantime.',
-    addObjetivo: 'Add business objective',
-    objetivoLabel: 'Business objective',
-    objetivoPlaceholder: 'E.g. Increase profit to 10% annually',
-    validado: 'Validated',
-    pendienteValidar: 'Pending validation',
-    eliminar: 'Remove',
-    mostrar: 'Show',
-    ocultar: 'Hide',
-    addEntorno: 'Add threat or opportunity',
-    entornoTipo: 'Type',
-    amenaza: 'Threat',
-    oportunidad: 'Opportunity',
-    entornoDesc: 'Description (what we detected in the environment)',
-    entornoPlaceholder: 'E.g. Inflation on imported supplies',
-    addFD: 'Add strength or weakness',
-    fortaleza: 'Strength',
-    debilidad: 'Weakness',
-    fdDesc: 'Description',
-    fdPlaceholder: 'E.g. Own machinery with installed capacity',
-    definirProyecto: 'Define project',
-    proyectoLabel: 'Project name',
-    proyectoPlaceholder: 'E.g. Automate business intelligence (ERP)',
-    responsableLabel: 'Owner (org chart role)',
-    responsableNombreLabel: 'Owner name',
-    addAccion: 'Add action',
-    accionDesc: 'Action description',
-    accionPlaceholder: 'E.g. Get quotes from 3 ERP vendors',
-    entregableLabel: 'Deliverable (evidence the action happened)',
-    entregablePlaceholder: 'E.g. Attendance list, signed quote',
-    inversionLabel: 'Investment required',
-    inversionPlaceholder: 'E.g. 15000 MXN or No cost',
-    factibilidadLabel: 'Feasibility',
-    impactoLabel: 'Economic impact',
-    prioridadLabel: 'Calculated priority',
-    fechaLabel: 'Implementation date',
-    estatusLabel: 'Status',
-    sendReminder: 'Send WhatsApp reminder',
-    noPhone: 'Add this phone number in the Contact Directory to send the reminder.',
-    savedNote: 'Changes are saved automatically in this browser.',
-    dueSoon: 'Due soon',
-    overdue: 'Overdue',
-  },
-};
-
-function newObjetivo(): Objetivo {
-  return { id: generateId(), texto: '', validado: false };
-}
-function objetivosDe(raw: { objetivoIds?: string[]; objetivoId?: unknown }): string[] {
-  if (Array.isArray(raw.objetivoIds)) return raw.objetivoIds;
-  return typeof raw.objetivoId === 'string' && raw.objetivoId ? [raw.objetivoId] : [];
-}
-function entornosDe(raw: { entornoIds?: string[]; entornoId?: unknown }): string[] {
-  if (Array.isArray(raw.entornoIds)) return raw.entornoIds;
-  return typeof raw.entornoId === 'string' && raw.entornoId ? [raw.entornoId] : [];
-}
-function newEntorno(objetivoIds: string[], tipo: EntornoTipo): AmenazaOportunidad {
-  return { id: generateId(), objetivoIds: objetivoIds, tipo: tipo, descripcion: '', validado: false };
-}
-function newFD(entornoIds: string[], tipo: FDTipo): FortalezaDebilidad {
-  return { id: generateId(), entornoIds: entornoIds, tipo: tipo, descripcion: '', validado: false };
-}
-function newProyecto(fdId: string): Proyecto {
-  return { id: generateId(), fdId: fdId, nombre: '', responsableRoleKey: '', responsableNombre: '', validado: false };
-}
-function newAccion(proyectoId: string, rank: number): Accion {
-  return {
-    id: generateId(),
-    proyectoId: proyectoId,
-    descripcion: '',
-    responsableRoleKey: '',
-    responsableNombre: '',
-    crossRoleKeys: [],
-    entregable: '',
-    inversion: '',
-    factibilidad: 'media',
-    impacto: 'medio',
-    fecha: suggestedDate(rank),
-    estatus: 'pendiente',
-    validado: false,
-  };
-}
 
 export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
   const t = LABELS[lang];
@@ -476,13 +138,12 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
   const [fds, setFds] = React.useState<FortalezaDebilidad[]>([]);
   const [proyectos, setProyectos] = React.useState<Proyecto[]>([]);
   const [acciones, setAcciones] = React.useState<Accion[]>([]);
-  const [contactos, setContactos] = React.useState<Contacto[]>([]);
-  const [expanded, setExpanded] = React.useState<ExpandedMap>({});
   const [prioGenerating, setPrioGenerating] = React.useState(false);
   const [prioGenError, setPrioGenError] = React.useState('');
   const [pasoGenerando, setPasoGenerando] = React.useState<'entornos' | 'fds' | 'acciones' | null>(null);
   const [planError, setPlanError] = React.useState('');
   const [loaded, setLoaded] = React.useState(false);
+  const [etapasOpen, setEtapasOpen] = React.useState(true);
   const [orgAssignments, setOrgAssignments] = React.useState<OrgAssignments>({});
   const [boardPresidente, setBoardPresidente] = React.useState('');
   const [boardSecretario, setBoardSecretario] = React.useState('');
@@ -564,15 +225,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
         }
         if (parsed && Array.isArray(parsed.proyectos)) setProyectos(parsed.proyectos);
         if (parsed && Array.isArray(parsed.acciones)) setAcciones(parsed.acciones);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-    try {
-      const rawC = window.localStorage.getItem(CONTACTS_KEY);
-      if (rawC) {
-        const parsedC = JSON.parse(rawC);
-        if (Array.isArray(parsedC)) setContactos(parsedC);
+        setEtapasOpen(!(Array.isArray(parsed.objetivos) && parsed.objetivos.length > 0));
       }
     } catch (err) {
       console.error(err);
@@ -613,13 +266,9 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       if (!raw) return;
       const parsed = JSON.parse(raw);
       if (!Array.isArray(parsed)) return;
-      const nuevos: Objetivo[] = [];
-      const existentes: Record<string, boolean> = {};
-      objetivos.forEach((o) => {
-        existentes[o.texto.trim().toLowerCase()] = true;
-      });
+      const porNombre: Record<string, { nombre: string; perspectiva?: string }> = {};
       parsed.forEach((ind) => {
-        const rawObj = ind as { nombre?: unknown; objetivo?: unknown };
+        const rawObj = ind as { nombre?: unknown; objetivo?: unknown; perspectiva?: unknown };
         const nombre =
           rawObj && typeof rawObj.nombre === 'string' && rawObj.nombre.trim()
             ? rawObj.nombre.trim()
@@ -628,13 +277,30 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
               : '';
         if (!nombre) return;
         const clave = nombre.toLowerCase();
-        if (existentes[clave]) return;
-        existentes[clave] = true;
-        nuevos.push({ id: generateId(), texto: nombre, validado: false });
+        const perspectiva = rawObj && typeof rawObj.perspectiva === 'string' && rawObj.perspectiva ? rawObj.perspectiva : undefined;
+        if (!porNombre[clave]) porNombre[clave] = { nombre, perspectiva };
       });
-      if (nuevos.length > 0) {
-        setObjetivos((prev) => prev.concat(nuevos));
-      }
+      if (Object.keys(porNombre).length === 0) return;
+      setObjetivos((prev) => {
+        const existentes: Record<string, boolean> = {};
+        prev.forEach((o) => {
+          existentes[o.texto.trim().toLowerCase()] = true;
+        });
+        const conPerspectiva = prev.map((o) => {
+          if (o.perspectiva) return o;
+          const hit = porNombre[o.texto.trim().toLowerCase()];
+          if (!hit || !hit.perspectiva) return o;
+          return Object.assign({}, o, { perspectiva: hit.perspectiva });
+        });
+        const nuevos: Objetivo[] = [];
+        Object.keys(porNombre).forEach((clave) => {
+          if (existentes[clave]) return;
+          existentes[clave] = true;
+          const hit = porNombre[clave];
+          nuevos.push({ id: generateId(), texto: hit.nombre, validado: false, perspectiva: hit.perspectiva });
+        });
+        return nuevos.length > 0 ? conPerspectiva.concat(nuevos) : conPerspectiva;
+      });
     } catch (err) {
       console.error(err);
     }
@@ -685,44 +351,11 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
     }
   }, [objetivos, entornos, fds, proyectos, acciones, loaded]);
 
-  React.useEffect(() => {
-    if (!loaded) return;
-    try {
-      window.localStorage.setItem(CONTACTS_KEY, JSON.stringify(contactos));
-    } catch (err) {
-      console.error(err);
-    }
-  }, [contactos, loaded]);
-
-  const toggleExpanded = (id: string) => {
-    setExpanded((prev) => {
-      const next = Object.assign({}, prev);
-      next[id] = !prev[id];
-      return next;
-    });
-  };
-
   const resolvePersonForRole = (roleKey: string): string => {
     if (!roleKey) return '';
     if (roleKey === 'consejo_administrativo') return boardPresidente;
     const a = orgAssignments[roleKey];
     return a && a.person ? a.person : '';
-  };
-
-  const resolveCelular = (nombre: string, roleKey?: string): string => {
-    if (roleKey) {
-      for (let i = 0; i < contactos.length; i++) {
-        const keys = contactos[i].roleKeys;
-        if (Array.isArray(keys) && keys.indexOf(roleKey) !== -1) return contactos[i].celular;
-      }
-    }
-    if (!nombre) return '';
-    for (let i = 0; i < contactos.length; i++) {
-      if (contactos[i].nombre.trim().toLowerCase() === nombre.trim().toLowerCase()) {
-        return contactos[i].celular;
-      }
-    }
-    return '';
   };
 
   const findProyectoByFd = (fdId: string): Proyecto | undefined => {
@@ -752,46 +385,10 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
     setAcciones((prev) => prev.filter((a) => proyectosToRemove.indexOf(a.proyectoId) === -1));
   };
 
-  const addEntorno = (objetivoId: string, tipo: EntornoTipo) => setEntornos((prev) => prev.concat([newEntorno([objetivoId], tipo)]));
   const updateEntorno = (id: string, patch: Partial<AmenazaOportunidad>) =>
     setEntornos((prev) => prev.map((e) => (e.id === id ? Object.assign({}, e, patch) : e)));
-  const removeEntorno = (id: string) => {
-    const fdsNuevos = fds
-      .map((f) =>
-        f.entornoIds.indexOf(id) !== -1 ? Object.assign({}, f, { entornoIds: f.entornoIds.filter((x) => x !== id) }) : f
-      )
-      .filter((f) => f.entornoIds.length > 0);
-    const fdsVivosIds = new Set(fdsNuevos.map((f) => f.id));
-    const proyectosToRemove = proyectos.filter((p) => !fdsVivosIds.has(p.fdId)).map((p) => p.id);
-    setEntornos((prev) => prev.filter((e) => e.id !== id));
-    setFds(fdsNuevos);
-    setProyectos((prev) => prev.filter((p) => fdsVivosIds.has(p.fdId)));
-    setAcciones((prev) => prev.filter((a) => proyectosToRemove.indexOf(a.proyectoId) === -1));
-  };
-
-  const addFD = (entornoId: string, tipo: FDTipo) => {
-    const fd = newFD([entornoId], tipo);
-    setFds((prev) => prev.concat([fd]));
-    setProyectos((prev) => prev.concat([newProyecto(fd.id)]));
-  };
   const updateFD = (id: string, patch: Partial<FortalezaDebilidad>) =>
     setFds((prev) => prev.map((f) => (f.id === id ? Object.assign({}, f, patch) : f)));
-  const removeFD = (id: string) => {
-    const proyectosToRemove = proyectos.filter((p) => p.fdId === id).map((p) => p.id);
-    setFds((prev) => prev.filter((f) => f.id !== id));
-    setProyectos((prev) => prev.filter((p) => p.fdId !== id));
-    setAcciones((prev) => prev.filter((a) => proyectosToRemove.indexOf(a.proyectoId) === -1));
-  };
-
-  const addProyecto = (fdId: string) => setProyectos((prev) => prev.concat([newProyecto(fdId)]));
-  const updateProyecto = (id: string, patch: Partial<Proyecto>) =>
-    setProyectos((prev) => prev.map((p) => (p.id === id ? Object.assign({}, p, patch) : p)));
-  const removeProyecto = (id: string) => {
-    setProyectos((prev) => prev.filter((p) => p.id !== id));
-    setAcciones((prev) => prev.filter((a) => a.proyectoId !== id));
-  };
-
-  const addAccion = (proyectoId: string) => setAcciones((prev) => prev.concat([newAccion(proyectoId, priorityRank('media', 'medio'))]));
   const updateAccion = (id: string, patch: Partial<Accion>) =>
     setAcciones((prev) =>
       prev.map((a) => {
@@ -804,7 +401,6 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
         return merged;
       })
     );
-  const removeAccion = (id: string) => setAcciones((prev) => prev.filter((a) => a.id !== id));
 
   const buildAccionesParaIA = (): Array<{ id: string; descripcion: string; entregable: string; contexto: string; responsableRoleKey: string }> => {
     const out: Array<{ id: string; descripcion: string; entregable: string; contexto: string; responsableRoleKey: string }> = [];
@@ -1179,375 +775,95 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
     );
   };
 
-  const renderAccion = (proyectoNombre: string, a: Accion) => {
-    const rank = priorityRank(a.factibilidad, a.impacto);
-    const tier = priorityTier(rank, lang);
-    const celular = resolveCelular(a.responsableNombre, a.responsableRoleKey);
-    const d = daysUntil(a.fecha);
-    const showDue = a.estatus !== 'terminado' && d <= 7;
+  const GRUPO_KEYS: string[] = ['financiera', 'clientes', 'procesos_internos', 'aprendizaje_crecimiento', 'socioambiental', 'sin_perspectiva'];
+
+  const grupos = GRUPO_KEYS.map((key) => ({
+    key,
+    estilo: perspectivaEstilo(key),
+    items: objetivos.filter((o) => (key === 'sin_perspectiva' ? !o.perspectiva : o.perspectiva === key)),
+  })).filter((g) => g.items.length > 0);
+
+  const renderGrupoPerspectiva = (g: { key: string; estilo: PerspectivaEstilo; items: Objetivo[] }) => {
+    let totalAcciones = 0;
+    let validadosAcciones = 0;
+    let totalValidados = 0;
+    g.items.forEach((o) => {
+      const r = resumenDeObjetivo(o.id, { objetivos, entornos, fds, proyectos, acciones });
+      totalAcciones = totalAcciones + r.total;
+      validadosAcciones = validadosAcciones + r.validados;
+      if (o.validado) totalValidados = totalValidados + 1;
+    });
+    const avance = totalAcciones > 0 ? validadosAcciones / totalAcciones : totalValidados / g.items.length;
+    const pct = Math.round(avance * 100);
     return (
-      <div key={a.id} className="mb-3 glass-panel p-3">
-        <div className="grid gap-2 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <label className="mb-1 block text-xs font-medium text-slate-600">{t.accionDesc}</label>
-            <input
-              type="text"
-              value={tr(a.descripcion)}
-              onChange={(ev) => updateAccion(a.id, { descripcion: ev.target.value })}
-              placeholder={t.accionPlaceholder}
-              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">{t.responsableLabel}</label>
-            <select
-              value={a.responsableRoleKey}
-              onChange={(ev) => {
-                const roleKey = ev.target.value;
-                const person = resolvePersonForRole(roleKey);
-                updateAccion(a.id, { responsableRoleKey: roleKey, responsableNombre: person ? person : a.responsableNombre });
-              }}
-              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-            >
-              <option value="">{t.responsableLabel}</option>
-              {ROLE_OPTIONS.map((opt) => {
-                const person = resolvePersonForRole(opt.key);
-                const label = roleLabel(opt.key, lang) + (person ? ' - ' + person : '');
-                return (
-                  <option key={opt.key} value={opt.key}>
-                    {label}
-                  </option>
-                );
-              })}
-            </select>
-            <input
-              type="text"
-              value={a.responsableNombre}
-              onChange={(ev) => updateAccion(a.id, { responsableNombre: ev.target.value })}
-              placeholder={t.responsableNombreLabel}
-              className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">{t.entregableLabel}</label>
-            <input
-              type="text"
-              value={tr(a.entregable)}
-              onChange={(ev) => updateAccion(a.id, { entregable: ev.target.value })}
-              placeholder={t.entregablePlaceholder}
-              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">{t.inversionLabel}</label>
-            <input
-              type="text"
-              value={a.inversion}
-              onChange={(ev) => updateAccion(a.id, { inversion: ev.target.value })}
-              placeholder={t.inversionPlaceholder}
-              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">{t.factibilidadLabel}</label>
-            <select
-              value={a.factibilidad}
-              onChange={(ev) => updateAccion(a.id, { factibilidad: ev.target.value as Factibilidad })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-            >
-              {FACTIBILIDAD_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {lang === 'en' ? opt.labelEn : opt.labelEs}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">{t.impactoLabel}</label>
-            <select
-              value={a.impacto}
-              onChange={(ev) => updateAccion(a.id, { impacto: ev.target.value as Impacto })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-            >
-              {IMPACTO_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {lang === 'en' ? opt.labelEn : opt.labelEs}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">{t.prioridadLabel}</label>
-            <span className={'inline-block rounded-full px-2.5 py-1 text-xs font-medium ' + tier.classes}>
-              {'#' + rank + ' - ' + tier.label}
-            </span>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">{t.fechaLabel}</label>
-            <input
-              type="date"
-              value={a.fecha}
-              onChange={(ev) => updateAccion(a.id, { fecha: ev.target.value })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-            />
-            {showDue ? (
-              <span
-                className={
-                  'mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium ' +
-                  (d < 0 ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800')
-                }
-              >
-                {d < 0 ? t.overdue : t.dueSoon}
-              </span>
-            ) : null}
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">{t.estatusLabel}</label>
-            <select
-              value={a.estatus}
-              onChange={(ev) => updateAccion(a.id, { estatus: ev.target.value as Estatus })}
-              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-            >
-              {ESTATUS_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {lang === 'en' ? opt.labelEn : opt.labelEs}
-                </option>
-              ))}
-            </select>
-          </div>
+      <div key={g.key} className={'rounded-xl border ' + g.estilo.border + ' ' + g.estilo.soft + ' p-3'}>
+        <div className="flex items-center justify-between">
+          <span className={'rounded-full px-2.5 py-1 text-xs font-medium ' + g.estilo.chip}>
+            {perspectivaLabel(g.key, lang)}
+          </span>
+          <span className="text-xs font-medium text-slate-500">
+            {g.items.length} {t.summaryObjetivos}
+          </span>
         </div>
-        <div className="mt-2 flex items-center justify-between">
-          <ValidateBadge validado={a.validado} onToggle={() => updateAccion(a.id, { validado: !a.validado })} />
-          <button type="button" onClick={() => removeAccion(a.id)} className="text-xs font-medium text-red-600 hover:underline">
-            {t.eliminar}
-          </button>
+        <div className="mt-1.5">
+          <span className="text-[11px] text-slate-500">
+            {totalAcciones} {t.accionesShort} · {t.mapaAvance} {pct}%
+          </span>
+          <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+            <div className="h-full rounded-full bg-teal-500" style={{ width: pct + '%' }} />
+          </div>
         </div>
         <div className="mt-2">
-          {celular ? (
-            <a
-              href={whatsappLink(celular, reminderMessage(lang, a.responsableNombre, a.descripcion, proyectoNombre, a.fecha, a.entregable))}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700"
-            >
-              {t.sendReminder}
-            </a>
-          ) : (
-            <p className="text-xs text-slate-400">{t.noPhone}</p>
-          )}
+          {g.items.map((o) => {
+            const r = resumenDeObjetivo(o.id, { objetivos, entornos, fds, proyectos, acciones });
+            return (
+              <div key={o.id} className="mt-2 rounded-lg border border-slate-200 bg-white/60 p-2">
+                <div className="flex items-start justify-between gap-2">
+                  <input
+                    type="text"
+                    value={tr(o.texto)}
+                    onChange={(ev) => updateObjetivo(o.id, { texto: ev.target.value })}
+                    placeholder={t.objetivoPlaceholder}
+                    className="w-full bg-transparent text-sm font-medium text-slate-800 outline-none"
+                  />
+                  <Link
+                    href={'/' + lang + '/babel/plan-accion/objetivo/' + o.id}
+                    className="shrink-0 rounded-lg bg-teal-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-teal-700"
+                  >
+                    {t.verPlan}
+                  </Link>
+                </div>
+                <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                  <span className={'rounded-full px-2 py-0.5 text-[11px] font-medium ' + g.estilo.chip}>
+                    {perspectivaLabel(o.perspectiva || '', lang)}
+                  </span>
+                  <select
+                    value={o.perspectiva || ''}
+                    onChange={(ev) => updateObjetivo(o.id, { perspectiva: ev.target.value || undefined })}
+                    className="rounded-lg border border-slate-300 px-1.5 py-0.5 text-[11px]"
+                    aria-label={t.perspectivaLabel}
+                  >
+                    <option value="">{t.sinPerspectiva}</option>
+                    {PERSPECTIVAS.map((p) => (
+                      <option key={p.key} value={p.key}>
+                        {lang === 'en' ? p.en : p.es}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="text-[11px] text-slate-500">
+                    {r.total} {t.accionesShort} · {r.pendientes} {t.pendientesShort} · {r.vencidas} {t.vencidasShort}
+                  </span>
+                  <span className="ml-auto flex items-center gap-2">
+                    <ValidateBadge validado={o.validado} onToggle={() => updateObjetivo(o.id, { validado: !o.validado })} />
+                    <button type="button" onClick={() => removeObjetivo(o.id)} className="text-xs font-medium text-red-600 hover:underline">
+                      {t.eliminar}
+                    </button>
+                  </span>
+                </div>
+              </div>
+            );
+          })}
         </div>
-      </div>
-    );
-  };
-
-  const renderProyecto = (p: Proyecto) => {
-    const isExpanded = expanded[p.id] === true;
-    const accionesDeP = acciones.filter((a) => a.proyectoId === p.id);
-    return (
-      <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <button type="button" onClick={() => toggleExpanded(p.id)} className="text-xs font-medium text-blue-600 hover:underline">
-            {(isExpanded ? t.ocultar : t.mostrar) + ' ' + t.addAccion + ' (' + accionesDeP.length + ')'}
-          </button>
-          <div className="flex items-center gap-2">
-            <ValidateBadge validado={p.validado} onToggle={() => updateProyecto(p.id, { validado: !p.validado })} />
-            <button type="button" onClick={() => removeProyecto(p.id)} className="text-xs font-medium text-red-600 hover:underline">
-              {t.eliminar}
-            </button>
-          </div>
-        </div>
-        {isExpanded ? (
-          <div className="mt-3">
-            {accionesDeP.map((a) => renderAccion('', a))}
-            <button type="button" onClick={() => addAccion(p.id)} className="mt-1 text-xs font-medium text-blue-600 hover:underline">
-              {t.addAccion}
-            </button>
-          </div>
-        ) : null}
-      </div>
-    );
-  };
-
-  const renderFD = (f: FortalezaDebilidad, e: AmenazaOportunidad, o: Objetivo) => {
-    const proyecto = findProyectoByFd(f.id);
-    return (
-      <div key={f.id} className="mb-3 glass-panel p-3">
-        <div className="grid gap-2 sm:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">{t.entornoTipo}</label>
-            <div className="flex gap-1.5">
-              <button
-                type="button"
-                onClick={() => updateFD(f.id, { tipo: 'fortaleza' })}
-                className={
-                  'rounded-full px-2.5 py-1 text-xs font-medium ' +
-                  (f.tipo === 'fortaleza' ? 'bg-green-100 text-green-800 ring-2 ring-green-500' : 'bg-slate-100 text-slate-600')
-                }
-              >
-                {t.fortaleza}
-              </button>
-              <button
-                type="button"
-                onClick={() => updateFD(f.id, { tipo: 'debilidad' })}
-                className={
-                  'rounded-full px-2.5 py-1 text-xs font-medium ' +
-                  (f.tipo === 'debilidad' ? 'bg-red-100 text-red-800 ring-2 ring-red-500' : 'bg-slate-100 text-slate-600')
-                }
-              >
-                {t.debilidad}
-              </button>
-            </div>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">{t.fdDesc}</label>
-            <textarea
-              value={tr(f.descripcion)}
-              onChange={(ev) => updateFD(f.id, { descripcion: ev.target.value })}
-              placeholder={t.fdPlaceholder}
-              rows={2}
-              className="w-full resize-y rounded-lg border border-slate-300 px-3 py-1.5 text-sm leading-snug"
-            />
-          </div>
-        </div>
-        <div className="mt-2 flex items-center justify-between">
-          <div></div>
-          <div className="flex items-center gap-2">
-            <ValidateBadge validado={f.validado} onToggle={() => updateFD(f.id, { validado: !f.validado })} />
-            <button type="button" onClick={() => removeFD(f.id)} className="text-xs font-medium text-red-600 hover:underline">
-              {t.eliminar}
-            </button>
-          </div>
-        </div>
-        {proyecto ? (
-          renderProyecto(proyecto)
-        ) : (
-          <button type="button" onClick={() => addProyecto(f.id)} className="mt-2 text-xs font-medium text-blue-600 hover:underline">
-            {t.addAccion}
-          </button>
-        )}
-      </div>
-    );
-  };
-
-  const renderEntorno = (e: AmenazaOportunidad, o: Objetivo) => {
-    const isExpanded = expanded[e.id] === true;
-    const fdsDeE = fds.filter((f) => f.entornoIds.indexOf(e.id) !== -1);
-    return (
-      <div key={e.id} className="mb-3 glass-panel p-3">
-        <div className="grid gap-2 sm:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">{t.entornoTipo}</label>
-            <div className="flex gap-1.5">
-              <button
-                type="button"
-                onClick={() => updateEntorno(e.id, { tipo: 'amenaza' })}
-                className={
-                  'rounded-full px-2.5 py-1 text-xs font-medium ' +
-                  (e.tipo === 'amenaza' ? 'bg-red-100 text-red-800 ring-2 ring-red-500' : 'bg-slate-100 text-slate-600')
-                }
-              >
-                {t.amenaza}
-              </button>
-              <button
-                type="button"
-                onClick={() => updateEntorno(e.id, { tipo: 'oportunidad' })}
-                className={
-                  'rounded-full px-2.5 py-1 text-xs font-medium ' +
-                  (e.tipo === 'oportunidad' ? 'bg-green-100 text-green-800 ring-2 ring-green-500' : 'bg-slate-100 text-slate-600')
-                }
-              >
-                {t.oportunidad}
-              </button>
-            </div>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">{t.entornoDesc}</label>
-            <textarea
-              value={tr(e.descripcion)}
-              onChange={(ev) => updateEntorno(e.id, { descripcion: ev.target.value })}
-              placeholder={t.entornoPlaceholder}
-              rows={2}
-              className="w-full resize-y rounded-lg border border-slate-300 px-3 py-1.5 text-sm leading-snug"
-            />
-          </div>
-        </div>
-        <div className="mt-2 flex items-center justify-between">
-          <button type="button" onClick={() => toggleExpanded(e.id)} className="text-xs font-medium text-blue-600 hover:underline">
-            {(isExpanded ? t.ocultar : t.mostrar) + ' ' + t.fortaleza + '/' + t.debilidad + ' (' + fdsDeE.length + ')'}
-          </button>
-          <div className="flex items-center gap-2">
-            <ValidateBadge validado={e.validado} onToggle={() => updateEntorno(e.id, { validado: !e.validado })} />
-            <button type="button" onClick={() => removeEntorno(e.id)} className="text-xs font-medium text-red-600 hover:underline">
-              {t.eliminar}
-            </button>
-          </div>
-        </div>
-        {isExpanded ? (
-          <div className="mt-3">
-            {fdsDeE.map((f) => renderFD(f, e, o))}
-            <div className="flex gap-3">
-              <button type="button" onClick={() => addFD(e.id, 'fortaleza')} className="text-xs font-medium text-blue-600 hover:underline">
-                {t.addFD + ' (' + t.fortaleza + ')'}
-              </button>
-              <button type="button" onClick={() => addFD(e.id, 'debilidad')} className="text-xs font-medium text-blue-600 hover:underline">
-                {t.addFD + ' (' + t.debilidad + ')'}
-              </button>
-            </div>
-          </div>
-        ) : null}
-      </div>
-    );
-  };
-
-  const renderObjetivo = (o: Objetivo) => {
-    const isExpanded = expanded[o.id] === true;
-    const entornosDeO = entornos.filter((e) => e.objetivoIds.indexOf(o.id) !== -1);
-    return (
-      <div key={o.id} className="mb-4 glass-panel p-4">
-        <div className="grid gap-2">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">{t.objetivoLabel}</label>
-            <textarea
-              value={tr(o.texto)}
-              onChange={(ev) => updateObjetivo(o.id, { texto: ev.target.value })}
-              placeholder={t.objetivoPlaceholder}
-              rows={2}
-              className="w-full resize-y rounded-lg border border-slate-300 px-3 py-1.5 text-sm leading-snug"
-            />
-          </div>
-        </div>
-        <div className="mt-2 flex items-center justify-between">
-          <button type="button" onClick={() => toggleExpanded(o.id)} className="text-xs font-medium text-blue-600 hover:underline">
-            {(isExpanded ? t.ocultar : t.mostrar) + ' ' + t.amenaza + '/' + t.oportunidad + ' (' + entornosDeO.length + ')'}
-          </button>
-          <div className="flex items-center gap-2">
-            <ValidateBadge validado={o.validado} onToggle={() => updateObjetivo(o.id, { validado: !o.validado })} />
-            <button type="button" onClick={() => removeObjetivo(o.id)} className="text-xs font-medium text-red-600 hover:underline">
-              {t.eliminar}
-            </button>
-          </div>
-        </div>
-        {isExpanded ? (
-          <div className="mt-3">
-            {entornosDeO.map((e) => renderEntorno(e, o))}
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => addEntorno(o.id, 'amenaza')}
-                className="text-xs font-medium text-blue-600 hover:underline"
-              >
-                {t.addEntorno + ' (' + t.amenaza + ')'}
-              </button>
-              <button
-                type="button"
-                onClick={() => addEntorno(o.id, 'oportunidad')}
-                className="text-xs font-medium text-blue-600 hover:underline"
-              >
-                {t.addEntorno + ' (' + t.oportunidad + ')'}
-              </button>
-            </div>
-          </div>
-        ) : null}
       </div>
     );
   };
@@ -1597,9 +913,22 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       </div>
 
       <div id="plan-accion-etapas" className="mt-6 glass-panel p-4">
-        <h4 className="text-sm font-semibold text-slate-800">{t.planIaTitle}</h4>
-        <p className="mt-1 text-sm text-slate-500">{t.planIaSubtitle}</p>
-        <div className="mt-3 grid gap-3 md:grid-cols-2">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h4 className="text-sm font-semibold text-slate-800">{t.planIaTitle}</h4>
+            <p className="mt-1 text-sm text-slate-500">{t.planIaSubtitle}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setEtapasOpen((prev) => !prev)}
+            className="shrink-0 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100"
+          >
+            {etapasOpen ? t.etapaBotonOcultar : t.etapaBotonMostrar}
+          </button>
+        </div>
+        {etapasOpen ? (
+          <div>
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
           <div className="rounded-lg border border-teal-200 bg-teal-50 p-3">
             <h5 className="text-sm font-semibold text-teal-800">{t.detectaEntornosBtn}</h5>
             <p className="mt-1 text-xs text-teal-800">{t.detectaEntornosSubtitle}</p>
@@ -1665,11 +994,25 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
             <p className="mt-0.5">{t.sugerirPrioridadErrorHint}</p>
           </div>
         ) : null}
+          </div>
+        ) : null}
       </div>
 
-      <div id="plan-accion-lista" className="mt-6">
-        {objetivos.map((o) => renderObjetivo(o))}
-        <button type="button" onClick={addObjetivo} className="mt-2 text-sm font-medium text-blue-600 hover:underline">
+      <div id="plan-accion-mapa" className="mt-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="text-sm font-semibold text-slate-800">{t.mapaTitle}</h4>
+            <p className="mt-1 text-sm text-slate-500">{t.mapaSubtitle}</p>
+          </div>
+        </div>
+        {grupos.length > 0 ? (
+          <div className="mt-3 grid gap-3 md:grid-cols-2">
+            {grupos.map((g) => renderGrupoPerspectiva(g))}
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-slate-500">{t.detectaEntornosNeed}</p>
+        )}
+        <button type="button" onClick={addObjetivo} className="mt-3 text-sm font-medium text-blue-600 hover:underline">
           {t.addObjetivo}
         </button>
       </div>
