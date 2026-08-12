@@ -17,7 +17,7 @@
     "exceljs": "^4.4.0",
     "firebase": "^10.14.1",
     "firebase-admin": "^14.2.0",
-    "jspdf": "^2.5.2",
+    "jspdf": "^4.2.1",
     "lucide-react": "^0.446.0",
     "mercadopago": "^3.2.1",
     "next": "14.2.35",
@@ -29,7 +29,8 @@
     "recharts": "^2.12.7",
     "remark-gfm": "^4.0.1",
     "tailwind-merge": "^2.5.2",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "postcss": "^8.5.26"
   },
   "devDependencies": {
     "@types/node": "^20",
@@ -42,6 +43,11 @@
     "typescript": "^5"
   },
   "overrides": {
-    "jwks-rsa": "^3.1.0"
+    "uuid": "^14.0.1",
+    "undici": "^6.28.0",
+    "dompurify": "^3.4.13",
+    "next": {
+      "postcss": "^8.5.26"
+    }
   }
 }
