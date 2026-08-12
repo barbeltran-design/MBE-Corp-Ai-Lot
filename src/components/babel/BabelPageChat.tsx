@@ -100,9 +100,7 @@ function detectDocumentLang(texto: string): 'es' | 'en' | null {
   return null;
 }
 
-async function traducirDocumentoCompilado(texto: string, destino: 'es' | 'en'): Promise<string> {
-  const detectado = detectDocumentLang(texto);
-  if (!detectado || detectado === destino) return texto;
+async function traducirParte(texto: string, destino: 'es' | 'en'): Promise<string | null> {
   try {
     const res = await fetch('/api/babel/traducir-plan', {
       method: 'POST',
@@ -111,10 +109,51 @@ async function traducirDocumentoCompilado(texto: string, destino: 'es' | 'en'): 
     });
     const data = await res.json();
     if (!res.ok || !data || typeof data.translation !== 'string' || !data.translation.trim()) {
-      console.error('[babel] Traduccion del plan compilado no reconocida', data);
-      return texto;
+      console.error('[babel] Traduccion del plan compilado no reconocida (status ' + res.status + ')', data);
+      return null;
     }
     return data.translation;
+  } catch (err) {
+    console.error('[babel] No se pudo traducir el plan compilado', err);
+    return null;
+  }
+}
+
+// Divide el documento en fragmentos de ~6000 caracteres respetando los saltos
+// de linea (no parte párrafos ni tablas cortas) para traducirlos EN PARALELO
+// y que el compilado no tarde ~25s en un solo viaje.
+function dividirDocumento(texto: string, max = 6000): string[] {
+  if (texto.length <= max) return [texto];
+  const lineas = texto.split('\n');
+  const partes: string[] = [];
+  let actual = '';
+  for (const linea of lineas) {
+    if (actual.length + linea.length + 1 > max && actual.trim()) {
+      partes.push(actual.trimEnd());
+      actual = '';
+    }
+    actual += linea + '\n';
+  }
+  if (actual.trim()) partes.push(actual.trimEnd());
+  return partes;
+}
+
+async function traducirDocumentoCompilado(texto: string, destino: 'es' | 'en'): Promise<string> {
+  const detectado = detectDocumentLang(texto);
+  if (!detectado || detectado === destino) return texto;
+  console.log('[babel] Traduciendo plan compilado: detectado', detectado, '->', destino, '| longitud', texto.length);
+  const partes = dividirDocumento(texto);
+  if (partes.length <= 1) {
+    const r = await traducirParte(texto, destino);
+    return r !== null ? r : texto;
+  }
+  try {
+    const resultados = await Promise.all(partes.map(function (p) { return traducirParte(p, destino); }));
+    if (resultados.some(function (r) { return r === null; })) {
+      console.error('[babel] Algunos fragmentos del plan no se tradujeron; se devuelve el documento original');
+      return texto;
+    }
+    return resultados.join('\n');
   } catch (err) {
     console.error('[babel] No se pudo traducir el plan compilado', err);
     return texto;
@@ -291,6 +330,7 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
   const [editContent, setEditContent] = React.useState('');
   const [chatExpanded, setChatExpanded] = React.useState<Set<number>>(new Set());
   const [compiling, setCompiling] = React.useState(false);
+  const [compilingStep, setCompilingStep] = React.useState<'traduciendo' | 'generando' | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = React.useState(0);
   const [phase0Answers, setPhase0Answers] = React.useState<Record<string, string>>({});
   const [isPhase0Complete, setIsPhase0Complete] = React.useState(false);
@@ -889,11 +929,13 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
   async function handleCompile() {
     if (!uid || !session || compiling) return;
     setCompiling(true);
+    setCompilingStep('traduciendo');
     setError(null);
     try {
       const textoFinal = await upsertCompiledPlan();
       if (textoFinal) {
         try {
+          setCompilingStep('generando');
           await downloadCompiledPlanPdf({ sessionTopic: session.topic, compiledText: textoFinal, language: locale });
         } catch (pdfErr) {
           console.error('[babel] No se pudo generar el PDF del plan compilado', pdfErr);
@@ -903,6 +945,7 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
       setError(err instanceof Error ? err.message : 'Error al compilar');
     } finally {
       setCompiling(false);
+      setCompilingStep(null);
     }
   }
   async function handleReset() {
@@ -1442,7 +1485,11 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
               {dispLang === 'en' ? 'Continue to Mission 5: Organization Chart and Roles →' : 'Continuar a la Misión 5: Organigrama y Roles →'}
             </Button>
             <Button onClick={handleCompile} disabled={compiling} variant="outline" className="w-full">
-              {compiling ? (dispLang === 'en' ? 'Generating...' : 'Generando...') : (dispLang === 'en' ? 'Download your Strategic Plan' : 'Descarga tu Plan Estratégico')}
+              {compiling
+                ? (compilingStep === 'generando'
+                    ? (dispLang === 'en' ? 'Generating PDF...' : 'Generando PDF...')
+                    : (dispLang === 'en' ? 'Translating the plan to English...' : 'Traduciendo el plan al inglés...'))
+                : (dispLang === 'en' ? 'Download your Strategic Plan' : 'Descarga tu Plan Estratégico')}
             </Button>
           </>
         )}
