@@ -248,7 +248,11 @@
 
   /* --- teal / cyan --- */
   .dark .bg-teal-50 { background-color: hsl(170, 40%, 11%); }
+  .dark .bg-teal-100 { background-color: hsl(170, 40%, 15%); }
+  .dark .bg-teal-200 { background-color: hsl(170, 40%, 20%); }
   .dark .bg-cyan-50 { background-color: hsl(190, 40%, 11%); }
+  .dark .bg-cyan-100 { background-color: hsl(190, 40%, 15%); }
+  .dark .bg-cyan-200 { background-color: hsl(190, 40%, 20%); }
   .dark .text-teal-600,
   .dark .text-teal-700,
   .dark .text-teal-800,
