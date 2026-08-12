@@ -46,6 +46,7 @@
     "uuid": "^14.0.1",
     "undici": "^6.28.0",
     "dompurify": "^3.4.13",
+    "jwks-rsa": "3.1.0",
     "next": {
       "postcss": "^8.5.26"
     }
