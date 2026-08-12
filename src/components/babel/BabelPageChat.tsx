@@ -78,6 +78,48 @@ const UI_FALLBACK: Record<'es' | 'en', {
   },
 };
 const FASE0_ORDERED_KEYS = ['ubicacion', 'giro', 'resultado_cliente', 'madurez', 'recursos'];
+
+// ---------------------------------------------------------------------------
+// Deteccion del idioma del documento compilado + traduccion por IA
+// (conservando el Markdown exacto para que el PDF no se rompa). El compilado
+// se arma con los resumenes de las fases (en el idioma en que se generaron);
+// si el idioma detectado no coincide con el de la interfaz, se traduce antes
+// de mostrarlo en el chat y de generarlo en PDF.
+// ---------------------------------------------------------------------------
+function detectDocumentLang(texto: string): 'es' | 'en' | null {
+  const muestra = (texto || '').slice(0, 5000).toLowerCase();
+  if (!muestra) return null;
+  const acentos = (muestra.match(/[áéíóúñ]/g) || []).length;
+  const es = [' que ', ' para ', ' como ', ' con ', ' una ', ' los ', ' las ', ' del ', ' al ', ' este ', ' esta ', ' esto ', ' estos ', ' estas ', ' es ', ' son ', ' nuestro ', ' nuestra ', ' tambien ', ' ademas ', ' empresa', ' negocio'];
+  const en = [' the ', ' and ', ' with ', ' for ', ' your ', ' our ', ' of ', ' to ', ' is ', ' are ', ' we ', ' you ', ' they ', ' this ', ' that ', ' business', ' company'];
+  const contar = (arr: string[]) => arr.reduce((acc, w) => acc + (muestra.split(w).length - 1), 0);
+  const esScore = contar(es) + acentos * 2;
+  const enScore = contar(en);
+  if (esScore >= 2 && esScore > enScore * 1.2) return 'es';
+  if (enScore >= 2 && enScore > (esScore + Math.max(0, acentos)) * 1.2) return 'en';
+  return null;
+}
+
+async function traducirDocumentoCompilado(texto: string, destino: 'es' | 'en'): Promise<string> {
+  const detectado = detectDocumentLang(texto);
+  if (!detectado || detectado === destino) return texto;
+  try {
+    const res = await fetch('/api/babel/traducir-plan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: texto, language: destino }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data || typeof data.translation !== 'string' || !data.translation.trim()) {
+      console.error('[babel] Traduccion del plan compilado no reconocida', data);
+      return texto;
+    }
+    return data.translation;
+  } catch (err) {
+    console.error('[babel] No se pudo traducir el plan compilado', err);
+    return texto;
+  }
+}
 function fase0IntroText(lang: 'es' | 'en'): string {
   return lang === 'en'
     ? 'Hi! I\'m **Babel**, MBE Corp\'s Strategic Business Architect & Sustainability Lead.\n\nTo get started on the right foot, I\'ll ask you **5 key questions**, one at a time. Take your time.\n\n**Note:** Use Enter to add a new line. The message is only sent when you press the "Send" button.\n\n---\n\n'
@@ -358,6 +400,10 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
     if (!session || dispLang === sessionLocale) return;
     session.messages.forEach(function (m, i) {
       if (m.role !== 'assistant') return;
+      // El mensaje compilado ya se inserta en el idioma de la interfaz
+      // (traducido por IA en upsertCompiledPlan); traducirlo de nuevo con
+      // Google romperia el Markdown y las tablas del PDF.
+      if (m.content.startsWith('### Plan Estrategico Compilado') || m.content.startsWith('### Compiled Strategic Plan')) return;
       if (currentPhase === 0 && i <= 1) return;
       const cacheKey = i + '::' + dispLang;
       if (translatedCache[cacheKey] !== undefined) return;
@@ -798,16 +844,26 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
       setError(err instanceof Error ? err.message : 'Error al guardar');
     }
   }
-  async function upsertCompiledPlan(overrideMessages?: ChatMessage[], overridePhases?: BabelPhaseRecord[]) {
-    if (!uid || !session) return;
+  async function upsertCompiledPlan(overrideMessages?: ChatMessage[], overridePhases?: BabelPhaseRecord[]): Promise<string> {
+    if (!uid || !session) return '';
     try {
       const phases = overridePhases ?? session.phases ?? [];
       const compiled = phases.length > 0 ? limpiarContenidoDocumento([...phases].sort((a, b) => a.phase - b.phase).map((p) => p.summary).join('\n\n---\n\n')) : '';
-      const compiledText = compiled ? '### Plan Estrategico Compilado\n\n' + compiled : 'No hay fases aprobadas para compilar aun.';
+      const textoCompilado = compiled ? await traducirDocumentoCompilado(compiled, locale) : '';
+      const compiledHeader = locale === 'en' ? '### Compiled Strategic Plan' : '### Plan Estrategico Compilado';
+      const compiledText = textoCompilado
+        ? compiledHeader + '\n\n' + textoCompilado
+        : locale === 'en'
+          ? 'There are no approved phases to compile yet.'
+          : 'No hay fases aprobadas para compilar aun.';
       const baseMessages = overrideMessages ?? session.messages;
       let existingIdx = -1;
       for (let j = baseMessages.length - 1; j >= 0; j--) {
         if (baseMessages[j].role === 'assistant' && baseMessages[j].content.startsWith('### Plan Estrategico Compilado')) {
+          existingIdx = j;
+          break;
+        }
+        if (baseMessages[j].role === 'assistant' && baseMessages[j].content.startsWith('### Compiled Strategic Plan')) {
           existingIdx = j;
           break;
         }
@@ -824,6 +880,7 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
       setSession(function (prev) { return prev ? { ...prev, messages: finalMessages } : prev; });
       await saveBabelMessages(uid, finalMessages);
       setInput('');
+      return textoCompilado;
     } catch (err) {
       console.error('[babel] Error en upsertCompiledPlan:', err);
       throw err;
@@ -834,13 +891,10 @@ export function BabelPageChat({ faseInicial }: { faseInicial?: number }) {
     setCompiling(true);
     setError(null);
     try {
-      await upsertCompiledPlan();
-      const compiled = (session.phases ?? []).length > 0
-        ? limpiarContenidoDocumento([...(session.phases ?? [])].sort((a, b) => a.phase - b.phase).map((p) => p.summary).join('\n\n---\n\n'))
-        : '';
-      if (compiled) {
+      const textoFinal = await upsertCompiledPlan();
+      if (textoFinal) {
         try {
-          await downloadCompiledPlanPdf({ sessionTopic: session.topic, compiledText: compiled, language: locale });
+          await downloadCompiledPlanPdf({ sessionTopic: session.topic, compiledText: textoFinal, language: locale });
         } catch (pdfErr) {
           console.error('[babel] No se pudo generar el PDF del plan compilado', pdfErr);
         }
