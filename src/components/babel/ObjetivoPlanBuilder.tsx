@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import AgentAvatar from '@/components/agentes/AgentAvatar';
 import { esMentorValido, type MentorId } from '@/lib/mentores';
 import {
@@ -47,6 +48,7 @@ import {
 type TabActiva = 'acciones' | 'diagnostico';
 
 export default function ObjetivoPlanBuilder({ lang, objetivoId }: { lang: PlanLang; objetivoId: string }) {
+  const router = useRouter();
   const t = LABELS[lang];
   const [translationCache, setTranslationCache] = React.useState<Record<string, string>>({});
   const tr = React.useCallback(function (text: string): string {
@@ -71,6 +73,7 @@ export default function ObjetivoPlanBuilder({ lang, objetivoId }: { lang: PlanLa
   const [wizardFdId, setWizardFdId] = React.useState('');
   const [wizardProyectoNombre, setWizardProyectoNombre] = React.useState('');
   const [ayudaAccionId, setAyudaAccionId] = React.useState('');
+  const [eleccionAccionId, setEleccionAccionId] = React.useState('');
   const [ayudaModo, setAyudaModo] = React.useState<'tip' | 'chat'>('tip');
   const [ayudaTip, setAyudaTip] = React.useState('');
   const [ayudaHistorial, setAyudaHistorial] = React.useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
@@ -167,9 +170,10 @@ export default function ObjetivoPlanBuilder({ lang, objetivoId }: { lang: PlanLa
 
   const abrirTip = (a: Accion) => {
     setAyudaAccionId(a.id);
-    setAyudaModo('tip');
+    setAyudaModo('chat');
     setAyudaHistorial([]);
     setAyudaTip('');
+    setAyudaInput('');
     setAyudaCargando(true);
     fetch('/api/mentores/ayuda', {
       method: 'POST',
@@ -182,10 +186,26 @@ export default function ObjetivoPlanBuilder({ lang, objetivoId }: { lang: PlanLa
       }),
     })
       .then((r) => r.json())
-      .then((d) => setAyudaTip(typeof d?.reply === 'string' ? d.reply : (d?.error || '')))
-      .catch(() => setAyudaTip(lang === 'en' ? 'Could not reach the mentor.' : 'No se pudo contactar al mentor.'))
+      .then((d) => {
+        const respuesta = typeof d?.reply === 'string' ? d.reply : (d?.error || (lang === 'en' ? 'No response.' : 'Sin respuesta.'));
+        setAyudaHistorial([{ role: 'assistant', content: respuesta }]);
+      })
+      .catch(() =>
+        setAyudaHistorial([
+          { role: 'assistant', content: lang === 'en' ? 'Could not reach the mentor.' : 'No se pudo contactar al mentor.' },
+        ])
+      )
       .finally(() => setAyudaCargando(false));
   };
+
+  React.useEffect(() => {
+    if (!ayudaAccionId) return;
+    const el = document.getElementById('ayuda-panel-' + ayudaAccionId);
+    if (el) {
+      const idTimeout = window.setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60);
+      return () => window.clearTimeout(idTimeout);
+    }
+  }, [ayudaAccionId]);
 
   const abrirChat = () => {
     setAyudaModo('chat');
@@ -303,7 +323,7 @@ export default function ObjetivoPlanBuilder({ lang, objetivoId }: { lang: PlanLa
           </span>
           <button
             type="button"
-            onClick={() => abrirTip(a)}
+            onClick={() => setEleccionAccionId(a.id)}
             title={lang === 'en' ? 'Ask ' + mentorDe(a) + ' for help with this action' : 'Pide ayuda a ' + mentorDe(a) + ' con esta accion'}
             className="group inline-flex items-center gap-1.5 rounded-full border-2 border-teal-300 bg-white py-1 pl-1 pr-3 shadow-sm ring-2 ring-teal-100 transition hover:border-teal-400 hover:shadow-md"
           >
@@ -464,7 +484,7 @@ export default function ObjetivoPlanBuilder({ lang, objetivoId }: { lang: PlanLa
           )}
         </div>
         {ayudaAccionId === a.id ? (
-          <div className="mt-2 rounded-lg border border-teal-200 bg-teal-50 p-2">
+          <div id={'ayuda-panel-' + a.id} className="mt-2 rounded-lg border border-teal-200 bg-teal-50 p-2">
             <div className="mb-1 flex items-center justify-between">
               <span className="flex items-center gap-1 text-xs font-semibold text-teal-800">
                 <AgentAvatar agente={mentorDe(a)} pose="reposando" size={18} />
