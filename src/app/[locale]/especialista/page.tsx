@@ -407,7 +407,12 @@ export default function EspecialistaPage() {
                       {actividades.map((a) => (
                         <tr key={a.id} className="border-t border-slate-100 dark:border-slate-800">
                           <td className="px-3 py-2 text-xs text-muted-foreground">{fmtDate(a.fecha ?? a.createdAt, dispLang)}</td>
-                          <td className="px-3 py-2 text-xs text-muted-foreground">{a.usuarioNombre || a.usuarioUid || '—'}</td>
+                          <td className="px-3 py-2 text-xs text-muted-foreground">
+                            {(() => {
+                              const ua = usuarios.find((x) => x.uid === a.usuarioUid);
+                              return a.usuarioNombre || ua?.nombre || ua?.email || '—';
+                            })()}
+                          </td>
                           <td className="px-3 py-2 text-xs text-muted-foreground">
                             {TEMA_LABELS[a.tema as keyof typeof TEMA_LABELS]?.[dispLang === 'en' ? 'en' : 'es'] ?? a.tema ?? '—'}
                           </td>

@@ -552,7 +552,12 @@ export default function AdminPage() {
                       <td className="px-3 py-2 text-muted-foreground">
                         {PRODUCTO_LABELS[p.productoId as keyof typeof PRODUCTO_LABELS]?.[dispLang === 'en' ? 'en' : 'es'] ?? p.productoId}
                       </td>
-                      <td className="px-3 py-2 text-muted-foreground">{p.uid}</td>
+                      <td className="px-3 py-2 text-muted-foreground">
+                        {(() => {
+                          const up = usuarios.find((x) => x.uid === p.uid);
+                          return up?.name || up?.email || p.uid;
+                        })()}
+                      </td>
                       <td className="px-3 py-2 font-medium text-foreground">{fmtMoney(p.monto)}</td>
                       <td className="px-3 py-2">
                         <PagoStatusBadge status={p.status} t={t} />
@@ -636,7 +641,12 @@ export default function AdminPage() {
                 <tbody>
                   {pagosEsp.map((p) => (
                     <tr key={p.id} className="border-t border-slate-100 dark:border-slate-800">
-                      <td className="px-3 py-2 text-muted-foreground">{p.especialistaNombre || p.especialistaUid}</td>
+                      <td className="px-3 py-2 text-muted-foreground">
+                        {(() => {
+                          const ue = usuarios.find((x) => x.uid === p.especialistaUid);
+                          return p.especialistaNombre || ue?.name || ue?.email || p.especialistaUid;
+                        })()}
+                      </td>
                       <td className="px-3 py-2 font-medium text-foreground">{fmtMoney(p.monto)}</td>
                       <td className="px-3 py-2 text-muted-foreground">{p.concepto ?? '—'}</td>
                       <td className="px-3 py-2 text-muted-foreground">{p.metodo ?? '—'}</td>
@@ -675,8 +685,17 @@ export default function AdminPage() {
                   {solicitudes.map((s) => (
                     <tr key={s.id} className="border-t border-slate-100 dark:border-slate-800">
                       <td className="px-3 py-2">
-                        <div className="font-medium text-foreground">{s.nombre || '—'}</div>
-                        <div className="text-xs text-muted-foreground">{s.email}</div>
+                        {(() => {
+                          const us = usuarios.find((x) => x.uid === s.uid);
+                          const nombreMostrar = s.nombre || us?.name || us?.email || s.uid;
+                          const correoMostrar = s.email || us?.email;
+                          return (
+                            <>
+                              <div className="font-medium text-foreground">{nombreMostrar || '—'}</div>
+                              {correoMostrar && <div className="text-xs text-muted-foreground">{correoMostrar}</div>}
+                            </>
+                          );
+                        })()}
                       </td>
                       <td className="px-3 py-2 text-muted-foreground">
                         {s.tipo === 'especialista' ? t('Especialista', 'Specialist') : t('Rep Sale', 'Rep Sale')}
