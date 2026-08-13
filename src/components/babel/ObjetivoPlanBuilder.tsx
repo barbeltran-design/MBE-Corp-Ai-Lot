@@ -215,6 +215,15 @@ export default function ObjetivoPlanBuilder({ lang, objetivoId }: { lang: PlanLa
     }
   }, [ayudaAccionId]);
 
+  React.useEffect(() => {
+    if (!ayudaAccionId) return;
+    const el = document.getElementById('ayuda-panel-' + ayudaAccionId);
+    if (el) {
+      const idTimeout = window.setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60);
+      return () => window.clearTimeout(idTimeout);
+    }
+  }, [ayudaAccionId]);
+
   const abrirChat = () => {
     setAyudaModo('chat');
     setAyudaHistorial([]);
@@ -738,6 +747,59 @@ export default function ObjetivoPlanBuilder({ lang, objetivoId }: { lang: PlanLa
       )}
 
       <p className="mt-4 text-xs text-slate-400">{t.savedNote}</p>
+
+      {eleccionAccionId ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setEleccionAccionId('')}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-5 text-center shadow-xl" onClick={(ev) => ev.stopPropagation()}>
+            {(() => {
+              const accionEligiendo = acciones.find((x) => x.id === eleccionAccionId);
+              if (!accionEligiendo) return null;
+              return (
+                <>
+                  <AgentAvatar agente={mentorDe(accionEligiendo)} pose="reposando" size={56} className="mx-auto" />
+                  <h4 className="mt-3 text-base font-bold text-slate-800">
+                    {lang === 'en' ? 'How would you like help?' : 'Como quieres que te ayudemos?'}
+                  </h4>
+                  <p className="mt-1 text-sm text-slate-600">
+                    {lang === 'en'
+                      ? 'Chat now with the AI mentor, or book a FREE 30-minute session with a real mentor.'
+                      : 'Quieres ayuda de la IA o prefieres una asesoria gratuita de 30 minutos con un mentor?'}
+                  </p>
+                  <div className="mt-4 flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEleccionAccionId('');
+                        abrirTip(accionEligiendo);
+                      }}
+                      className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700"
+                    >
+                      {lang === 'en' ? 'AI help (chat)' : 'Ayuda de la IA (chat)'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEleccionAccionId('');
+                        router.push('/' + lang + '/agendar');
+                      }}
+                      className="rounded-lg border border-teal-600 px-4 py-2 text-sm font-semibold text-teal-700 hover:bg-teal-50"
+                    >
+                      {lang === 'en' ? 'Free 30-min mentor session' : 'Asesoria gratuita de 30 min con un mentor'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEleccionAccionId('')}
+                      className="mt-1 text-xs font-medium text-slate-500 hover:underline"
+                    >
+                      {lang === 'en' ? 'Cancel' : 'Cancelar'}
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      ) : null}
 
       {wizardOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setWizardOpen(false)}>
