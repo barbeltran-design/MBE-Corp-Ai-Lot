@@ -145,7 +145,15 @@ export default function ObjetivoPlanBuilder({ lang, objetivoId }: { lang: PlanLa
     );
   const removeAccion = (id: string) => setAcciones((prev) => prev.filter((a) => a.id !== id));
 
-  const mentorDe = (a: Accion): MentorId => (esMentorValido(a.mentor) ? a.mentor : 'Babel');
+  const mentorDe = (_a: Accion): MentorId => {
+    const p = (objetivo?.perspectiva || '').toLowerCase();
+    if (p.includes('financ')) return 'Fisnando';
+    if (p.includes('client')) return 'Karmetin';
+    if (p.includes('proceso')) return 'Atech';
+    if (p.includes('aprendiz')) return 'Babel';
+    if (p.includes('socioambient') || p.includes('ambient')) return 'Normau';
+    return 'Babel';
+  };
 
   const clasificarSiFalta = (a: Accion) => {
     if (a.mentor || a.descripcion.trim().length < 4) return;
