@@ -2,6 +2,7 @@
 import React from 'react';
 import Link from 'next/link';
 import AgentAvatar from '@/components/agentes/AgentAvatar';
+import { esMentorValido, type MentorId } from '@/lib/mentores';
 import {
   type PlanLang,
   type Estatus,
@@ -69,6 +70,12 @@ export default function ObjetivoPlanBuilder({ lang, objetivoId }: { lang: PlanLa
   const [wizardEntornoId, setWizardEntornoId] = React.useState('');
   const [wizardFdId, setWizardFdId] = React.useState('');
   const [wizardProyectoNombre, setWizardProyectoNombre] = React.useState('');
+  const [ayudaAccionId, setAyudaAccionId] = React.useState('');
+  const [ayudaModo, setAyudaModo] = React.useState<'tip' | 'chat'>('tip');
+  const [ayudaTip, setAyudaTip] = React.useState('');
+  const [ayudaHistorial, setAyudaHistorial] = React.useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
+  const [ayudaInput, setAyudaInput] = React.useState('');
+  const [ayudaCargando, setAyudaCargando] = React.useState(false);
 
   React.useEffect(() => {
     const plan = loadPlanAccion();
@@ -134,6 +141,88 @@ export default function ObjetivoPlanBuilder({ lang, objetivoId }: { lang: PlanLa
       })
     );
   const removeAccion = (id: string) => setAcciones((prev) => prev.filter((a) => a.id !== id));
+
+  const mentorDe = (a: Accion): MentorId => (esMentorValido(a.mentor) ? a.mentor : 'Babel');
+
+  const clasificarSiFalta = (a: Accion) => {
+    if (a.mentor || a.descripcion.trim().length < 4) return;
+    fetch('/api/babel/clasificar-mentor', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ descripcion: a.descripcion, language: lang }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (typeof d?.mentor === 'string' && d.mentor) updateAccion(a.id, { mentor: d.mentor });
+      })
+      .catch(() => {});
+  };
+
+  const cerrarAyuda = () => {
+    setAyudaAccionId('');
+    setAyudaTip('');
+    setAyudaHistorial([]);
+    setAyudaInput('');
+  };
+
+  const abrirTip = (a: Accion) => {
+    setAyudaAccionId(a.id);
+    setAyudaModo('tip');
+    setAyudaHistorial([]);
+    setAyudaTip('');
+    setAyudaCargando(true);
+    fetch('/api/mentores/ayuda', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mentor: mentorDe(a),
+        modo: 'tip',
+        language: lang,
+        accion: { descripcion: a.descripcion, entregable: a.entregable },
+      }),
+    })
+      .then((r) => r.json())
+      .then((d) => setAyudaTip(typeof d?.reply === 'string' ? d.reply : (d?.error || '')))
+      .catch(() => setAyudaTip(lang === 'en' ? 'Could not reach the mentor.' : 'No se pudo contactar al mentor.'))
+      .finally(() => setAyudaCargando(false));
+  };
+
+  const abrirChat = () => {
+    setAyudaModo('chat');
+    setAyudaHistorial([]);
+    setAyudaInput('');
+  };
+
+  const enviarMensajeChat = (a: Accion) => {
+    const texto = ayudaInput.trim();
+    if (!texto || ayudaCargando) return;
+    const historialNuevo = ayudaHistorial.concat([{ role: 'user' as const, content: texto }]);
+    setAyudaHistorial(historialNuevo);
+    setAyudaInput('');
+    setAyudaCargando(true);
+    fetch('/api/mentores/ayuda', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mentor: mentorDe(a),
+        modo: 'chat',
+        language: lang,
+        accion: { descripcion: a.descripcion, entregable: a.entregable },
+        mensajes: historialNuevo,
+      }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        const respuesta = typeof d?.reply === 'string' ? d.reply : d?.error || (lang === 'en' ? 'No response.' : 'Sin respuesta.');
+        setAyudaHistorial((prev) => prev.concat([{ role: 'assistant' as const, content: respuesta }]));
+      })
+      .catch(() => {
+        setAyudaHistorial((prev) =>
+          prev.concat([{ role: 'assistant' as const, content: lang === 'en' ? 'Could not reach the mentor.' : 'No se pudo contactar al mentor.' }])
+        );
+      })
+      .finally(() => setAyudaCargando(false));
+  };
 
   const crearAccionManual = () => {
     if (!wizardEntornoId) return;
@@ -212,6 +301,15 @@ export default function ObjetivoPlanBuilder({ lang, objetivoId }: { lang: PlanLa
           <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-[11px] font-medium text-blue-800">
             {proyectoNombre}
           </span>
+          <button
+            type="button"
+            onClick={() => abrirTip(a)}
+            title={lang === 'en' ? 'Ask ' + mentorDe(a) + ' for help with this action' : 'Pide ayuda a ' + mentorDe(a) + ' con esta accion'}
+            className="inline-flex items-center gap-1 rounded-full border border-teal-200 bg-white py-0.5 pl-0.5 pr-2 text-[11px] font-medium text-teal-700 hover:bg-teal-50"
+          >
+            <AgentAvatar agente={mentorDe(a)} pose="reposando" size={22} />
+            <span>?</span>
+          </button>
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
           <div className="sm:col-span-2">
@@ -220,6 +318,7 @@ export default function ObjetivoPlanBuilder({ lang, objetivoId }: { lang: PlanLa
               type="text"
               value={tr(a.descripcion)}
               onChange={(ev) => updateAccion(a.id, { descripcion: ev.target.value })}
+              onBlur={() => clasificarSiFalta(a)}
               placeholder={t.accionPlaceholder}
               className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
             />
@@ -362,6 +461,67 @@ export default function ObjetivoPlanBuilder({ lang, objetivoId }: { lang: PlanLa
             <p className="text-xs text-slate-400">{t.noPhone}</p>
           )}
         </div>
+        {ayudaAccionId === a.id ? (
+          <div className="mt-2 rounded-lg border border-teal-200 bg-teal-50 p-2">
+            <div className="mb-1 flex items-center justify-between">
+              <span className="flex items-center gap-1 text-xs font-semibold text-teal-800">
+                <AgentAvatar agente={mentorDe(a)} pose="reposando" size={18} />
+                {mentorDe(a)}
+              </span>
+              <div className="flex items-center gap-2 text-xs">
+                {ayudaModo === 'tip' ? (
+                  <button type="button" onClick={abrirChat} className="font-medium text-teal-700 hover:underline">
+                    {lang === 'en' ? 'Open chat' : 'Abrir chat'}
+                  </button>
+                ) : null}
+                <button type="button" onClick={cerrarAyuda} className="text-slate-500 hover:underline">
+                  {lang === 'en' ? 'Close' : 'Cerrar'}
+                </button>
+              </div>
+            </div>
+            {ayudaModo === 'tip' ? (
+              <p className="whitespace-pre-wrap text-xs text-slate-700">
+                {ayudaCargando ? (lang === 'en' ? 'Thinking...' : 'Pensando...') : ayudaTip}
+              </p>
+            ) : (
+              <div>
+                {ayudaHistorial.map((m, i) => (
+                  <p
+                    key={i}
+                    className={
+                      'mt-1 whitespace-pre-wrap text-xs ' + (m.role === 'user' ? 'font-medium text-slate-800' : 'text-slate-700')
+                    }
+                  >
+                    {m.content}
+                  </p>
+                ))}
+                {ayudaCargando ? (
+                  <p className="mt-1 text-xs text-slate-500">{lang === 'en' ? 'Thinking...' : 'Pensando...'}</p>
+                ) : null}
+                <div className="mt-2 flex gap-1">
+                  <input
+                    type="text"
+                    value={ayudaInput}
+                    onChange={(ev) => setAyudaInput(ev.target.value)}
+                    onKeyDown={(ev) => {
+                      if (ev.key === 'Enter') enviarMensajeChat(a);
+                    }}
+                    placeholder={lang === 'en' ? 'Ask a question...' : 'Escribe tu pregunta...'}
+                    className="flex-1 rounded border border-slate-300 px-2 py-1 text-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => enviarMensajeChat(a)}
+                    disabled={ayudaCargando}
+                    className="rounded bg-teal-600 px-2 py-1 text-xs font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+                  >
+                    {lang === 'en' ? 'Send' : 'Enviar'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : null}
       </div>
     );
   };

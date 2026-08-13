@@ -1,0 +1,669 @@
+diff --git a/src/app/api/babel/clasificar-mentor/route.ts b/src/app/api/babel/clasificar-mentor/route.ts
+new file mode 100644
+index 0000000..3a1bc2b
+--- /dev/null
++++ b/src/app/api/babel/clasificar-mentor/route.ts
+@@ -0,0 +1,50 @@
++import { NextRequest, NextResponse } from 'next/server';
++import { callMentorLLM, esMentorValido, matchMentorPorTexto, MentorId } from '@/lib/mentores';
++
++// ---------------------------------------------------------------------------
++// POST /api/babel/clasificar-mentor
++//
++// Identifica que mentor de IA (Babel, Karmetin, Normau, Fisnando, Atech)
++// es el mas adecuado para atender una accion del Plan de Accion, sea que
++// venga sugerida por IA o que el usuario la haya escrito manualmente.
++//
++// 1) Intenta primero el catalogo de src/lib/buenas-practicas.ts (fuente de
++//    verdad de las areas por accion).
++// 2) Si la accion no coincide con nada del catalogo, clasifica por contexto
++//    con una sola llamada corta a la IA.
++// 3) Si todo falla, regresa 'Babel' como respaldo seguro.
++// ---------------------------------------------------------------------------
++
++export async function POST(req: NextRequest) {
++  try {
++    const body = await req.json().catch(() => ({}));
++    const descripcion = typeof body.descripcion === 'string' ? body.descripcion.trim() : '';
++    const language = body.language === 'en' ? 'en' : 'es';
++
++    if (!descripcion) {
++      return NextResponse.json({ mentor: 'Babel', origen: 'vacio' });
++    }
++
++    const porCatalogo = matchMentorPorTexto(descripcion);
++    if (porCatalogo) {
++      return NextResponse.json({ mentor: porCatalogo, origen: 'catalogo' });
++    }
++
++    const prompt =
++      language === 'en'
++        ? `Read this business action and answer with EXACTLY ONE WORD and nothing else: which of these 5 mentors best fits it? Babel (Strategy/People/Culture), Karmetin (Marketing/Sales/Customer care), Normau (Compliance/Partnerships/ESG), Fisnando (Finance/Tax), Atech (Operations/Knowledge/Digital). Action: "${descripcion}"`
++        : `Lee esta accion de negocio y responde con EXACTAMENTE UNA PALABRA y nada mas: cual de estos 5 mentores le queda mejor? Babel (Rumbo Estrategico/Capital Humano/Cultura), Karmetin (Marketing/Ventas/Atencion a clientes), Normau (Cumplimiento Normativo/Alianzas/ESG), Fisnando (Finanzas/Fiscal), Atech (Operacion/Conocimiento/Digitalizacion). Accion: "${descripcion}"`;
++
++    const resultado = await callMentorLLM(prompt, [{ role: 'user', content: descripcion }], false);
++    const crudo = (resultado?.reply || '').trim();
++    const primeraPalabra = crudo.split(/\s+/)[0] || '';
++    const limpio = primeraPalabra.replace(/[^a-zA-Z]/g, '');
++    const candidato = limpio.charAt(0).toUpperCase() + limpio.slice(1).toLowerCase();
++    const mentor: MentorId = esMentorValido(candidato) ? candidato : 'Babel';
++
++    return NextResponse.json({ mentor, origen: resultado ? 'ia' : 'fallback' });
++  } catch (err) {
++    console.error('[clasificar-mentor] error:', err);
++    return NextResponse.json({ mentor: 'Babel', origen: 'error' });
++  }
++}
+diff --git a/src/app/api/mentores/ayuda/route.ts b/src/app/api/mentores/ayuda/route.ts
+new file mode 100644
+index 0000000..d2fe237
+--- /dev/null
++++ b/src/app/api/mentores/ayuda/route.ts
+@@ -0,0 +1,74 @@
++import { NextRequest, NextResponse } from 'next/server';
++import { buildMentorSystemPrompt, callMentorLLM, esMentorValido, MentorChatMessage } from '@/lib/mentores';
++
++// ---------------------------------------------------------------------------
++// POST /api/mentores/ayuda
++//
++// Modo tip: el mentor da un tip breve y accionable sobre UNA accion puntual
++//           del Plan de Accion (sin busqueda web).
++// Modo chat: conversacion abierta con el mentor, acotada SOLO al texto de esa
++//            accion (nunca al resto del plan). Busca en internet como
++//            implementarla y cierra con referencias breves cuando el
++//            proveedor lo permite (Gemini). Si el usuario pregunta de otra
++//            area, el mentor lo redirige al mentor correcto en vez de
++//            responder el.
++// ---------------------------------------------------------------------------
++
++export async function POST(req: NextRequest) {
++  try {
++    const body = await req.json().catch(() => ({}));
++    const language = body.language === 'en' ? 'en' : 'es';
++    const modo = body.modo === 'chat' ? 'chat' : 'tip';
++    const mentor = esMentorValido(body.mentor) ? body.mentor : 'Babel';
++
++    const accionRaw = body && typeof body === 'object' ? (body as { accion?: unknown }).accion : undefined;
++    const accionObj = accionRaw && typeof accionRaw === 'object' ? (accionRaw as Record<string, unknown>) : {};
++    const accion = {
++      descripcion: typeof accionObj.descripcion === 'string' ? accionObj.descripcion.trim() : '',
++      entregable: typeof accionObj.entregable === 'string' ? accionObj.entregable.trim() : '',
++    };
++
++    if (!accion.descripcion) {
++      return NextResponse.json(
++        { error: language === 'en' ? 'Missing action description.' : 'Falta la descripcion de la accion.' },
++        { status: 400 },
++      );
++    }
++
++    const mensajesEntrada: MentorChatMessage[] = Array.isArray(body.mensajes)
++      ? (body.mensajes as unknown[])
++          .filter((m): m is { role?: string; content: string } => {
++            return !!m && typeof m === 'object' && typeof (m as { content?: unknown }).content === 'string';
++          })
++          .slice(-10)
++          .map((m) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content }))
++      : [];
++
++    const systemPrompt = buildMentorSystemPrompt(mentor, language, modo, accion);
++
++    const mensajes: MentorChatMessage[] =
++      modo === 'tip'
++        ? [{ role: 'user', content: language === 'en' ? 'Give me the tip.' : 'Dame el tip.' }]
++        : mensajesEntrada.length > 0
++          ? mensajesEntrada
++          : [
++              {
++                role: 'user',
++                content: language === 'en' ? 'How do I implement this action?' : 'Como implemento esta accion?',
++              },
++            ];
++
++    const resultado = await callMentorLLM(systemPrompt, mensajes, modo === 'chat');
++    if (!resultado) {
++      return NextResponse.json(
++        { error: language === 'en' ? 'No AI provider responded. Try again in a moment.' : 'Ningun proveedor de IA respondio. Intenta de nuevo en un momento.' },
++        { status: 502 },
++      );
++    }
++
++    return NextResponse.json({ reply: resultado.reply, mentor, usedSearch: resultado.usedSearch });
++  } catch (err) {
++    console.error('[mentores/ayuda] error:', err);
++    return NextResponse.json({ error: 'Error interno.' }, { status: 500 });
++  }
++}
+diff --git a/src/components/babel/ObjetivoPlanBuilder.tsx b/src/components/babel/ObjetivoPlanBuilder.tsx
+index a7e6f59..12cae63 100644
+--- a/src/components/babel/ObjetivoPlanBuilder.tsx
++++ b/src/components/babel/ObjetivoPlanBuilder.tsx
+@@ -2,6 +2,7 @@
+ import React from 'react';
+ import Link from 'next/link';
+ import AgentAvatar from '@/components/agentes/AgentAvatar';
++import { esMentorValido, type MentorId } from '@/lib/mentores';
+ import {
+   type PlanLang,
+   type Estatus,
+@@ -69,6 +70,12 @@ export default function ObjetivoPlanBuilder({ lang, objetivoId }: { lang: PlanLa
+   const [wizardEntornoId, setWizardEntornoId] = React.useState('');
+   const [wizardFdId, setWizardFdId] = React.useState('');
+   const [wizardProyectoNombre, setWizardProyectoNombre] = React.useState('');
++  const [ayudaAccionId, setAyudaAccionId] = React.useState('');
++  const [ayudaModo, setAyudaModo] = React.useState<'tip' | 'chat'>('tip');
++  const [ayudaTip, setAyudaTip] = React.useState('');
++  const [ayudaHistorial, setAyudaHistorial] = React.useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
++  const [ayudaInput, setAyudaInput] = React.useState('');
++  const [ayudaCargando, setAyudaCargando] = React.useState(false);
+ 
+   React.useEffect(() => {
+     const plan = loadPlanAccion();
+@@ -135,6 +142,88 @@ export default function ObjetivoPlanBuilder({ lang, objetivoId }: { lang: PlanLa
+     );
+   const removeAccion = (id: string) => setAcciones((prev) => prev.filter((a) => a.id !== id));
+ 
++  const mentorDe = (a: Accion): MentorId => (esMentorValido(a.mentor) ? a.mentor : 'Babel');
++
++  const clasificarSiFalta = (a: Accion) => {
++    if (a.mentor || a.descripcion.trim().length < 4) return;
++    fetch('/api/babel/clasificar-mentor', {
++      method: 'POST',
++      headers: { 'Content-Type': 'application/json' },
++      body: JSON.stringify({ descripcion: a.descripcion, language: lang }),
++    })
++      .then((r) => r.json())
++      .then((d) => {
++        if (typeof d?.mentor === 'string' && d.mentor) updateAccion(a.id, { mentor: d.mentor });
++      })
++      .catch(() => {});
++  };
++
++  const cerrarAyuda = () => {
++    setAyudaAccionId('');
++    setAyudaTip('');
++    setAyudaHistorial([]);
++    setAyudaInput('');
++  };
++
++  const abrirTip = (a: Accion) => {
++    setAyudaAccionId(a.id);
++    setAyudaModo('tip');
++    setAyudaHistorial([]);
++    setAyudaTip('');
++    setAyudaCargando(true);
++    fetch('/api/mentores/ayuda', {
++      method: 'POST',
++      headers: { 'Content-Type': 'application/json' },
++      body: JSON.stringify({
++        mentor: mentorDe(a),
++        modo: 'tip',
++        language: lang,
++        accion: { descripcion: a.descripcion, entregable: a.entregable },
++      }),
++    })
++      .then((r) => r.json())
++      .then((d) => setAyudaTip(typeof d?.reply === 'string' ? d.reply : (d?.error || '')))
++      .catch(() => setAyudaTip(lang === 'en' ? 'Could not reach the mentor.' : 'No se pudo contactar al mentor.'))
++      .finally(() => setAyudaCargando(false));
++  };
++
++  const abrirChat = () => {
++    setAyudaModo('chat');
++    setAyudaHistorial([]);
++    setAyudaInput('');
++  };
++
++  const enviarMensajeChat = (a: Accion) => {
++    const texto = ayudaInput.trim();
++    if (!texto || ayudaCargando) return;
++    const historialNuevo = ayudaHistorial.concat([{ role: 'user' as const, content: texto }]);
++    setAyudaHistorial(historialNuevo);
++    setAyudaInput('');
++    setAyudaCargando(true);
++    fetch('/api/mentores/ayuda', {
++      method: 'POST',
++      headers: { 'Content-Type': 'application/json' },
++      body: JSON.stringify({
++        mentor: mentorDe(a),
++        modo: 'chat',
++        language: lang,
++        accion: { descripcion: a.descripcion, entregable: a.entregable },
++        mensajes: historialNuevo,
++      }),
++    })
++      .then((r) => r.json())
++      .then((d) => {
++        const respuesta = typeof d?.reply === 'string' ? d.reply : d?.error || (lang === 'en' ? 'No response.' : 'Sin respuesta.');
++        setAyudaHistorial((prev) => prev.concat([{ role: 'assistant' as const, content: respuesta }]));
++      })
++      .catch(() => {
++        setAyudaHistorial((prev) =>
++          prev.concat([{ role: 'assistant' as const, content: lang === 'en' ? 'Could not reach the mentor.' : 'No se pudo contactar al mentor.' }])
++        );
++      })
++      .finally(() => setAyudaCargando(false));
++  };
++
+   const crearAccionManual = () => {
+     if (!wizardEntornoId) return;
+     const fdId = wizardFdId;
+@@ -212,6 +301,15 @@ export default function ObjetivoPlanBuilder({ lang, objetivoId }: { lang: PlanLa
+           <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-[11px] font-medium text-blue-800">
+             {proyectoNombre}
+           </span>
++          <button
++            type="button"
++            onClick={() => abrirTip(a)}
++            title={lang === 'en' ? 'Ask ' + mentorDe(a) + ' for help with this action' : 'Pide ayuda a ' + mentorDe(a) + ' con esta accion'}
++            className="inline-flex items-center gap-1 rounded-full border border-teal-200 bg-white py-0.5 pl-0.5 pr-2 text-[11px] font-medium text-teal-700 hover:bg-teal-50"
++          >
++            <AgentAvatar agente={mentorDe(a)} pose="reposando" size={22} />
++            <span>?</span>
++          </button>
+         </div>
+         <div className="grid gap-2 sm:grid-cols-2">
+           <div className="sm:col-span-2">
+@@ -220,6 +318,7 @@ export default function ObjetivoPlanBuilder({ lang, objetivoId }: { lang: PlanLa
+               type="text"
+               value={tr(a.descripcion)}
+               onChange={(ev) => updateAccion(a.id, { descripcion: ev.target.value })}
++              onBlur={() => clasificarSiFalta(a)}
+               placeholder={t.accionPlaceholder}
+               className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+             />
+@@ -362,6 +461,67 @@ export default function ObjetivoPlanBuilder({ lang, objetivoId }: { lang: PlanLa
+             <p className="text-xs text-slate-400">{t.noPhone}</p>
+           )}
+         </div>
++        {ayudaAccionId === a.id ? (
++          <div className="mt-2 rounded-lg border border-teal-200 bg-teal-50 p-2">
++            <div className="mb-1 flex items-center justify-between">
++              <span className="flex items-center gap-1 text-xs font-semibold text-teal-800">
++                <AgentAvatar agente={mentorDe(a)} pose="reposando" size={18} />
++                {mentorDe(a)}
++              </span>
++              <div className="flex items-center gap-2 text-xs">
++                {ayudaModo === 'tip' ? (
++                  <button type="button" onClick={abrirChat} className="font-medium text-teal-700 hover:underline">
++                    {lang === 'en' ? 'Open chat' : 'Abrir chat'}
++                  </button>
++                ) : null}
++                <button type="button" onClick={cerrarAyuda} className="text-slate-500 hover:underline">
++                  {lang === 'en' ? 'Close' : 'Cerrar'}
++                </button>
++              </div>
++            </div>
++            {ayudaModo === 'tip' ? (
++              <p className="whitespace-pre-wrap text-xs text-slate-700">
++                {ayudaCargando ? (lang === 'en' ? 'Thinking...' : 'Pensando...') : ayudaTip}
++              </p>
++            ) : (
++              <div>
++                {ayudaHistorial.map((m, i) => (
++                  <p
++                    key={i}
++                    className={
++                      'mt-1 whitespace-pre-wrap text-xs ' + (m.role === 'user' ? 'font-medium text-slate-800' : 'text-slate-700')
++                    }
++                  >
++                    {m.content}
++                  </p>
++                ))}
++                {ayudaCargando ? (
++                  <p className="mt-1 text-xs text-slate-500">{lang === 'en' ? 'Thinking...' : 'Pensando...'}</p>
++                ) : null}
++                <div className="mt-2 flex gap-1">
++                  <input
++                    type="text"
++                    value={ayudaInput}
++                    onChange={(ev) => setAyudaInput(ev.target.value)}
++                    onKeyDown={(ev) => {
++                      if (ev.key === 'Enter') enviarMensajeChat(a);
++                    }}
++                    placeholder={lang === 'en' ? 'Ask a question...' : 'Escribe tu pregunta...'}
++                    className="flex-1 rounded border border-slate-300 px-2 py-1 text-xs"
++                  />
++                  <button
++                    type="button"
++                    onClick={() => enviarMensajeChat(a)}
++                    disabled={ayudaCargando}
++                    className="rounded bg-teal-600 px-2 py-1 text-xs font-medium text-white hover:bg-teal-700 disabled:opacity-50"
++                  >
++                    {lang === 'en' ? 'Send' : 'Enviar'}
++                  </button>
++                </div>
++              </div>
++            )}
++          </div>
++        ) : null}
+       </div>
+     );
+   };
+diff --git a/src/components/babel/PlanAccionBuilder.tsx b/src/components/babel/PlanAccionBuilder.tsx
+index 7828104..c282779 100644
+--- a/src/components/babel/PlanAccionBuilder.tsx
++++ b/src/components/babel/PlanAccionBuilder.tsx
+@@ -732,6 +732,30 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
+       }
+       if (nuevas.length > 0) {
+         setAcciones((prev) => prev.concat(nuevas));
++        // Identifica en paralelo, con base en el catalogo de buenas practicas
++        // (y contexto por IA si una accion no coincide con nada del
++        // catalogo), que mentor puede ayudar a implementar cada accion
++        // sugerida.
++        Promise.all(
++          nuevas.map((n) =>
++            fetch('/api/babel/clasificar-mentor', {
++              method: 'POST',
++              headers: { 'Content-Type': 'application/json' },
++              body: JSON.stringify({ descripcion: n.descripcion, language: lang }),
++            })
++              .then((r) => r.json())
++              .then((d) => ({ id: n.id, mentor: typeof d?.mentor === 'string' ? d.mentor : '' }))
++              .catch(() => ({ id: n.id, mentor: '' }))
++          )
++        ).then((resultados) => {
++          const porId: Record<string, string> = {};
++          resultados.forEach((r) => {
++            if (r.mentor) porId[r.id] = r.mentor;
++          });
++          if (Object.keys(porId).length > 0) {
++            setAcciones((prev) => prev.map((a) => (porId[a.id] ? Object.assign({}, a, { mentor: porId[a.id] }) : a)));
++          }
++        });
+       }
+     } finally {
+       setPasoGenerando(null);
+diff --git a/src/lib/mentores.ts b/src/lib/mentores.ts
+new file mode 100644
+index 0000000..28375c3
+--- /dev/null
++++ b/src/lib/mentores.ts
+@@ -0,0 +1,264 @@
++import { BUENAS_PRACTICAS } from './buenas-practicas';
++
++// ---------------------------------------------------------------------------
++// src/lib/mentores.ts
++//
++// Logica compartida para el sistema de "agente que puede ayudar con cada
++// accion" del Plan de Accion:
++//   - Los 5 mentores de IA (mismos ids que AgentAvatar.tsx).
++//   - Emparejamiento de una accion con un mentor usando el catalogo de
++//     BUENAS_PRACTICAS (src/lib/buenas-practicas.ts) como fuente principal.
++//   - Construccion del system prompt de cada mentor (modo tip / modo chat).
++//   - Llamada a los proveedores de IA en cascada (Gemini -> Groq ->
++//     OpenRouter -> DeepSeek), reutilizando las mismas variables de entorno
++//     que src/app/api/babel/route.ts. Solo Gemini soporta busqueda web
++//     nativa (Google Search grounding) en este stack; en los demas
++//     proveedores el mentor responde sin citar fuentes en vez de inventarlas.
++// ---------------------------------------------------------------------------
++
++export type MentorId = 'Babel' | 'Karmetin' | 'Normau' | 'Fisnando' | 'Atech';
++
++export const MENTOR_IDS: MentorId[] = ['Babel', 'Karmetin', 'Normau', 'Fisnando', 'Atech'];
++
++export function esMentorValido(valor: unknown): valor is MentorId {
++  return typeof valor === 'string' && (MENTOR_IDS as string[]).indexOf(valor) !== -1;
++}
++
++function normalizar(txt: string): string {
++  return txt
++    .toLowerCase()
++    .normalize('NFD')
++    .replace(/[\u0300-\u036f]/g, '');
++}
++
++// Empareja el texto de una accion contra el catalogo de Buenas Practicas por
++// coincidencia de palabras del Tema/Practica. Devuelve null si no hay
++// coincidencia clara (el llamador debe usar clasificacion por IA como
++// respaldo, tal como pidio el usuario).
++export function matchMentorPorTexto(texto: string): MentorId | null {
++  const t = normalizar(texto || '');
++  if (!t) return null;
++  let mejorMentor: MentorId | null = null;
++  let mejorPuntos = 0;
++  BUENAS_PRACTICAS.forEach((bp) => {
++    if (!esMentorValido(bp.mentor)) return;
++    const palabras = normalizar(bp.tema + ' ' + bp.practica)
++      .split(/[^a-z0-9]+/)
++      .filter((w) => w.length > 3);
++    let puntos = 0;
++    palabras.forEach((w) => {
++      if (t.indexOf(w) !== -1) puntos = puntos + 1;
++    });
++    if (puntos > mejorPuntos) {
++      mejorPuntos = puntos;
++      mejorMentor = bp.mentor as MentorId;
++    }
++  });
++  return mejorMentor;
++}
++
++// ---------------------------------------------------------------------------
++// System prompts por mentor
++// ---------------------------------------------------------------------------
++
++interface AccionContexto {
++  descripcion: string;
++  entregable?: string;
++}
++
++const PERSONAS: Record<MentorId, { es: string; en: string }> = {
++  Babel: {
++    es: 'Eres Babel, mentor de Rumbo Estrategico, Capital Humano y Cultura Organizacional. Eres inteligente y te importa genuinamente ayudar.',
++    en: 'You are Babel, mentor for Strategic Direction, Human Capital and Organizational Culture. You are smart and genuinely care about helping.',
++  },
++  Karmetin: {
++    es: 'Eres Karmetin, mentora de Marketing y Ventas, y Atencion al Cliente. Eres creativa y servicial.',
++    en: 'You are Karmetin, mentor for Marketing and Sales, and Customer Care. You are creative and service-minded.',
++  },
++  Normau: {
++    es: 'Eres Normau, mentor de Cumplimiento Normativo, Alianzas y Enfoque Socioambiental. Eres responsable y te preocupas por la gente.',
++    en: 'You are Normau, mentor for Regulatory Compliance, Partnerships and Social-Environmental Focus. You are responsible and care about people.',
++  },
++  Fisnando: {
++    es: 'Eres Fisnando, mentor de Finanzas y temas Fiscales. Eres ambicioso y cumplido.',
++    en: 'You are Fisnando, mentor for Finance and Tax matters. You are ambitious and reliable.',
++  },
++  Atech: {
++    es: 'Eres Atech, mentor de Operacion, Conocimiento y Digitalizacion. Eres geek y muy estructurado.',
++    en: 'You are Atech, mentor for Operations, Knowledge and Digitalization. You are a structured geek.',
++  },
++};
++
++const AREAS_MENTOR: Record<MentorId, { es: string; en: string }> = {
++  Babel: { es: 'Rumbo Estrategico, Capital Humano y Cultura', en: 'Strategy, People and Culture' },
++  Karmetin: { es: 'Marketing, Ventas y Atencion al Cliente', en: 'Marketing, Sales and Customer Care' },
++  Normau: { es: 'Cumplimiento Normativo, Alianzas y Enfoque Socioambiental', en: 'Compliance, Partnerships and ESG' },
++  Fisnando: { es: 'Finanzas y Fiscal', en: 'Finance and Tax' },
++  Atech: { es: 'Operacion, Conocimiento y Digitalizacion', en: 'Operations, Knowledge and Digital' },
++};
++
++// El agente solo conoce el texto de ESTA accion puntual (nunca el plan
++// completo), solo responde de ese tema y temas relacionados, y si el
++// usuario pregunta algo de otra area lo redirige al mentor correcto.
++export function buildMentorSystemPrompt(
++  mentor: MentorId,
++  language: 'es' | 'en',
++  modo: 'tip' | 'chat',
++  accion: AccionContexto,
++): string {
++  const persona = PERSONAS[mentor][language];
++  const otros = MENTOR_IDS.filter((m) => m !== mentor)
++    .map((m) => `${m} (${AREAS_MENTOR[m][language]})`)
++    .join(', ');
++
++  if (language === 'en') {
++    const alcance =
++      `Your ONLY context is this action: "${accion.descripcion}"` +
++      (accion.entregable ? ` (deliverable: "${accion.entregable}")` : '') +
++      `. Only answer about this specific topic and closely related topics — never the rest of the action plan. ` +
++      `If the user asks about a different area, answer in ONE line that it should be discussed with ${otros}, and do not develop that topic yourself.`;
++    if (modo === 'tip') {
++      return `${persona}\n${alcance}\nGive exactly ONE short, concrete, actionable tip (max 4 lines, no markdown headers, no lists) to help implement this action. No web search needed for this quick tip.`;
++    }
++    return (
++      `${persona}\n${alcance}\n` +
++      `Chat mode: search the internet for how to implement this action, then answer briefly (max 5-6 lines). ` +
++      `Close with 1-3 references in the exact format "Source: [title] — [URL]". ` +
++      `Never invent a source — if you find nothing reliable, say so plainly and give your best recommendation without citing.`
++    );
++  }
++
++  const alcance =
++    `Tu UNICO contexto es esta accion: "${accion.descripcion}"` +
++    (accion.entregable ? ` (entregable: "${accion.entregable}")` : '') +
++    `. Solo respondes sobre este tema puntual y temas directamente relacionados — nunca sobre el resto del plan de accion. ` +
++    `Si el usuario pregunta algo de otra area, responde en UNA linea que lo consulte con ${otros}, y no desarrolles tu ese tema.`;
++  if (modo === 'tip') {
++    return `${persona}\n${alcance}\nDa EXACTAMENTE UN tip breve, concreto y accionable (maximo 4 lineas, sin encabezados markdown, sin listas) para ayudar a implementar esta accion. No necesitas buscar en internet para este tip rapido.`;
++  }
++  return (
++    `${persona}\n${alcance}\n` +
++    `Modo chat: busca en internet como implementar esta accion y responde breve (maximo 5-6 lineas). ` +
++    `Cierra con 1-3 referencias en el formato exacto "Fuente: [titulo] — [URL]". ` +
++    `Nunca inventes una fuente — si no encuentras nada confiable, dilo claramente y da tu mejor recomendacion sin citar.`
++  );
++}
++
++// ---------------------------------------------------------------------------
++// Proveedores de IA en cascada (misma logica que src/app/api/babel/route.ts)
++// ---------------------------------------------------------------------------
++
++const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
++const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
++
++const FALLBACK_ENDPOINT = process.env.FALLBACK_ENDPOINT || 'https://api.groq.com/openai/v1/chat/completions';
++const FALLBACK_MODEL = process.env.FALLBACK_MODEL || 'llama-3.3-70b-versatile';
++
++const TERTIARY_ENDPOINT = process.env.TERTIARY_ENDPOINT || 'https://openrouter.ai/api/v1/chat/completions';
++const TERTIARY_MODEL = process.env.TERTIARY_MODEL || 'openai/gpt-oss-20b:free';
++
++const DEEPSEEK_ENDPOINT = process.env.DEEPSEEK_ENDPOINT || 'https://api.deepseek.com/chat/completions';
++const DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
++
++export interface MentorChatMessage {
++  role: 'user' | 'assistant';
++  content: string;
++}
++
++interface MentorLLMResult {
++  reply: string;
++  usedSearch: boolean;
++}
++
++async function tryGeminiMentor(
++  systemPrompt: string,
++  mensajes: MentorChatMessage[],
++  allowSearch: boolean,
++): Promise<MentorLLMResult | null> {
++  const apiKey = process.env.GEMINI_API_KEY;
++  if (!apiKey) return null;
++  const contents = mensajes.map((m) => ({
++    role: m.role === 'assistant' ? 'model' : 'user',
++    parts: [{ text: m.content }],
++  }));
++  try {
++    const body: Record<string, unknown> = {
++      systemInstruction: { parts: [{ text: systemPrompt }] },
++      contents,
++      generationConfig: { temperature: 0.5, maxOutputTokens: 1024 },
++    };
++    if (allowSearch) body.tools = [{ googleSearch: {} }];
++    const res = await fetch(GEMINI_ENDPOINT, {
++      method: 'POST',
++      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
++      body: JSON.stringify(body),
++    });
++    if (!res.ok) {
++      console.error('[mentores] Gemini error', res.status, (await res.text()).slice(0, 200));
++      return null;
++    }
++    const data = await res.json();
++    const text =
++      data?.candidates?.[0]?.content?.parts
++        ?.map((p: { text?: string }) => p.text ?? '')
++        .join('') ?? '';
++    if (!text) return null;
++    return { reply: text, usedSearch: allowSearch };
++  } catch (err) {
++    console.error('[mentores] Gemini fetch exception:', err);
++    return null;
++  }
++}
++
++async function tryOpenAICompatibleMentor(
++  systemPrompt: string,
++  mensajes: MentorChatMessage[],
++  endpoint: string,
++  model: string,
++  apiKey: string | undefined,
++  label: string,
++): Promise<MentorLLMResult | null> {
++  if (!apiKey) return null;
++  const msgs = [{ role: 'system', content: systemPrompt }, ...mensajes.map((m) => ({ role: m.role, content: m.content }))];
++  try {
++    const res = await fetch(endpoint, {
++      method: 'POST',
++      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
++      body: JSON.stringify({ model, messages: msgs, temperature: 0.5, max_tokens: 1024 }),
++    });
++    if (!res.ok) {
++      console.error(`[mentores] ${label} error`, res.status, (await res.text()).slice(0, 200));
++      return null;
++    }
++    const data = await res.json();
++    const text = data?.choices?.[0]?.message?.content ?? '';
++    if (!text) return null;
++    return { reply: text, usedSearch: false };
++  } catch (err) {
++    console.error(`[mentores] ${label} fetch exception:`, err);
++    return null;
++  }
++}
++
++// Intenta los proveedores en cascada. Solo Gemini soporta busqueda web real
++// (allowSearch); en el resto se ignora y el mentor responde sin citas en vez
++// de inventarlas (asi lo indica el propio system prompt).
++export async function callMentorLLM(
++  systemPrompt: string,
++  mensajes: MentorChatMessage[],
++  allowSearch: boolean,
++): Promise<MentorLLMResult | null> {
++  const r1 = await tryGeminiMentor(systemPrompt, mensajes, allowSearch);
++  if (r1) return r1;
++
++  const r2 = await tryOpenAICompatibleMentor(systemPrompt, mensajes, FALLBACK_ENDPOINT, FALLBACK_MODEL, process.env.FALLBACK_API_KEY, 'Groq');
++  if (r2) return r2;
++
++  const r3 = await tryOpenAICompatibleMentor(systemPrompt, mensajes, TERTIARY_ENDPOINT, TERTIARY_MODEL, process.env.TERTIARY_API_KEY, 'OpenRouter');
++  if (r3) return r3;
++
++  const r4 = await tryOpenAICompatibleMentor(systemPrompt, mensajes, DEEPSEEK_ENDPOINT, DEEPSEEK_MODEL, process.env.DEEPSEEK_API_KEY, 'DeepSeek');
++  if (r4) return r4;
++
++  return null;
++}
+diff --git a/src/lib/plan-accion.ts b/src/lib/plan-accion.ts
+index 6d0f9c0..3cf0b68 100644
+--- a/src/lib/plan-accion.ts
++++ b/src/lib/plan-accion.ts
+@@ -25,6 +25,9 @@ export type Accion = {
+   fecha: string;
+   estatus: Estatus;
+   validado: boolean;
++  // Mentor de IA sugerido para ayudar a implementar esta accion (Babel,
++  // Karmetin, Normau, Fisnando o Atech). Vacio = aun no clasificada.
++  mentor?: string;
+ };
+ export type Contacto = { id: string; nombre: string; celular: string; correo: string; roleKeys: string[] };
+ export type OrgAssignments = Record<string, { person: string }>;
+@@ -234,6 +237,7 @@ export function newAccion(proyectoId: string, rank: number): Accion {
+     fecha: suggestedDate(rank),
+     estatus: 'pendiente',
+     validado: false,
++    mentor: '',
+   };
+ }
+ 

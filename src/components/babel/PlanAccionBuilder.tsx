@@ -732,6 +732,30 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       }
       if (nuevas.length > 0) {
         setAcciones((prev) => prev.concat(nuevas));
+        // Identifica en paralelo, con base en el catalogo de buenas practicas
+        // (y contexto por IA si una accion no coincide con nada del
+        // catalogo), que mentor puede ayudar a implementar cada accion
+        // sugerida.
+        Promise.all(
+          nuevas.map((n) =>
+            fetch('/api/babel/clasificar-mentor', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ descripcion: n.descripcion, language: lang }),
+            })
+              .then((r) => r.json())
+              .then((d) => ({ id: n.id, mentor: typeof d?.mentor === 'string' ? d.mentor : '' }))
+              .catch(() => ({ id: n.id, mentor: '' }))
+          )
+        ).then((resultados) => {
+          const porId: Record<string, string> = {};
+          resultados.forEach((r) => {
+            if (r.mentor) porId[r.id] = r.mentor;
+          });
+          if (Object.keys(porId).length > 0) {
+            setAcciones((prev) => prev.map((a) => (porId[a.id] ? Object.assign({}, a, { mentor: porId[a.id] }) : a)));
+          }
+        });
       }
     } finally {
       setPasoGenerando(null);

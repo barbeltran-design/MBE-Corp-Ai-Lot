@@ -25,6 +25,9 @@ export type Accion = {
   fecha: string;
   estatus: Estatus;
   validado: boolean;
+  // Mentor de IA sugerido para ayudar a implementar esta accion (Babel,
+  // Karmetin, Normau, Fisnando o Atech). Vacio = aun no clasificada.
+  mentor?: string;
 };
 export type Contacto = { id: string; nombre: string; celular: string; correo: string; roleKeys: string[] };
 export type OrgAssignments = Record<string, { person: string }>;
@@ -234,6 +237,7 @@ export function newAccion(proyectoId: string, rank: number): Accion {
     fecha: suggestedDate(rank),
     estatus: 'pendiente',
     validado: false,
+    mentor: '',
   };
 }
 
