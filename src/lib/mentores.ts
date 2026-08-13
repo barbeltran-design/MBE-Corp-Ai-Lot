@@ -57,6 +57,26 @@ export function matchMentorPorTexto(texto: string): MentorId | null {
   return mejorMentor;
 }
 
+// Mapea la perspectiva del Balanced Scorecard del objetivo (ver PERSPECTIVAS
+// en src/lib/plan-accion.ts) al mentor que le corresponde. Se usa como
+// segundo respaldo cuando el catalogo de Buenas Practicas no encuentra
+// coincidencia: Financieros -> Fisnando, Clientes -> Karmetin, Procesos ->
+// Atech, Aprendizaje -> Babel, Socioambientales -> Normau.
+export const PERSPECTIVA_MENTOR: Record<string, MentorId> = {
+  financiera: 'Fisnando',
+  clientes: 'Karmetin',
+  procesos_internos: 'Atech',
+  aprendizaje_crecimiento: 'Babel',
+  socioambiental: 'Normau',
+};
+
+export function mentorPorPerspectiva(perspectiva: string): MentorId | null {
+  const key = (perspectiva || '').trim();
+  if (!key) return null;
+  const mentor = PERSPECTIVA_MENTOR[key];
+  return mentor || null;
+}
+
 // ---------------------------------------------------------------------------
 // System prompts por mentor
 // ---------------------------------------------------------------------------

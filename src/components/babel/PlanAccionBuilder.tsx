@@ -674,6 +674,24 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
     }
   };
 
+  // Busca la perspectiva del Balanced Scorecard del objetivo vinculado a
+  // esta Fortaleza/Debilidad (via sus Amenazas/Oportunidades), para usarla
+  // como respaldo al clasificar el mentor de una accion nueva cuando el
+  // catalogo de buenas practicas no encuentra coincidencia.
+  const perspectivaDeFd = (fdId: string): string => {
+    const fd = fds.find((f) => f.id === fdId);
+    if (!fd) return '';
+    for (let i = 0; i < fd.entornoIds.length; i++) {
+      const entorno = entornos.find((e) => e.id === fd.entornoIds[i]);
+      if (!entorno) continue;
+      for (let j = 0; j < entorno.objetivoIds.length; j++) {
+        const obj = objetivos.find((o) => o.id === entorno.objetivoIds[j]);
+        if (obj && obj.perspectiva) return obj.perspectiva;
+      }
+    }
+    return '';
+  };
+
   const sugerirAccionesPlanConIA = async () => {
     if (pasoGenerando) return;
     if (fds.length === 0) {
@@ -709,6 +727,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       });
       const nuevosProyectos: Proyecto[] = [];
       const nuevas: Accion[] = [];
+      const fdPorAccionId: Record<string, string> = {};
       (data.sugerencias as RawAccionIA[]).forEach((raw) => {
         const fdId = (raw.fdId || '').trim();
         const descripcion = (raw.descripcion || '').trim();
@@ -726,6 +745,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
         nueva.descripcion = descripcion;
         nueva.entregable = (raw.entregable || '').trim();
         nuevas.push(nueva);
+        fdPorAccionId[nueva.id] = fdId;
       });
       if (nuevosProyectos.length > 0) {
         setProyectos((prev) => prev.concat(nuevosProyectos));
@@ -733,15 +753,19 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       if (nuevas.length > 0) {
         setAcciones((prev) => prev.concat(nuevas));
         // Identifica en paralelo, con base en el catalogo de buenas practicas
-        // (y contexto por IA si una accion no coincide con nada del
-        // catalogo), que mentor puede ayudar a implementar cada accion
-        // sugerida.
+        // (y, si no hay coincidencia, la perspectiva del Balanced Scorecard
+        // del objetivo asociado, y como ultimo recurso contexto por IA), que
+        // mentor puede ayudar a implementar cada accion sugerida.
         Promise.all(
           nuevas.map((n) =>
             fetch('/api/babel/clasificar-mentor', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ descripcion: n.descripcion, language: lang }),
+              body: JSON.stringify({
+                descripcion: n.descripcion,
+                language: lang,
+                perspectiva: perspectivaDeFd(fdPorAccionId[n.id] || ''),
+              }),
             })
               .then((r) => r.json())
               .then((d) => ({ id: n.id, mentor: typeof d?.mentor === 'string' ? d.mentor : '' }))

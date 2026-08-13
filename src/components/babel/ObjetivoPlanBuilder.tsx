@@ -149,7 +149,7 @@ export default function ObjetivoPlanBuilder({ lang, objetivoId }: { lang: PlanLa
     fetch('/api/babel/clasificar-mentor', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ descripcion: a.descripcion, language: lang }),
+      body: JSON.stringify({ descripcion: a.descripcion, language: lang, perspectiva: objetivo?.perspectiva || '' }),
     })
       .then((r) => r.json())
       .then((d) => {
@@ -305,10 +305,12 @@ export default function ObjetivoPlanBuilder({ lang, objetivoId }: { lang: PlanLa
             type="button"
             onClick={() => abrirTip(a)}
             title={lang === 'en' ? 'Ask ' + mentorDe(a) + ' for help with this action' : 'Pide ayuda a ' + mentorDe(a) + ' con esta accion'}
-            className="inline-flex items-center gap-1 rounded-full border border-teal-200 bg-white py-0.5 pl-0.5 pr-2 text-[11px] font-medium text-teal-700 hover:bg-teal-50"
+            className="group inline-flex items-center gap-1.5 rounded-full border-2 border-teal-300 bg-white py-1 pl-1 pr-3 shadow-sm ring-2 ring-teal-100 transition hover:border-teal-400 hover:shadow-md"
           >
-            <AgentAvatar agente={mentorDe(a)} pose="reposando" size={22} />
-            <span>?</span>
+            <AgentAvatar agente={mentorDe(a)} pose="reposando" size={40} />
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-teal-600 text-xs font-bold text-white animate-pulse group-hover:animate-none">
+              ?
+            </span>
           </button>
         </div>
         <div className="grid gap-2 sm:grid-cols-2">

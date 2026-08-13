@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { callMentorLLM, esMentorValido, matchMentorPorTexto, MentorId } from '@/lib/mentores';
+import { callMentorLLM, esMentorValido, matchMentorPorTexto, mentorPorPerspectiva, MentorId } from '@/lib/mentores';
 
 // ---------------------------------------------------------------------------
 // POST /api/babel/clasificar-mentor
@@ -10,15 +10,20 @@ import { callMentorLLM, esMentorValido, matchMentorPorTexto, MentorId } from '@/
 //
 // 1) Intenta primero el catalogo de src/lib/buenas-practicas.ts (fuente de
 //    verdad de las areas por accion).
-// 2) Si la accion no coincide con nada del catalogo, clasifica por contexto
-//    con una sola llamada corta a la IA.
-// 3) Si todo falla, regresa 'Babel' como respaldo seguro.
+// 2) Si la accion no coincide con nada del catalogo, y se conoce la
+//    perspectiva del Balanced Scorecard del objetivo, asigna el mentor por
+//    perspectiva (Financieros->Fisnando, Clientes->Karmetin,
+//    Procesos->Atech, Aprendizaje->Babel, Socioambientales->Normau).
+// 3) Si tampoco hay perspectiva conocida, clasifica por contexto con una
+//    sola llamada corta a la IA.
+// 4) Si todo falla, regresa 'Babel' como respaldo seguro.
 // ---------------------------------------------------------------------------
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     const descripcion = typeof body.descripcion === 'string' ? body.descripcion.trim() : '';
+    const perspectiva = typeof body.perspectiva === 'string' ? body.perspectiva.trim() : '';
     const language = body.language === 'en' ? 'en' : 'es';
 
     if (!descripcion) {
@@ -28,6 +33,11 @@ export async function POST(req: NextRequest) {
     const porCatalogo = matchMentorPorTexto(descripcion);
     if (porCatalogo) {
       return NextResponse.json({ mentor: porCatalogo, origen: 'catalogo' });
+    }
+
+    const porPerspectiva = mentorPorPerspectiva(perspectiva);
+    if (porPerspectiva) {
+      return NextResponse.json({ mentor: porPerspectiva, origen: 'perspectiva' });
     }
 
     const prompt =
