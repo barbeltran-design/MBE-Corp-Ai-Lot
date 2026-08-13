@@ -1,0 +1,1303 @@
+diff --git a/src/app/[locale]/admin/page.tsx b/src/app/[locale]/admin/page.tsx
+index e0472ea..37d358b 100644
+--- a/src/app/[locale]/admin/page.tsx
++++ b/src/app/[locale]/admin/page.tsx
+@@ -93,6 +93,8 @@ interface UserRow {
+   totalMaturity?: number | null;
+   subscription?: string;
+   planStatus?: string;
++  accesoManualPremium?: boolean;
++  totalInvertido?: number;
+   actividad?: { assessments?: number; sesionesBabel?: number; pagos?: number };
+ }
+ 
+@@ -119,6 +121,7 @@ export default function AdminPage() {
+   const [selRoles, setSelRoles] = React.useState<string[]>([]);
+   const [selTemas, setSelTemas] = React.useState<string[]>([]);
+   const [selCert, setSelCert] = React.useState(false);
++  const [selAccesoPremium, setSelAccesoPremium] = React.useState(false);
+   const [rolesMsg, setRolesMsg] = React.useState('');
+ 
+   // Pagos
+@@ -223,7 +226,7 @@ export default function AdminPage() {
+     const res = await fetch('/api/admin/users', {
+       method: 'POST',
+       headers: { ...headers, 'Content-Type': 'application/json' },
+-      body: JSON.stringify({ uid: selUid, roles: selRoles, especialistaTemas: selTemas, certificado: selCert }),
++      body: JSON.stringify({ uid: selUid, roles: selRoles, especialistaTemas: selTemas, certificado: selCert, accesoManualPremium: selAccesoPremium }),
+     });
+     if (!res.ok) {
+       setRolesMsg(t('No se pudieron guardar los roles.', 'Could not save roles.'));
+@@ -345,6 +348,7 @@ export default function AdminPage() {
+                     <th className="px-3 py-2 font-medium">{t('Madurez', 'Maturity')}</th>
+                     <th className="px-3 py-2 font-medium">{t('Actividad', 'Activity')}</th>
+                     <th className="px-3 py-2 font-medium">{t('Plan', 'Plan')}</th>
++                    <th className="px-3 py-2 font-medium">{t('Invertido', 'Invested')}</th>
+                     <th className="px-3 py-2" />
+                   </tr>
+                 </thead>
+@@ -377,10 +381,17 @@ export default function AdminPage() {
+                       <td className="px-3 py-2 text-xs text-muted-foreground">
+                         {u.subscription === 'pro' && u.planStatus === 'active' ? (
+                           <span className="text-emerald-700">{t('Pro activo', 'Pro active')}</span>
++                        ) : u.accesoManualPremium ? (
++                          <span className="text-teal-700">{t('Acceso manual', 'Manual access')}</span>
+                         ) : (
+                           <span>{u.subscription || 'free'}</span>
+                         )}
+                       </td>
++                      <td className="px-3 py-2 text-xs text-muted-foreground">
++                        {typeof u.totalInvertido === 'number' && u.totalInvertido > 0
++                          ? `$${u.totalInvertido.toLocaleString('es-MX')} MXN`
++                          : '—'}
++                      </td>
+                       <td className="px-3 py-2">
+                         <Button
+                           type="button"
+@@ -391,6 +402,7 @@ export default function AdminPage() {
+                             setSelRoles(Array.isArray(u.roles) ? u.roles : []);
+                             setSelTemas(Array.isArray(u.especialistaTemas) ? u.especialistaTemas : []);
+                             setSelCert(u.certificado === true);
++                            setSelAccesoPremium(u.accesoManualPremium === true);
+                           }}
+                         >
+                           {t('Asignar roles', 'Assign roles')}
+@@ -477,6 +489,29 @@ export default function AdminPage() {
+                       {selCert ? '✓ ' + t('Certificado', 'Certified') : t('Sin certificación', 'Not certified')}
+                     </button>
+                   </div>
++                  <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
++                    <div>
++                      <p className="text-sm font-medium text-foreground">{t('Acceso a Mundos Premium', 'Premium Worlds access')}</p>
++                      <p className="text-xs text-muted-foreground">
++                        {t(
++                          'Otorga acceso a los Mundos Premium sin necesidad de que el usuario haya pagado el plan. Los administradores siempre tienen acceso.',
++                          'Grants access to the Premium Worlds without the user having paid for the plan. Admins always have access.'
++                        )}
++                      </p>
++                    </div>
++                    <button
++                      type="button"
++                      onClick={() => setSelAccesoPremium((prev) => !prev)}
++                      className={
++                        'inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold transition-colors ' +
++                        (selAccesoPremium
++                          ? 'border-teal-500 bg-teal-500/10 text-teal-700 dark:text-teal-300'
++                          : 'border-slate-300 text-muted-foreground hover:border-teal-400 dark:border-slate-600')
++                      }
++                    >
++                      {selAccesoPremium ? '✓ ' + t('Acceso otorgado', 'Access granted') : t('Sin acceso manual', 'No manual access')}
++                    </button>
++                  </div>
+                   {rolesMsg && <p className="text-sm text-emerald-700">{rolesMsg}</p>}
+                   <div className="flex gap-2">
+                     <Button type="button" onClick={saveRoles}>
+diff --git a/src/app/[locale]/page.tsx b/src/app/[locale]/page.tsx
+index 6d4ecb9..144438c 100644
+--- a/src/app/[locale]/page.tsx
++++ b/src/app/[locale]/page.tsx
+@@ -2,6 +2,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
+ import { Hero } from '@/components/landing/hero';
+ import { RegisterForm } from '@/components/landing/register-form';
+ import { LanguageSwitcher } from '@/components/landing/language-switcher';
++import { AgentsPreview } from '@/components/landing/agents-preview';
+ 
+ export default async function LandingPage({ params }: { params: Promise<{ locale: string }> }) {
+   const { locale } = await params;
+@@ -9,6 +10,7 @@ export default async function LandingPage({ params }: { params: Promise<{ locale
+ 
+   const tCommon = await getTranslations('common');
+   const tFooter = await getTranslations('footer');
++  const tNav = await getTranslations('landing.nav');
+ 
+   return (
+     <main className="min-h-screen bg-gradient-to-b from-emerald-50/40 to-white">
+@@ -18,16 +20,28 @@ export default async function LandingPage({ params }: { params: Promise<{ locale
+           <img src="/logo-mbe.png" alt={tCommon('appName')} className="h-8 w-8 object-contain" />
+           <span className="text-lg font-semibold text-slate-900">{tCommon('appName')}</span>
+         </div>
++
++        <nav className="hidden items-center gap-6 text-sm font-medium text-slate-600 sm:flex">
++          <a href="#beneficios" className="transition-colors hover:text-slate-900">
++            {tNav('features')}
++          </a>
++          <a href="#agentes" className="transition-colors hover:text-slate-900">
++            {tNav('agents')}
++          </a>
++        </nav>
++
+         <LanguageSwitcher />
+       </header>
+ 
+-      <section className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-6 py-10 lg:grid-cols-2 lg:py-20">
++      <section id="beneficios" className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-6 py-10 lg:grid-cols-2 lg:py-20">
+         <Hero />
+         <div className="flex justify-center lg:justify-end">
+           <RegisterForm />
+         </div>
+       </section>
+ 
++      <AgentsPreview />
++
+       <footer className="mx-auto max-w-6xl px-6 py-10 text-center text-xs text-slate-400">
+         © {new Date().getFullYear()} {tCommon('appName')}. {tFooter('rights')}
+       </footer>
+diff --git a/src/app/[locale]/perfil/page.tsx b/src/app/[locale]/perfil/page.tsx
+index 18e1ea0..21b3340 100644
+--- a/src/app/[locale]/perfil/page.tsx
++++ b/src/app/[locale]/perfil/page.tsx
+@@ -67,6 +67,8 @@ function ProfilePageInner() {
+   const [website, setWebsite] = React.useState('');
+   const [language, setLanguage] = React.useState<Language>('es');
+   const [telefono, setTelefono] = React.useState('');
++  const [fechaNacimiento, setFechaNacimiento] = React.useState('');
++  const [certificado, setCertificado] = React.useState(false);
+ 
+   const [saving, setSaving] = React.useState(false);
+   const [savedMsg, setSavedMsg] = React.useState('');
+@@ -125,6 +127,8 @@ function ProfilePageInner() {
+           setCountry(data.country || 'MX');
+           setLanguage(data.language || 'es');
+           setTelefono((data.telefono as string) || '');
++          setFechaNacimiento((data.fechaNacimiento as string) || '');
++          setCertificado(data.certificado === true);
+           setPuntosClub(typeof data.puntosClub === 'number' ? data.puntosClub : 0);
+           setSemanasJunta(typeof data.semanasJunta === 'number' ? data.semanasJunta : 0);
+           setPrimerJuntaAt((data.primerJuntaAt as string) || '');
+@@ -199,6 +203,16 @@ function ProfilePageInner() {
+     }
+   }
+ 
++  async function handleSaveFechaNacimiento() {
++    if (!user) return;
++    try {
++      const db = getFirebaseDb();
++      await setDoc(doc(db, 'users', user.uid), { fechaNacimiento: fechaNacimiento || null }, { merge: true });
++    } catch (err) {
++      console.error('[perfil] fechaNacimiento save failed', err);
++    }
++  }
++
+   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+     if (!user) return;
+     const file = e.target.files && e.target.files[0];
+@@ -478,6 +492,42 @@ function ProfilePageInner() {
+                   {t('Se guarda automáticamente al salir del campo.', 'It is saved automatically when you leave the field.')}
+                 </p>
+               </div>
++              <div className="space-y-1">
++                <Label htmlFor="perfil-fecha-nacimiento">
++                  {t('Fecha de cumpleaños', 'Birthday')}
++                </Label>
++                <Input
++                  id="perfil-fecha-nacimiento"
++                  type="date"
++                  value={fechaNacimiento}
++                  onChange={(e) => setFechaNacimiento(e.target.value)}
++                  onBlur={handleSaveFechaNacimiento}
++                />
++                <p className="text-xs text-muted-foreground">
++                  {t(
++                    'Se usa para felicitarte en Comunidad el día de tu cumpleaños. Se guarda al salir del campo.',
++                    'Used to congratulate you in Community on your birthday. Saved automatically when you leave the field.'
++                  )}
++                </p>
++              </div>
++              <div className="space-y-1">
++                <Label>{t('Certificación MBE Corp', 'MBE Corp Certification')}</Label>
++                <div className="rounded-lg border border-glass-border bg-glass p-3 text-sm">
++                  {certificado ? (
++                    <span className="font-semibold text-emerald-700 dark:text-emerald-300">
++                      ✓ {t('Certificado', 'Certified')}
++                    </span>
++                  ) : (
++                    <span className="text-muted-foreground">{t('Sin certificación', 'Not certified')}</span>
++                  )}
++                </div>
++                <p className="text-xs text-muted-foreground">
++                  {t(
++                    'Este campo lo otorga un administrador de MBE Corp.',
++                    'This field is granted by an MBE Corp administrator.'
++                  )}
++                </p>
++              </div>
+               <div className="space-y-1">
+                 <Label htmlFor="perfil-nivel">
+                   {t('Nivel en la comunidad', 'Community level')}
+diff --git a/src/app/api/admin/users/route.ts b/src/app/api/admin/users/route.ts
+index 8b1d043..c6ec768 100644
+--- a/src/app/api/admin/users/route.ts
++++ b/src/app/api/admin/users/route.ts
+@@ -25,6 +25,13 @@ export async function GET(req: NextRequest) {
+           db.collection('pagos').where('uid', '==', uid).limit(50).get(),
+         ]);
+ 
++        // Suma de lo invertido: cada doc en `pagos` guarda `monto` (MXN, ver
++        // /api/webhooks/mercadopago). Se ignoran montos no numéricos.
++        const totalInvertido = pagosSnap.docs.reduce((acc, d) => {
++          const m = d.data().monto;
++          return acc + (typeof m === 'number' && Number.isFinite(m) ? m : 0);
++        }, 0);
++
+         return {
+           uid,
+           name: data.name ?? '',
+@@ -34,6 +41,8 @@ export async function GET(req: NextRequest) {
+           certificado: data.certificado === true,
+           subscription: data.subscription ?? 'free',
+           planStatus: data.planStatus ?? '',
++          accesoManualPremium: data.accesoManualPremium === true,
++          totalInvertido,
+           totalMaturity: typeof data.totalMaturity === 'number' ? data.totalMaturity : null,
+           assessmentCompleted: data.assessmentCompleted === true,
+           companyName: data.companyName ?? '',
+@@ -83,12 +92,18 @@ export async function POST(req: NextRequest) {
+       return NextResponse.json({ error: 'Faltan los roles.' }, { status: 400 });
+     }
+     const certificado = typeof body?.certificado === 'boolean' ? body.certificado : undefined;
++    const accesoManualPremium = typeof body?.accesoManualPremium === 'boolean' ? body.accesoManualPremium : undefined;
+ 
+     const patch: Record<string, unknown> = {
+       roles: roles.length ? roles : ['usuario'],
+       especialistaTemas: temas,
+     };
+     if (certificado !== undefined) patch.certificado = certificado;
++    if (accesoManualPremium !== undefined) {
++      patch.accesoManualPremium = accesoManualPremium;
++      patch.accesoManualPor = accesoManualPremium ? guard.uid : null;
++      patch.accesoManualAt = accesoManualPremium ? new Date().toISOString() : null;
++    }
+ 
+     await getAdminDb().collection('users').doc(uid).set(patch, { merge: true });
+     return NextResponse.json({ ok: true });
+diff --git a/src/app/api/club/route.ts b/src/app/api/club/route.ts
+index 2c83964..e7ba00e 100644
+--- a/src/app/api/club/route.ts
++++ b/src/app/api/club/route.ts
+@@ -14,6 +14,20 @@ import {
+   tematicaDeSemana,
+   type JuntaClubDoc,
+ } from '@/lib/club';
++import { nivelPorPuntos } from '@/lib/refplace';
++import { puedeCrearNoticias, nivelMinimoNoticiasInfo } from '@/lib/premium';
++
++interface NoticiaClubDoc {
++  titulo: string;
++  contenido: string;
++  autorUid: string;
++  autorNombre: string;
++  estatus: 'pendiente' | 'aprobada' | 'rechazada';
++  creadoEn: string;
++  aprobadoPor?: string;
++  aprobadoEn?: string;
++  motivoRechazo?: string;
++}
+ 
+ const ROLES_JUNTA_IDS = ['coordinador', 'mentor_dinamica', 'mentor_crecimiento', 'mentor_b2b', 'mentor_calidad'] as const;
+ 
+@@ -66,6 +80,8 @@ export async function GET(req: NextRequest) {
+ 
+   try {
+     const db = getAdminDb();
++    const userRoles = await readUserRoles(uid);
++    const esAdminFlag = esAdmin(userRoles);
+ 
+     const usersSnap = await db.collection('users').limit(400).get();
+     const users = new Map<string, Record<string, unknown>>();
+@@ -110,12 +126,48 @@ export async function GET(req: NextRequest) {
+ 
+     const yoRaw = (users.get(uid) as Record<string, unknown> | undefined) ?? {};
+     const yoPuntos = parseNum(yoRaw.puntosClub, 0);
++    const yoNivelComunidad = nivelPorPuntos(yoPuntos);
++    const yoCertificado = yoRaw.certificado === true;
++    const yoPuedeCrearNoticias =
++      esAdminFlag || puedeCrearNoticias({ roles: userRoles, nivelComunidad: yoNivelComunidad, certificado: yoCertificado });
+     const misRolesJunta = juntaActual
+       ? Object.entries(juntaActual.roles)
+           .filter(([, v]) => v && v.uid === uid)
+           .map(([k]) => k)
+       : [];
+ 
++    // --- Noticias de la comunidad (Junta semanal > Noticias) ---
++    const noticiasSnap = await db.collection('noticias_club').orderBy('creadoEn', 'desc').limit(80).get();
++    const todasNoticias = noticiasSnap.docs.map((d) => {
++      const nd = d.data() as Partial<NoticiaClubDoc>;
++      return {
++        id: d.id,
++        titulo: String(nd.titulo ?? ''),
++        contenido: String(nd.contenido ?? ''),
++        autorUid: String(nd.autorUid ?? ''),
++        autorNombre: String(nd.autorNombre ?? ''),
++        estatus: (nd.estatus as NoticiaClubDoc['estatus']) ?? 'pendiente',
++        creadoEn: String(nd.creadoEn ?? ''),
++        aprobadoPor: nd.aprobadoPor ? String(nd.aprobadoPor) : undefined,
++        aprobadoEn: nd.aprobadoEn ? String(nd.aprobadoEn) : undefined,
++        motivoRechazo: nd.motivoRechazo ? String(nd.motivoRechazo) : undefined,
++      };
++    });
++    const noticiasAprobadas = todasNoticias.filter((n) => n.estatus === 'aprobada');
++    const noticiasPendientes = esAdminFlag ? todasNoticias.filter((n) => n.estatus === 'pendiente') : [];
++
++    // --- Cumpleaños de hoy (a partir de users.fechaNacimiento, formato YYYY-MM-DD) ---
++    const hoyMesDia = (() => {
++      const d = new Date();
++      return `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
++    })();
++    const cumpleanosHoy = Array.from(users.entries())
++      .filter(([, u]) => {
++        const fn = typeof u.fechaNacimiento === 'string' ? u.fechaNacimiento : '';
++        return fn.length >= 10 && fn.slice(5, 10) === hoyMesDia;
++      })
++      .map(([id, u]) => ({ uid: id, nombre: String(u.name ?? '') || 'Miembro' }));
++
+     // --- Puntos de la semana (para el Mentor de Calidad) ---
+     const puntosSnap = await db
+       .collection('puntos_club')
+@@ -178,6 +230,9 @@ export async function GET(req: NextRequest) {
+         siguienteNivel: siguiente ? { id: siguiente.id, es: siguiente.es, en: siguiente.en } : null,
+         primerJuntaAt: String(yoRaw.primerJuntaAt ?? ''),
+         semanasJunta: parseNum(yoRaw.semanasJunta, 0),
++        certificado: yoCertificado,
++        nivelComunidad: yoNivelComunidad,
++        puedeCrearNoticias: yoPuedeCrearNoticias,
+       },
+       miembros: Array.from(users.entries())
+         .map(([id, u]) => ({
+@@ -203,6 +258,10 @@ export async function GET(req: NextRequest) {
+       catalogo: CATALOGO_PUNTOS.map((c) => ({ id: c.id, es: c.es, en: c.en, valor: c.valor })),
+       agendaEjemplo: AGENDA_JUNTA.es,
+       totalMinutosAgenda: AGENDA_JUNTA_TOTAL,
++      noticiasAprobadas,
++      noticiasPendientes,
++      cumpleanosHoy,
++      nivelMinimoNoticias: nivelMinimoNoticiasInfo(),
+     });
+   } catch (err) {
+     console.error('[club] GET error', err);
+@@ -220,6 +279,9 @@ export async function GET(req: NextRequest) {
+ //   otorgar-puntos   {juntaId, items: [{userId, categorias[]}]}  (admin o mentor_calidad)
+ //   ajustar-puntos   {userId, valor, nota?}                      (solo admin)
+ //   cerrar-junta     {juntaId}                                   (admin o coord.)
++//   crear-noticia    {titulo, contenido}                         (nivel Empresario Orquesta+, certificado, o admin)
++//   aprobar-noticia  {noticiaId}                                 (solo admin)
++//   rechazar-noticia {noticiaId, motivo?}                        (solo admin)
+ export async function POST(req: NextRequest) {
+   let uid: string;
+   try {
+@@ -487,6 +549,58 @@ export async function POST(req: NextRequest) {
+       return NextResponse.json({ ok: true });
+     }
+ 
++    if (accion === 'crear-noticia') {
++      const titulo = String(body?.titulo ?? '').trim();
++      const contenido = String(body?.contenido ?? '').trim();
++      if (!titulo || !contenido) return NextResponse.json({ error: 'Falta título o contenido.' }, { status: 400 });
++      if (titulo.length > 140) return NextResponse.json({ error: 'El título es demasiado largo (máx. 140 caracteres).' }, { status: 400 });
++      if (contenido.length > 4000) return NextResponse.json({ error: 'El contenido es demasiado largo (máx. 4000 caracteres).' }, { status: 400 });
++      const uData = (userSnap.exists ? userSnap.data() : {}) as Record<string, unknown>;
++      const nivelComunidad = nivelPorPuntos(parseNum(uData.puntosClub, 0));
++      const autorizado =
++        esAdminFlag || puedeCrearNoticias({ roles: userRoles, nivelComunidad, certificado: uData.certificado === true });
++      if (!autorizado) {
++        return NextResponse.json(
++          { error: 'Solo miembros con nivel Empresario Orquesta o superior, o con certificación MBE, pueden crear noticias.' },
++          { status: 403 }
++        );
++      }
++      const ref = await db.collection('noticias_club').add({
++        titulo,
++        contenido,
++        autorUid: uid,
++        autorNombre: userName || '',
++        estatus: 'pendiente',
++        creadoEn: now,
++      });
++      return NextResponse.json({ ok: true, id: ref.id });
++    }
++
++    if (accion === 'aprobar-noticia') {
++      if (!esAdminFlag) return NextResponse.json({ error: 'Solo un administrador puede aprobar noticias.' }, { status: 403 });
++      const noticiaId = String(body?.noticiaId ?? '');
++      if (!noticiaId) return NextResponse.json({ error: 'Falta la noticia.' }, { status: 400 });
++      const nSnap = await db.collection('noticias_club').doc(noticiaId).get();
++      if (!nSnap.exists) return NextResponse.json({ error: 'Noticia no encontrada.' }, { status: 404 });
++      await db.collection('noticias_club').doc(noticiaId).update({ estatus: 'aprobada', aprobadoPor: uid, aprobadoEn: now });
++      return NextResponse.json({ ok: true });
++    }
++
++    if (accion === 'rechazar-noticia') {
++      if (!esAdminFlag) return NextResponse.json({ error: 'Solo un administrador puede rechazar noticias.' }, { status: 403 });
++      const noticiaId = String(body?.noticiaId ?? '');
++      if (!noticiaId) return NextResponse.json({ error: 'Falta la noticia.' }, { status: 400 });
++      const nSnap = await db.collection('noticias_club').doc(noticiaId).get();
++      if (!nSnap.exists) return NextResponse.json({ error: 'Noticia no encontrada.' }, { status: 404 });
++      await db.collection('noticias_club').doc(noticiaId).update({
++        estatus: 'rechazada',
++        aprobadoPor: uid,
++        aprobadoEn: now,
++        motivoRechazo: String(body?.motivo ?? '').trim(),
++      });
++      return NextResponse.json({ ok: true });
++    }
++
+     return NextResponse.json({ error: 'Acción desconocida.' }, { status: 400 });
+   } catch (err) {
+     console.error('[club] POST error', err);
+diff --git a/src/app/api/worlds/route.ts b/src/app/api/worlds/route.ts
+index 9a164a7..0d933ba 100644
+--- a/src/app/api/worlds/route.ts
++++ b/src/app/api/worlds/route.ts
+@@ -3,6 +3,7 @@ import { getAdminDb } from '@/lib/firebase-admin';
+ import { requireAuth } from '@/lib/server-roles';
+ import { nivelDesdePuntos, trimestreActual } from '@/lib/club';
+ import { MISIONES_PART_LABELS, puntosDeMision } from '@/lib/worlds';
++import { esUsuarioPremium } from '@/lib/premium';
+ 
+ // Progreso guardado en users/{uid}.worlds = { partida: number[], tablero: boolean }
+ interface WorldsDoc {
+@@ -40,6 +41,12 @@ export async function GET(req: NextRequest) {
+       ? worldsRaw.partida.map((n) => Number(n)).filter((n) => Number.isFinite(n) && n >= 1 && n <= MISIONES_PART_LABELS.length)
+       : [];
+     const puntos = parseNum(uData.puntosClub, 0);
++    const premium = esUsuarioPremium({
++      roles: Array.isArray(uData.roles) ? (uData.roles as string[]) : null,
++      subscription: (uData.subscription as string) ?? null,
++      planStatus: (uData.planStatus as string) ?? null,
++      accesoManualPremium: uData.accesoManualPremium === true,
++    });
+     return NextResponse.json({
+       yo: {
+         uid,
+@@ -48,6 +55,7 @@ export async function GET(req: NextRequest) {
+         nivel: nivelDesdePuntos(puntos),
+         partida,
+         tablero: worldsRaw.tablero === true,
++        premium,
+       },
+     });
+   } catch (err) {
+diff --git a/src/components/club/ClubBuilder.tsx b/src/components/club/ClubBuilder.tsx
+index 77a89a0..15dbfce 100644
+--- a/src/components/club/ClubBuilder.tsx
++++ b/src/components/club/ClubBuilder.tsx
+@@ -17,6 +17,7 @@ import {
+   LogIn,
+   Medal,
+   Minus,
++  Newspaper,
+   Plus,
+   RefreshCw,
+   Save,
+@@ -27,6 +28,7 @@ import {
+ } from 'lucide-react';
+ import { AGENDA_JUNTA, AGENDA_JUNTA_TOTAL, ROLES_JUNTA, rolLabel, nivelDesdePuntos } from '@/lib/club';
+ import { nivelLabel } from '@/lib/refplace';
++import { nivelMinimoNoticiasLabel } from '@/lib/premium';
+ 
+ // Liga tal cual la ingresó el usuario pero siempre con protocolo, para que el
+ // navegador no la resuelva contra el origen de la app (ej. meet.google.com/...).
+@@ -60,6 +62,19 @@ interface JuntaView {
+   estatus: string;
+ }
+ 
++interface NoticiaView {
++  id: string;
++  titulo: string;
++  contenido: string;
++  autorUid: string;
++  autorNombre: string;
++  estatus: 'pendiente' | 'aprobada' | 'rechazada';
++  creadoEn: string;
++  aprobadoPor?: string;
++  aprobadoEn?: string;
++  motivoRechazo?: string;
++}
++
+ interface ResumenDatos {
+   yo: {
+     uid: string;
+@@ -70,6 +85,9 @@ interface ResumenDatos {
+     siguienteNivel: { id: string; es: string; en: string } | null;
+     primerJuntaAt: string;
+     semanasJunta: number;
++    certificado: boolean;
++    nivelComunidad: string;
++    puedeCrearNoticias: boolean;
+   };
+   miembros: { uid: string; nombre: string; email: string; puntos: number; nivel: string }[];
+   semanaActual: number;
+@@ -84,6 +102,10 @@ interface ResumenDatos {
+   catalogo: { id: string; es: string; en: string; valor: number }[];
+   agendaEjemplo: AgendaItemView[];
+   totalMinutosAgenda: number;
++  noticiasAprobadas: NoticiaView[];
++  noticiasPendientes: NoticiaView[];
++  cumpleanosHoy: { uid: string; nombre: string }[];
++  nivelMinimoNoticias: { id: string; es: string; en: string } | null;
+ }
+ 
+ interface RankRow {
+@@ -94,7 +116,7 @@ interface RankRow {
+   posicion: number;
+ }
+ 
+-type TabId = 'semana' | 'puntos' | 'organizar';
++type TabId = 'semana' | 'puntos' | 'organizar' | 'noticias';
+ 
+ const NEGATIVOS = new Set(['entrega_mala', 'no_cumplir']);
+ 
+@@ -152,6 +174,10 @@ export function ClubBuilder() {
+   const [ptsNota, setPtsNota] = React.useState('');
+   const [ajUser, setAjUser] = React.useState('');
+   const [ajValor, setAjValor] = React.useState('');
++  const [ntTitulo, setNtTitulo] = React.useState('');
++  const [ntContenido, setNtContenido] = React.useState('');
++  const [rechazoAbiertoId, setRechazoAbiertoId] = React.useState<string | null>(null);
++  const [rechazoMotivo, setRechazoMotivo] = React.useState('');
+ 
+   async function cargar(token: string): Promise<ResumenDatos> {
+     const res = await fetch('/api/club', { headers: { Authorization: `Bearer ${token}` } });
+@@ -866,6 +892,159 @@ export function ClubBuilder() {
+     </div>
+   );
+ 
++  // ---------- Tab: noticias ----------
++  const nivelMinLbl = nivelMinimoNoticiasLabel(dispLang);
++  const renderNoticias = () => (
++    <div className="space-y-4">
++      {/* Cumpleaños de hoy (subsección por defecto) */}
++      <div className="glass-panel p-4">
++        <p className="text-sm font-semibold text-foreground">🎂 {t('Cumpleaños de hoy', "Today's birthdays")}</p>
++        {data && data.cumpleanosHoy.length === 0 ? (
++          <p className="mt-2 text-sm text-muted-foreground">
++            {t('Nadie de la comunidad cumple años hoy.', "No one in the community has a birthday today.")}
++          </p>
++        ) : (
++          <ul className="mt-2 space-y-1">
++            {(data?.cumpleanosHoy ?? []).map((c) => (
++              <li key={c.uid} className="text-sm text-foreground">
++                🎉 <span className="font-semibold">{c.nombre || t('Miembro', 'Member')}</span>{' '}
++                <span className="text-muted-foreground">{t('¡Feliz cumpleaños!', 'Happy birthday!')}</span>
++              </li>
++            ))}
++          </ul>
++        )}
++      </div>
++
++      {/* Crear noticia */}
++      <div className="glass-panel p-4">
++        <p className="text-sm font-semibold text-foreground">{t('Crear noticia', 'Create news')}</p>
++        {!yo?.puedeCrearNoticias ? (
++          <p className="mt-2 text-sm text-muted-foreground">
++            {t(
++              `Solo quienes tengan el nivel "${nivelMinLbl}" o superior, o cuenten con una certificación MBE en su perfil, pueden crear noticias para la comunidad.`,
++              `Only members with the "${nivelMinLbl}" level or higher, or an MBE certification on their profile, can create news for the community.`
++            )}
++          </p>
++        ) : (
++          <div className="mt-3 space-y-2">
++            <input
++              value={ntTitulo}
++              onChange={(e) => setNtTitulo(e.target.value)}
++              placeholder={t('Título de la noticia', 'News title')}
++              maxLength={140}
++              className="w-full rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-teal-500 focus:outline-none"
++            />
++            <textarea
++              value={ntContenido}
++              onChange={(e) => setNtContenido(e.target.value)}
++              placeholder={t('Contenido de la noticia', 'News content')}
++              maxLength={4000}
++              rows={4}
++              className="w-full rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-teal-500 focus:outline-none"
++            />
++            <button
++              type="button"
++              disabled={busy === 'crear-noticia' || !ntTitulo.trim() || !ntContenido.trim()}
++              onClick={() => {
++                void act('crear-noticia', { titulo: ntTitulo.trim(), contenido: ntContenido.trim() }, 'Noticia enviada para aprobación.', 'News submitted for approval.');
++                setNtTitulo('');
++                setNtContenido('');
++              }}
++              className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:opacity-50"
++            >
++              {busy === 'crear-noticia' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
++              {t('Enviar para aprobación', 'Submit for approval')}
++            </button>
++            <p className="text-xs text-muted-foreground">
++              {t('Tu noticia se publicará hasta que un administrador la apruebe.', 'Your news will be published once an administrator approves it.')}
++            </p>
++          </div>
++        )}
++      </div>
++
++      {/* Panel de aprobación (solo admin) */}
++      {esAdmin && data && data.noticiasPendientes.length > 0 && (
++        <div className="glass-panel p-4">
++          <p className="text-sm font-semibold text-foreground">{t('Noticias pendientes de aprobación', 'News pending approval')}</p>
++          <div className="mt-3 space-y-3">
++            {data.noticiasPendientes.map((n) => (
++              <div key={n.id} className="rounded-lg border border-glass-border p-3">
++                <p className="text-sm font-semibold text-foreground">{n.titulo}</p>
++                <p className="mt-1 text-xs text-muted-foreground">
++                  {n.autorNombre || t('Autor desconocido', 'Unknown author')} · {new Date(n.creadoEn).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}
++                </p>
++                <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{n.contenido}</p>
++                <div className="mt-3 flex flex-wrap items-center gap-2">
++                  <button
++                    type="button"
++                    disabled={busy === 'aprobar-noticia'}
++                    onClick={() => void act('aprobar-noticia', { noticiaId: n.id }, 'Noticia aprobada.', 'News approved.')}
++                    className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
++                  >
++                    <Check className="h-3.5 w-3.5" />
++                    {t('Aprobar', 'Approve')}
++                  </button>
++                  {rechazoAbiertoId === n.id ? (
++                    <>
++                      <input
++                        value={rechazoMotivo}
++                        onChange={(e) => setRechazoMotivo(e.target.value)}
++                        placeholder={t('Motivo (opcional)', 'Reason (optional)')}
++                        className="rounded-lg border border-glass-border bg-background px-2 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:border-teal-500 focus:outline-none"
++                      />
++                      <button
++                        type="button"
++                        disabled={busy === 'rechazar-noticia'}
++                        onClick={() => {
++                          void act('rechazar-noticia', { noticiaId: n.id, motivo: rechazoMotivo }, 'Noticia rechazada.', 'News rejected.');
++                          setRechazoAbiertoId(null);
++                          setRechazoMotivo('');
++                        }}
++                        className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-300"
++                      >
++                        <X className="h-3.5 w-3.5" />
++                        {t('Confirmar rechazo', 'Confirm rejection')}
++                      </button>
++                    </>
++                  ) : (
++                    <button
++                      type="button"
++                      onClick={() => { setRechazoAbiertoId(n.id); setRechazoMotivo(''); }}
++                      className="inline-flex items-center gap-2 rounded-lg border border-glass-border bg-glass px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
++                    >
++                      <X className="h-3.5 w-3.5" />
++                      {t('Rechazar', 'Reject')}
++                    </button>
++                  )}
++                </div>
++              </div>
++            ))}
++          </div>
++        </div>
++      )}
++
++      {/* Noticias publicadas */}
++      <div className="glass-panel p-4">
++        <p className="text-sm font-semibold text-foreground">{t('Noticias de la comunidad', 'Community news')}</p>
++        {data && data.noticiasAprobadas.length === 0 ? (
++          <p className="mt-2 text-sm text-muted-foreground">{t('Todavía no hay noticias publicadas.', 'No news published yet.')}</p>
++        ) : (
++          <div className="mt-3 space-y-3">
++            {(data?.noticiasAprobadas ?? []).map((n) => (
++              <div key={n.id} className="rounded-lg border border-glass-border p-3">
++                <p className="text-sm font-semibold text-foreground">{n.titulo}</p>
++                <p className="mt-1 text-xs text-muted-foreground">
++                  {n.autorNombre || t('Autor desconocido', 'Unknown author')} · {new Date(n.creadoEn).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}
++                </p>
++                <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{n.contenido}</p>
++              </div>
++            ))}
++          </div>
++        )}
++      </div>
++    </div>
++  );
++
+   // ===== PARTE 3: return principal =====
+   return (
+     <div className="space-y-6">
+@@ -959,6 +1138,7 @@ export function ClubBuilder() {
+               ['semana', 'Junta semanal', Users],
+               ['puntos', 'Puntos y niveles', Trophy],
+               ['organizar', 'Organizar', CalendarClock],
++              ['noticias', 'Noticias', Newspaper],
+             ] as [TabId, string, React.ComponentType<{ className?: string }>][]).map(([id, lbl, Icon]) => (
+               <button
+                 key={id}
+@@ -970,7 +1150,15 @@ export function ClubBuilder() {
+                 }
+               >
+                 <Icon className="h-4 w-4" />
+-                {t(lbl, id === 'semana' ? 'Weekly meeting' : id === 'puntos' ? 'Points & levels' : 'Organization')}
++                {t(
++                  lbl,
++                  id === 'semana' ? 'Weekly meeting' : id === 'puntos' ? 'Points & levels' : id === 'organizar' ? 'Organization' : 'News'
++                )}
++                {id === 'noticias' && esAdmin && (data?.noticiasPendientes.length ?? 0) > 0 && (
++                  <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[11px] font-bold text-white">
++                    {data?.noticiasPendientes.length}
++                  </span>
++                )}
+               </button>
+             ))}
+           </div>
+@@ -978,6 +1166,7 @@ export function ClubBuilder() {
+           {tab === 'semana' && renderSemana()}
+           {tab === 'puntos' && renderPuntos()}
+           {tab === 'organizar' && renderOrganizar()}
++          {tab === 'noticias' && renderNoticias()}
+         </>
+       )}
+ 
+diff --git a/src/components/landing/agents-preview.tsx b/src/components/landing/agents-preview.tsx
+new file mode 100644
+index 0000000..d1b3577
+--- /dev/null
++++ b/src/components/landing/agents-preview.tsx
+@@ -0,0 +1,43 @@
++'use client';
++
++import { useTranslations } from 'next-intl';
++import AgentAvatar, { type AgenteAvatarId } from '@/components/agentes/AgentAvatar';
++
++const AGENTES: AgenteAvatarId[] = ['Babel', 'Fisnando', 'Karmetin', 'Normau', 'Atech'];
++
++export function AgentsPreview() {
++  const t = useTranslations('landing.agentsPreview');
++
++  return (
++    <section id="agentes" className="mx-auto max-w-6xl px-6 py-16">
++      <div className="mx-auto max-w-2xl text-center">
++        <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
++          {t('title')}
++        </h2>
++        <p className="mt-3 text-slate-600">{t('subtitle')}</p>
++      </div>
++
++      <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
++        {AGENTES.map((agente) => {
++          const key = agente.toLowerCase();
++          return (
++            <div
++              key={agente}
++              className="flex flex-col items-center gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-6 text-center shadow-sm transition-shadow hover:shadow-md"
++            >
++              <AgentAvatar agente={agente} pose="reposando" size={64} />
++              <div>
++                <p className="text-sm font-semibold text-slate-900">
++                  {t(`agents.${key}.name`)}
++                </p>
++                <p className="mt-0.5 text-xs text-slate-500">
++                  {t(`agents.${key}.domain`)}
++                </p>
++              </div>
++            </div>
++          );
++        })}
++      </div>
++    </section>
++  );
++}
+diff --git a/src/components/worlds/InsigniaCelebracion.tsx b/src/components/worlds/InsigniaCelebracion.tsx
+new file mode 100644
+index 0000000..d3e84f9
+--- /dev/null
++++ b/src/components/worlds/InsigniaCelebracion.tsx
+@@ -0,0 +1,50 @@
++'use client';
++
++import * as React from 'react';
++import { insigniaPorId } from '@/lib/insignias';
++
++interface Props {
++  insigniaId: string | null;
++  lang: 'es' | 'en';
++  onClose: () => void;
++}
++
++/**
++ * Modal de felicitación cuando el usuario alcanza una insignia nueva.
++ * Se muestra sobre la vista actual (Mundos, Club, etc.) y se cierra al
++ * hacer clic fuera o en "Genial".
++ */
++export function InsigniaCelebracion({ insigniaId, lang, onClose }: Props) {
++  const insignia = insigniaId ? insigniaPorId(insigniaId) : undefined;
++  if (!insignia) return null;
++
++  return (
++    <div
++      className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
++      onClick={onClose}
++    >
++      <div
++        className="world-glass world-grain max-w-sm animate-in fade-in zoom-in rounded-2xl p-6 text-center shadow-2xl"
++        onClick={(e) => e.stopPropagation()}
++      >
++        <div className="text-6xl">{insignia.icon}</div>
++        <p className="mt-2 text-xs font-extrabold uppercase tracking-wide text-amber-600 dark:text-amber-300">
++          {lang === 'en' ? '🎉 New badge!' : '🎉 ¡Nueva insignia!'}
++        </p>
++        <h3 className="mt-1 text-lg font-extrabold text-slate-800 dark:text-white">
++          {lang === 'en' ? insignia.en : insignia.es}
++        </h3>
++        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
++          {lang === 'en' ? insignia.descEn : insignia.descEs}
++        </p>
++        <button
++          type="button"
++          className="mt-4 rounded-full bg-teal-600 px-5 py-2 text-xs font-extrabold text-white shadow hover:bg-teal-700"
++          onClick={onClose}
++        >
++          {lang === 'en' ? 'Awesome!' : '¡Genial!'}
++        </button>
++      </div>
++    </div>
++  );
++}
+diff --git a/src/components/worlds/WorldsBuilder.tsx b/src/components/worlds/WorldsBuilder.tsx
+index 661e6a9..9709a59 100644
+--- a/src/components/worlds/WorldsBuilder.tsx
++++ b/src/components/worlds/WorldsBuilder.tsx
+@@ -18,6 +18,8 @@ import {
+   nivelLabelPuntos,
+ } from '@/lib/worlds';
+ import { WorldsBg } from '@/components/worlds/worlds-bg';
++import { InsigniaCelebracion } from '@/components/worlds/InsigniaCelebracion';
++import { insigniasNuevas, insigniasVistas, marcarInsigniasVistas } from '@/lib/insignias';
+ import PageTour from '@/components/ui/executive/PageTour';
+ import type { TourStep } from '@/components/ui/executive/PageTour';
+ 
+@@ -32,6 +34,7 @@ interface Progreso {
+   nivel: string;
+   partida: number[];
+   tablero: boolean;
++  premium?: boolean;
+ }
+ 
+ // Traducciones es/en (estilo de los builders existentes).
+@@ -447,6 +450,26 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
+     window.setTimeout(() => setToast(null), 2900);
+   }, []);
+ 
++  // Mundos Premium: visibles para todos, pero solo se puede entrar si el
++  // usuario tiene acceso premium (pagó el plan, o un admin se lo otorgó
++  // manualmente, o es admin — ver src/lib/premium.ts / /api/worlds).
++  const [premiumLock, setPremiumLock] = React.useState(false);
++  const [insigniaNuevaId, setInsigniaNuevaId] = React.useState<string | null>(null);
++  const esPremium = yo?.premium === true;
++  const abrirMundo = React.useCallback(
++    (destino: Vista) => {
++      if (!esPremium) {
++        setPremiumLock(true);
++        return;
++      }
++      setVista(destino);
++    },
++    [esPremium]
++  );
++  const irAPagar = React.useCallback(() => {
++    router.push(`/${lang === 'es' ? 'es' : 'en'}/perfil`);
++  }, [router, lang]);
++
+   const festejar = React.useCallback(() => {
+     const seed = Date.now();
+     setConfettiSeed(seed);
+@@ -467,6 +490,15 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
+         if (res.ok) {
+           const data = (await res.json()) as { yo: Progreso };
+           setYo(data.yo);
++          const nuevas = insigniasNuevas(usr.uid, {
++            partida: data.yo.partida,
++            tablero: data.yo.tablero,
++            premium: data.yo.premium,
++          });
++          if (nuevas.length > 0) {
++            setInsigniaNuevaId(nuevas[0]);
++            festejar();
++          }
+         }
+       } catch (err) {
+         console.error('[worlds] carga', err);
+@@ -590,10 +622,17 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
+   // Soporta /worlds?v=partida|tablero|estrategia para abrir directo una vista
+   // (los enlaces del Inicio llevan este parámetro).
+   React.useEffect(() => {
++    if (cargando) return; // espera a conocer yo.premium antes de decidir
+     const v = new URLSearchParams(window.location.search).get('v');
+     const validas: string[] = ['partida', 'tablero', 'estrategia', ...VISTAS_PREMIUM];
+-    if (v && validas.includes(v)) setVista(v as Vista);
+-  }, []);
++    const premiumVistas: string[] = ['estrategia', ...VISTAS_PREMIUM];
++    if (!v || !validas.includes(v)) return;
++    if (premiumVistas.includes(v) && !esPremium) {
++      setPremiumLock(true);
++      return;
++    }
++    setVista(v as Vista);
++  }, [cargando, esPremium]);
+ 
+   const hechas = yo?.partida ?? [];
+   const mundoVista = MUNDOS_PREMIUM_LABELS.find((m) => m.id === vista);
+@@ -609,6 +648,56 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
+         </div>
+       )}
+ 
++      <InsigniaCelebracion
++        insigniaId={insigniaNuevaId}
++        lang={lang === 'en' ? 'en' : 'es'}
++        onClose={() => {
++          if (uid && insigniaNuevaId) {
++            marcarInsigniasVistas(uid, [...insigniasVistas(uid), insigniaNuevaId]);
++          }
++          setInsigniaNuevaId(null);
++        }}
++      />
++
++      {premiumLock && (
++        <div
++          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
++          onClick={() => setPremiumLock(false)}
++        >
++          <div
++            className="world-glass world-grain max-w-sm rounded-2xl p-6 text-center shadow-2xl"
++            onClick={(e) => e.stopPropagation()}
++          >
++            <div className="text-4xl">🔒</div>
++            <h3 className="mt-2 text-base font-extrabold text-slate-800 dark:text-white">
++              {en(['Este mundo es Premium', 'This world is Premium'])}
++            </h3>
++            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
++              {en([
++                'Para entrar necesitas activar tu plan MBE Copilot. Puedes ver todos los Mundos Premium desde el mapa, pero solo se desbloquean con el plan activo.',
++                'To enter you need to activate your MBE Copilot plan. You can see every Premium World from the map, but they only unlock with an active plan.',
++              ])}
++            </p>
++            <div className="mt-4 flex justify-center gap-2">
++              <button
++                type="button"
++                className="rounded-full bg-teal-600 px-4 py-2 text-xs font-extrabold text-white shadow hover:bg-teal-700"
++                onClick={irAPagar}
++              >
++                {en(['Ir a activar mi plan →', 'Activate my plan →'])}
++              </button>
++              <button
++                type="button"
++                className="rounded-full border border-slate-300 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
++                onClick={() => setPremiumLock(false)}
++              >
++                {en(['Cerrar', 'Close'])}
++              </button>
++            </div>
++          </div>
++        </div>
++      )}
++
+       <div className="mx-auto max-w-6xl px-4 py-8">
+         <div className="world-glass world-grain mb-6 flex flex-wrap items-center gap-3 p-4">
+           <div className="flex items-center gap-2 text-lg font-extrabold text-slate-800 dark:text-white">
+@@ -713,9 +802,9 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
+                 </h2>
+ 
+                 <div className="mb-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+-                  <button className="world-glass world-glass-hover world-grain p-5 text-left" onClick={() => setVista('estrategia')}>
+-                    <span className="mb-2 inline-block rounded-full bg-fuchsia-100 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-fuchsia-700 dark:bg-fuchsia-900 dark:text-fuchsia-200">
+-                      Premium
++                  <button className="world-glass world-glass-hover world-grain p-5 text-left" onClick={() => abrirMundo('estrategia')}>
++                    <span className="mb-2 inline-flex items-center gap-1 rounded-full bg-fuchsia-100 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-fuchsia-700 dark:bg-fuchsia-900 dark:text-fuchsia-200">
++                      {esPremium ? 'Premium' : '🔒 Premium'}
+                     </span>
+                     <div className="text-4xl">🧭</div>
+                     <div className="mt-3 flex items-center gap-2">
+@@ -732,10 +821,10 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
+                     <button
+                       key={m.id}
+                       className="world-glass world-glass-hover world-grain p-5 text-left"
+-                      onClick={() => setVista(m.id)}
++                      onClick={() => abrirMundo(m.id)}
+                     >
+-                      <span className="mb-2 inline-block rounded-full bg-fuchsia-100 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-fuchsia-700 dark:bg-fuchsia-900 dark:text-fuchsia-200">
+-                        Premium
++                      <span className="mb-2 inline-flex items-center gap-1 rounded-full bg-fuchsia-100 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-fuchsia-700 dark:bg-fuchsia-900 dark:text-fuchsia-200">
++                        {esPremium ? 'Premium' : '🔒 Premium'}
+                       </span>
+                       <div className="text-4xl">{m.icon}</div>
+                       <div className="mt-3 flex items-center gap-2">
+diff --git a/src/lib/insignias.ts b/src/lib/insignias.ts
+new file mode 100644
+index 0000000..e2a9ac6
+--- /dev/null
++++ b/src/lib/insignias.ts
+@@ -0,0 +1,90 @@
++// Catálogo mínimo de insignias de Mundos MBE. Se calculan a partir del
++// progreso que ya devuelve /api/worlds (yo: {partida, tablero, premium}) — no
++// requiere una colección nueva. Cuando el usuario alcanza una insignia nueva
++// (comparado contra lo que ya vio, guardado en localStorage), el cliente
++// muestra una celebración — ver src/components/worlds/InsigniaCelebracion.tsx.
++export interface InsigniaDef {
++  id: string;
++  es: string;
++  en: string;
++  descEs: string;
++  descEn: string;
++  icon: string;
++}
++
++export const INSIGNIAS: InsigniaDef[] = [
++  {
++    id: 'caminante',
++    es: 'Caminante',
++    en: 'Wayfarer',
++    descEs: 'Completaste el Mundo de Partida.',
++    descEn: 'You completed the Starting World.',
++    icon: '🥾',
++  },
++  {
++    id: 'tablero_desbloqueado',
++    es: 'Tablero Desbloqueado',
++    en: 'Board Unlocked',
++    descEs: 'Desbloqueaste el Tablero de Retos.',
++    descEn: 'You unlocked the Challenges Board.',
++    icon: '🎯',
++  },
++  {
++    id: 'miembro_premium',
++    es: 'Miembro Premium',
++    en: 'Premium Member',
++    descEs: 'Tienes acceso a los Mundos Premium.',
++    descEn: 'You have access to the Premium Worlds.',
++    icon: '👑',
++  },
++];
++
++export function insigniaPorId(id: string): InsigniaDef | undefined {
++  return INSIGNIAS.find((i) => i.id === id);
++}
++
++/** Insignias que el progreso actual ya cumple, por id. */
++export function insigniasGanadas(yo: { partida: number[]; tablero: boolean; premium?: boolean }): string[] {
++  const ids: string[] = [];
++  if (Array.isArray(yo.partida) && yo.partida.length >= 2) ids.push('caminante');
++  if (yo.tablero === true) ids.push('tablero_desbloqueado');
++  if (yo.premium === true) ids.push('miembro_premium');
++  return ids;
++}
++
++function storageKey(uid: string): string {
++  return `mbe_insignias_vistas_${uid}`;
++}
++
++/** Lee del localStorage qué insignias ya se le celebraron a este uid. */
++export function insigniasVistas(uid: string): string[] {
++  if (typeof window === 'undefined') return [];
++  try {
++    const raw = window.localStorage.getItem(storageKey(uid));
++    const parsed = raw ? JSON.parse(raw) : [];
++    return Array.isArray(parsed) ? parsed.filter((x) => typeof x === 'string') : [];
++  } catch {
++    return [];
++  }
++}
++
++export function marcarInsigniasVistas(uid: string, ids: string[]): void {
++  if (typeof window === 'undefined') return;
++  try {
++    window.localStorage.setItem(storageKey(uid), JSON.stringify(ids));
++  } catch {
++    /* almacenamiento no disponible; no es crítico */
++  }
++}
++
++/**
++ * Compara las insignias ganadas contra las ya vistas y devuelve las nuevas
++ * (sin marcarlas todavía como vistas — eso lo hace el componente después de
++ * mostrar la celebración, para no perder la notificación si el usuario
++ * recarga a mitad de la animación).
++ */
++export function insigniasNuevas(uid: string, yo: { partida: number[]; tablero: boolean; premium?: boolean }): string[] {
++  const ganadas = insigniasGanadas(yo);
++  const vistas = new Set(insigniasVistas(uid));
++  return ganadas.filter((id) => !vistas.has(id));
++}
+diff --git a/src/lib/premium.ts b/src/lib/premium.ts
+new file mode 100644
+index 0000000..470c368
+--- /dev/null
++++ b/src/lib/premium.ts
+@@ -0,0 +1,63 @@
++// Acceso a Mundos Premium y permisos relacionados con el nivel de comunidad /
++// certificación. Centraliza la lógica para que la API y los componentes de
++// cliente usen la misma regla.
++//
++// Umbral confirmado con el usuario: "empresario_orquesta" ("Empresario
++// Orquesta", 500 pts en NIVELES_COMUNIDAD, src/lib/refplace.ts). Es el mismo
++// nivel que ya desbloquea "solicitar referencias" (puedeSolicitarReferencias
++// en refplace.ts), así que crear noticias queda alineado con ese precedente.
++import { NIVELES_COMUNIDAD, nivelIndex } from '@/lib/refplace';
++
++export const NIVEL_MINIMO_NOTICIAS: string = 'empresario_orquesta';
++
++/**
++ * Un usuario tiene acceso a los Mundos Premium si:
++ *  - es administrador (rol 'admin'), o
++ *  - tiene una suscripción activa (subscription 'pro'/'active'/'premium' con
++ *    planStatus 'active'), o
++ *  - un administrador le otorgó acceso manual (accesoManualPremium === true).
++ */
++export function esUsuarioPremium(u: {
++  roles?: string[] | null;
++  subscription?: string | null;
++  planStatus?: string | null;
++  accesoManualPremium?: boolean | null;
++}): boolean {
++  if (Array.isArray(u.roles) && u.roles.includes('admin')) return true;
++  if (u.accesoManualPremium === true) return true;
++  const sub = u.subscription ?? '';
++  const activa = ['pro', 'active', 'premium'].includes(sub);
++  if (activa && (u.planStatus === 'active' || !u.planStatus)) return true;
++  return false;
++}
++
++/**
++ * Un usuario puede crear noticias de comunidad si:
++ *  - es administrador, o
++ *  - su nivelComunidad es NIVEL_MINIMO_NOTICIAS o superior, o
++ *  - tiene certificado === true.
++ */
++export function puedeCrearNoticias(u: {
++  roles?: string[] | null;
++  nivelComunidad?: string | null;
++  certificado?: boolean | null;
++}): boolean {
++  if (Array.isArray(u.roles) && u.roles.includes('admin')) return true;
++  if (u.certificado === true) return true;
++  if (u.nivelComunidad && nivelIndex(u.nivelComunidad) >= nivelIndex(NIVEL_MINIMO_NOTICIAS)) return true;
++  return false;
++}
++
++export function nivelMinimoNoticiasLabel(lang: 'es' | 'en'): string {
++  const n = NIVELES_COMUNIDAD.find((x) => x.id === NIVEL_MINIMO_NOTICIAS);
++  return n ? (lang === 'en' ? n.en : n.es) : NIVEL_MINIMO_NOTICIAS;
++}
++
++/**
++ * Info completa (id + es + en) del nivel mínimo para crear noticias, lista
++ * para exponer en una respuesta de API sin duplicar la búsqueda en cada ruta.
++ */
++export function nivelMinimoNoticiasInfo(): { id: string; es: string; en: string } | null {
++  const n = NIVELES_COMUNIDAD.find((x) => x.id === NIVEL_MINIMO_NOTICIAS);
++  return n ? { id: n.id, es: n.es, en: n.en } : null;
++}
+diff --git a/src/messages/en.json b/src/messages/en.json
+index afccf11..9c9ca04 100644
+--- a/src/messages/en.json
++++ b/src/messages/en.json
+@@ -31,7 +31,29 @@
+     },
+     "agentsPreview": {
+       "title": "Your AI Board of Directors",
+-      "subtitle": "Each agent masters a different area of your business"
++      "subtitle": "Each agent masters a different area of your business",
++      "agents": {
++        "babel": {
++          "name": "Babel",
++          "domain": "Strategic Direction"
++        },
++        "fisnando": {
++          "name": "Fisnando",
++          "domain": "Finance"
++        },
++        "karmetin": {
++          "name": "Karmetin",
++          "domain": "Marketing & Sales"
++        },
++        "normau": {
++          "name": "Normau",
++          "domain": "Partnerships"
++        },
++        "atech": {
++          "name": "Atech",
++          "domain": "Operations"
++        }
++      }
+     }
+   },
+   "register": {
+@@ -129,7 +151,7 @@
+     "compileHeader": "### Your Socio-Environmental Strategic Business Plan — Compiled",
+     "compileEmpty": "You haven't approved any phase yet, so there's nothing to compile. Approve at least Phase 0 and try again.",
+     "compileHint": "Type /compilar at any time to assemble every phase you've approved so far into a single document.",
+-        "downloadDeliverable": "Download PDF", 
+-        "errorGeneric": "Something went wrong talking to Babel. Please try again."
++    "downloadDeliverable": "Download PDF",
++    "errorGeneric": "Something went wrong talking to Babel. Please try again."
+   }
+ }
+diff --git a/src/messages/es.json b/src/messages/es.json
+index ecc495f..b1484f0 100644
+--- a/src/messages/es.json
++++ b/src/messages/es.json
+@@ -31,7 +31,29 @@
+     },
+     "agentsPreview": {
+       "title": "Tu Consejo de Administración de IA",
+-      "subtitle": "Cada agente domina un área distinta de tu negocio"
++      "subtitle": "Cada agente domina un área distinta de tu negocio",
++      "agents": {
++        "babel": {
++          "name": "Babel",
++          "domain": "Rumbo Estratégico"
++        },
++        "fisnando": {
++          "name": "Fisnando",
++          "domain": "Finanzas"
++        },
++        "karmetin": {
++          "name": "Karmetin",
++          "domain": "Marketing y Ventas"
++        },
++        "normau": {
++          "name": "Normau",
++          "domain": "Alianzas"
++        },
++        "atech": {
++          "name": "Atech",
++          "domain": "Operación"
++        }
++      }
+     }
+   },
+   "register": {
+@@ -129,8 +151,7 @@
+     "compileHeader": "### Tu Plan de Negocio Estratégico Socioambiental — Compilado",
+     "compileEmpty": "Todavía no has aprobado ninguna fase, así que no hay nada que compilar. Aprueba al menos la Fase 0 y vuelve a intentarlo.",
+     "compileHint": "Escribe /compilar en cualquier momento para juntar en un solo documento todas las fases que ya has aprobado.",
+-        "downloadDeliverable": "Descargar PDF",
++    "downloadDeliverable": "Descargar PDF",
+     "errorGeneric": "Algo salió mal hablando con Babel. Intenta de nuevo."
+   }
+ }
+-  
+diff --git a/src/types/firestore.ts b/src/types/firestore.ts
+index a4ffc43..70b6243 100644
+--- a/src/types/firestore.ts
++++ b/src/types/firestore.ts
+@@ -49,6 +49,18 @@ export interface UserDoc {
+   // true cuando el usuario pagó/obtuvo la certificación MBE (certificacion_mbe).
+   certificado?: boolean;
+   certificadoDesde?: string;
++  // Fecha de nacimiento (YYYY-MM-DD) — usada para felicitaciones de cumpleaños
++  // en Comunidad > Noticias.
++  fechaNacimiento?: string;
++  // Acceso manual a Mundos Premium otorgado por un administrador sin que el
++  // usuario haya pagado un plan (ver src/lib/premium.ts).
++  accesoManualPremium?: boolean;
++  accesoManualPor?: string; // uid del admin que otorgó el acceso
++  accesoManualAt?: string; // ISO date
++  // Suma de pagos.monto (colección `pagos`) para este usuario. Se calcula al
++  // vuelo en /api/admin/users, no se persiste aquí; se documenta por
++  // completitud del tipo.
++  totalInvertido?: number;
+   // Club de juntas semanales: puntos acumulados, semanas asistidas y fecha de
+   // la primera junta confirmada (los nivela el sistema desde puntosClub).
+   puntosClub?: number;

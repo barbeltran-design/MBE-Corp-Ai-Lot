@@ -14,6 +14,20 @@ import {
   tematicaDeSemana,
   type JuntaClubDoc,
 } from '@/lib/club';
+import { nivelPorPuntos } from '@/lib/refplace';
+import { puedeCrearNoticias, nivelMinimoNoticiasInfo } from '@/lib/premium';
+
+interface NoticiaClubDoc {
+  titulo: string;
+  contenido: string;
+  autorUid: string;
+  autorNombre: string;
+  estatus: 'pendiente' | 'aprobada' | 'rechazada';
+  creadoEn: string;
+  aprobadoPor?: string;
+  aprobadoEn?: string;
+  motivoRechazo?: string;
+}
 
 const ROLES_JUNTA_IDS = ['coordinador', 'mentor_dinamica', 'mentor_crecimiento', 'mentor_b2b', 'mentor_calidad'] as const;
 
@@ -66,6 +80,8 @@ export async function GET(req: NextRequest) {
 
   try {
     const db = getAdminDb();
+    const userRoles = await readUserRoles(uid);
+    const esAdminFlag = esAdmin(userRoles);
 
     const usersSnap = await db.collection('users').limit(400).get();
     const users = new Map<string, Record<string, unknown>>();
@@ -110,11 +126,47 @@ export async function GET(req: NextRequest) {
 
     const yoRaw = (users.get(uid) as Record<string, unknown> | undefined) ?? {};
     const yoPuntos = parseNum(yoRaw.puntosClub, 0);
+    const yoNivelComunidad = nivelPorPuntos(yoPuntos);
+    const yoCertificado = yoRaw.certificado === true;
+    const yoPuedeCrearNoticias =
+      esAdminFlag || puedeCrearNoticias({ roles: userRoles, nivelComunidad: yoNivelComunidad, certificado: yoCertificado });
     const misRolesJunta = juntaActual
       ? Object.entries(juntaActual.roles)
           .filter(([, v]) => v && v.uid === uid)
           .map(([k]) => k)
       : [];
+
+    // --- Noticias de la comunidad (Junta semanal > Noticias) ---
+    const noticiasSnap = await db.collection('noticias_club').orderBy('creadoEn', 'desc').limit(80).get();
+    const todasNoticias = noticiasSnap.docs.map((d) => {
+      const nd = d.data() as Partial<NoticiaClubDoc>;
+      return {
+        id: d.id,
+        titulo: String(nd.titulo ?? ''),
+        contenido: String(nd.contenido ?? ''),
+        autorUid: String(nd.autorUid ?? ''),
+        autorNombre: String(nd.autorNombre ?? ''),
+        estatus: (nd.estatus as NoticiaClubDoc['estatus']) ?? 'pendiente',
+        creadoEn: String(nd.creadoEn ?? ''),
+        aprobadoPor: nd.aprobadoPor ? String(nd.aprobadoPor) : undefined,
+        aprobadoEn: nd.aprobadoEn ? String(nd.aprobadoEn) : undefined,
+        motivoRechazo: nd.motivoRechazo ? String(nd.motivoRechazo) : undefined,
+      };
+    });
+    const noticiasAprobadas = todasNoticias.filter((n) => n.estatus === 'aprobada');
+    const noticiasPendientes = esAdminFlag ? todasNoticias.filter((n) => n.estatus === 'pendiente') : [];
+
+    // --- Cumpleaños de hoy (a partir de users.fechaNacimiento, formato YYYY-MM-DD) ---
+    const hoyMesDia = (() => {
+      const d = new Date();
+      return `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    })();
+    const cumpleanosHoy = Array.from(users.entries())
+      .filter(([, u]) => {
+        const fn = typeof u.fechaNacimiento === 'string' ? u.fechaNacimiento : '';
+        return fn.length >= 10 && fn.slice(5, 10) === hoyMesDia;
+      })
+      .map(([id, u]) => ({ uid: id, nombre: String(u.name ?? '') || 'Miembro' }));
 
     // --- Puntos de la semana (para el Mentor de Calidad) ---
     const puntosSnap = await db
@@ -178,6 +230,9 @@ export async function GET(req: NextRequest) {
         siguienteNivel: siguiente ? { id: siguiente.id, es: siguiente.es, en: siguiente.en } : null,
         primerJuntaAt: String(yoRaw.primerJuntaAt ?? ''),
         semanasJunta: parseNum(yoRaw.semanasJunta, 0),
+        certificado: yoCertificado,
+        nivelComunidad: yoNivelComunidad,
+        puedeCrearNoticias: yoPuedeCrearNoticias,
       },
       miembros: Array.from(users.entries())
         .map(([id, u]) => ({
@@ -203,6 +258,10 @@ export async function GET(req: NextRequest) {
       catalogo: CATALOGO_PUNTOS.map((c) => ({ id: c.id, es: c.es, en: c.en, valor: c.valor })),
       agendaEjemplo: AGENDA_JUNTA.es,
       totalMinutosAgenda: AGENDA_JUNTA_TOTAL,
+      noticiasAprobadas,
+      noticiasPendientes,
+      cumpleanosHoy,
+      nivelMinimoNoticias: nivelMinimoNoticiasInfo(),
     });
   } catch (err) {
     console.error('[club] GET error', err);
@@ -220,6 +279,9 @@ export async function GET(req: NextRequest) {
 //   otorgar-puntos   {juntaId, items: [{userId, categorias[]}]}  (admin o mentor_calidad)
 //   ajustar-puntos   {userId, valor, nota?}                      (solo admin)
 //   cerrar-junta     {juntaId}                                   (admin o coord.)
+//   crear-noticia    {titulo, contenido}                         (nivel Empresario Orquesta+, certificado, o admin)
+//   aprobar-noticia  {noticiaId}                                 (solo admin)
+//   rechazar-noticia {noticiaId, motivo?}                        (solo admin)
 export async function POST(req: NextRequest) {
   let uid: string;
   try {
@@ -484,6 +546,58 @@ export async function POST(req: NextRequest) {
       }
       await batch.commit();
       await db.collection('juntas_club').doc(juntaId).update({ estatus: 'realizada' });
+      return NextResponse.json({ ok: true });
+    }
+
+    if (accion === 'crear-noticia') {
+      const titulo = String(body?.titulo ?? '').trim();
+      const contenido = String(body?.contenido ?? '').trim();
+      if (!titulo || !contenido) return NextResponse.json({ error: 'Falta título o contenido.' }, { status: 400 });
+      if (titulo.length > 140) return NextResponse.json({ error: 'El título es demasiado largo (máx. 140 caracteres).' }, { status: 400 });
+      if (contenido.length > 4000) return NextResponse.json({ error: 'El contenido es demasiado largo (máx. 4000 caracteres).' }, { status: 400 });
+      const uData = (userSnap.exists ? userSnap.data() : {}) as Record<string, unknown>;
+      const nivelComunidad = nivelPorPuntos(parseNum(uData.puntosClub, 0));
+      const autorizado =
+        esAdminFlag || puedeCrearNoticias({ roles: userRoles, nivelComunidad, certificado: uData.certificado === true });
+      if (!autorizado) {
+        return NextResponse.json(
+          { error: 'Solo miembros con nivel Empresario Orquesta o superior, o con certificación MBE, pueden crear noticias.' },
+          { status: 403 }
+        );
+      }
+      const ref = await db.collection('noticias_club').add({
+        titulo,
+        contenido,
+        autorUid: uid,
+        autorNombre: userName || '',
+        estatus: 'pendiente',
+        creadoEn: now,
+      });
+      return NextResponse.json({ ok: true, id: ref.id });
+    }
+
+    if (accion === 'aprobar-noticia') {
+      if (!esAdminFlag) return NextResponse.json({ error: 'Solo un administrador puede aprobar noticias.' }, { status: 403 });
+      const noticiaId = String(body?.noticiaId ?? '');
+      if (!noticiaId) return NextResponse.json({ error: 'Falta la noticia.' }, { status: 400 });
+      const nSnap = await db.collection('noticias_club').doc(noticiaId).get();
+      if (!nSnap.exists) return NextResponse.json({ error: 'Noticia no encontrada.' }, { status: 404 });
+      await db.collection('noticias_club').doc(noticiaId).update({ estatus: 'aprobada', aprobadoPor: uid, aprobadoEn: now });
+      return NextResponse.json({ ok: true });
+    }
+
+    if (accion === 'rechazar-noticia') {
+      if (!esAdminFlag) return NextResponse.json({ error: 'Solo un administrador puede rechazar noticias.' }, { status: 403 });
+      const noticiaId = String(body?.noticiaId ?? '');
+      if (!noticiaId) return NextResponse.json({ error: 'Falta la noticia.' }, { status: 400 });
+      const nSnap = await db.collection('noticias_club').doc(noticiaId).get();
+      if (!nSnap.exists) return NextResponse.json({ error: 'Noticia no encontrada.' }, { status: 404 });
+      await db.collection('noticias_club').doc(noticiaId).update({
+        estatus: 'rechazada',
+        aprobadoPor: uid,
+        aprobadoEn: now,
+        motivoRechazo: String(body?.motivo ?? '').trim(),
+      });
       return NextResponse.json({ ok: true });
     }
 

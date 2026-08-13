@@ -3,6 +3,7 @@ import { getAdminDb } from '@/lib/firebase-admin';
 import { requireAuth } from '@/lib/server-roles';
 import { nivelDesdePuntos, trimestreActual } from '@/lib/club';
 import { MISIONES_PART_LABELS, puntosDeMision } from '@/lib/worlds';
+import { esUsuarioPremium } from '@/lib/premium';
 
 // Progreso guardado en users/{uid}.worlds = { partida: number[], tablero: boolean }
 interface WorldsDoc {
@@ -40,6 +41,12 @@ export async function GET(req: NextRequest) {
       ? worldsRaw.partida.map((n) => Number(n)).filter((n) => Number.isFinite(n) && n >= 1 && n <= MISIONES_PART_LABELS.length)
       : [];
     const puntos = parseNum(uData.puntosClub, 0);
+    const premium = esUsuarioPremium({
+      roles: Array.isArray(uData.roles) ? (uData.roles as string[]) : null,
+      subscription: (uData.subscription as string) ?? null,
+      planStatus: (uData.planStatus as string) ?? null,
+      accesoManualPremium: uData.accesoManualPremium === true,
+    });
     return NextResponse.json({
       yo: {
         uid,
@@ -48,6 +55,7 @@ export async function GET(req: NextRequest) {
         nivel: nivelDesdePuntos(puntos),
         partida,
         tablero: worldsRaw.tablero === true,
+        premium,
       },
     });
   } catch (err) {

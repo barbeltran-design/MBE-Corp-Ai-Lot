@@ -93,6 +93,8 @@ interface UserRow {
   totalMaturity?: number | null;
   subscription?: string;
   planStatus?: string;
+  accesoManualPremium?: boolean;
+  totalInvertido?: number;
   actividad?: { assessments?: number; sesionesBabel?: number; pagos?: number };
 }
 
@@ -119,6 +121,7 @@ export default function AdminPage() {
   const [selRoles, setSelRoles] = React.useState<string[]>([]);
   const [selTemas, setSelTemas] = React.useState<string[]>([]);
   const [selCert, setSelCert] = React.useState(false);
+  const [selAccesoPremium, setSelAccesoPremium] = React.useState(false);
   const [rolesMsg, setRolesMsg] = React.useState('');
 
   // Pagos
@@ -223,7 +226,7 @@ export default function AdminPage() {
     const res = await fetch('/api/admin/users', {
       method: 'POST',
       headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ uid: selUid, roles: selRoles, especialistaTemas: selTemas, certificado: selCert }),
+      body: JSON.stringify({ uid: selUid, roles: selRoles, especialistaTemas: selTemas, certificado: selCert, accesoManualPremium: selAccesoPremium }),
     });
     if (!res.ok) {
       setRolesMsg(t('No se pudieron guardar los roles.', 'Could not save roles.'));
@@ -345,6 +348,7 @@ export default function AdminPage() {
                     <th className="px-3 py-2 font-medium">{t('Madurez', 'Maturity')}</th>
                     <th className="px-3 py-2 font-medium">{t('Actividad', 'Activity')}</th>
                     <th className="px-3 py-2 font-medium">{t('Plan', 'Plan')}</th>
+                    <th className="px-3 py-2 font-medium">{t('Invertido', 'Invested')}</th>
                     <th className="px-3 py-2" />
                   </tr>
                 </thead>
@@ -377,9 +381,16 @@ export default function AdminPage() {
                       <td className="px-3 py-2 text-xs text-muted-foreground">
                         {u.subscription === 'pro' && u.planStatus === 'active' ? (
                           <span className="text-emerald-700">{t('Pro activo', 'Pro active')}</span>
+                        ) : u.accesoManualPremium ? (
+                          <span className="text-teal-700">{t('Acceso manual', 'Manual access')}</span>
                         ) : (
                           <span>{u.subscription || 'free'}</span>
                         )}
+                      </td>
+                      <td className="px-3 py-2 text-xs text-muted-foreground">
+                        {typeof u.totalInvertido === 'number' && u.totalInvertido > 0
+                          ? `$${u.totalInvertido.toLocaleString('es-MX')} MXN`
+                          : '—'}
                       </td>
                       <td className="px-3 py-2">
                         <Button
@@ -391,6 +402,7 @@ export default function AdminPage() {
                             setSelRoles(Array.isArray(u.roles) ? u.roles : []);
                             setSelTemas(Array.isArray(u.especialistaTemas) ? u.especialistaTemas : []);
                             setSelCert(u.certificado === true);
+                            setSelAccesoPremium(u.accesoManualPremium === true);
                           }}
                         >
                           {t('Asignar roles', 'Assign roles')}
@@ -475,6 +487,29 @@ export default function AdminPage() {
                       }
                     >
                       {selCert ? '✓ ' + t('Certificado', 'Certified') : t('Sin certificación', 'Not certified')}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{t('Acceso a Mundos Premium', 'Premium Worlds access')}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {t(
+                          'Otorga acceso a los Mundos Premium sin necesidad de que el usuario haya pagado el plan. Los administradores siempre tienen acceso.',
+                          'Grants access to the Premium Worlds without the user having paid for the plan. Admins always have access.'
+                        )}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelAccesoPremium((prev) => !prev)}
+                      className={
+                        'inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold transition-colors ' +
+                        (selAccesoPremium
+                          ? 'border-teal-500 bg-teal-500/10 text-teal-700 dark:text-teal-300'
+                          : 'border-slate-300 text-muted-foreground hover:border-teal-400 dark:border-slate-600')
+                      }
+                    >
+                      {selAccesoPremium ? '✓ ' + t('Acceso otorgado', 'Access granted') : t('Sin acceso manual', 'No manual access')}
                     </button>
                   </div>
                   {rolesMsg && <p className="text-sm text-emerald-700">{rolesMsg}</p>}

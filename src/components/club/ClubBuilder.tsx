@@ -17,6 +17,7 @@ import {
   LogIn,
   Medal,
   Minus,
+  Newspaper,
   Plus,
   RefreshCw,
   Save,
@@ -27,6 +28,7 @@ import {
 } from 'lucide-react';
 import { AGENDA_JUNTA, AGENDA_JUNTA_TOTAL, ROLES_JUNTA, rolLabel, nivelDesdePuntos } from '@/lib/club';
 import { nivelLabel } from '@/lib/refplace';
+import { nivelMinimoNoticiasLabel } from '@/lib/premium';
 
 // Liga tal cual la ingresó el usuario pero siempre con protocolo, para que el
 // navegador no la resuelva contra el origen de la app (ej. meet.google.com/...).
@@ -60,6 +62,19 @@ interface JuntaView {
   estatus: string;
 }
 
+interface NoticiaView {
+  id: string;
+  titulo: string;
+  contenido: string;
+  autorUid: string;
+  autorNombre: string;
+  estatus: 'pendiente' | 'aprobada' | 'rechazada';
+  creadoEn: string;
+  aprobadoPor?: string;
+  aprobadoEn?: string;
+  motivoRechazo?: string;
+}
+
 interface ResumenDatos {
   yo: {
     uid: string;
@@ -70,6 +85,9 @@ interface ResumenDatos {
     siguienteNivel: { id: string; es: string; en: string } | null;
     primerJuntaAt: string;
     semanasJunta: number;
+    certificado: boolean;
+    nivelComunidad: string;
+    puedeCrearNoticias: boolean;
   };
   miembros: { uid: string; nombre: string; email: string; puntos: number; nivel: string }[];
   semanaActual: number;
@@ -84,6 +102,10 @@ interface ResumenDatos {
   catalogo: { id: string; es: string; en: string; valor: number }[];
   agendaEjemplo: AgendaItemView[];
   totalMinutosAgenda: number;
+  noticiasAprobadas: NoticiaView[];
+  noticiasPendientes: NoticiaView[];
+  cumpleanosHoy: { uid: string; nombre: string }[];
+  nivelMinimoNoticias: { id: string; es: string; en: string } | null;
 }
 
 interface RankRow {
@@ -94,7 +116,7 @@ interface RankRow {
   posicion: number;
 }
 
-type TabId = 'semana' | 'puntos' | 'organizar';
+type TabId = 'semana' | 'puntos' | 'organizar' | 'noticias';
 
 const NEGATIVOS = new Set(['entrega_mala', 'no_cumplir']);
 
@@ -152,6 +174,10 @@ export function ClubBuilder() {
   const [ptsNota, setPtsNota] = React.useState('');
   const [ajUser, setAjUser] = React.useState('');
   const [ajValor, setAjValor] = React.useState('');
+  const [ntTitulo, setNtTitulo] = React.useState('');
+  const [ntContenido, setNtContenido] = React.useState('');
+  const [rechazoAbiertoId, setRechazoAbiertoId] = React.useState<string | null>(null);
+  const [rechazoMotivo, setRechazoMotivo] = React.useState('');
 
   async function cargar(token: string): Promise<ResumenDatos> {
     const res = await fetch('/api/club', { headers: { Authorization: `Bearer ${token}` } });
@@ -866,6 +892,159 @@ export function ClubBuilder() {
     </div>
   );
 
+  // ---------- Tab: noticias ----------
+  const nivelMinLbl = nivelMinimoNoticiasLabel(dispLang);
+  const renderNoticias = () => (
+    <div className="space-y-4">
+      {/* Cumpleaños de hoy (subsección por defecto) */}
+      <div className="glass-panel p-4">
+        <p className="text-sm font-semibold text-foreground">🎂 {t('Cumpleaños de hoy', "Today's birthdays")}</p>
+        {data && data.cumpleanosHoy.length === 0 ? (
+          <p className="mt-2 text-sm text-muted-foreground">
+            {t('Nadie de la comunidad cumple años hoy.', "No one in the community has a birthday today.")}
+          </p>
+        ) : (
+          <ul className="mt-2 space-y-1">
+            {(data?.cumpleanosHoy ?? []).map((c) => (
+              <li key={c.uid} className="text-sm text-foreground">
+                🎉 <span className="font-semibold">{c.nombre || t('Miembro', 'Member')}</span>{' '}
+                <span className="text-muted-foreground">{t('¡Feliz cumpleaños!', 'Happy birthday!')}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* Crear noticia */}
+      <div className="glass-panel p-4">
+        <p className="text-sm font-semibold text-foreground">{t('Crear noticia', 'Create news')}</p>
+        {!yo?.puedeCrearNoticias ? (
+          <p className="mt-2 text-sm text-muted-foreground">
+            {t(
+              `Solo quienes tengan el nivel "${nivelMinLbl}" o superior, o cuenten con una certificación MBE en su perfil, pueden crear noticias para la comunidad.`,
+              `Only members with the "${nivelMinLbl}" level or higher, or an MBE certification on their profile, can create news for the community.`
+            )}
+          </p>
+        ) : (
+          <div className="mt-3 space-y-2">
+            <input
+              value={ntTitulo}
+              onChange={(e) => setNtTitulo(e.target.value)}
+              placeholder={t('Título de la noticia', 'News title')}
+              maxLength={140}
+              className="w-full rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-teal-500 focus:outline-none"
+            />
+            <textarea
+              value={ntContenido}
+              onChange={(e) => setNtContenido(e.target.value)}
+              placeholder={t('Contenido de la noticia', 'News content')}
+              maxLength={4000}
+              rows={4}
+              className="w-full rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-teal-500 focus:outline-none"
+            />
+            <button
+              type="button"
+              disabled={busy === 'crear-noticia' || !ntTitulo.trim() || !ntContenido.trim()}
+              onClick={() => {
+                void act('crear-noticia', { titulo: ntTitulo.trim(), contenido: ntContenido.trim() }, 'Noticia enviada para aprobación.', 'News submitted for approval.');
+                setNtTitulo('');
+                setNtContenido('');
+              }}
+              className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:opacity-50"
+            >
+              {busy === 'crear-noticia' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              {t('Enviar para aprobación', 'Submit for approval')}
+            </button>
+            <p className="text-xs text-muted-foreground">
+              {t('Tu noticia se publicará hasta que un administrador la apruebe.', 'Your news will be published once an administrator approves it.')}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Panel de aprobación (solo admin) */}
+      {esAdmin && data && data.noticiasPendientes.length > 0 && (
+        <div className="glass-panel p-4">
+          <p className="text-sm font-semibold text-foreground">{t('Noticias pendientes de aprobación', 'News pending approval')}</p>
+          <div className="mt-3 space-y-3">
+            {data.noticiasPendientes.map((n) => (
+              <div key={n.id} className="rounded-lg border border-glass-border p-3">
+                <p className="text-sm font-semibold text-foreground">{n.titulo}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {n.autorNombre || t('Autor desconocido', 'Unknown author')} · {new Date(n.creadoEn).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </p>
+                <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{n.contenido}</p>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={busy === 'aprobar-noticia'}
+                    onClick={() => void act('aprobar-noticia', { noticiaId: n.id }, 'Noticia aprobada.', 'News approved.')}
+                    className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                    {t('Aprobar', 'Approve')}
+                  </button>
+                  {rechazoAbiertoId === n.id ? (
+                    <>
+                      <input
+                        value={rechazoMotivo}
+                        onChange={(e) => setRechazoMotivo(e.target.value)}
+                        placeholder={t('Motivo (opcional)', 'Reason (optional)')}
+                        className="rounded-lg border border-glass-border bg-background px-2 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:border-teal-500 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        disabled={busy === 'rechazar-noticia'}
+                        onClick={() => {
+                          void act('rechazar-noticia', { noticiaId: n.id, motivo: rechazoMotivo }, 'Noticia rechazada.', 'News rejected.');
+                          setRechazoAbiertoId(null);
+                          setRechazoMotivo('');
+                        }}
+                        className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-300"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                        {t('Confirmar rechazo', 'Confirm rejection')}
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => { setRechazoAbiertoId(n.id); setRechazoMotivo(''); }}
+                      className="inline-flex items-center gap-2 rounded-lg border border-glass-border bg-glass px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                      {t('Rechazar', 'Reject')}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Noticias publicadas */}
+      <div className="glass-panel p-4">
+        <p className="text-sm font-semibold text-foreground">{t('Noticias de la comunidad', 'Community news')}</p>
+        {data && data.noticiasAprobadas.length === 0 ? (
+          <p className="mt-2 text-sm text-muted-foreground">{t('Todavía no hay noticias publicadas.', 'No news published yet.')}</p>
+        ) : (
+          <div className="mt-3 space-y-3">
+            {(data?.noticiasAprobadas ?? []).map((n) => (
+              <div key={n.id} className="rounded-lg border border-glass-border p-3">
+                <p className="text-sm font-semibold text-foreground">{n.titulo}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {n.autorNombre || t('Autor desconocido', 'Unknown author')} · {new Date(n.creadoEn).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </p>
+                <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{n.contenido}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   // ===== PARTE 3: return principal =====
   return (
     <div className="space-y-6">
@@ -959,6 +1138,7 @@ export function ClubBuilder() {
               ['semana', 'Junta semanal', Users],
               ['puntos', 'Puntos y niveles', Trophy],
               ['organizar', 'Organizar', CalendarClock],
+              ['noticias', 'Noticias', Newspaper],
             ] as [TabId, string, React.ComponentType<{ className?: string }>][]).map(([id, lbl, Icon]) => (
               <button
                 key={id}
@@ -970,7 +1150,15 @@ export function ClubBuilder() {
                 }
               >
                 <Icon className="h-4 w-4" />
-                {t(lbl, id === 'semana' ? 'Weekly meeting' : id === 'puntos' ? 'Points & levels' : 'Organization')}
+                {t(
+                  lbl,
+                  id === 'semana' ? 'Weekly meeting' : id === 'puntos' ? 'Points & levels' : id === 'organizar' ? 'Organization' : 'News'
+                )}
+                {id === 'noticias' && esAdmin && (data?.noticiasPendientes.length ?? 0) > 0 && (
+                  <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[11px] font-bold text-white">
+                    {data?.noticiasPendientes.length}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -978,6 +1166,7 @@ export function ClubBuilder() {
           {tab === 'semana' && renderSemana()}
           {tab === 'puntos' && renderPuntos()}
           {tab === 'organizar' && renderOrganizar()}
+          {tab === 'noticias' && renderNoticias()}
         </>
       )}
 

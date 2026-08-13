@@ -31,7 +31,29 @@
     },
     "agentsPreview": {
       "title": "Tu Consejo de Administración de IA",
-      "subtitle": "Cada agente domina un área distinta de tu negocio"
+      "subtitle": "Cada agente domina un área distinta de tu negocio",
+      "agents": {
+        "babel": {
+          "name": "Babel",
+          "domain": "Rumbo Estratégico"
+        },
+        "fisnando": {
+          "name": "Fisnando",
+          "domain": "Finanzas"
+        },
+        "karmetin": {
+          "name": "Karmetin",
+          "domain": "Marketing y Ventas"
+        },
+        "normau": {
+          "name": "Normau",
+          "domain": "Alianzas"
+        },
+        "atech": {
+          "name": "Atech",
+          "domain": "Operación"
+        }
+      }
     }
   },
   "register": {
@@ -129,8 +151,7 @@
     "compileHeader": "### Tu Plan de Negocio Estratégico Socioambiental — Compilado",
     "compileEmpty": "Todavía no has aprobado ninguna fase, así que no hay nada que compilar. Aprueba al menos la Fase 0 y vuelve a intentarlo.",
     "compileHint": "Escribe /compilar en cualquier momento para juntar en un solo documento todas las fases que ya has aprobado.",
-        "downloadDeliverable": "Descargar PDF",
+    "downloadDeliverable": "Descargar PDF",
     "errorGeneric": "Algo salió mal hablando con Babel. Intenta de nuevo."
   }
 }
-  

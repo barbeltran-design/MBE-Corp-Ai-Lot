@@ -49,6 +49,18 @@ export interface UserDoc {
   // true cuando el usuario pagó/obtuvo la certificación MBE (certificacion_mbe).
   certificado?: boolean;
   certificadoDesde?: string;
+  // Fecha de nacimiento (YYYY-MM-DD) — usada para felicitaciones de cumpleaños
+  // en Comunidad > Noticias.
+  fechaNacimiento?: string;
+  // Acceso manual a Mundos Premium otorgado por un administrador sin que el
+  // usuario haya pagado un plan (ver src/lib/premium.ts).
+  accesoManualPremium?: boolean;
+  accesoManualPor?: string; // uid del admin que otorgó el acceso
+  accesoManualAt?: string; // ISO date
+  // Suma de pagos.monto (colección `pagos`) para este usuario. Se calcula al
+  // vuelo en /api/admin/users, no se persiste aquí; se documenta por
+  // completitud del tipo.
+  totalInvertido?: number;
   // Club de juntas semanales: puntos acumulados, semanas asistidas y fecha de
   // la primera junta confirmada (los nivela el sistema desde puntosClub).
   puntosClub?: number;

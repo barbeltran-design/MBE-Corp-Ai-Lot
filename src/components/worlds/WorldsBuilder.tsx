@@ -18,6 +18,8 @@ import {
   nivelLabelPuntos,
 } from '@/lib/worlds';
 import { WorldsBg } from '@/components/worlds/worlds-bg';
+import { InsigniaCelebracion } from '@/components/worlds/InsigniaCelebracion';
+import { insigniasNuevas, insigniasVistas, marcarInsigniasVistas } from '@/lib/insignias';
 import PageTour from '@/components/ui/executive/PageTour';
 import type { TourStep } from '@/components/ui/executive/PageTour';
 
@@ -32,6 +34,7 @@ interface Progreso {
   nivel: string;
   partida: number[];
   tablero: boolean;
+  premium?: boolean;
 }
 
 // Traducciones es/en (estilo de los builders existentes).
@@ -447,6 +450,26 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
     window.setTimeout(() => setToast(null), 2900);
   }, []);
 
+  // Mundos Premium: visibles para todos, pero solo se puede entrar si el
+  // usuario tiene acceso premium (pagó el plan, o un admin se lo otorgó
+  // manualmente, o es admin — ver src/lib/premium.ts / /api/worlds).
+  const [premiumLock, setPremiumLock] = React.useState(false);
+  const [insigniaNuevaId, setInsigniaNuevaId] = React.useState<string | null>(null);
+  const esPremium = yo?.premium === true;
+  const abrirMundo = React.useCallback(
+    (destino: Vista) => {
+      if (!esPremium) {
+        setPremiumLock(true);
+        return;
+      }
+      setVista(destino);
+    },
+    [esPremium]
+  );
+  const irAPagar = React.useCallback(() => {
+    router.push(`/${lang === 'es' ? 'es' : 'en'}/perfil`);
+  }, [router, lang]);
+
   const festejar = React.useCallback(() => {
     const seed = Date.now();
     setConfettiSeed(seed);
@@ -467,6 +490,15 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
         if (res.ok) {
           const data = (await res.json()) as { yo: Progreso };
           setYo(data.yo);
+          const nuevas = insigniasNuevas(usr.uid, {
+            partida: data.yo.partida,
+            tablero: data.yo.tablero,
+            premium: data.yo.premium,
+          });
+          if (nuevas.length > 0) {
+            setInsigniaNuevaId(nuevas[0]);
+            festejar();
+          }
         }
       } catch (err) {
         console.error('[worlds] carga', err);
@@ -590,10 +622,17 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
   // Soporta /worlds?v=partida|tablero|estrategia para abrir directo una vista
   // (los enlaces del Inicio llevan este parámetro).
   React.useEffect(() => {
+    if (cargando) return; // espera a conocer yo.premium antes de decidir
     const v = new URLSearchParams(window.location.search).get('v');
     const validas: string[] = ['partida', 'tablero', 'estrategia', ...VISTAS_PREMIUM];
-    if (v && validas.includes(v)) setVista(v as Vista);
-  }, []);
+    const premiumVistas: string[] = ['estrategia', ...VISTAS_PREMIUM];
+    if (!v || !validas.includes(v)) return;
+    if (premiumVistas.includes(v) && !esPremium) {
+      setPremiumLock(true);
+      return;
+    }
+    setVista(v as Vista);
+  }, [cargando, esPremium]);
 
   const hechas = yo?.partida ?? [];
   const mundoVista = MUNDOS_PREMIUM_LABELS.find((m) => m.id === vista);
@@ -606,6 +645,56 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
       {toast && (
         <div className="fixed bottom-6 left-1/2 z-[99] w-max max-w-[92vw] -translate-x-1/2 rounded-full border border-teal-300/50 bg-[#0b2430]/90 px-5 py-3 text-sm font-bold text-white shadow-2xl backdrop-blur-xl">
           ⭐ {toast}
+        </div>
+      )}
+
+      <InsigniaCelebracion
+        insigniaId={insigniaNuevaId}
+        lang={lang === 'en' ? 'en' : 'es'}
+        onClose={() => {
+          if (uid && insigniaNuevaId) {
+            marcarInsigniasVistas(uid, [...insigniasVistas(uid), insigniaNuevaId]);
+          }
+          setInsigniaNuevaId(null);
+        }}
+      />
+
+      {premiumLock && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+          onClick={() => setPremiumLock(false)}
+        >
+          <div
+            className="world-glass world-grain max-w-sm rounded-2xl p-6 text-center shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-4xl">🔒</div>
+            <h3 className="mt-2 text-base font-extrabold text-slate-800 dark:text-white">
+              {en(['Este mundo es Premium', 'This world is Premium'])}
+            </h3>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+              {en([
+                'Para entrar necesitas activar tu plan MBE Copilot. Puedes ver todos los Mundos Premium desde el mapa, pero solo se desbloquean con el plan activo.',
+                'To enter you need to activate your MBE Copilot plan. You can see every Premium World from the map, but they only unlock with an active plan.',
+              ])}
+            </p>
+            <div className="mt-4 flex justify-center gap-2">
+              <button
+                type="button"
+                className="rounded-full bg-teal-600 px-4 py-2 text-xs font-extrabold text-white shadow hover:bg-teal-700"
+                onClick={irAPagar}
+              >
+                {en(['Ir a activar mi plan →', 'Activate my plan →'])}
+              </button>
+              <button
+                type="button"
+                className="rounded-full border border-slate-300 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+                onClick={() => setPremiumLock(false)}
+              >
+                {en(['Cerrar', 'Close'])}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -713,9 +802,9 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
                 </h2>
 
                 <div className="mb-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  <button className="world-glass world-glass-hover world-grain p-5 text-left" onClick={() => setVista('estrategia')}>
-                    <span className="mb-2 inline-block rounded-full bg-fuchsia-100 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-fuchsia-700 dark:bg-fuchsia-900 dark:text-fuchsia-200">
-                      Premium
+                  <button className="world-glass world-glass-hover world-grain p-5 text-left" onClick={() => abrirMundo('estrategia')}>
+                    <span className="mb-2 inline-flex items-center gap-1 rounded-full bg-fuchsia-100 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-fuchsia-700 dark:bg-fuchsia-900 dark:text-fuchsia-200">
+                      {esPremium ? 'Premium' : '🔒 Premium'}
                     </span>
                     <div className="text-4xl">🧭</div>
                     <div className="mt-3 flex items-center gap-2">
@@ -732,10 +821,10 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
                     <button
                       key={m.id}
                       className="world-glass world-glass-hover world-grain p-5 text-left"
-                      onClick={() => setVista(m.id)}
+                      onClick={() => abrirMundo(m.id)}
                     >
-                      <span className="mb-2 inline-block rounded-full bg-fuchsia-100 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-fuchsia-700 dark:bg-fuchsia-900 dark:text-fuchsia-200">
-                        Premium
+                      <span className="mb-2 inline-flex items-center gap-1 rounded-full bg-fuchsia-100 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-fuchsia-700 dark:bg-fuchsia-900 dark:text-fuchsia-200">
+                        {esPremium ? 'Premium' : '🔒 Premium'}
                       </span>
                       <div className="text-4xl">{m.icon}</div>
                       <div className="mt-3 flex items-center gap-2">

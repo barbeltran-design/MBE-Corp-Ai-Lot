@@ -31,7 +31,29 @@
     },
     "agentsPreview": {
       "title": "Your AI Board of Directors",
-      "subtitle": "Each agent masters a different area of your business"
+      "subtitle": "Each agent masters a different area of your business",
+      "agents": {
+        "babel": {
+          "name": "Babel",
+          "domain": "Strategic Direction"
+        },
+        "fisnando": {
+          "name": "Fisnando",
+          "domain": "Finance"
+        },
+        "karmetin": {
+          "name": "Karmetin",
+          "domain": "Marketing & Sales"
+        },
+        "normau": {
+          "name": "Normau",
+          "domain": "Partnerships"
+        },
+        "atech": {
+          "name": "Atech",
+          "domain": "Operations"
+        }
+      }
     }
   },
   "register": {
@@ -129,7 +151,7 @@
     "compileHeader": "### Your Socio-Environmental Strategic Business Plan — Compiled",
     "compileEmpty": "You haven't approved any phase yet, so there's nothing to compile. Approve at least Phase 0 and try again.",
     "compileHint": "Type /compilar at any time to assemble every phase you've approved so far into a single document.",
-        "downloadDeliverable": "Download PDF", 
-        "errorGeneric": "Something went wrong talking to Babel. Please try again."
+    "downloadDeliverable": "Download PDF",
+    "errorGeneric": "Something went wrong talking to Babel. Please try again."
   }
 }

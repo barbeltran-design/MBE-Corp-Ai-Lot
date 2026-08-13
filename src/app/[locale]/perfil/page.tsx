@@ -67,6 +67,8 @@ function ProfilePageInner() {
   const [website, setWebsite] = React.useState('');
   const [language, setLanguage] = React.useState<Language>('es');
   const [telefono, setTelefono] = React.useState('');
+  const [fechaNacimiento, setFechaNacimiento] = React.useState('');
+  const [certificado, setCertificado] = React.useState(false);
 
   const [saving, setSaving] = React.useState(false);
   const [savedMsg, setSavedMsg] = React.useState('');
@@ -125,6 +127,8 @@ function ProfilePageInner() {
           setCountry(data.country || 'MX');
           setLanguage(data.language || 'es');
           setTelefono((data.telefono as string) || '');
+          setFechaNacimiento((data.fechaNacimiento as string) || '');
+          setCertificado(data.certificado === true);
           setPuntosClub(typeof data.puntosClub === 'number' ? data.puntosClub : 0);
           setSemanasJunta(typeof data.semanasJunta === 'number' ? data.semanasJunta : 0);
           setPrimerJuntaAt((data.primerJuntaAt as string) || '');
@@ -196,6 +200,16 @@ function ProfilePageInner() {
       await setDoc(doc(db, 'users', user.uid), { telefono: telefono.trim() }, { merge: true });
     } catch (err) {
       console.error('[perfil] telefono save failed', err);
+    }
+  }
+
+  async function handleSaveFechaNacimiento() {
+    if (!user) return;
+    try {
+      const db = getFirebaseDb();
+      await setDoc(doc(db, 'users', user.uid), { fechaNacimiento: fechaNacimiento || null }, { merge: true });
+    } catch (err) {
+      console.error('[perfil] fechaNacimiento save failed', err);
     }
   }
 
@@ -476,6 +490,42 @@ function ProfilePageInner() {
                 />
                 <p className="text-xs text-muted-foreground">
                   {t('Se guarda automáticamente al salir del campo.', 'It is saved automatically when you leave the field.')}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="perfil-fecha-nacimiento">
+                  {t('Fecha de cumpleaños', 'Birthday')}
+                </Label>
+                <Input
+                  id="perfil-fecha-nacimiento"
+                  type="date"
+                  value={fechaNacimiento}
+                  onChange={(e) => setFechaNacimiento(e.target.value)}
+                  onBlur={handleSaveFechaNacimiento}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t(
+                    'Se usa para felicitarte en Comunidad el día de tu cumpleaños. Se guarda al salir del campo.',
+                    'Used to congratulate you in Community on your birthday. Saved automatically when you leave the field.'
+                  )}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <Label>{t('Certificación MBE Corp', 'MBE Corp Certification')}</Label>
+                <div className="rounded-lg border border-glass-border bg-glass p-3 text-sm">
+                  {certificado ? (
+                    <span className="font-semibold text-emerald-700 dark:text-emerald-300">
+                      ✓ {t('Certificado', 'Certified')}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">{t('Sin certificación', 'Not certified')}</span>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {t(
+                    'Este campo lo otorga un administrador de MBE Corp.',
+                    'This field is granted by an MBE Corp administrator.'
+                  )}
                 </p>
               </div>
               <div className="space-y-1">

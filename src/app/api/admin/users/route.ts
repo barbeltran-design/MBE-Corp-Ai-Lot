@@ -25,6 +25,13 @@ export async function GET(req: NextRequest) {
           db.collection('pagos').where('uid', '==', uid).limit(50).get(),
         ]);
 
+        // Suma de lo invertido: cada doc en `pagos` guarda `monto` (MXN, ver
+        // /api/webhooks/mercadopago). Se ignoran montos no numéricos.
+        const totalInvertido = pagosSnap.docs.reduce((acc, d) => {
+          const m = d.data().monto;
+          return acc + (typeof m === 'number' && Number.isFinite(m) ? m : 0);
+        }, 0);
+
         return {
           uid,
           name: data.name ?? '',
@@ -34,6 +41,8 @@ export async function GET(req: NextRequest) {
           certificado: data.certificado === true,
           subscription: data.subscription ?? 'free',
           planStatus: data.planStatus ?? '',
+          accesoManualPremium: data.accesoManualPremium === true,
+          totalInvertido,
           totalMaturity: typeof data.totalMaturity === 'number' ? data.totalMaturity : null,
           assessmentCompleted: data.assessmentCompleted === true,
           companyName: data.companyName ?? '',
@@ -83,12 +92,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Faltan los roles.' }, { status: 400 });
     }
     const certificado = typeof body?.certificado === 'boolean' ? body.certificado : undefined;
+    const accesoManualPremium = typeof body?.accesoManualPremium === 'boolean' ? body.accesoManualPremium : undefined;
 
     const patch: Record<string, unknown> = {
       roles: roles.length ? roles : ['usuario'],
       especialistaTemas: temas,
     };
     if (certificado !== undefined) patch.certificado = certificado;
+    if (accesoManualPremium !== undefined) {
+      patch.accesoManualPremium = accesoManualPremium;
+      patch.accesoManualPor = accesoManualPremium ? guard.uid : null;
+      patch.accesoManualAt = accesoManualPremium ? new Date().toISOString() : null;
+    }
 
     await getAdminDb().collection('users').doc(uid).set(patch, { merge: true });
     return NextResponse.json({ ok: true });
