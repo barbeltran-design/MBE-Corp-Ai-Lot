@@ -1,0 +1,391 @@
+diff --git a/src/app/api/club/route.ts b/src/app/api/club/route.ts
+index e7ba00e..ed3a8b6 100644
+--- a/src/app/api/club/route.ts
++++ b/src/app/api/club/route.ts
+@@ -12,7 +12,9 @@ import {
+   siguienteNivel,
+   trimestreActual,
+   tematicaDeSemana,
++  aplicarAgendaMaestra,
+   type JuntaClubDoc,
++  type AgendaOverrideItem,
+ } from '@/lib/club';
+ import { nivelPorPuntos } from '@/lib/refplace';
+ import { puedeCrearNoticias, nivelMinimoNoticiasInfo } from '@/lib/premium';
+@@ -65,6 +67,23 @@ function nowISO(): string {
+   return new Date().toISOString();
+ }
+ 
++// Overrides "permanentes" de la agenda base, guardados por un admin desde el
++// Club (accion reordenar-agenda con permanente:true). Si el documento no
++// existe todavia, se usa la agenda original tal cual (sin cambios).
++const AGENDA_MAESTRA_DOC = 'config/agenda_junta_maestra';
++
++async function leerAgendaMaestra(db: FirebaseFirestore.Firestore): Promise<Record<string, AgendaOverrideItem>> {
++  try {
++    const snap = await db.doc(AGENDA_MAESTRA_DOC).get();
++    if (!snap.exists) return {};
++    const data = snap.data() as { overrides?: Record<string, AgendaOverrideItem> } | undefined;
++    return data?.overrides ?? {};
++  } catch (err) {
++    console.error('[club] leerAgendaMaestra error', err);
++    return {};
++  }
++}
++
+ // GET /api/club — vista del Club (autenticado): juntas y eventos, roles con
+ // nombres de quienes los ocupan, mis datos/puntos, rankings y catálogo.
+ export async function GET(req: NextRequest) {
+@@ -82,6 +101,8 @@ export async function GET(req: NextRequest) {
+     const db = getAdminDb();
+     const userRoles = await readUserRoles(uid);
+     const esAdminFlag = esAdmin(userRoles);
++    const agendaOverrides = await leerAgendaMaestra(db);
++    const agendaBase = aplicarAgendaMaestra(agendaOverrides);
+ 
+     const usersSnap = await db.collection('users').limit(400).get();
+     const users = new Map<string, Record<string, unknown>>();
+@@ -256,7 +277,7 @@ export async function GET(req: NextRequest) {
+       puntosSemana,
+       niveles: NIVEL_PUNTOS.map((n) => ({ id: n.id, umbral: n.umbral, es: n.es, en: n.en })),
+       catalogo: CATALOGO_PUNTOS.map((c) => ({ id: c.id, es: c.es, en: c.en, valor: c.valor })),
+-      agendaEjemplo: AGENDA_JUNTA.es,
++      agendaEjemplo: agendaBase,
+       totalMinutosAgenda: AGENDA_JUNTA_TOTAL,
+       noticiasAprobadas,
+       noticiasPendientes,
+@@ -312,6 +333,7 @@ export async function POST(req: NextRequest) {
+       const semana = semanaDeMes(fecha);
+       let liga = String(body?.liga ?? '').trim();
+       if (liga && !/^https?:\/\//i.test(liga)) liga = 'https://' + liga;
++      const agendaOverridesNueva = await leerAgendaMaestra(db);
+       const doc: JuntaClubDoc = {
+         tipo: 'junta',
+         nombre: `Junta ${semana === 1 ? 'de Consejo' : 'semanal'} · Semana ${semana}`,
+@@ -319,7 +341,7 @@ export async function POST(req: NextRequest) {
+         hora,
+         liga,
+         semanaMes: semana,
+-        agenda: AGENDA_JUNTA.es.map((i) => ({ ...i })),
++        agenda: aplicarAgendaMaestra(agendaOverridesNueva),
+         roles: { coordinador: null, mentor_dinamica: null, mentor_crecimiento: null, mentor_b2b: null, mentor_calidad: null },
+         asistentes: {},
+         temaDefinido: '',
+@@ -392,8 +414,15 @@ export async function POST(req: NextRequest) {
+ 
+     if (accion === 'reordenar-agenda') {
+       const juntaId = String(body?.juntaId ?? '');
++      const permanente = body?.permanente === true;
++      if (permanente && !esAdminFlag) {
++        return NextResponse.json(
++          { error: 'Solo un administrador puede guardar un cambio permanente en la agenda (que aplique a todas las juntas futuras). Puedes guardar el cambio solo para la junta de hoy.' },
++          { status: 403 }
++        );
++      }
+       const agendaRaw = Array.isArray(body?.agenda) ? body.agenda : [];
+-      const agenda: { id: string; titulo: string; descripcion: string; responsable: string; duracionMin: number }[] = [];
++      const agenda: { id: string; titulo: string; descripcion: string; responsable: string; duracionMin: number; oculto: boolean }[] = [];
+       for (const item of agendaRaw) {
+         const i = item as Record<string, unknown>;
+         if (typeof i?.id !== 'string') continue;
+@@ -406,12 +435,15 @@ export async function POST(req: NextRequest) {
+           descripcion: String(i?.descripcion ?? base?.descripcion ?? ''),
+           responsable: String(i?.responsable ?? base?.responsable ?? ''),
+           duracionMin: dur,
++          oculto: i?.oculto === true,
+         });
+       }
+-      const total = agenda.reduce((a, x) => a + x.duracionMin, 0);
++      // Solo los temas visibles cuentan para el total de 90 minutos; un tema
++      // oculto no ocupa tiempo en la junta de ese dia.
++      const total = agenda.filter((x) => !x.oculto).reduce((a, x) => a + x.duracionMin, 0);
+       if (total !== AGENDA_JUNTA_TOTAL) {
+         return NextResponse.json(
+-          { error: `La agenda debe sumar ${AGENDA_JUNTA_TOTAL} minutos (ahora suma ${total}).` },
++          { error: `Los temas visibles de la agenda deben sumar ${AGENDA_JUNTA_TOTAL} minutos (ahora suman ${total}). Los temas ocultos no cuentan en la suma.` },
+           { status: 400 }
+         );
+       }
+@@ -422,8 +454,29 @@ export async function POST(req: NextRequest) {
+       if (!esAdminFlag && !soyCoord) {
+         return NextResponse.json({ error: 'Solo el coordinador o un admin puede ajustar la agenda.' }, { status: 403 });
+       }
++      // Cambio solo para esta junta (siempre se guarda, sea permanente o no).
+       await db.collection('juntas_club').doc(juntaId).update({ agenda });
+-      return NextResponse.json({ ok: true });
++
++      // Si se pidio que sea permanente (solo admin, ya validado arriba),
++      // ademas se guarda como override de la agenda maestra: asi, la proxima
++      // vez que se cree una junta nueva, nacera ya con estos cambios. Si no
++      // es permanente, la agenda maestra no se toca y la proxima junta nueva
++      // aparecera con los temas originales.
++      if (permanente) {
++        const existentes = await leerAgendaMaestra(db);
++        const overrides: Record<string, AgendaOverrideItem> = { ...existentes };
++        for (const item of agenda) {
++          overrides[item.id] = {
++            titulo: item.titulo,
++            descripcion: item.descripcion,
++            duracionMin: item.duracionMin,
++            oculto: item.oculto,
++          };
++        }
++        await db.doc(AGENDA_MAESTRA_DOC).set({ overrides }, { merge: false });
++      }
++
++      return NextResponse.json({ ok: true, permanente });
+     }
+ 
+     if (accion === 'confirmar-asistencia') {
+diff --git a/src/components/club/ClubBuilder.tsx b/src/components/club/ClubBuilder.tsx
+index 15dbfce..d24df91 100644
+--- a/src/components/club/ClubBuilder.tsx
++++ b/src/components/club/ClubBuilder.tsx
+@@ -12,6 +12,8 @@ import {
+   CalendarClock,
+   Check,
+   Crown,
++  Eye,
++  EyeOff,
+   Link2,
+   Loader2,
+   LogIn,
+@@ -42,6 +44,7 @@ interface AgendaItemView {
+   descripcion: string;
+   responsable: string;
+   duracionMin: number;
++  oculto?: boolean;
+ }
+ 
+ interface JuntaView {
+@@ -292,7 +295,7 @@ export function ClubBuilder() {
+ 
+   const yo = data?.yo ?? null;
+   const agenda = agendaSel ?? ja?.agenda ?? data?.agendaEjemplo ?? [];
+-  const sumaAgenda = agenda.reduce((a, x) => a + x.duracionMin, 0);
++  const sumaAgenda = agenda.filter((x) => !x.oculto).reduce((a, x) => a + x.duracionMin, 0);
+   const eventos = (data?.juntas ?? []).filter((j) => j.tipo === 'evento' && j.estatus === 'programada');
+   const miembrosSel = data?.miembros ?? [];
+ 
+@@ -316,6 +319,39 @@ export function ClubBuilder() {
+     });
+   }
+ 
++  function editarCampoAgenda(idx: number, campo: 'titulo' | 'descripcion', valor: string) {
++    setAgendaSel((prev) => {
++      const cur = prev ?? agenda;
++      return cur.map((it, i2) => (i2 === idx ? { ...it, [campo]: valor } : it));
++    });
++  }
++
++  function toggleOcultoAgenda(idx: number) {
++    setAgendaSel((prev) => {
++      const cur = prev ?? agenda;
++      return cur.map((it, i2) => (i2 === idx ? { ...it, oculto: !it.oculto } : it));
++    });
++  }
++
++  async function guardarAgenda() {
++    if (!ja) return;
++    let permanente = false;
++    if (esAdmin) {
++      permanente = window.confirm(
++        t(
++          '¿Este cambio a la agenda será permanente y aplicará a todas las juntas futuras?\n\nAceptar = permanente (las próximas juntas nacerán ya con este cambio).\nCancelar = solo para la junta de hoy (la próxima junta nueva aparecerá con los temas originales).',
++          'Will this agenda change be permanent and apply to all future meetings?\n\nOK = permanent (future meetings will start with this change already applied).\nCancel = only for today\'s meeting (the next new meeting will show the original topics).'
++        )
++      );
++    }
++    await act(
++      'reordenar-agenda',
++      { juntaId: ja.id, agenda, permanente },
++      permanente ? 'Agenda actualizada de forma permanente.' : 'Agenda actualizada solo para hoy.',
++      permanente ? 'Agenda permanently updated.' : 'Agenda updated for today only.'
++    );
++  }
++
+   const catalogo = data?.catalogo ?? [];
+   const niveles = data?.niveles ?? [];
+   const rankingTrimBase = data?.rankings.trimestre ?? [];
+@@ -488,7 +524,7 @@ export function ClubBuilder() {
+                 <button
+                   type="button"
+                   disabled={busy === 'reordenar-agenda' || sumaAgenda !== AGENDA_JUNTA_TOTAL}
+-                  onClick={() => void act('reordenar-agenda', { juntaId: ja.id, agenda }, 'Agenda actualizada.', 'Agenda updated.')}
++                  onClick={() => void guardarAgenda()}
+                   className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:opacity-50"
+                 >
+                   {busy === 'reordenar-agenda' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+@@ -496,39 +532,85 @@ export function ClubBuilder() {
+                 </button>
+               )}
+             </div>
++            {(soyCoord || esAdmin) && (
++              <p className="mt-1 text-xs text-muted-foreground">
++                {t(
++                  'Puedes ocultar un tema (icono de ojo), editar su redacción y ajustar su duración. Al guardar se preguntará si el cambio es solo para hoy o permanente.',
++                  'You can hide a topic (eye icon), edit its wording and adjust its duration. When saving, you will be asked whether the change is only for today or permanent.'
++                )}
++              </p>
++            )}
+             <div className="mt-3 space-y-2">
+-              {agenda.map((item, idx) => (
+-                <div key={item.id + '-' + idx} className="rounded-lg border border-glass-border bg-glass p-3">
+-                  <div className="flex flex-wrap items-center gap-2">
+-                    {(soyCoord || esAdmin) && (
+-                      <span className="flex items-center gap-1">
+-                        <button type="button" onClick={() => moveAgenda(idx, -1)} disabled={idx === 0} className="rounded border border-glass-border p-1 text-muted-foreground hover:text-foreground disabled:opacity-40">
+-                          <ArrowUp className="h-3 w-3" />
+-                        </button>
+-                        <button type="button" onClick={() => moveAgenda(idx, 1)} disabled={idx === agenda.length - 1} className="rounded border border-glass-border p-1 text-muted-foreground hover:text-foreground disabled:opacity-40">
+-                          <ArrowDown className="h-3 w-3" />
+-                        </button>
+-                      </span>
+-                    )}
+-                    <span className="font-semibold text-foreground">{agendaSel && item.responsable === rolesJa?.coordinador?.uid ? item.titulo : t(item.titulo, item.titulo)}</span>
+-                    <span className="text-xs text-muted-foreground">· {rolLabel(item.responsable, dispLang)}</span>
+-                    {(soyCoord || esAdmin) ? (
+-                      <span className="ml-auto flex items-center gap-1">
+-                        <button type="button" onClick={() => cambiaDuracion(idx, -5)} className="rounded border border-glass-border p-1 text-muted-foreground hover:text-foreground">
+-                          <Minus className="h-3 w-3" />
+-                        </button>
+-                        <span className="w-12 text-center text-sm font-semibold">{item.duracionMin} min</span>
+-                        <button type="button" onClick={() => cambiaDuracion(idx, 5)} className="rounded border border-glass-border p-1 text-muted-foreground hover:text-foreground">
+-                          <Plus className="h-3 w-3" />
+-                        </button>
+-                      </span>
+-                    ) : (
+-                      <span className="ml-auto rounded-full bg-glass px-2 py-0.5 text-xs font-medium text-muted-foreground">{item.duracionMin} min</span>
+-                    )}
+-                  </div>
+-                  <p className="mt-1 text-xs text-muted-foreground">{item.descripcion}</p>
+-                </div>
+-              ))}
++              {agenda
++                .filter((item) => !item.oculto || soyCoord || esAdmin)
++                .map((item) => {
++                  const idx = agenda.indexOf(item);
++                  return (
++                    <div
++                      key={item.id + '-' + idx}
++                      className={'rounded-lg border border-glass-border bg-glass p-3' + (item.oculto ? ' opacity-50' : '')}
++                    >
++                      <div className="flex flex-wrap items-center gap-2">
++                        {(soyCoord || esAdmin) && (
++                          <span className="flex items-center gap-1">
++                            <button type="button" onClick={() => moveAgenda(idx, -1)} disabled={idx === 0} className="rounded border border-glass-border p-1 text-muted-foreground hover:text-foreground disabled:opacity-40">
++                              <ArrowUp className="h-3 w-3" />
++                            </button>
++                            <button type="button" onClick={() => moveAgenda(idx, 1)} disabled={idx === agenda.length - 1} className="rounded border border-glass-border p-1 text-muted-foreground hover:text-foreground disabled:opacity-40">
++                              <ArrowDown className="h-3 w-3" />
++                            </button>
++                            <button
++                              type="button"
++                              onClick={() => toggleOcultoAgenda(idx)}
++                              title={item.oculto ? t('Mostrar tema', 'Show topic') : t('Ocultar tema', 'Hide topic')}
++                              className="rounded border border-glass-border p-1 text-muted-foreground hover:text-foreground"
++                            >
++                              {item.oculto ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
++                            </button>
++                          </span>
++                        )}
++                        {(soyCoord || esAdmin) ? (
++                          <input
++                            value={item.titulo}
++                            onChange={(e) => editarCampoAgenda(idx, 'titulo', e.target.value)}
++                            className="min-w-[160px] flex-1 rounded border border-glass-border bg-background px-2 py-1 text-sm font-semibold text-foreground focus:border-teal-500 focus:outline-none"
++                          />
++                        ) : (
++                          <span className="font-semibold text-foreground">{item.titulo}</span>
++                        )}
++                        <span className="text-xs text-muted-foreground">· {rolLabel(item.responsable, dispLang)}</span>
++                        {item.oculto && (soyCoord || esAdmin) && (
++                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
++                            {t('Oculto para el grupo', 'Hidden from the group')}
++                          </span>
++                        )}
++                        {(soyCoord || esAdmin) ? (
++                          <span className="ml-auto flex items-center gap-1">
++                            <button type="button" onClick={() => cambiaDuracion(idx, -5)} className="rounded border border-glass-border p-1 text-muted-foreground hover:text-foreground">
++                              <Minus className="h-3 w-3" />
++                            </button>
++                            <span className="w-12 text-center text-sm font-semibold">{item.duracionMin} min</span>
++                            <button type="button" onClick={() => cambiaDuracion(idx, 5)} className="rounded border border-glass-border p-1 text-muted-foreground hover:text-foreground">
++                              <Plus className="h-3 w-3" />
++                            </button>
++                          </span>
++                        ) : (
++                          <span className="ml-auto rounded-full bg-glass px-2 py-0.5 text-xs font-medium text-muted-foreground">{item.duracionMin} min</span>
++                        )}
++                      </div>
++                      {(soyCoord || esAdmin) ? (
++                        <textarea
++                          value={item.descripcion}
++                          onChange={(e) => editarCampoAgenda(idx, 'descripcion', e.target.value)}
++                          rows={2}
++                          className="mt-1 w-full rounded border border-glass-border bg-background px-2 py-1 text-xs text-foreground focus:border-teal-500 focus:outline-none"
++                        />
++                      ) : (
++                        <p className="mt-1 text-xs text-muted-foreground">{item.descripcion}</p>
++                      )}
++                    </div>
++                  );
++                })}
+             </div>
+           </div>
+         </>
+diff --git a/src/lib/club.ts b/src/lib/club.ts
+index 9aa4667..bdaf887 100644
+--- a/src/lib/club.ts
++++ b/src/lib/club.ts
+@@ -47,6 +47,7 @@ export interface AgendaItemDef {
+   descripcion: string;
+   responsable: RolJuntaId | string; // rol que lidera el bloque
+   duracionMin: number;
++  oculto?: boolean; // si es true, no se muestra a los miembros (solo coordinador/admin lo ven, atenuado)
+ }
+ 
+ export const AGENDA_JUNTA: { es: AgendaItemDef[]; en: AgendaItemDef[] } = {
+@@ -152,6 +153,33 @@ export const AGENDA_JUNTA: { es: AgendaItemDef[]; en: AgendaItemDef[] } = {
+ 
+ export const AGENDA_JUNTA_TOTAL = AGENDA_JUNTA.es.reduce((a, i) => a + i.duracionMin, 0); // 90
+ 
++// Cambios "permanentes" a la agenda base (hechos por un admin desde el Club)
++// se guardan en Firestore como overrides por id de bloque, y se aplican aqui
++// sobre AGENDA_JUNTA.es para calcular la agenda que se copia a cada junta
++// nueva. Si no hay overrides, el comportamiento es identico al original.
++export interface AgendaOverrideItem {
++  titulo?: string;
++  descripcion?: string;
++  duracionMin?: number;
++  oculto?: boolean;
++}
++
++export function aplicarAgendaMaestra(
++  overrides: Record<string, AgendaOverrideItem> | null | undefined
++): AgendaItemDef[] {
++  return AGENDA_JUNTA.es.map((base) => {
++    const o = overrides?.[base.id];
++    if (!o) return { ...base };
++    return {
++      ...base,
++      titulo: typeof o.titulo === 'string' && o.titulo.trim() ? o.titulo : base.titulo,
++      descripcion: typeof o.descripcion === 'string' && o.descripcion.trim() ? o.descripcion : base.descripcion,
++      duracionMin: typeof o.duracionMin === 'number' && o.duracionMin > 0 ? o.duracionMin : base.duracionMin,
++      oculto: o.oculto === true,
++    };
++  });
++}
++
+ // Catálogo de puntos que otorga el Mentor de Calidad (y que el admin puede
+ // ajustar). valor = puntos que se suman/restan al asistente.
+ export const CATALOGO_PUNTOS = [
+@@ -236,7 +264,7 @@ export interface JuntaClubDoc {
+   objetivo?: string;
+   precio?: number; // solo eventos
+   semanaMes?: number; // 1-5 para juntas semanales
+-  agenda?: { id: string; titulo: string; descripcion: string; responsable: string; duracionMin: number }[];
++  agenda?: { id: string; titulo: string; descripcion: string; responsable: string; duracionMin: number; oculto?: boolean }[];
+   roles?: Record<string, string | null>; // RolJuntaId -> uid
+   temaDefinido?: string; // tema del tutorial definido por el mentor de crecimiento
+   asistentes?: Record<string, boolean>; // uid -> confirmado

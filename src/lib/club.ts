@@ -47,6 +47,7 @@ export interface AgendaItemDef {
   descripcion: string;
   responsable: RolJuntaId | string; // rol que lidera el bloque
   duracionMin: number;
+  oculto?: boolean; // si es true, no se muestra a los miembros (solo coordinador/admin lo ven, atenuado)
 }
 
 export const AGENDA_JUNTA: { es: AgendaItemDef[]; en: AgendaItemDef[] } = {
@@ -152,6 +153,33 @@ export const AGENDA_JUNTA: { es: AgendaItemDef[]; en: AgendaItemDef[] } = {
 
 export const AGENDA_JUNTA_TOTAL = AGENDA_JUNTA.es.reduce((a, i) => a + i.duracionMin, 0); // 90
 
+// Cambios "permanentes" a la agenda base (hechos por un admin desde el Club)
+// se guardan en Firestore como overrides por id de bloque, y se aplican aqui
+// sobre AGENDA_JUNTA.es para calcular la agenda que se copia a cada junta
+// nueva. Si no hay overrides, el comportamiento es identico al original.
+export interface AgendaOverrideItem {
+  titulo?: string;
+  descripcion?: string;
+  duracionMin?: number;
+  oculto?: boolean;
+}
+
+export function aplicarAgendaMaestra(
+  overrides: Record<string, AgendaOverrideItem> | null | undefined
+): AgendaItemDef[] {
+  return AGENDA_JUNTA.es.map((base) => {
+    const o = overrides?.[base.id];
+    if (!o) return { ...base };
+    return {
+      ...base,
+      titulo: typeof o.titulo === 'string' && o.titulo.trim() ? o.titulo : base.titulo,
+      descripcion: typeof o.descripcion === 'string' && o.descripcion.trim() ? o.descripcion : base.descripcion,
+      duracionMin: typeof o.duracionMin === 'number' && o.duracionMin > 0 ? o.duracionMin : base.duracionMin,
+      oculto: o.oculto === true,
+    };
+  });
+}
+
 // Catálogo de puntos que otorga el Mentor de Calidad (y que el admin puede
 // ajustar). valor = puntos que se suman/restan al asistente.
 export const CATALOGO_PUNTOS = [
@@ -236,7 +264,7 @@ export interface JuntaClubDoc {
   objetivo?: string;
   precio?: number; // solo eventos
   semanaMes?: number; // 1-5 para juntas semanales
-  agenda?: { id: string; titulo: string; descripcion: string; responsable: string; duracionMin: number }[];
+  agenda?: { id: string; titulo: string; descripcion: string; responsable: string; duracionMin: number; oculto?: boolean }[];
   roles?: Record<string, string | null>; // RolJuntaId -> uid
   temaDefinido?: string; // tema del tutorial definido por el mentor de crecimiento
   asistentes?: Record<string, boolean>; // uid -> confirmado

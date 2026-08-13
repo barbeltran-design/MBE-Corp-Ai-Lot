@@ -12,7 +12,9 @@ import {
   siguienteNivel,
   trimestreActual,
   tematicaDeSemana,
+  aplicarAgendaMaestra,
   type JuntaClubDoc,
+  type AgendaOverrideItem,
 } from '@/lib/club';
 import { nivelPorPuntos } from '@/lib/refplace';
 import { puedeCrearNoticias, nivelMinimoNoticiasInfo } from '@/lib/premium';
@@ -65,6 +67,23 @@ function nowISO(): string {
   return new Date().toISOString();
 }
 
+// Overrides "permanentes" de la agenda base, guardados por un admin desde el
+// Club (accion reordenar-agenda con permanente:true). Si el documento no
+// existe todavia, se usa la agenda original tal cual (sin cambios).
+const AGENDA_MAESTRA_DOC = 'config/agenda_junta_maestra';
+
+async function leerAgendaMaestra(db: FirebaseFirestore.Firestore): Promise<Record<string, AgendaOverrideItem>> {
+  try {
+    const snap = await db.doc(AGENDA_MAESTRA_DOC).get();
+    if (!snap.exists) return {};
+    const data = snap.data() as { overrides?: Record<string, AgendaOverrideItem> } | undefined;
+    return data?.overrides ?? {};
+  } catch (err) {
+    console.error('[club] leerAgendaMaestra error', err);
+    return {};
+  }
+}
+
 // GET /api/club — vista del Club (autenticado): juntas y eventos, roles con
 // nombres de quienes los ocupan, mis datos/puntos, rankings y catálogo.
 export async function GET(req: NextRequest) {
@@ -82,6 +101,8 @@ export async function GET(req: NextRequest) {
     const db = getAdminDb();
     const userRoles = await readUserRoles(uid);
     const esAdminFlag = esAdmin(userRoles);
+    const agendaOverrides = await leerAgendaMaestra(db);
+    const agendaBase = aplicarAgendaMaestra(agendaOverrides);
 
     const usersSnap = await db.collection('users').limit(400).get();
     const users = new Map<string, Record<string, unknown>>();
@@ -256,7 +277,7 @@ export async function GET(req: NextRequest) {
       puntosSemana,
       niveles: NIVEL_PUNTOS.map((n) => ({ id: n.id, umbral: n.umbral, es: n.es, en: n.en })),
       catalogo: CATALOGO_PUNTOS.map((c) => ({ id: c.id, es: c.es, en: c.en, valor: c.valor })),
-      agendaEjemplo: AGENDA_JUNTA.es,
+      agendaEjemplo: agendaBase,
       totalMinutosAgenda: AGENDA_JUNTA_TOTAL,
       noticiasAprobadas,
       noticiasPendientes,
@@ -312,6 +333,7 @@ export async function POST(req: NextRequest) {
       const semana = semanaDeMes(fecha);
       let liga = String(body?.liga ?? '').trim();
       if (liga && !/^https?:\/\//i.test(liga)) liga = 'https://' + liga;
+      const agendaOverridesNueva = await leerAgendaMaestra(db);
       const doc: JuntaClubDoc = {
         tipo: 'junta',
         nombre: `Junta ${semana === 1 ? 'de Consejo' : 'semanal'} · Semana ${semana}`,
@@ -319,7 +341,7 @@ export async function POST(req: NextRequest) {
         hora,
         liga,
         semanaMes: semana,
-        agenda: AGENDA_JUNTA.es.map((i) => ({ ...i })),
+        agenda: aplicarAgendaMaestra(agendaOverridesNueva),
         roles: { coordinador: null, mentor_dinamica: null, mentor_crecimiento: null, mentor_b2b: null, mentor_calidad: null },
         asistentes: {},
         temaDefinido: '',
@@ -392,8 +414,15 @@ export async function POST(req: NextRequest) {
 
     if (accion === 'reordenar-agenda') {
       const juntaId = String(body?.juntaId ?? '');
+      const permanente = body?.permanente === true;
+      if (permanente && !esAdminFlag) {
+        return NextResponse.json(
+          { error: 'Solo un administrador puede guardar un cambio permanente en la agenda (que aplique a todas las juntas futuras). Puedes guardar el cambio solo para la junta de hoy.' },
+          { status: 403 }
+        );
+      }
       const agendaRaw = Array.isArray(body?.agenda) ? body.agenda : [];
-      const agenda: { id: string; titulo: string; descripcion: string; responsable: string; duracionMin: number }[] = [];
+      const agenda: { id: string; titulo: string; descripcion: string; responsable: string; duracionMin: number; oculto: boolean }[] = [];
       for (const item of agendaRaw) {
         const i = item as Record<string, unknown>;
         if (typeof i?.id !== 'string') continue;
@@ -406,12 +435,15 @@ export async function POST(req: NextRequest) {
           descripcion: String(i?.descripcion ?? base?.descripcion ?? ''),
           responsable: String(i?.responsable ?? base?.responsable ?? ''),
           duracionMin: dur,
+          oculto: i?.oculto === true,
         });
       }
-      const total = agenda.reduce((a, x) => a + x.duracionMin, 0);
+      // Solo los temas visibles cuentan para el total de 90 minutos; un tema
+      // oculto no ocupa tiempo en la junta de ese dia.
+      const total = agenda.filter((x) => !x.oculto).reduce((a, x) => a + x.duracionMin, 0);
       if (total !== AGENDA_JUNTA_TOTAL) {
         return NextResponse.json(
-          { error: `La agenda debe sumar ${AGENDA_JUNTA_TOTAL} minutos (ahora suma ${total}).` },
+          { error: `Los temas visibles de la agenda deben sumar ${AGENDA_JUNTA_TOTAL} minutos (ahora suman ${total}). Los temas ocultos no cuentan en la suma.` },
           { status: 400 }
         );
       }
@@ -422,8 +454,29 @@ export async function POST(req: NextRequest) {
       if (!esAdminFlag && !soyCoord) {
         return NextResponse.json({ error: 'Solo el coordinador o un admin puede ajustar la agenda.' }, { status: 403 });
       }
+      // Cambio solo para esta junta (siempre se guarda, sea permanente o no).
       await db.collection('juntas_club').doc(juntaId).update({ agenda });
-      return NextResponse.json({ ok: true });
+
+      // Si se pidio que sea permanente (solo admin, ya validado arriba),
+      // ademas se guarda como override de la agenda maestra: asi, la proxima
+      // vez que se cree una junta nueva, nacera ya con estos cambios. Si no
+      // es permanente, la agenda maestra no se toca y la proxima junta nueva
+      // aparecera con los temas originales.
+      if (permanente) {
+        const existentes = await leerAgendaMaestra(db);
+        const overrides: Record<string, AgendaOverrideItem> = { ...existentes };
+        for (const item of agenda) {
+          overrides[item.id] = {
+            titulo: item.titulo,
+            descripcion: item.descripcion,
+            duracionMin: item.duracionMin,
+            oculto: item.oculto,
+          };
+        }
+        await db.doc(AGENDA_MAESTRA_DOC).set({ overrides }, { merge: false });
+      }
+
+      return NextResponse.json({ ok: true, permanente });
     }
 
     if (accion === 'confirmar-asistencia') {

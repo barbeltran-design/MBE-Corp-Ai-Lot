@@ -12,6 +12,8 @@ import {
   CalendarClock,
   Check,
   Crown,
+  Eye,
+  EyeOff,
   Link2,
   Loader2,
   LogIn,
@@ -42,6 +44,7 @@ interface AgendaItemView {
   descripcion: string;
   responsable: string;
   duracionMin: number;
+  oculto?: boolean;
 }
 
 interface JuntaView {
@@ -292,7 +295,7 @@ export function ClubBuilder() {
 
   const yo = data?.yo ?? null;
   const agenda = agendaSel ?? ja?.agenda ?? data?.agendaEjemplo ?? [];
-  const sumaAgenda = agenda.reduce((a, x) => a + x.duracionMin, 0);
+  const sumaAgenda = agenda.filter((x) => !x.oculto).reduce((a, x) => a + x.duracionMin, 0);
   const eventos = (data?.juntas ?? []).filter((j) => j.tipo === 'evento' && j.estatus === 'programada');
   const miembrosSel = data?.miembros ?? [];
 
@@ -314,6 +317,39 @@ export function ClubBuilder() {
       const cur = prev ?? agenda;
       return cur.map((it, i2) => (i2 === idx ? { ...it, duracionMin: Math.max(1, Math.min(90, it.duracionMin + delta)) } : it));
     });
+  }
+
+  function editarCampoAgenda(idx: number, campo: 'titulo' | 'descripcion', valor: string) {
+    setAgendaSel((prev) => {
+      const cur = prev ?? agenda;
+      return cur.map((it, i2) => (i2 === idx ? { ...it, [campo]: valor } : it));
+    });
+  }
+
+  function toggleOcultoAgenda(idx: number) {
+    setAgendaSel((prev) => {
+      const cur = prev ?? agenda;
+      return cur.map((it, i2) => (i2 === idx ? { ...it, oculto: !it.oculto } : it));
+    });
+  }
+
+  async function guardarAgenda() {
+    if (!ja) return;
+    let permanente = false;
+    if (esAdmin) {
+      permanente = window.confirm(
+        t(
+          '¿Este cambio a la agenda será permanente y aplicará a todas las juntas futuras?\n\nAceptar = permanente (las próximas juntas nacerán ya con este cambio).\nCancelar = solo para la junta de hoy (la próxima junta nueva aparecerá con los temas originales).',
+          'Will this agenda change be permanent and apply to all future meetings?\n\nOK = permanent (future meetings will start with this change already applied).\nCancel = only for today\'s meeting (the next new meeting will show the original topics).'
+        )
+      );
+    }
+    await act(
+      'reordenar-agenda',
+      { juntaId: ja.id, agenda, permanente },
+      permanente ? 'Agenda actualizada de forma permanente.' : 'Agenda actualizada solo para hoy.',
+      permanente ? 'Agenda permanently updated.' : 'Agenda updated for today only.'
+    );
   }
 
   const catalogo = data?.catalogo ?? [];
@@ -488,7 +524,7 @@ export function ClubBuilder() {
                 <button
                   type="button"
                   disabled={busy === 'reordenar-agenda' || sumaAgenda !== AGENDA_JUNTA_TOTAL}
-                  onClick={() => void act('reordenar-agenda', { juntaId: ja.id, agenda }, 'Agenda actualizada.', 'Agenda updated.')}
+                  onClick={() => void guardarAgenda()}
                   className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:opacity-50"
                 >
                   {busy === 'reordenar-agenda' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
@@ -496,39 +532,85 @@ export function ClubBuilder() {
                 </button>
               )}
             </div>
+            {(soyCoord || esAdmin) && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t(
+                  'Puedes ocultar un tema (icono de ojo), editar su redacción y ajustar su duración. Al guardar se preguntará si el cambio es solo para hoy o permanente.',
+                  'You can hide a topic (eye icon), edit its wording and adjust its duration. When saving, you will be asked whether the change is only for today or permanent.'
+                )}
+              </p>
+            )}
             <div className="mt-3 space-y-2">
-              {agenda.map((item, idx) => (
-                <div key={item.id + '-' + idx} className="rounded-lg border border-glass-border bg-glass p-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {(soyCoord || esAdmin) && (
-                      <span className="flex items-center gap-1">
-                        <button type="button" onClick={() => moveAgenda(idx, -1)} disabled={idx === 0} className="rounded border border-glass-border p-1 text-muted-foreground hover:text-foreground disabled:opacity-40">
-                          <ArrowUp className="h-3 w-3" />
-                        </button>
-                        <button type="button" onClick={() => moveAgenda(idx, 1)} disabled={idx === agenda.length - 1} className="rounded border border-glass-border p-1 text-muted-foreground hover:text-foreground disabled:opacity-40">
-                          <ArrowDown className="h-3 w-3" />
-                        </button>
-                      </span>
-                    )}
-                    <span className="font-semibold text-foreground">{agendaSel && item.responsable === rolesJa?.coordinador?.uid ? item.titulo : t(item.titulo, item.titulo)}</span>
-                    <span className="text-xs text-muted-foreground">· {rolLabel(item.responsable, dispLang)}</span>
-                    {(soyCoord || esAdmin) ? (
-                      <span className="ml-auto flex items-center gap-1">
-                        <button type="button" onClick={() => cambiaDuracion(idx, -5)} className="rounded border border-glass-border p-1 text-muted-foreground hover:text-foreground">
-                          <Minus className="h-3 w-3" />
-                        </button>
-                        <span className="w-12 text-center text-sm font-semibold">{item.duracionMin} min</span>
-                        <button type="button" onClick={() => cambiaDuracion(idx, 5)} className="rounded border border-glass-border p-1 text-muted-foreground hover:text-foreground">
-                          <Plus className="h-3 w-3" />
-                        </button>
-                      </span>
-                    ) : (
-                      <span className="ml-auto rounded-full bg-glass px-2 py-0.5 text-xs font-medium text-muted-foreground">{item.duracionMin} min</span>
-                    )}
-                  </div>
-                  <p className="mt-1 text-xs text-muted-foreground">{item.descripcion}</p>
-                </div>
-              ))}
+              {agenda
+                .filter((item) => !item.oculto || soyCoord || esAdmin)
+                .map((item) => {
+                  const idx = agenda.indexOf(item);
+                  return (
+                    <div
+                      key={item.id + '-' + idx}
+                      className={'rounded-lg border border-glass-border bg-glass p-3' + (item.oculto ? ' opacity-50' : '')}
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        {(soyCoord || esAdmin) && (
+                          <span className="flex items-center gap-1">
+                            <button type="button" onClick={() => moveAgenda(idx, -1)} disabled={idx === 0} className="rounded border border-glass-border p-1 text-muted-foreground hover:text-foreground disabled:opacity-40">
+                              <ArrowUp className="h-3 w-3" />
+                            </button>
+                            <button type="button" onClick={() => moveAgenda(idx, 1)} disabled={idx === agenda.length - 1} className="rounded border border-glass-border p-1 text-muted-foreground hover:text-foreground disabled:opacity-40">
+                              <ArrowDown className="h-3 w-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => toggleOcultoAgenda(idx)}
+                              title={item.oculto ? t('Mostrar tema', 'Show topic') : t('Ocultar tema', 'Hide topic')}
+                              className="rounded border border-glass-border p-1 text-muted-foreground hover:text-foreground"
+                            >
+                              {item.oculto ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                            </button>
+                          </span>
+                        )}
+                        {(soyCoord || esAdmin) ? (
+                          <input
+                            value={item.titulo}
+                            onChange={(e) => editarCampoAgenda(idx, 'titulo', e.target.value)}
+                            className="min-w-[160px] flex-1 rounded border border-glass-border bg-background px-2 py-1 text-sm font-semibold text-foreground focus:border-teal-500 focus:outline-none"
+                          />
+                        ) : (
+                          <span className="font-semibold text-foreground">{item.titulo}</span>
+                        )}
+                        <span className="text-xs text-muted-foreground">· {rolLabel(item.responsable, dispLang)}</span>
+                        {item.oculto && (soyCoord || esAdmin) && (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
+                            {t('Oculto para el grupo', 'Hidden from the group')}
+                          </span>
+                        )}
+                        {(soyCoord || esAdmin) ? (
+                          <span className="ml-auto flex items-center gap-1">
+                            <button type="button" onClick={() => cambiaDuracion(idx, -5)} className="rounded border border-glass-border p-1 text-muted-foreground hover:text-foreground">
+                              <Minus className="h-3 w-3" />
+                            </button>
+                            <span className="w-12 text-center text-sm font-semibold">{item.duracionMin} min</span>
+                            <button type="button" onClick={() => cambiaDuracion(idx, 5)} className="rounded border border-glass-border p-1 text-muted-foreground hover:text-foreground">
+                              <Plus className="h-3 w-3" />
+                            </button>
+                          </span>
+                        ) : (
+                          <span className="ml-auto rounded-full bg-glass px-2 py-0.5 text-xs font-medium text-muted-foreground">{item.duracionMin} min</span>
+                        )}
+                      </div>
+                      {(soyCoord || esAdmin) ? (
+                        <textarea
+                          value={item.descripcion}
+                          onChange={(e) => editarCampoAgenda(idx, 'descripcion', e.target.value)}
+                          rows={2}
+                          className="mt-1 w-full rounded border border-glass-border bg-background px-2 py-1 text-xs text-foreground focus:border-teal-500 focus:outline-none"
+                        />
+                      ) : (
+                        <p className="mt-1 text-xs text-muted-foreground">{item.descripcion}</p>
+                      )}
+                    </div>
+                  );
+                })}
             </div>
           </div>
         </>
