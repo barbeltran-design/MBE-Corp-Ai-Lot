@@ -424,7 +424,12 @@ export default function AdminPage() {
             {selUid && (
               <div className="rounded-lg border border-slate-200 p-5 dark:border-slate-700">
                 <h3 className="text-sm font-semibold text-foreground">{t('Asignar roles a usuario', 'Assign roles to user')}</h3>
-                <p className="mt-0.5 text-xs text-muted-foreground">{selUid}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {(() => {
+                    const su = usuarios.find((x) => x.uid === selUid);
+                    return su?.name || su?.email || selUid;
+                  })()}
+                </p>
                 <div className="mt-4 space-y-4">
                   <div className="flex flex-wrap gap-2">
                     {APP_ROLES.map((r) => (
