@@ -464,7 +464,8 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
   const esPremium = yo?.premium === true;
   const abrirMundo = React.useCallback((destino: Vista) => {
     setVista(destino);
-  }, []);
+    router.replace(`/${lang === 'es' ? 'es' : 'en'}/worlds?v=${destino}`);
+  }, [lang, router]);
 
   // La barrera de pago ya NO se muestra al entrar a un mundo premium.
   // Se muestra al intentar ENTRAR/INTERACTUAR con una misión dentro de un

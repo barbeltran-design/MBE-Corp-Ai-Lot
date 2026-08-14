@@ -68,7 +68,12 @@ const sidebarListeners = new Set<() => void>();
 
 function readSidebarCollapsed(): boolean {
   try {
-    return window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === '1';
+    const stored = window.localStorage.getItem(SIDEBAR_STORAGE_KEY);
+    if (stored !== null) return stored === '1';
+    // No hay preferencia guardada todavia: en pantallas de celular el menu
+    // lateral arranca contraido por default (el usuario lo puede volver a
+    // expandir con el boton de abajo; esa eleccion se recuerda).
+    return window.innerWidth < 768;
   } catch {
     return sidebarCollapsedCache;
   }
@@ -165,7 +170,7 @@ export function ExecutiveShell({
   }, [commandItems, navItems, router]);
 
   const search = typeof window !== 'undefined' ? window.location.search : '';
-  const [openSections, setOpenSections] = React.useState<Record<string, boolean>>({});
+  const [openSections, setOpenSections] = React.useState<Record<string, boolean>>({ Toolbox: true });
   const toggleSection = (label: string) => setOpenSections((prev) => ({ ...prev, [label]: !prev[label] }));
 
   // Al navegar, abre automáticamente la sección que contiene la ruta activa.
