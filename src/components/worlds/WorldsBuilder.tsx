@@ -344,6 +344,7 @@ function MisionPlanAccion({
   respuestas,
   plan,
   onIrPlan,
+  esPremium,
 }: {
   agente: MentorAgente;
   lang: 'es' | 'en';
@@ -351,25 +352,27 @@ function MisionPlanAccion({
   respuestas: Record<string, string[]> | null;
   plan: PlanMadurezLeido;
   onIrPlan: () => void;
+  esPremium: boolean;
 }) {
   const en = t2(lang);
+  const desbloqueada = planAccionDefinido && esPremium;
   return (
     <div className="world-glass world-grain p-5">
       <div className="flex items-center justify-between gap-2">
         <span
           className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide ${
-            planAccionDefinido
+            desbloqueada
               ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200'
               : 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
           }`}
         >
-          {planAccionDefinido ? `✓ ${en(I.listoTag)}` : `🔒 ${en(I.bloqueadaTag)}`}
+          {desbloqueada ? `✓ ${en(I.listoTag)}` : `🔒 ${en(I.bloqueadaTag)}`}
         </span>
       </div>
       <div className="mt-3 text-4xl">📋</div>
       <h3 className="mt-1 text-base font-extrabold text-slate-800 dark:text-white">{en(I.misPA)}</h3>
       <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{en(I.misPADesc)}</p>
-      {!planAccionDefinido ? (
+      {!desbloqueada ? (
         <div className="mt-3 rounded-xl border border-slate-300/50 bg-white/40 p-4 dark:bg-white/5">
           <p className="text-xs font-bold text-slate-600 dark:text-slate-300">🔒 {en(I.paLockDesc)}</p>
           <button
@@ -452,19 +455,28 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
     window.setTimeout(() => setToast(null), 2900);
   }, []);
 
-  // Mundos Premium: visibles para todos, pero solo se puede entrar si el
-  // usuario tiene acceso premium (pagó el plan, o un admin se lo otorgó
-  // manualmente, o es admin — ver src/lib/premium.ts / /api/worlds).
+  // Mundos Premium: visibles y abiertos para todos. La barrera de pago
+  // solo aparece al intentar entrar/interactuar con una MISIÓN dentro de
+  // un mundo premium (pagó el plan, o un admin se lo otorgó manualmente,
+  // o es admin — ver src/lib/premium.ts / /api/worlds).
   const [premiumLock, setPremiumLock] = React.useState(false);
   const [insigniaNuevaId, setInsigniaNuevaId] = React.useState<string | null>(null);
   const esPremium = yo?.premium === true;
-  const abrirMundo = React.useCallback(
-    (destino: Vista) => {
+  const abrirMundo = React.useCallback((destino: Vista) => {
+    setVista(destino);
+  }, []);
+
+  // La barrera de pago ya NO se muestra al entrar a un mundo premium.
+  // Se muestra al intentar ENTRAR/INTERACTUAR con una misión dentro de un
+  // mundo premium (Estrategia o cualquiera de los 5 mundos: dinero,
+  // cliente, normativo, operativo, cultura).
+  const abrirMision = React.useCallback(
+    (accion: () => void) => {
       if (!esPremium) {
         setPremiumLock(true);
         return;
       }
-      setVista(destino);
+      accion();
     },
     [esPremium]
   );
@@ -655,17 +667,14 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
   // Soporta /worlds?v=partida|tablero|estrategia para abrir directo una vista
   // (los enlaces del Inicio llevan este parámetro).
   React.useEffect(() => {
-    if (cargando) return; // espera a conocer yo.premium antes de decidir
+    if (cargando) return;
     const v = new URLSearchParams(window.location.search).get('v');
     const validas: string[] = ['partida', 'tablero', 'estrategia', ...VISTAS_PREMIUM];
-    const premiumVistas: string[] = ['estrategia', ...VISTAS_PREMIUM];
     if (!v || !validas.includes(v)) return;
-    if (premiumVistas.includes(v) && !esPremium) {
-      setPremiumLock(true);
-      return;
-    }
+    // Los mundos premium (incluida Estrategia) ahora se pueden ABRIR sin
+    // pagar; la barrera de pago aparece solo al intentar entrar a una misión.
     setVista(v as Vista);
-  }, [cargando, esPremium]);
+  }, [cargando]);
 
   const hechas = yo?.partida ?? [];
   const mundoVista = MUNDOS_PREMIUM_LABELS.find((m) => m.id === vista);
@@ -1074,7 +1083,7 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <button
                     className="world-glass world-glass-hover world-grain p-5 text-left"
-                    onClick={irAgendar}
+                    onClick={() => abrirMision(irAgendar)}
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="rounded-full bg-fuchsia-100 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-fuchsia-700 dark:bg-fuchsia-900 dark:text-fuchsia-200">
@@ -1098,7 +1107,8 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
                     planAccionDefinido={planAccionDefinido}
                     respuestas={respuestas}
                     plan={planMadurez}
-                    onIrPlan={irPlanAccion}
+                    onIrPlan={() => abrirMision(irPlanAccion)}
+                    esPremium={esPremium}
                   />
                 </div>
               </>
@@ -1145,7 +1155,7 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
                         <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{lang === 'en' ? s.enDesc : s.esDesc}</p>
                         <button
                           className="mt-3 rounded-lg border border-teal-400/60 bg-white/40 px-3 py-1.5 text-xs font-extrabold text-teal-700 backdrop-blur-md transition hover:bg-white/70 dark:bg-white/10 dark:text-teal-200 dark:hover:bg-white/20"
-                          onClick={() => router.push(s.ruta)}
+                          onClick={() => abrirMision(() => router.push(s.ruta))}
                         >
                           {en(I.abrirSub)} →
                         </button>
@@ -1168,7 +1178,7 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
                     <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{en(I.misApoyoDesc)}</p>
                     <button
                       className="mt-3 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 px-3 py-1.5 text-xs font-extrabold text-white shadow-md shadow-teal-500/30 transition hover:opacity-90"
-                      onClick={irAgendar}
+                      onClick={() => abrirMision(irAgendar)}
                     >
                       {en(I.agendarMentor)} →
                     </button>
@@ -1178,12 +1188,12 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
                 <div id="estrategia-plan-accion" className="world-glass world-grain mt-6 p-5">
                   <h2 className="text-base font-extrabold text-slate-800 dark:text-white">📋 {en(I.misPA)}</h2>
                   <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{en(I.misPADesc)}</p>
-                  {!planAccionDefinido ? (
+                  {!planAccionDefinido || !esPremium ? (
                     <div className="mt-3 rounded-xl border border-slate-300/50 bg-white/40 p-4 dark:bg-white/5">
                       <p className="text-xs font-bold text-slate-600 dark:text-slate-300">🔒 {en(I.paLockDesc)}</p>
                       <button
                         className="mt-2 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 px-3 py-1.5 text-xs font-extrabold text-white shadow-md shadow-teal-500/30 transition hover:opacity-90"
-                        onClick={irPlanAccion}
+                        onClick={() => abrirMision(irPlanAccion)}
                       >
                         {en(I.crearMiPA)}
                       </button>
