@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
       if (typeof body?.productId === 'string' && productIdValido(body.productId)) {
         productId = body.productId;
       }
-      if (typeof body?.returnPath === 'string' && ['/perfil', '/dashboard'].includes(body.returnPath)) {
+      if (typeof body?.returnPath === 'string' && ['/perfil', '/dashboard', '/babel/madurez', '/worlds'].includes(body.returnPath)) {
         returnPath = body.returnPath;
       }
     } catch {
