@@ -134,7 +134,7 @@ export function ExecutiveShell({
   children,
   navItems,
   commandItems = [],
-  brandLabel = 'MBE Corpilot AI',
+  brandLabel = 'MBE Corp-AI-Lot',
   logoSrc,
   headerRight,
 }: ExecutiveShellProps) {
@@ -295,9 +295,9 @@ export function ExecutiveShell({
         >
           <div className="flex h-14 items-center gap-2 border-b border-glass-border px-3">
             {logoSrc && !logoFailed ? (
-              <img src={logoSrc} alt={brandLabel} className="h-6 w-6 shrink-0 rounded" onError={() => setLogoFailed(true)} />
+              <img src={logoSrc} alt={brandLabel} className="h-9 w-9 shrink-0 rounded" onError={() => setLogoFailed(true)} />
             ) : (
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-primary text-xs font-bold text-primary-foreground">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-xs font-bold text-primary-foreground">
                 M
               </div>
             )}
