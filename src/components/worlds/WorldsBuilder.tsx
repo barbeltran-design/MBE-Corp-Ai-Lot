@@ -646,7 +646,7 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
     setPagando(true);
     try {
       const token = await usr.getIdToken();
-      const res = await fetch('/api/pagos/crear-preferencia', {
+      const res = await fetch('/api/pagos/crear-suscripcion', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ locale: lang, returnPath: '/worlds' }),

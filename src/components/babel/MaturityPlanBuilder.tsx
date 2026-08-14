@@ -480,7 +480,7 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
     setPagando(true);
     try {
       const token = await user.getIdToken();
-      const res = await fetch('/api/pagos/crear-preferencia', {
+      const res = await fetch('/api/pagos/crear-suscripcion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ locale: lang, returnPath: '/babel/madurez' }),

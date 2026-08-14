@@ -29,6 +29,14 @@ export interface UserDoc {
   planStatus?: string;
   planActivatedAt?: string;
   mercadoPagoPaymentId?: string;
+  // id de la suscripcion (PreApproval) activa en Mercado Pago; se usa
+  // para poder cancelarla desde /perfil (ver /api/pagos/cancelar-suscripcion).
+  mercadoPagoPreapprovalId?: string;
+  planCanceladoAt?: string;
+  // id de la suscripcion (PreApproval) activa en Mercado Pago; se usa
+  // para poder cancelarla desde /perfil (ver /api/pagos/cancelar-suscripcion).
+  mercadoPagoPreapprovalId?: string;
+  planCanceladoAt?: string;
   currentMonth: number; // 1-12
   totalMaturity: number; // 0-120
   assessmentCompleted?: boolean; // true once saveAssessment() has run at least once

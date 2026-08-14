@@ -88,6 +88,8 @@ function ProfilePageInner() {
 
   const [payLoading, setPayLoading] = React.useState(false);
   const [payError, setPayError] = React.useState('');
+  const [cancelLoading, setCancelLoading] = React.useState(false);
+  const [cancelError, setCancelError] = React.useState('');
 
   // ── Solicitar rol de especialista / rep sale ─────────────────────────
   const [roles, setRoles] = React.useState<string[]>([]);
@@ -303,7 +305,7 @@ function ProfilePageInner() {
     setPayError('');
     try {
       const idToken = await user.getIdToken();
-      const res = await fetch('/api/pagos/crear-preferencia', {
+      const res = await fetch('/api/pagos/crear-suscripcion', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${idToken}`,
@@ -320,6 +322,40 @@ function ProfilePageInner() {
       console.error(err);
       setPayError(t('No se pudo iniciar el pago. Intenta de nuevo en unos segundos.', 'Could not start the payment. Try again in a few seconds.'));
       setPayLoading(false);
+    }
+  }
+
+  async function handleCancelarSuscripcion() {
+    if (!user) return;
+    const confirmado = window.confirm(
+      t(
+        '¿Seguro que quieres cancelar tu suscripción? Perderás el acceso al plan completo de inmediato.',
+        'Are you sure you want to cancel your subscription? You will lose access to the full plan immediately.'
+      )
+    );
+    if (!confirmado) return;
+    setCancelLoading(true);
+    setCancelError('');
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch('/api/pagos/cancelar-suscripcion', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'No se pudo cancelar la suscripción.');
+      }
+      setSubscription('cancelled');
+      setPlanStatus('cancelled');
+    } catch (err) {
+      console.error(err);
+      setCancelError(t('No se pudo cancelar la suscripción. Intenta de nuevo en unos segundos.', 'Could not cancel the subscription. Try again in a few seconds.'));
+    } finally {
+      setCancelLoading(false);
     }
   }
 
@@ -646,6 +682,17 @@ function ProfilePageInner() {
                         ? t('Activado el ' + new Date(planActivatedAt).toLocaleDateString(dispLang === 'en' ? 'en-US' : 'es-MX', { year: 'numeric', month: 'long', day: 'numeric' }), 'Activated on ' + new Date(planActivatedAt).toLocaleDateString(dispLang === 'en' ? 'en-US' : 'es-MX', { year: 'numeric', month: 'long', day: 'numeric' }))
                         : t('Acceso completo a todas las herramientas de MBE Corpilot AI.', 'Full access to all MBE Corpilot AI tools.')}
                     </p>
+                  </div>
+                  <div className="ml-auto flex flex-col items-end gap-1">
+                    <Button
+                      variant="outline"
+                      className="border-red-300 text-red-700 hover:bg-red-50"
+                      onClick={handleCancelarSuscripcion}
+                      disabled={cancelLoading}
+                    >
+                      {cancelLoading ? t('Cancelando...', 'Cancelling...') : t('Cancelar suscripción', 'Cancel subscription')}
+                    </Button>
+                    {cancelError && <p className="text-sm text-red-600">{cancelError}</p>}
                   </div>
                 </div>
               ) : (
