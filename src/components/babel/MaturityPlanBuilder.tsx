@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import AgentAvatar from '@/components/agentes/AgentAvatar';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
+import { useRouter } from 'next/navigation';
 import { getFirebaseAuth } from '@/lib/firebase';
 import { getLatestAssessmentAnswers } from '@/lib/assessment';
 import { DIMENSION_IDS, getMaturityDimensions, type DimensionId } from '@/lib/maturity-dimensions';
@@ -68,8 +69,6 @@ const LABELS = {
       'Cada mes se trabaja una practica con cada agente (Babel, Fisnando, Karmetin, Normau y Atech) en el orden de los temas de la Evaluacion de Madurez: se parte del nivel mas bajo de Rumbo Estrategico y se avanza hasta Cultura Organizacional, para regresar en ciclo al siguiente nivel de cada tema. Las practicas sugeridas salen de tu evaluacion (el nivel mas bajo no completado) y todo es editable.',
     sinEvaluacion:
       'Aun no se encontro tu Evaluacion de Madurez. Completa el diagnostico para que las sugerencias partan de tu nivel real; mientras tanto el plan parte del nivel Ejecucion.',
-    agentesTitle: 'Siguiente practica por agente',
-    agenteSinPendientes: 'No quedan practicas pendientes',
     planMensualTitle: 'Plan del mes',
     planMensualHint: 'Cada mes se agenda una practica con cada agente. Actualiza el estatus cuando la completes.',
     actualizarMes: 'Actualizar plan del mes',
@@ -100,6 +99,20 @@ const LABELS = {
     sinAccion: 'Elige una accion para esta semana',
     emptyMes: 'Este mes no tiene compromisos. Toca "Actualizar plan del mes".',
     sinCompromiso: 'Sin practica asignada este mes',
+    pedirAyuda: 'Pedir ayuda',
+    eleccionTitulo: '¿Cómo quieres que te ayudemos?',
+    eleccionDesc: '¿Quieres ayuda de la IA o prefieres una asesoría gratuita de 30 minutos con un mentor?',
+    opcionIA: 'Ayuda de la IA (chat)',
+    opcionMentor: 'Asesoría gratuita de 30 min con un mentor',
+    cancelar: 'Cancelar',
+    cerrarChat: 'Cerrar',
+    escribeAqui: 'Escribe tu pregunta...',
+    enviar: 'Enviar',
+    pensando: 'Pensando...',
+    paywallTitulo: 'Necesitas el plan mensual',
+    paywallDesc: 'Para obtener ayuda de la IA, contrata el plan mensual.',
+    pagarPlan: 'Pagar plan mensual por solo \${monto}',
+    pagarCargando: 'Procesando...',
   },
   en: {
     title: 'Maturity Plan',
@@ -107,8 +120,6 @@ const LABELS = {
       'Each month you work on one practice with each agent (Babel, Fisnando, Karmetin, Normau and Atech) following the order of the Maturity Assessment topics: starting from the lowest level of Strategic Direction and advancing through Organizational Culture, then cycling back to the next level of each topic. Suggested practices come from your assessment (lowest incomplete level) and everything is editable.',
     sinEvaluacion:
       'Your Maturity Assessment was not found yet. Complete the diagnosis so suggestions start from your real level; in the meantime the plan starts from the Execution level.',
-    agentesTitle: 'Next practice per agent',
-    agenteSinPendientes: 'No pending practices left',
     planMensualTitle: 'Monthly plan',
     planMensualHint: 'Each month schedules one practice per agent. Update the status when you complete it.',
     actualizarMes: 'Refresh monthly plan',
@@ -139,6 +150,20 @@ const LABELS = {
     sinAccion: 'Pick an action for this week',
     emptyMes: 'This month has no commitments. Tap "Refresh monthly plan".',
     sinCompromiso: 'No practice assigned this month',
+    pedirAyuda: 'Get help',
+    eleccionTitulo: 'How would you like help?',
+    eleccionDesc: 'Do you want AI help or would you rather book a free 30-minute session with a mentor?',
+    opcionIA: 'AI help (chat)',
+    opcionMentor: 'Free 30-min session with a mentor',
+    cancelar: 'Cancel',
+    cerrarChat: 'Close',
+    escribeAqui: 'Type your question...',
+    enviar: 'Send',
+    pensando: 'Thinking...',
+    paywallTitulo: 'You need the monthly plan',
+    paywallDesc: 'To get AI help, subscribe to the monthly plan.',
+    pagarPlan: 'Pay monthly plan for only \${monto}',
+    pagarCargando: 'Processing...',
   },
 };
 
@@ -194,14 +219,12 @@ const PASOS_TOUR: Record<PlanLang, TourStep[]> = {
   es: [
     { selector: '#madurez-plan-title', title: 'Mejora del Nivel de Madurez', description: 'Aquí defines las acciones para mejorar la madurez de tu organización: cada mes una práctica con cada agente, en el orden de los temas de la evaluación.' },
     { selector: '#madurez-scrum', title: 'Scrum semanal', description: 'Semana a semana se elige UNA acción y se divide en tareas. Toca una tarjeta para moverla entre columnas.' },
-    { selector: '#madurez-agentes', title: 'Siguiente práctica por agente', description: 'Cada agente (Babel, Fisnando, Karmetin, Normau y Atech) tiene asignada la siguiente práctica sugerida, partiendo del nivel más bajo no completado de tu evaluación.' },
     { selector: '#madurez-mensual', title: 'Plan del mes', description: 'Cada mes se agenda una práctica con cada agente. Actualiza el estatus a Completada para avanzar automáticamente al siguiente nivel del tema.' },
     { selector: '#madurez-temas', title: 'Prácticas por tema', description: 'El detalle de los 11 temas: la siguiente práctica a trabajar y, si ya la dominas, márcala completada.' },
   ],
   en: [
     { selector: '#madurez-plan-title', title: 'Maturity Level Improvement', description: 'This is where you define the actions to improve your organization\'s maturity: one practice with each agent per month, following the assessment topic order.' },
     { selector: '#madurez-scrum', title: 'Weekly scrum', description: 'Week by week you choose ONE action and break it into tasks. Tap a card to move it across columns.' },
-    { selector: '#madurez-agentes', title: 'Next practice per agent', description: 'Each agent (Babel, Fisnando, Karmetin, Normau and Atech) has its next suggested practice, starting from the lowest incomplete level of your assessment.' },
     { selector: '#madurez-mensual', title: 'Monthly plan', description: 'Each month schedules one practice per agent. Update the status to Completed to automatically advance to the next level of the topic.' },
     { selector: '#madurez-temas', title: 'Practices by topic', description: 'The detail of the 11 topics: the next practice to work on and, if you already master it, mark it as completed.' },
   ],
@@ -225,6 +248,16 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
   const [mesSel, setMesSel] = React.useState<string>(() => monthKeyOf(new Date()));
   const [semanaOffset, setSemanaOffset] = React.useState(0);
   const [nuevaTarea, setNuevaTarea] = React.useState('');
+  const router = useRouter();
+  const [eleccionMentor, setEleccionMentor] = React.useState<MentorAgente | null>(null);
+  const [paywallMentor, setPaywallMentor] = React.useState<MentorAgente | null>(null);
+  const [ayudaMentor, setAyudaMentor] = React.useState<MentorAgente | null>(null);
+  const [ayudaHistorial, setAyudaHistorial] = React.useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
+  const [ayudaInput, setAyudaInput] = React.useState('');
+  const [ayudaCargando, setAyudaCargando] = React.useState(false);
+  const [esPremium, setEsPremium] = React.useState(false);
+  const [precioPlan, setPrecioPlan] = React.useState<number | null>(null);
+  const [pagando, setPagando] = React.useState(false);
 
   React.useEffect(() => {
     const auth = getFirebaseAuth();
@@ -242,6 +275,39 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
       } catch (err) {
         console.error('[MBE Madurez] failed to load assessment', err);
         if (!cancelled) setAnswers(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  React.useEffect(() => {
+    if (!user) {
+      setEsPremium(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch('/api/worlds', { headers: { Authorization: `Bearer ${token}` } });
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled) setEsPremium(Boolean(data?.yo?.premium));
+        }
+      } catch (err) {
+        console.error('[MBE Madurez] failed to load premium status', err);
+      }
+      try {
+        const token2 = await user.getIdToken();
+        const res2 = await fetch('/api/pagos/precio-plan', { headers: { Authorization: `Bearer ${token2}` } });
+        if (res2.ok) {
+          const data2 = await res2.json();
+          if (!cancelled && typeof data2?.precio === 'number') setPrecioPlan(data2.precio);
+        }
+      } catch (err) {
+        console.error('[MBE Madurez] failed to load plan price', err);
       }
     })();
     return () => {
@@ -318,6 +384,119 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
     },
     [proximaPractica]
   );
+
+  const contextoDeMentor = React.useCallback(
+    (mentor: MentorAgente): { descripcion: string; entregable: string } => {
+      const comp = (plan.compromisos[mesSel] ?? []).find((c) => c.mentor === mentor);
+      if (comp) return { descripcion: `${temaDe[comp.themeId]} - ${comp.practica}`, entregable: comp.practica };
+      const sig = siguienteDeAgente(mentor);
+      if (sig) return { descripcion: `${temaDe[sig.themeId]} - ${sig.practica.practica}`, entregable: sig.practica.practica };
+      return { descripcion: mentor, entregable: '' };
+    },
+    [plan.compromisos, mesSel, temaDe, siguienteDeAgente]
+  );
+
+  const cerrarAyuda = () => {
+    setAyudaMentor(null);
+    setAyudaHistorial([]);
+    setAyudaInput('');
+  };
+
+  const abrirChatMentor = (mentor: MentorAgente) => {
+    setAyudaMentor(mentor);
+    setAyudaHistorial([]);
+    setAyudaInput('');
+    setAyudaCargando(true);
+    const ctx = contextoDeMentor(mentor);
+    fetch('/api/mentores/ayuda', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mentor, modo: 'tip', language: lang, accion: ctx }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        const respuesta = typeof d?.reply === 'string' ? d.reply : d?.error || (lang === 'en' ? 'No response.' : 'Sin respuesta.');
+        setAyudaHistorial([{ role: 'assistant', content: respuesta }]);
+      })
+      .catch(() =>
+        setAyudaHistorial([
+          { role: 'assistant', content: lang === 'en' ? 'Could not reach the mentor.' : 'No se pudo contactar al mentor.' },
+        ])
+      )
+      .finally(() => setAyudaCargando(false));
+  };
+
+  React.useEffect(() => {
+    if (!ayudaMentor) return;
+    const el = document.getElementById('ayuda-mentor-panel-' + ayudaMentor);
+    if (el) {
+      const idTimeout = window.setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60);
+      return () => window.clearTimeout(idTimeout);
+    }
+  }, [ayudaMentor]);
+
+  const enviarMensajeMentor = (mentor: MentorAgente) => {
+    const texto = ayudaInput.trim();
+    if (!texto || ayudaCargando) return;
+    const historialNuevo = ayudaHistorial.concat([{ role: 'user' as const, content: texto }]);
+    setAyudaHistorial(historialNuevo);
+    setAyudaInput('');
+    setAyudaCargando(true);
+    const ctx = contextoDeMentor(mentor);
+    fetch('/api/mentores/ayuda', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mentor, modo: 'chat', language: lang, accion: ctx, mensajes: historialNuevo }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        const respuesta = typeof d?.reply === 'string' ? d.reply : d?.error || (lang === 'en' ? 'No response.' : 'Sin respuesta.');
+        setAyudaHistorial((prev) => prev.concat([{ role: 'assistant' as const, content: respuesta }]));
+      })
+      .catch(() => {
+        setAyudaHistorial((prev) =>
+          prev.concat([{ role: 'assistant' as const, content: lang === 'en' ? 'Could not reach the mentor.' : 'No se pudo contactar al mentor.' }])
+        );
+      })
+      .finally(() => setAyudaCargando(false));
+  };
+
+  const elegirIA = (mentor: MentorAgente) => {
+    setEleccionMentor(null);
+    if (!esPremium) {
+      setPaywallMentor(mentor);
+      return;
+    }
+    abrirChatMentor(mentor);
+  };
+
+  const elegirMentorHumano = () => {
+    setEleccionMentor(null);
+    router.push('/' + lang + '/agendar');
+  };
+
+  const pagarPlanMensual = async () => {
+    if (!user || pagando) return;
+    setPagando(true);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch('/api/pagos/crear-preferencia', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ locale: lang, returnPath: '/babel/madurez' }),
+      });
+      const data = await res.json();
+      if (data?.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      } else {
+        console.error('[MBE Madurez] crear-preferencia sin checkoutUrl', data);
+        setPagando(false);
+      }
+    } catch (err) {
+      console.error('[MBE Madurez] error al iniciar pago', err);
+      setPagando(false);
+    }
+  };
 
   const generarMes = (mesKey: string) => {
     setPlan((prev) => {
@@ -679,35 +858,6 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
         </div>
       </div>
 
-      {/* Siguiente practica por agente */}
-      <div id="madurez-agentes" className="mt-6">
-        <h4 className="text-sm font-semibold text-slate-700">{t.agentesTitle}</h4>
-        <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
-          {MENTORES.map((mentor) => {
-            const sig = siguienteDeAgente(mentor);
-            return (
-              <div key={mentor} className="glass-panel p-3">
-                <div className="flex items-center gap-2">
-                  <AgentAvatar agente={mentor} size={24} />
-                  <span className={'inline-block rounded-full px-2.5 py-1 text-xs font-medium ' + MENTOR_COLOR[mentor]}>
-                    {mentor}
-                  </span>
-                </div>
-                <p className="mt-2 text-xs text-slate-600">                  {sig ? (
-                    <>
-                      <span className="font-semibold text-slate-800">{temaDe[sig.themeId]}</span> ({LEVEL_LABELS[lang][sig.nivel]}) -{' '}
-                      {sig.practica.practica}
-                    </>
-                  ) : (
-                    t.agenteSinPendientes
-                  )}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Plan mensual */}
       <div id="madurez-mensual" className="mt-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -748,59 +898,114 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
             {MENTORES.map((mentor) => {
               const comp = compromisosMes.find((c) => c.mentor === mentor);
               return (
-                <div
-                  key={mentor}
-                  className="glass-panel grid items-center gap-2 p-3 sm:grid-cols-[110px_1fr_90px_130px_auto]"
-                >
-                  <span className="flex w-fit items-center gap-1.5">
-                    <AgentAvatar agente={mentor} size={20} />
-                    <span className={'inline-block rounded-full px-2.5 py-1 text-xs font-medium ' + MENTOR_COLOR[mentor]}>
-                      {mentor}
-                    </span>
-                  </span>
-                  {comp ? (
-                    <>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-slate-800">
-                          {temaDe[comp.themeId]} - {comp.practica}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {t.nivelCol}: {LEVEL_LABELS[lang][comp.nivel]}
-                        </p>
-                      </div>
-                      <select
-                        value={comp.estatus}
-                        onChange={(ev) => cambiarEstatus(mesSel, comp.id, ev.target.value as Estatus)}
-                        className="rounded-lg border border-slate-300 px-2 py-1.5 text-xs text-slate-700"
-                      >
-                        <option value="pendiente">{t.pendiente}</option>
-                        <option value="en_progreso">{t.enProgreso}</option>
-                        <option value="completada">{t.completada}</option>
-                      </select>
-                      <span
-                        className={
-                          'rounded-full px-2.5 py-1 text-xs font-medium ' +
-                          (comp.estatus === 'completada'
-                            ? 'bg-green-100 text-green-800'
-                            : comp.estatus === 'en_progreso'
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-slate-100 text-slate-600')
-                        }
-                      >
-                        {estatusLabel(comp.estatus)}
-                      </span>
+                <React.Fragment key={mentor}>
+                  <div className="glass-panel grid items-center gap-2 p-3 sm:grid-cols-[140px_1fr_90px_130px_auto]">
+                    <span className="flex w-fit items-center gap-1.5">
                       <button
                         type="button"
-                        onClick={() => eliminarCompromiso(mesSel, comp.id)}
-                        className="text-xs font-medium text-red-600 hover:underline"
+                        onClick={() => setEleccionMentor(mentor)}
+                        className="relative shrink-0 rounded-full outline-none ring-teal-400 focus-visible:ring-2"
+                        title={t.pedirAyuda}
                       >
-                        {t.eliminar}
+                        <AgentAvatar agente={mentor} size={36} onClick={() => setEleccionMentor(mentor)} />
+                        <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-teal-600 text-[10px] font-bold text-white shadow">
+                          ?
+                        </span>
                       </button>
-                    </>
-                  ) : (
-                    <p className="text-sm text-slate-400">{t.sinCompromiso}</p>
-                  )}
-                </div>
+                      <span className={'inline-block rounded-full px-2.5 py-1 text-xs font-medium ' + MENTOR_COLOR[mentor]}>
+                        {mentor}
+                      </span>
+                    </span>
+                    {comp ? (
+                      <>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-slate-800">
+                            {temaDe[comp.themeId]} - {comp.practica}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {t.nivelCol}: {LEVEL_LABELS[lang][comp.nivel]}
+                          </p>
+                        </div>
+                        <select
+                          value={comp.estatus}
+                          onChange={(ev) => cambiarEstatus(mesSel, comp.id, ev.target.value as Estatus)}
+                          className="rounded-lg border border-slate-300 px-2 py-1.5 text-xs text-slate-700"
+                        >
+                          <option value="pendiente">{t.pendiente}</option>
+                          <option value="en_progreso">{t.enProgreso}</option>
+                          <option value="completada">{t.completada}</option>
+                        </select>
+                        <span
+                          className={
+                            'rounded-full px-2.5 py-1 text-xs font-medium ' +
+                            (comp.estatus === 'completada'
+                              ? 'bg-green-100 text-green-800'
+                              : comp.estatus === 'en_progreso'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-slate-100 text-slate-600')
+                          }
+                        >
+                          {estatusLabel(comp.estatus)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => eliminarCompromiso(mesSel, comp.id)}
+                          className="text-xs font-medium text-red-600 hover:underline"
+                        >
+                          {t.eliminar}
+                        </button>
+                      </>
+                    ) : (
+                      <p className="text-sm text-slate-400">{t.sinCompromiso}</p>
+                    )}
+                  </div>
+                  {ayudaMentor === mentor ? (
+                    <div id={'ayuda-mentor-panel-' + mentor} className="rounded-lg border border-teal-200 bg-teal-50 p-2">
+                      <div className="mb-1 flex items-center justify-between">
+                        <span className="flex items-center gap-1 text-xs font-semibold text-teal-800">
+                          <AgentAvatar agente={mentor} size={18} />
+                          {mentor}
+                        </span>
+                        <button type="button" onClick={cerrarAyuda} className="text-xs text-slate-500 hover:underline">
+                          {t.cerrarChat}
+                        </button>
+                      </div>
+                      <div>
+                        {ayudaHistorial.map((m, i) => (
+                          <p
+                            key={i}
+                            className={
+                              'mt-1 whitespace-pre-wrap text-xs ' + (m.role === 'user' ? 'font-medium text-slate-800' : 'text-slate-700')
+                            }
+                          >
+                            {m.content}
+                          </p>
+                        ))}
+                        {ayudaCargando ? <p className="mt-1 text-xs text-slate-500">{t.pensando}</p> : null}
+                        <div className="mt-2 flex gap-1">
+                          <input
+                            type="text"
+                            value={ayudaInput}
+                            onChange={(ev) => setAyudaInput(ev.target.value)}
+                            onKeyDown={(ev) => {
+                              if (ev.key === 'Enter') enviarMensajeMentor(mentor);
+                            }}
+                            placeholder={t.escribeAqui}
+                            className="flex-1 rounded border border-slate-300 px-2 py-1 text-xs"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => enviarMensajeMentor(mentor)}
+                            disabled={ayudaCargando}
+                            className="rounded bg-teal-600 px-2 py-1 text-xs font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+                          >
+                            {t.enviar}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+                </React.Fragment>
               );
             })}
           </div>
@@ -841,6 +1046,67 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
       </div>
 
       <p className="mt-4 text-xs text-slate-400">{t.guardado}</p>
+
+      {eleccionMentor ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setEleccionMentor(null)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-5 text-center shadow-xl" onClick={(ev) => ev.stopPropagation()}>
+            <AgentAvatar agente={eleccionMentor} size={56} className="mx-auto" />
+            <h4 className="mt-3 text-base font-bold text-slate-800">{t.eleccionTitulo}</h4>
+            <p className="mt-1 text-sm text-slate-600">{t.eleccionDesc}</p>
+            <div className="mt-4 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => elegirIA(eleccionMentor)}
+                className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700"
+              >
+                {t.opcionIA}
+              </button>
+              <button
+                type="button"
+                onClick={elegirMentorHumano}
+                className="rounded-lg border border-teal-600 px-4 py-2 text-sm font-semibold text-teal-700 hover:bg-teal-50"
+              >
+                {t.opcionMentor}
+              </button>
+              <button
+                type="button"
+                onClick={() => setEleccionMentor(null)}
+                className="mt-1 text-xs font-medium text-slate-500 hover:underline"
+              >
+                {t.cancelar}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {paywallMentor ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setPaywallMentor(null)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-5 text-center shadow-xl" onClick={(ev) => ev.stopPropagation()}>
+            <AgentAvatar agente={paywallMentor} size={56} className="mx-auto" />
+            <h4 className="mt-3 text-base font-bold text-slate-800">{t.paywallTitulo}</h4>
+            <p className="mt-1 text-sm text-slate-600">{t.paywallDesc}</p>
+            <div className="mt-4 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={pagarPlanMensual}
+                disabled={pagando}
+                className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50"
+              >
+                {pagando ? t.pagarCargando : t.pagarPlan.replace('${monto}', String(precioPlan ?? 99))}
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaywallMentor(null)}
+                className="mt-1 text-xs font-medium text-slate-500 hover:underline"
+              >
+                {t.cancelar}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <PageTour pageId="madurez" steps={lang === 'en' ? PASOS_TOUR.en : PASOS_TOUR.es} lang={lang} />
     </div>
   );

@@ -444,6 +444,8 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
   const [fase0Aprobada, setFase0Aprobada] = React.useState(false);
   const [planMadurez, setPlanMadurez] = React.useState<PlanMadurezLeido>({ completados: {}, compromisos: {} });
   const [planAccionDefinido, setPlanAccionDefinido] = React.useState(false);
+  const [precioPlan, setPrecioPlan] = React.useState<number | null>(null);
+  const [pagando, setPagando] = React.useState(false);
 
   const notificar = React.useCallback((msg: string) => {
     setToast(msg);
@@ -466,10 +468,6 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
     },
     [esPremium]
   );
-  const irAPagar = React.useCallback(() => {
-    router.push(`/${lang === 'es' ? 'es' : 'en'}/perfil`);
-  }, [router, lang]);
-
   const festejar = React.useCallback(() => {
     const seed = Date.now();
     setConfettiSeed(seed);
@@ -499,6 +497,15 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
             setInsigniaNuevaId(nuevas[0]);
             festejar();
           }
+        }
+        try {
+          const res2 = await fetch('/api/pagos/precio-plan', { headers: { Authorization: `Bearer ${token}` } });
+          if (res2.ok) {
+            const data2 = await res2.json();
+            if (typeof data2?.precio === 'number') setPrecioPlan(data2.precio);
+          }
+        } catch (err) {
+          console.error('[worlds] precio-plan', err);
         }
       } catch (err) {
         console.error('[worlds] carga', err);
@@ -619,6 +626,32 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
     }
   }
 
+  async function pagarPlanMensual() {
+    if (pagando) return;
+    const auth = getFirebaseAuth();
+    const usr = auth.currentUser;
+    if (!usr) return;
+    setPagando(true);
+    try {
+      const token = await usr.getIdToken();
+      const res = await fetch('/api/pagos/crear-preferencia', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ locale: lang, returnPath: '/worlds' }),
+      });
+      const data = await res.json();
+      if (data?.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      } else {
+        console.error('[worlds] crear-preferencia sin checkoutUrl', data);
+        setPagando(false);
+      }
+    } catch (err) {
+      console.error('[worlds] error al iniciar pago', err);
+      setPagando(false);
+    }
+  }
+
   // Soporta /worlds?v=partida|tablero|estrategia para abrir directo una vista
   // (los enlaces del Inicio llevan este parámetro).
   React.useEffect(() => {
@@ -674,17 +707,20 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
             </h3>
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
               {en([
-                'Para entrar necesitas activar tu plan MBE Copilot. Puedes ver todos los Mundos Premium desde el mapa, pero solo se desbloquean con el plan activo.',
-                'To enter you need to activate your MBE Copilot plan. You can see every Premium World from the map, but they only unlock with an active plan.',
+                'Para interactuar en las misiones de este mundo necesitas contratar el plan mensual.',
+                'To interact with the missions in this world you need to subscribe to the monthly plan.',
               ])}
             </p>
-            <div className="mt-4 flex justify-center gap-2">
+            <div className="mt-4 flex flex-col items-center justify-center gap-2">
               <button
                 type="button"
-                className="rounded-full bg-teal-600 px-4 py-2 text-xs font-extrabold text-white shadow hover:bg-teal-700"
-                onClick={irAPagar}
+                className="rounded-full bg-teal-600 px-4 py-2 text-xs font-extrabold text-white shadow hover:bg-teal-700 disabled:opacity-50"
+                onClick={pagarPlanMensual}
+                disabled={pagando}
               >
-                {en(['Ir a activar mi plan →', 'Activate my plan →'])}
+                {pagando
+                  ? en(['Procesando...', 'Processing...'])
+                  : en([`Pagar plan mensual por solo $${precioPlan ?? 99}`, `Pay monthly plan for only $${precioPlan ?? 99}`])}
               </button>
               <button
                 type="button"
