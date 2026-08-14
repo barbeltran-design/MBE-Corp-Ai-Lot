@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import AgentAvatar, { type AgenteAvatarId } from '@/components/agentes/AgentAvatar';
 
-const AGENTES: AgenteAvatarId[] = ['Babel', 'Fisnando', 'Karmetin', 'Normau', 'Atech'];
+const AGENTES: AgenteAvatarId[] = ['Babel', 'Fisnando', 'Karmetin', 'Normau', 'Atech', 'Ecori'];
 
 export function AgentsPreview() {
   const t = useTranslations('landing.agentsPreview');
@@ -17,7 +17,7 @@ export function AgentsPreview() {
         <p className="mt-3 text-slate-600">{t('subtitle')}</p>
       </div>
 
-      <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         {AGENTES.map((agente) => {
           const key = agente.toLowerCase();
           return (

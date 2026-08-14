@@ -20,7 +20,7 @@ type CorpiloteInfo = {
   rasgo: Params;
 };
 
-// Orden oficial del usuario: Babel, Fisnando, Karmetin, Normau, Atech.
+// Orden oficial del usuario: Babel, Fisnando, Karmetin, Normau, Atech, Ecori.
 const CORPILOTES: CorpiloteInfo[] = [
   {
     agente: 'Babel',
@@ -46,6 +46,11 @@ const CORPILOTES: CorpiloteInfo[] = [
     agente: 'Atech',
     temas: ['Operación | Conocimiento', 'Operations | Knowledge'],
     rasgo: ['Te estructura y facilita decisiones', 'Structures you and eases decisions'],
+  },
+  {
+    agente: 'Ecori',
+    temas: ['Convocatorias | Fondos', 'Calls | Funds'],
+    rasgo: ['Te guía a ganar', 'Guides you to win'],
   },
 ];
 
@@ -315,7 +320,7 @@ export default function InicioBuilder({ lang }: { lang: InicioLang }) {
           </h4>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
           {CORPILOTES.map((ag) => (
             <div
               key={ag.agente}

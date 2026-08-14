@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "MBE AI Copilot",
+    "appName": "MBE Corp-AI-lot",
     "download": "Download",
     "continue": "Continue",
     "back": "Back",
@@ -23,8 +23,8 @@
     },
     "hero": {
       "eyebrow": "Powered by Gemini on Google Cloud",
-      "title": "Transform your small business into a world-class company with AI",
-      "subtitle": "5 specialized AI agents diagnose your business and hand you real plans, contracts and spreadsheets — not generic advice.",
+      "title": "⚠️ Let's be honest: what's stopping you from growing?",
+      "subtitle": "No access to money? - We give it to you 💸\nNo team to work with? - We connect you with Mentors and AI Agents 🐙🛡️\nDon't know where to start? - We guide you step by step 📈\n\n🔥 Start FREE today - Sign up now!\n\nYou no longer have a (©#!%&@º) excuse",
       "ctaPrimary": "Create free account",
       "ctaSecondary": "Watch 2-min demo",
       "socialProof": "Built on 153 world-class practices from MBE Corp"
@@ -47,11 +47,15 @@
         },
         "normau": {
           "name": "Normau",
-          "domain": "Partnerships"
+          "domain": "Legal Compliance"
         },
         "atech": {
           "name": "Atech",
           "domain": "Operations"
+        },
+        "ecori": {
+          "name": "Ecori",
+          "domain": "Calls & Grants"
         }
       }
     }
@@ -97,6 +101,7 @@
     }
   },
   "footer": {
+    "brand": "MBE Corp",
     "rights": "All rights reserved."
   },
   "assessment": {

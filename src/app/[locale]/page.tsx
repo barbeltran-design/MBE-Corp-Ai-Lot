@@ -17,7 +17,7 @@ export default async function LandingPage({ params }: { params: Promise<{ locale
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
         <div className="flex items-center gap-2.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-mbe.png" alt={tCommon('appName')} className="h-8 w-8 object-contain" />
+          <img src="/logo-mbe.png" alt={tCommon('appName')} className="h-16 w-16 object-contain" />
           <span className="text-lg font-semibold text-slate-900">{tCommon('appName')}</span>
         </div>
 
@@ -43,7 +43,7 @@ export default async function LandingPage({ params }: { params: Promise<{ locale
       <AgentsPreview />
 
       <footer className="mx-auto max-w-6xl px-6 py-10 text-center text-xs text-slate-400">
-        © {new Date().getFullYear()} {tCommon('appName')}. {tFooter('rights')}
+        © {new Date().getFullYear()} {tFooter('brand')}. {tFooter('rights')}
       </footer>
     </main>
   );

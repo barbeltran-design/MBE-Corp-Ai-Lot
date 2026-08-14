@@ -1,7 +1,7 @@
 import React from 'react';
 import { BABEL_AYUDA_EVENT } from '@/components/babel/BabelAvatar';
 
-export type AgenteAvatarId = 'Babel' | 'Fisnando' | 'Karmetin' | 'Normau' | 'Atech';
+export type AgenteAvatarId = 'Babel' | 'Fisnando' | 'Karmetin' | 'Normau' | 'Atech' | 'Ecori';
 export type AgentePose = 'reposando' | 'guiando';
 
 type AgentAvatarProps = {
@@ -18,6 +18,7 @@ const AGENTE_SLUG: Record<AgenteAvatarId, string> = {
   Karmetin: 'karmetin',
   Normau: 'normau',
   Atech: 'atech',
+  Ecori: 'ecori',
 };
 
 // Avatar por agente usando las ilustraciones PNG de MBE Worlds. Dos poses:
