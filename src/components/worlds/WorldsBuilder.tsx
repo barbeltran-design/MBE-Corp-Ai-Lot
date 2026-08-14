@@ -1250,6 +1250,20 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
               ? 'Cada misión abre una herramienta real (Dashboard u Objetivos estratégicos). Puedes repetirlas cuando cambie tu empresa.'
               : 'Each mission opens a real tool (Dashboard or Strategic Objectives). You can redo them whenever your company changes.',
           },
+          {
+            selector: '#worlds-misiones',
+            title: lang === 'es' ? 'Tus misiones' : 'Your missions',
+            description: lang === 'es'
+              ? 'Completa las misiones en orden: cada tarjeta se desbloquea al terminar la anterior. Las misiones repetibles puedes volver a hacerlas cuando cambie tu empresa.'
+              : 'Complete the missions in order: each card unlocks once you finish the previous one. Repeatable missions can be redone whenever your company changes.',
+          },
+          {
+            selector: '#estrategia-plan-accion',
+            title: lang === 'es' ? 'Plan de Acción' : 'Action Plan',
+            description: lang === 'es'
+              ? 'Se desbloquea cuando defines tu Plan de Acción: conecta los temas de cada agente con las buenas prácticas a trabajar, mes a mes.'
+              : 'Unlocks once you define your Action Plan: it connects the topics of each agent with the practices to work on, month by month.',
+          },
         ]}
       />
     </div>

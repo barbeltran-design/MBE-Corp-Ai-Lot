@@ -206,11 +206,13 @@ const TOOLBOX: ToolboxItem[] = [
 const PASOS_TOUR: Record<InicioLang, TourStep[]> = {
   es: [
     { selector: '#inicio-title', title: 'Inicio', description: '¡Hola! Aquí empieza tu viaje con MBE: nosotros transformamos tu empresa y tú el mundo.' },
+    { selector: '#inicio-dual', title: 'Toolbox y Mundos Premium', description: 'El Toolbox (fondos, comunidad y mentoría) se desbloquea al completar el Mundo de Partida. Los Mundos Premium, cada uno con su especialista, requieren el plan mensual.' },
     { selector: '#inicio-agentes', title: 'Tus especialistas de IA', description: 'Conoce a los 5 agentes que te ayudarán a impulsar tu crecimiento. Toca su avatar para verlo en grande.' },
     { selector: '#inicio-mundos', title: 'El universo MBE', description: 'Viaja por el universo empresarial de MBE Corp: cada mundo te conecta con tu equipo de especialistas, herramientas, mentoría y más clientes.' },
   ],
   en: [
     { selector: '#inicio-title', title: 'Home', description: 'Hi! Your journey with MBE starts here: we transform your company and you transform the world.' },
+    { selector: '#inicio-dual', title: 'Toolbox and Premium Worlds', description: 'The Toolbox (funds, community and mentoring) unlocks once you complete the Starting World. The Premium Worlds, each with its own specialist, require the monthly plan.' },
     { selector: '#inicio-agentes', title: 'Your AI Copilots', description: "Meet the 5 AI agents who help you boost your growth. Tap their avatar to view it big." },
     { selector: '#inicio-mundos', title: 'The MBE universe', description: 'Travel across the business universe of MBE Corp: every world connects you with your specialist team, tools, mentoring and more customers.' },
   ],

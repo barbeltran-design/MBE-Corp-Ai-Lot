@@ -3,6 +3,7 @@ import * as React from 'react';
 import { CalendarCheck, ExternalLink, RefreshCw, Search } from 'lucide-react';
 import AgentAvatar from '@/components/agentes/AgentAvatar';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
+import { BABEL_AYUDA_EVENT } from '@/components/babel/BabelAvatar';
 import {
   DATOS_CONVOCATORIAS,
   ESTADOS_MX,
@@ -152,10 +153,28 @@ const PASOS_TOUR: Record<ConvoLang, TourStep[]> = {
         'Directorio de convocatorias, premios, becas y fondos alineados a los ODS para tu organización. Céntrate en los que están abiertos.',
     },
     {
+      selector: '#convocatorias-agendar',
+      title: 'Agenda con tu mentor',
+      description:
+        'Si una convocatoria te genera dudas, agenda una sesión con tu mentor para revisar si aplica y cómo preparar tu postulación.',
+    },
+    {
+      selector: '#convocatorias-stats',
+      title: 'Panorama general',
+      description:
+        'Aquí ves de un vistazo cuántas convocatorias hay en total, cuántas están abiertas ahora, el monto disponible y cuándo se actualizó el directorio.',
+    },
+    {
       selector: '#convocatorias-buscar',
       title: 'Encuentra tus convocatorias',
       description:
         'Captura el perfil de tu organización (tipo, ubicación, años de operación, edad, ODS y liderazgo) y pulsa "Buscar mis convocatorias" para ver a cuáles puedes aplicar y por qué.',
+    },
+    {
+      selector: '#convocatorias-resultados',
+      title: 'Tus resultados',
+      description:
+        'Después de buscar por perfil verás dos grupos: las convocatorias a las que sí puedes aplicar y las que no cumples todavía, con el motivo de cada una.',
     },
     {
       selector: '#convocatorias-catalogo',
@@ -172,10 +191,28 @@ const PASOS_TOUR: Record<ConvoLang, TourStep[]> = {
         'Directory of calls for proposals, awards, fellowships and grants aligned with the SDGs for your organization. Focus on the ones that are open.',
     },
     {
+      selector: '#convocatorias-agendar',
+      title: 'Book time with your mentor',
+      description:
+        'If a call raises questions, book a session with your mentor to check whether it applies to you and how to prepare your application.',
+    },
+    {
+      selector: '#convocatorias-stats',
+      title: 'At a glance',
+      description:
+        'See at a glance the total number of calls, how many are open right now, the available amount, and when the directory was last updated.',
+    },
+    {
       selector: '#convocatorias-buscar',
       title: 'Find your calls',
       description:
         'Enter your organization profile (type, location, years in operation, age, SDGs and leadership) and press "Find my calls" to see which ones you can apply to and why.',
+    },
+    {
+      selector: '#convocatorias-resultados',
+      title: 'Your results',
+      description:
+        'After searching by profile you will see two groups: the calls you can apply to and the ones you do not meet yet, with the reason for each.',
     },
     {
       selector: '#convocatorias-catalogo',
@@ -382,7 +419,7 @@ export default function ConvocatoriasBuilder({ lang }: { lang: ConvoLang }) {
   return (
     <div>
       <div className="flex items-center gap-3">
-        <AgentAvatar agente="Ecori" size={56} className="shrink-0" />
+        <AgentAvatar agente="Ecori" size={56} className="shrink-0" onClick={() => window.dispatchEvent(new CustomEvent(BABEL_AYUDA_EVENT))} />
         <div>
           <h3 id="convocatorias-title" className="text-xl font-bold text-slate-800">
             {t.title}
@@ -392,7 +429,7 @@ export default function ConvocatoriasBuilder({ lang }: { lang: ConvoLang }) {
       </div>
 
       {/* Agendar cita con mentor */}
-      <div className="glass-panel mt-4 flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div id="convocatorias-agendar" className="glass-panel mt-4 flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-200">
           {t.mentorCtaText}
         </p>
@@ -406,7 +443,7 @@ export default function ConvocatoriasBuilder({ lang }: { lang: ConvoLang }) {
       </div>
 
       {/* Stats */}
-      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div id="convocatorias-stats" className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <div className="glass-panel p-3">
           <p className="text-xl font-bold text-slate-800">{datos.length}</p>
           <p className="text-xs text-slate-500">{t.statsTotal}</p>
@@ -494,7 +531,7 @@ export default function ConvocatoriasBuilder({ lang }: { lang: ConvoLang }) {
 if (!hoy) {
     return (
       <div className="flex items-center gap-3">
-        <AgentAvatar agente="Ecori" size={56} className="shrink-0" />
+        <AgentAvatar agente="Ecori" size={56} className="shrink-0" onClick={() => window.dispatchEvent(new CustomEvent(BABEL_AYUDA_EVENT))} />
         <div>
           <h3 id="convocatorias-title" className="text-xl font-bold text-slate-800">
             {t.title}
