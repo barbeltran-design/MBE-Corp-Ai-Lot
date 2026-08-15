@@ -4,8 +4,6 @@ import { CalendarCheck, ExternalLink, RefreshCw, Search } from 'lucide-react';
 import AgentAvatar from '@/components/agentes/AgentAvatar';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 import { BABEL_AYUDA_EVENT } from '@/components/babel/BabelAvatar';
-import { BABEL_AYUDA_EVENT } from '@/components/babel/BabelAvatar';
-import { BABEL_AYUDA_EVENT } from '@/components/babel/BabelAvatar';
 import {
   DATOS_CONVOCATORIAS,
   ESTADOS_MX,
