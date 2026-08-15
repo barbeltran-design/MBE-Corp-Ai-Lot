@@ -5,6 +5,9 @@ import { useParams } from 'next/navigation';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase';
 import { useDisplayLang } from '@/components/display-lang-provider';
+import AgentAvatar from '@/components/agentes/AgentAvatar';
+import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
+import { BABEL_AYUDA_EVENT } from '@/components/babel/BabelAvatar';
 import {
   BadgeCheck,
   CalendarClock,
@@ -39,6 +42,49 @@ import {
   type TipoReunion,
   type TipoResultado,
 } from '@/lib/refplace';
+
+const PASOS_TOUR_REFPLACE: Record<'es' | 'en', TourStep[]> = {
+  es: [
+    {
+      selector: '#refplace-title',
+      title: 'Reference Place',
+      description:
+        'Aqui encuentras el mercado de referencias, agendas reuniones B2B con la comunidad y consultas perfiles publicos de miembros certificados MBE.',
+    },
+    {
+      selector: '#refplace-perfil',
+      title: 'Tu perfil comunitario',
+      description:
+        'Aqui ves tu nivel, si ya estas certificado y si tienes acceso a reuniones B2B y a solicitar referencias.',
+    },
+    {
+      selector: '#refplace-tabs',
+      title: 'Secciones de Reference Place',
+      description:
+        'Cambia entre Referencias y Rep Sales, Reuniones B2B y el directorio de la Comunidad.',
+    },
+  ],
+  en: [
+    {
+      selector: '#refplace-title',
+      title: 'Reference Place',
+      description:
+        'Here you find the referral marketplace, schedule B2B meetings with the community, and check public profiles of certified MBE members.',
+    },
+    {
+      selector: '#refplace-perfil',
+      title: 'Your community profile',
+      description:
+        'See your level, whether you are already certified, and whether you have access to B2B meetings and to request referrals.',
+    },
+    {
+      selector: '#refplace-tabs',
+      title: 'Reference Place sections',
+      description:
+        'Switch between Referrals & Sales Reps, B2B Meetings and the Community directory.',
+    },
+  ],
+};
 
 interface YoComunidad {
   uid: string;
@@ -284,11 +330,14 @@ export function ReferencePlaceBuilder() {
   return (
     <div className="space-y-6">
       <header className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">{t('Reference Place', 'Reference Place')}</h1>
+        <div className="flex items-start gap-3">
+          <AgentAvatar agente="Karmetin" size={48} className="mt-0.5 shrink-0" onClick={() => window.dispatchEvent(new CustomEvent(BABEL_AYUDA_EVENT))} />
+          <div>
+          <h1 id="refplace-title" className="text-xl font-semibold text-foreground">{t('Reference Place', 'Reference Place')}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {t('Mercado de referencias, reuniones B2B y perfiles públicos de la comunidad certificada MBE.', 'Referral marketplace, B2B meetings and public profiles of the certified MBE community.')}
           </p>
+          </div>
         </div>
         <button
           type="button"
@@ -315,7 +364,7 @@ export function ReferencePlaceBuilder() {
           {success && <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{success}</div>}
 
           {/* Tarjeta de mi perfil comunitario */}
-          <div className="glass-panel p-4">
+          <div id="refplace-perfil" className="glass-panel p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-teal-600 text-lg font-bold text-white">
@@ -355,7 +404,7 @@ export function ReferencePlaceBuilder() {
           </div>
 
           {/* Tabs */}
-          <div className="flex flex-wrap gap-2">
+          <div id="refplace-tabs" className="flex flex-wrap gap-2">
             {([
               ['mercado', 'Referencias y Rep Sales', Store],
               ['reuniones', 'Reuniones B2B', Handshake],
@@ -1003,6 +1052,7 @@ export function ReferencePlaceBuilder() {
           </div>
         </div>
       )}
+      <PageTour pageId="refplace" steps={dispLang === 'en' ? PASOS_TOUR_REFPLACE.en : PASOS_TOUR_REFPLACE.es} lang={dispLang} />
     </div>
   );
 }

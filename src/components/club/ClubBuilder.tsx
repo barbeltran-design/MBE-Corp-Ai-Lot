@@ -6,6 +6,9 @@ import { onAuthStateChanged, type User } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase';
 import { useDisplayLang } from '@/components/display-lang-provider';
 import { useUserRoles } from '@/lib/use-user-roles';
+import AgentAvatar from '@/components/agentes/AgentAvatar';
+import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
+import { BABEL_AYUDA_EVENT } from '@/components/babel/BabelAvatar';
 import {
   ArrowDown,
   ArrowUp,
@@ -31,6 +34,49 @@ import {
 import { AGENDA_JUNTA, AGENDA_JUNTA_TOTAL, ROLES_JUNTA, rolLabel, nivelDesdePuntos } from '@/lib/club';
 import { nivelLabel } from '@/lib/refplace';
 import { nivelMinimoNoticiasLabel } from '@/lib/premium';
+
+const PASOS_TOUR_CLUB: Record<'es' | 'en', TourStep[]> = {
+  es: [
+    {
+      selector: '#club-title',
+      title: 'Comunidad de Mentoria Semanal',
+      description:
+        'Aqui participas en las juntas semanales de mentoria: revisas el tema de la semana, tus puntos, tu nivel y las noticias de la comunidad.',
+    },
+    {
+      selector: '#club-progreso',
+      title: 'Tu progreso',
+      description:
+        'Aqui ves tu nivel actual, tus puntos acumulados y cuantos puntos te faltan para el siguiente nivel.',
+    },
+    {
+      selector: '#club-tabs',
+      title: 'Secciones de la comunidad',
+      description:
+        'Cambia entre la junta semanal, tus puntos y niveles, la organizacion de las juntas y las noticias de la comunidad.',
+    },
+  ],
+  en: [
+    {
+      selector: '#club-title',
+      title: 'Weekly Mentoring Community',
+      description:
+        'Here you take part in the weekly mentoring meetings: check this week topic, your points, your level and the community news.',
+    },
+    {
+      selector: '#club-progreso',
+      title: 'Your progress',
+      description:
+        'See your current level, your accumulated points and how many points you need for the next level.',
+    },
+    {
+      selector: '#club-tabs',
+      title: 'Community sections',
+      description:
+        'Switch between the weekly meeting, your points and levels, meeting organization and community news.',
+    },
+  ],
+};
 
 // Liga tal cual la ingresó el usuario pero siempre con protocolo, para que el
 // navegador no la resuelva contra el origen de la app (ej. meet.google.com/...).
@@ -1131,8 +1177,10 @@ export function ClubBuilder() {
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">{t('Comunidad de Mentoría Semanal', 'Weekly Mentoring Community')}</h1>
+        <div className="flex items-start gap-3">
+          <AgentAvatar agente="Babel" size={48} className="mt-0.5 shrink-0" onClick={() => window.dispatchEvent(new CustomEvent(BABEL_AYUDA_EVENT))} />
+          <div>
+          <h1 id="club-title" className="text-xl font-semibold text-foreground">{t('Comunidad de Mentoría Semanal', 'Weekly Mentoring Community')}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {t('Juntas de 90 minutos cada semana, con temas, roles, puntos y niveles.', '90-minute meetings every week, with topics, roles, points and levels.')}
             {data && (
@@ -1144,6 +1192,7 @@ export function ClubBuilder() {
               </span>
             )}
           </p>
+          </div>
         </div>
         <button
           type="button"
@@ -1171,7 +1220,7 @@ export function ClubBuilder() {
 
           {/* Mi progreso */}
           {yo && (
-            <div className="glass-panel p-4">
+            <div id="club-progreso" className="glass-panel p-4">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-teal-600 text-lg font-bold text-white">
@@ -1215,7 +1264,7 @@ export function ClubBuilder() {
           )}
 
           {/* Tabs */}
-          <div className="flex flex-wrap gap-2">
+          <div id="club-tabs" className="flex flex-wrap gap-2">
             {([
               ['semana', 'Junta semanal', Users],
               ['puntos', 'Puntos y niveles', Trophy],
@@ -1289,6 +1338,7 @@ export function ClubBuilder() {
           </div>
         </div>
       )}
+      <PageTour pageId="club" steps={dispLang === 'en' ? PASOS_TOUR_CLUB.en : PASOS_TOUR_CLUB.es} lang={dispLang} />
     </div>
   );
 }
