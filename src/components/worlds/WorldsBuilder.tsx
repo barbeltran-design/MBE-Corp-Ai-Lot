@@ -7,10 +7,11 @@ import { getFirebaseAuth } from '@/lib/firebase';
 import { useDisplayLang } from '@/components/display-lang-provider';
 import AgentAvatar from '@/components/agentes/AgentAvatar';
 import { getLatestAssessmentAnswers } from '@/lib/assessment';
-import { getMaturityDimensions, DIMENSION_IDS, type DimensionId } from '@/lib/maturity-dimensions';
+import { getMaturityDimensions } from '@/lib/maturity-dimensions';
 import { nivelDesdePuntos } from '@/lib/club';
 import { getBabelSessionIfExists } from '@/lib/babel-session';
-import { MENTORES, PRACTICAS_POR_TEMA, type MentorAgente } from '@/lib/madurez-practicas';
+import type { MentorAgente } from '@/lib/madurez-practicas';
+import { loadPlanAccion, type Accion, type PlanData } from '@/lib/plan-accion';
 import {
   MISIONES_PART_LABELS,
   SUBMUNDOS_ESTRATEGIA_LABELS,
@@ -42,9 +43,10 @@ const I = {
   cargando: ['Cargando el mapa de mundos…', 'Loading the worlds map…'],
   sinSesion: ['Inicia sesión para comenzar tu partida.', 'Sign in to start your game.'],
   volver: ['← Volver al mapa', '← Back to the map'],
-  chipPuntos: ['Puntos del Club', 'Club points'],
+  chipPuntos: ['Puntos de Comunidad', 'Community points'],
   chipRacha: ['Racha', 'Streak'],
-  rachaDemo: ['4 días (Fase B real)', '4 days (real in Phase B)'],
+  rachaDia: ['día', 'day'],
+  rachaDias: ['días', 'days'],
   saludo: ['¡Hola', 'Hi'],
   progreso: ['Tu progreso', 'Your progress'],
   misionesDe: ['misiones', 'missions'],
@@ -144,29 +146,32 @@ const I = {
   ],
   agendarMentor: ['Agendar con un mentor', 'Book a mentor session'],
   misPA: ['Misión de Plan de Acción', 'Action Plan Mission'],
+  misPA2: ['Misión 2. Plan de Acción', 'Mission 2. Action Plan'],
+  misPA6: ['Misión 6. Plan de Acción', 'Mission 6. Action Plan'],
   misPADesc: [
-    'Se desbloquea cuando defines tu Plan de Acción. Conecta los temas de cada agente con las buenas prácticas a trabajar, mes a mes.',
-    "Unlocks once you define your Action Plan. It connects each agent's topics with the practices to work on, month by month.",
+    'Se desbloquea cuando defines tu Plan de Acción Estratégico (Misión 6 con Babel). Conecta cada acción del plan con el agente que puede ayudarte a cumplirla.',
+    'Unlocks once you define your Strategic Action Plan (Mission 6 with Babel). It connects every plan action with the agent that can help you get it done.',
   ],
   bloqueadaTag: ['Bloqueada', 'Locked'],
   paLockDesc: [
-    'Define primero tu Plan de Acción (Plan de Acción Socioambiental de la Reflexión Estratégica) para desbloquear esta misión y ver tus actividades por agente.',
-    'Define your Action Plan first (Socioenvironmental Action Plan of the Strategic Reflection) to unlock this mission and see your activities per agent.',
+    'Define primero tu Plan de Acción Estratégico (Misión 6 con Babel en la Reflexión Estratégica) para desbloquear esta misión y ver tus actividades por agente.',
+    'Define your Strategic Action Plan first (Mission 6 with Babel in the Strategic Reflection) to unlock this mission and see your activities per agent.',
   ],
   crearMiPA: ['Definir mi Plan de Acción', 'Define my Action Plan'],
   verPA: ['Abrir el Plan de Acción', 'Open the Action Plan'],
   panelAgente: ['Agente', 'Agent'],
   panelTemas: ['Temas asignados a', 'Topics assigned to'],
   panelTodos: ['Actividades por agente', 'Activities per agent'],
-  temaCol: ['Tema', 'Topic'],
-  practicaCol: ['Siguiente práctica', 'Next practice'],
-  nivelCol: ['Nivel', 'Level'],
-  mesCol: ['Este mes', 'This month'],
-  dominadoTag: ['Dominado', 'Mastered'],
-  sinPend: ['Sin prácticas pendientes', 'No pending practices'],
-  notaPanel: [
-    'Las actividades parten de tu Evaluación de Madurez (el nivel más bajo no completado de cada tema) y del Plan de Madurez del mes actual.',
-    "Activities come from your Maturity Assessment (the lowest incomplete level of each topic) and this month's Maturity Plan.",
+  accionCol: ['Acción', 'Action'],
+  entregableCol: ['Entregable', 'Deliverable'],
+  fechaCol: ['Fecha', 'Due date'],
+  estatusCol: ['Estatus', 'Status'],
+  termTag: ['Terminado', 'Done'],
+  sinAgenteTag: ['Sin agente', 'Unassigned'],
+  sinAccionesTag: ['Sin acciones para este agente', 'No actions for this agent'],
+  notaPanelPA: [
+    'Las actividades provienen de tu Plan de Acción Estratégico (Misión 6 con Babel): cada acción está asignada al agente que puede ayudarte a cumplirla.',
+    'Activities come from your Strategic Action Plan (Mission 6 with Babel): each action is assigned to the agent that can help you get it done.',
   ],
 } as const;
 
@@ -174,104 +179,48 @@ type Params = readonly [string, string];
 const t2 = (lang: 'es' | 'en') => (p: Params) => (lang === 'en' ? p[1] : p[0]);
 
 // ── Misiones "Plan de Acción" de los mundos: panel de actividades por agente ─
-// Los temas asignados a cada agente salen del catálogo de prácticas de madurez
-// (PRACTICAS_POR_TEMA: mentor por tema) y las actividades del nivel más bajo
-// no completado de la evaluación + el Plan de Madurez del mes actual.
+// Las actividades se toman del Plan de Acción Estratégico del usuario
+// (babel_plan_accion_v2, la Misión 6 del Mundo de la Estrategia, construida
+// con Babel). Cada acción guarda su `mentor` (agente de IA sugerido para
+// implementarla), así que el panel agrupa las acciones por agente.
 
-const NIVELES_ACT: Record<'es' | 'en', string[]> = {
-  es: ['Ejecución', 'Estándar', 'Control', 'Optimización', 'Excelencia', 'Influencer'],
-  en: ['Execution', 'Standard', 'Control', 'Optimization', 'Excellence', 'Influencer'],
-};
+const AGENTES5: MentorAgente[] = ['Babel', 'Fisnando', 'Karmetin', 'Normau', 'Atech'];
 
-interface CompromisoLeido {
-  themeId?: string;
-  estatus?: 'pendiente' | 'en_progreso' | 'completada';
+function mentorDeAccion(a: Accion): MentorAgente | null {
+  return (AGENTES5 as string[]).indexOf(a.mentor ?? '') !== -1 ? (a.mentor as MentorAgente) : null;
 }
 
-interface PlanMadurezLeido {
-  completados: Record<string, number>;
-  compromisos: Record<string, CompromisoLeido[]>;
-}
-
-interface Actividad {
-  themeId: DimensionId;
-  terminado: boolean;
-  practica: string | null;
-  nivel: number;
-  comp: CompromisoLeido | undefined;
-}
-
-function monthKeyOf(date: Date): string {
-  return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
-}
-
-function baseNivelDe(respuestas: Record<string, string[]> | null, themeId: DimensionId): number {
-  const arr = respuestas?.[themeId];
-  if (!arr) return 0;
-  for (let i = 0; i < 6; i++) {
-    if (arr[i] !== 'yes') return i;
-  }
-  return 6;
-}
-
-function PanelActividades({
+function PanelActividadesPlanAccion({
   agente,
   lang,
-  respuestas,
-  plan,
+  planAccion,
 }: {
   agente: MentorAgente | 'todos';
   lang: 'es' | 'en';
-  respuestas: Record<string, string[]> | null;
-  plan: PlanMadurezLeido;
+  planAccion: PlanData | null;
 }) {
   const en = t2(lang);
-  const dims = React.useMemo(() => getMaturityDimensions(lang), [lang]);
-  const temaDe = React.useMemo(() => {
-    const m: Record<string, string> = {};
-    dims.forEach((d) => {
-      m[d.id] = d.tema;
-    });
-    return m;
-  }, [dims]);
-  const mesKey = monthKeyOf(new Date());
-  const agentes: MentorAgente[] = agente === 'todos' ? MENTORES : [agente];
+  const acciones = planAccion?.acciones ?? [];
 
-  const filas = React.useMemo(() => {
-    const comps = plan.compromisos[mesKey] ?? [];
-    return agentes.map((a) => {
-      const fs: Actividad[] = [];
-      for (const id of DIMENSION_IDS) {
-        const prs = PRACTICAS_POR_TEMA[id];
-        if (!prs.some((p) => p.mentor === a)) continue;
-        const n = Math.min(6, baseNivelDe(respuestas, id) + (plan.completados[id] ?? 0));
-        fs.push({
-          themeId: id,
-          terminado: n >= 6,
-          practica: n < 6 ? prs[n].practica : null,
-          nivel: n < 6 ? n : -1,
-          comp: comps.find((c) => c.themeId === id),
-        });
-      }
-      return { agente: a, filas: fs };
-    });
-  }, [agentes, plan, respuestas, mesKey]);
+  const grupos = React.useMemo<{ agente: MentorAgente | ''; items: Accion[] }[]>(() => {
+    if (agente === 'todos') {
+      const porAgente = AGENTES5.map((a) => ({ agente: a as MentorAgente | '', items: acciones.filter((x) => mentorDeAccion(x) === a) }));
+      porAgente.push({ agente: '', items: acciones.filter((x) => mentorDeAccion(x) === null) });
+      return porAgente;
+    }
+    return [{ agente, items: acciones.filter((x) => mentorDeAccion(x) === agente) }];
+  }, [agente, acciones]);
 
   const colSpan = agente === 'todos' ? 5 : 4;
 
-  const chip = (c: CompromisoLeido | undefined) => {
-    if (!c) {
-      return <span className="text-slate-400 dark:text-slate-500">—</span>;
+  const chipEstatus = (a: Accion) => {
+    if (a.estatus === 'terminado') {
+      return <span className="rounded-full border border-emerald-300 bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900 dark:text-emerald-200">{en(I.termTag)}</span>;
     }
-    const cls =
-      c.estatus === 'completada'
-        ? 'border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900 dark:text-emerald-200'
-        : c.estatus === 'en_progreso'
-          ? 'border-amber-300 bg-amber-100 text-amber-700 dark:border-amber-700 dark:bg-amber-900 dark:text-amber-200'
-          : 'border-slate-300 bg-slate-100 text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300';
-    const lbl =
-      c.estatus === 'completada' ? en(I.completadaTag) : c.estatus === 'en_progreso' ? en(I.enCursoTag) : en(I.pendienteTag);
-    return <span className={`rounded-full border px-2 py-0.5 text-[10px] font-extrabold ${cls}`}>{lbl}</span>;
+    if (a.estatus === 'en_proceso') {
+      return <span className="rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-extrabold text-amber-700 dark:border-amber-700 dark:bg-amber-900 dark:text-amber-200">{en(I.enCursoTag)}</span>;
+    }
+    return <span className="rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[10px] font-extrabold text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">{en(I.pendienteTag)}</span>;
   };
 
   return (
@@ -280,53 +229,43 @@ function PanelActividades({
         <thead>
           <tr className="text-left text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">
             {agente === 'todos' && <th className="pb-2">{en(I.panelAgente)}</th>}
-            <th className="pb-2">{en(I.temaCol)}</th>
-            <th className="pb-2">{en(I.practicaCol)}</th>
-            <th className="pb-2 text-center">{en(I.nivelCol)}</th>
-            <th className="pb-2">{en(I.mesCol)}</th>
+            <th className="pb-2">{en(I.accionCol)}</th>
+            <th className="pb-2">{en(I.entregableCol)}</th>
+            <th className="pb-2">{en(I.fechaCol)}</th>
+            <th className="pb-2">{en(I.estatusCol)}</th>
           </tr>
         </thead>
         <tbody>
-          {filas.map(({ agente: a, filas: fs }) => (
-            <React.Fragment key={a}>
+          {grupos.map((g) => (
+            <React.Fragment key={g.agente || 'sin-agente'}>
               {agente === 'todos' && (
                 <tr className="border-t border-slate-300/40 dark:border-slate-600/40">
                   <td colSpan={colSpan} className="py-1.5 pt-2.5">
-                    <span className="flex items-center gap-2 font-extrabold text-slate-700 dark:text-slate-200">
-                      <AgentAvatar agente={a} size={20} className="shrink-0" onClick={() => undefined} />
-                      {a}
-                    </span>
+                    {g.agente ? (
+                      <span className="flex items-center gap-2 font-extrabold text-slate-700 dark:text-slate-200">
+                        <AgentAvatar agente={g.agente} size={20} className="shrink-0" onClick={() => undefined} />
+                        {g.agente}
+                      </span>
+                    ) : (
+                      <span className="font-extrabold text-slate-500 dark:text-slate-400">{en(I.sinAgenteTag)}</span>
+                    )}
                   </td>
                 </tr>
               )}
-              {fs.length === 0 && (
+              {g.items.length === 0 && (
                 <tr className="border-t border-slate-300/40 dark:border-slate-600/40">
                   <td colSpan={colSpan} className="py-1.5 text-slate-500 dark:text-slate-400">
-                    {en(I.sinPend)}
+                    {en(I.sinAccionesTag)}
                   </td>
                 </tr>
               )}
-              {fs.map((f) => (
-                <tr key={f.themeId} className="border-t border-slate-300/40 dark:border-slate-600/40">
+              {g.items.map((a) => (
+                <tr key={a.id} className="border-t border-slate-300/40 dark:border-slate-600/40">
                   {agente === 'todos' && <td className="py-1.5 pr-2" />}
-                  <td className="py-1.5 pr-2 font-bold text-slate-700 dark:text-slate-200">{temaDe[f.themeId] ?? f.themeId}</td>
-                  <td className="py-1.5 pr-2 text-slate-600 dark:text-slate-300">
-                    {f.terminado ? (
-                      <span className="font-extrabold text-emerald-600 dark:text-emerald-400">✓ {en(I.dominadoTag)}</span>
-                    ) : (
-                      f.practica
-                    )}
-                  </td>
-                  <td className="py-1.5 text-center">
-                    {f.terminado ? (
-                      <span className="font-extrabold text-emerald-600 dark:text-emerald-400">6/6</span>
-                    ) : (
-                      <span className="rounded-full bg-teal-100 px-2 py-0.5 text-[10px] font-extrabold text-teal-700 dark:bg-teal-900 dark:text-teal-200">
-                        {NIVELES_ACT[lang][f.nivel]}
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-1.5 pl-2">{chip(f.comp)}</td>
+                  <td className="py-1.5 pr-2 font-bold text-slate-700 dark:text-slate-200">{a.descripcion}</td>
+                  <td className="py-1.5 pr-2 text-slate-600 dark:text-slate-300">{a.entregable || '—'}</td>
+                  <td className="py-1.5 pr-2 whitespace-nowrap text-slate-600 dark:text-slate-300">{a.fecha || '—'}</td>
+                  <td className="py-1.5 pl-2">{chipEstatus(a)}</td>
                 </tr>
               ))}
             </React.Fragment>
@@ -341,16 +280,14 @@ function MisionPlanAccion({
   agente,
   lang,
   planAccionDefinido,
-  respuestas,
-  plan,
+  planAccion,
   onIrPlan,
   esPremium,
 }: {
   agente: MentorAgente;
   lang: 'es' | 'en';
   planAccionDefinido: boolean;
-  respuestas: Record<string, string[]> | null;
-  plan: PlanMadurezLeido;
+  planAccion: PlanData | null;
   onIrPlan: () => void;
   esPremium: boolean;
 }) {
@@ -359,6 +296,9 @@ function MisionPlanAccion({
   return (
     <div className="world-glass world-grain p-5">
       <div className="flex items-center justify-between gap-2">
+        <span className="rounded-full bg-fuchsia-100 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-fuchsia-700 dark:bg-fuchsia-900 dark:text-fuchsia-200">
+          {en(I.misNum)} 2
+        </span>
         <span
           className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide ${
             desbloqueada
@@ -370,7 +310,7 @@ function MisionPlanAccion({
         </span>
       </div>
       <div className="mt-3 text-4xl">📋</div>
-      <h3 className="mt-1 text-base font-extrabold text-slate-800 dark:text-white">{en(I.misPA)}</h3>
+      <h3 className="mt-1 text-base font-extrabold text-slate-800 dark:text-white">{en(I.misPA2)}</h3>
       <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">{en(I.misPADesc)}</p>
       {!desbloqueada ? (
         <div className="mt-3 rounded-xl border border-slate-300/50 bg-white/40 p-4 dark:bg-white/5">
@@ -389,7 +329,7 @@ function MisionPlanAccion({
             <b className="text-teal-700 dark:text-teal-300">{agente}</b>
           </p>
           <div className="mt-2">
-            <PanelActividades agente={agente} lang={lang} respuestas={respuestas} plan={plan} />
+            <PanelActividadesPlanAccion agente={agente} lang={lang} planAccion={planAccion} />
           </div>
           <button
             className="mt-3 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 px-3 py-1.5 text-xs font-extrabold text-white shadow-md shadow-teal-500/30 transition hover:opacity-90"
@@ -445,8 +385,9 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
   // Misión 0 del Mundo de Estrategia (Calibración): se marca COMPLETADA cuando
   // la Fase 0 de Babel ya fue aprobada por el usuario en su sesión.
   const [fase0Aprobada, setFase0Aprobada] = React.useState(false);
-  const [planMadurez, setPlanMadurez] = React.useState<PlanMadurezLeido>({ completados: {}, compromisos: {} });
+  const [planAccion, setPlanAccion] = React.useState<PlanData | null>(null);
   const [planAccionDefinido, setPlanAccionDefinido] = React.useState(false);
+  const [racha, setRacha] = React.useState(0);
   const [precioPlan, setPrecioPlan] = React.useState<number | null>(null);
   const [pagando, setPagando] = React.useState(false);
 
@@ -571,27 +512,42 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
     router.push(`/${lang === 'es' ? 'es' : 'en'}/babel/plan-accion`);
   }, [router, lang]);
 
-  // Lee el Plan de Madurez y el Plan de Acción del usuario (localStorage) para
-  // las misiones "Plan de Acción" de cada mundo (panel de actividades por
-  // agente). El plan de acción se considera DEFINIDO cuando ya tiene acciones.
+  // Lee el Plan de Acción Estratégico del usuario (Misión 6 con Babel —
+  // babel_plan_accion_v2) para las misiones "Plan de Acción" de cada mundo
+  // (panel de actividades por agente). Se considera DEFINIDO cuando ya
+  // tiene acciones.
   React.useEffect(() => {
+    const pa = loadPlanAccion();
+    setPlanAccion(pa);
+    setPlanAccionDefinido(Array.isArray(pa?.acciones) && pa.acciones.length > 0);
+  }, []);
+
+  // Racha de días conectados seguidos (visitas a este mapa). Se cuenta en
+  // días consecutivos: si ayer también hubo visita, suma uno; si no, reinicia.
+  React.useEffect(() => {
+    const RACHA_KEY = 'mbe_racha_v1';
+    const diaKey = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     try {
-      const raw = window.localStorage.getItem('babel_madurez_plan_v1');
+      const hoy = diaKey(new Date());
+      const ayer = diaKey(new Date(Date.now() - 86400000));
+      const raw = window.localStorage.getItem(RACHA_KEY);
+      let rachaNueva = 1;
       if (raw) {
-        const p = JSON.parse(raw) as { completados?: Record<string, number>; compromisos?: Record<string, CompromisoLeido[]> };
-        setPlanMadurez({ completados: p?.completados ?? {}, compromisos: p?.compromisos ?? {} });
+        const st = JSON.parse(raw) as { ultima?: string; racha?: number } | null;
+        const prev = typeof st?.racha === 'number' && st.racha > 0 ? st.racha : 0;
+        if (st?.ultima === hoy) {
+          rachaNueva = Math.max(1, prev);
+        } else if (st?.ultima === ayer) {
+          rachaNueva = prev + 1;
+        } else {
+          rachaNueva = 1;
+        }
       }
+      window.localStorage.setItem(RACHA_KEY, JSON.stringify({ ultima: hoy, racha: rachaNueva }));
+      setRacha(rachaNueva);
     } catch (err) {
-      console.error('[worlds] plan de madurez', err);
-    }
-    try {
-      const raw = window.localStorage.getItem('babel_plan_accion_v2');
-      if (raw) {
-        const p = JSON.parse(raw) as { acciones?: unknown[] };
-        setPlanAccionDefinido(Array.isArray(p?.acciones) && p.acciones.length > 0);
-      }
-    } catch (err) {
-      console.error('[worlds] plan de accion', err);
+      console.error('[worlds] racha', err);
     }
   }, []);
 
@@ -769,7 +725,8 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
               ⭐ {yo ? nivelLabelPuntos(yo.nivel, lang === 'es' ? 'es' : 'en') : '—'}
             </span>
             <span className="rounded-full border border-amber-300/60 bg-white/50 px-3 py-1.5 backdrop-blur-md dark:bg-white/10">
-              🔥 {en(I.chipRacha)} {en(I.rachaDemo)}
+              🔥 {en(I.chipRacha)}{' '}
+              {racha > 0 ? `${racha} ${racha === 1 ? en(I.rachaDia) : en(I.rachaDias)}` : '—'}
             </span>
           </div>
         </div>
@@ -878,7 +835,7 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
                         <h3 className="text-base font-extrabold text-slate-800 dark:text-white">{lang === 'en' ? m.en : m.es}</h3>
                       </div>
                       <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                        {en(I.host)} <b>{m.agente}</b> · {en(I.misNum)} 1 · {en(I.misApoyo)} + {en(I.misPA)}.
+                        {en(I.host)} <b>{m.agente}</b> · {en(I.misNum)} 1 · {en(I.misApoyo)} + {en(I.misPA2)}.
                       </p>
                       <p className="mt-2 text-xs font-bold text-teal-700 dark:text-teal-300">{en(I.verMundo)}</p>
                     </button>
@@ -1106,8 +1063,7 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
                     agente={mundoVista.agente}
                     lang={lang === 'es' ? 'es' : 'en'}
                     planAccionDefinido={planAccionDefinido}
-                    respuestas={respuestas}
-                    plan={planMadurez}
+                    planAccion={planAccion}
                     onIrPlan={() => abrirMision(irPlanAccion)}
                     esPremium={esPremium}
                   />
@@ -1187,7 +1143,7 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
                 </div>
 
                 <div id="estrategia-plan-accion" className="world-glass world-grain mt-6 p-5">
-                  <h2 className="text-base font-extrabold text-slate-800 dark:text-white">📋 {en(I.misPA)}</h2>
+                  <h2 className="text-base font-extrabold text-slate-800 dark:text-white">📋 {en(I.misPA6)}</h2>
                   <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{en(I.misPADesc)}</p>
                   {!planAccionDefinido || !esPremium ? (
                     <div className="mt-3 rounded-xl border border-slate-300/50 bg-white/40 p-4 dark:bg-white/5">
@@ -1203,9 +1159,9 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
                     <>
                       <p className="mt-3 text-xs font-extrabold text-slate-700 dark:text-slate-200">🌐 {en(I.panelTodos)}</p>
                       <div className="mt-2">
-                        <PanelActividades agente="todos" lang={lang === 'es' ? 'es' : 'en'} respuestas={respuestas} plan={planMadurez} />
+                        <PanelActividadesPlanAccion agente="todos" lang={lang === 'es' ? 'es' : 'en'} planAccion={planAccion} />
                       </div>
-                      <p className="mt-3 text-[11px] text-slate-500 dark:text-slate-400">{en(I.notaPanel)}</p>
+                      <p className="mt-3 text-[11px] text-slate-500 dark:text-slate-400">{en(I.notaPanelPA)}</p>
                     </>
                   )}
                 </div>
