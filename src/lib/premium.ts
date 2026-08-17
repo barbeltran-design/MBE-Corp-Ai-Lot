@@ -21,14 +21,41 @@ export function esUsuarioPremium(u: {
   roles?: string[] | null;
   subscription?: string | null;
   planStatus?: string | null;
+  // Solo relevante cuando planStatus === 'pending_cancellation': fecha (ISO)
+  // hasta la que el usuario conserva el acceso pro tras cancelar (ver
+  // planCancelaEn en src/types/firestore.ts). Después de esa fecha ya no es
+  // premium, aunque el registro en Firestore todavía no se haya actualizado.
+  planCancelaEn?: string | null;
   accesoManualPremium?: boolean | null;
 }): boolean {
   if (Array.isArray(u.roles) && u.roles.includes('admin')) return true;
   if (u.accesoManualPremium === true) return true;
   const sub = u.subscription ?? '';
   const activa = ['pro', 'active', 'premium'].includes(sub);
-  if (activa && (u.planStatus === 'active' || !u.planStatus)) return true;
+  if (!activa) return false;
+  if (u.planStatus === 'active' || !u.planStatus) return true;
+  if (u.planStatus === 'pending_cancellation' && u.planCancelaEn) {
+    const finGracia = new Date(u.planCancelaEn).getTime();
+    if (!Number.isNaN(finGracia) && finGracia > Date.now()) return true;
+  }
   return false;
+}
+
+// Suma un mes (calendario) a una fecha ISO, respetando fin de mes (ej. 31 de
+// enero + 1 mes = 28/29 de febrero, no "3 de marzo" como haría un
+// setMonth() ingenuo). Se usa para calcular hasta cuándo queda pagado el
+// plan cuando alguien cancela su suscripción — ver cancelar-suscripcion y el
+// webhook de Mercado Pago.
+export function sumarUnMes(fechaIso: string): string {
+  const original = new Date(fechaIso);
+  if (Number.isNaN(original.getTime())) return fechaIso;
+  const diaOriginal = original.getDate();
+  const d = new Date(original.getTime());
+  d.setDate(1);
+  d.setMonth(d.getMonth() + 1);
+  const ultimoDiaDelMesDestino = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(diaOriginal, ultimoDiaDelMesDestino));
+  return d.toISOString();
 }
 
 /**

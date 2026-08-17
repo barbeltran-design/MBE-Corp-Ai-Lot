@@ -41,6 +41,7 @@ export async function GET(req: NextRequest) {
           certificado: data.certificado === true,
           subscription: data.subscription ?? 'free',
           planStatus: data.planStatus ?? '',
+          planCancelaEn: typeof data.planCancelaEn === 'string' ? data.planCancelaEn : null,
           accesoManualPremium: data.accesoManualPremium === true,
           totalInvertido,
           totalMaturity: typeof data.totalMaturity === 'number' ? data.totalMaturity : null,

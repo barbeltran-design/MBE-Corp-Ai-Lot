@@ -44,6 +44,7 @@ import {
   InvalidWebhookSignatureError,
 } from 'mercadopago';
 import { getAdminDb } from '@/lib/firebase-admin';
+import { sumarUnMes } from '@/lib/premium';
 
 export async function POST(req: NextRequest) {
   const dataId = req.nextUrl.searchParams.get('data.id');
@@ -126,24 +127,66 @@ export async function POST(req: NextRequest) {
       }
 
       if (preapproval.status === 'authorized') {
+        const ahora = new Date().toISOString();
         await db.collection('users').doc(uid).set(
           {
             subscription: 'pro',
             planStatus: 'active',
             mercadoPagoPreapprovalId: dataId,
-            planActivatedAt: new Date().toISOString(),
+            planActivatedAt: ahora,
+            // Ancla para calcular el periodo de gracia si más adelante se
+            // cancela (ver planCancelaEn en src/types/firestore.ts).
+            ultimoCobroAt: ahora,
           },
           { merge: true }
         );
       } else if (preapproval.status === 'cancelled') {
-        await db.collection('users').doc(uid).set(
-          {
-            subscription: 'cancelled',
-            planStatus: 'cancelled',
-            planCanceladoAt: new Date().toISOString(),
-          },
-          { merge: true }
-        );
+        // Esta rama también se dispara cuando el usuario cancela DIRECTO
+        // desde su propia cuenta de Mercado Pago (no solo desde nuestro
+        // botón "Cancelar suscripción", que ya escribe este mismo estado
+        // en /api/pagos/cancelar-suscripcion). Le damos el mismo periodo de
+        // gracia aquí: conserva el acceso hasta que termine el mes ya
+        // pagado, calculado desde el último cobro que tenemos guardado.
+        const uSnap = await db.collection('users').doc(uid).get();
+        const uData = uSnap.exists ? uSnap.data() : null;
+        const yaEnGracia =
+          uData?.planStatus === 'pending_cancellation' &&
+          typeof uData?.planCancelaEn === 'string' &&
+          new Date(uData.planCancelaEn as string).getTime() > Date.now();
+
+        if (yaEnGracia) {
+          // Nuestro propio botón de cancelar ya dejó todo bien configurado
+          // hace un momento — no lo pisamos, solo confirmamos el estado.
+          console.log(`[webhook mercadopago] Preapproval ${dataId} ya estaba en periodo de gracia para ${uid}.`);
+        } else {
+          const ultimoCobroAt =
+            (uData?.ultimoCobroAt as string | undefined) ||
+            (uData?.planActivatedAt as string | undefined) ||
+            null;
+          const candidato = ultimoCobroAt ? sumarUnMes(ultimoCobroAt) : null;
+          const planCancelaEn =
+            candidato && new Date(candidato).getTime() > Date.now() ? candidato : null;
+
+          if (planCancelaEn) {
+            await db.collection('users').doc(uid).set(
+              {
+                planStatus: 'pending_cancellation',
+                planCancelaEn,
+                planCanceladoAt: new Date().toISOString(),
+              },
+              { merge: true }
+            );
+          } else {
+            await db.collection('users').doc(uid).set(
+              {
+                subscription: 'cancelled',
+                planStatus: 'cancelled',
+                planCanceladoAt: new Date().toISOString(),
+              },
+              { merge: true }
+            );
+          }
+        }
       } else if (preapproval.status === 'paused') {
         // Pausada (ej. por falta de fondos varias veces seguidas) — le
         // quitamos el acceso pro sin borrar el id de la suscripción, por
@@ -198,9 +241,15 @@ export async function POST(req: NextRequest) {
         );
         if (payment.status === 'approved') {
           // Refuerza el estado activo por si el webhook de preapproval no
-          // llegó a procesarse por alguna razón.
+          // llegó a procesarse por alguna razón, y actualiza ultimoCobroAt
+          // — la ancla que usamos para calcular el periodo de gracia si el
+          // usuario cancela más adelante.
           await db.collection('users').doc(uid).set(
-            { subscription: 'pro', planStatus: 'active' },
+            {
+              subscription: 'pro',
+              planStatus: 'active',
+              ultimoCobroAt: payment.date_approved || new Date().toISOString(),
+            },
             { merge: true }
           );
         }

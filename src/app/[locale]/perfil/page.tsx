@@ -80,6 +80,10 @@ function ProfilePageInner() {
   const [subscription, setSubscription] = React.useState<string>('');
   const [planStatus, setPlanStatus] = React.useState<string>('');
   const [planActivatedAt, setPlanActivatedAt] = React.useState<string>('');
+  // Fecha (ISO) hasta la que se conserva el acceso pro tras cancelar — solo
+  // tiene sentido cuando planStatus === 'pending_cancellation'. Ver
+  // src/lib/premium.ts.
+  const [planCancelaEn, setPlanCancelaEn] = React.useState<string>('');
 
   // Club de juntas semanales
   const [puntosClub, setPuntosClub] = React.useState(0);
@@ -137,6 +141,7 @@ function ProfilePageInner() {
           setSubscription(data.subscription || 'free');
           setPlanStatus(data.planStatus || '');
           setPlanActivatedAt(data.planActivatedAt || '');
+          setPlanCancelaEn(data.planCancelaEn || '');
           if (Array.isArray(data.roles)) setRoles(data.roles.map(String));
         }
         const companySnap = await getDoc(doc(db, 'companies', user.uid));
@@ -329,8 +334,8 @@ function ProfilePageInner() {
     if (!user) return;
     const confirmado = window.confirm(
       t(
-        '¿Seguro que quieres cancelar tu suscripción? Perderás el acceso al plan completo de inmediato.',
-        'Are you sure you want to cancel your subscription? You will lose access to the full plan immediately.'
+        '¿Seguro que quieres cancelar tu suscripción? Ya no se te volverá a cobrar, pero conservarás el acceso al plan completo hasta que termine el periodo que ya pagaste.',
+        'Are you sure you want to cancel your subscription? You will not be charged again, but you will keep full access to the plan until the period you already paid for ends.'
       )
     );
     if (!confirmado) return;
@@ -349,8 +354,18 @@ function ProfilePageInner() {
       if (!res.ok) {
         throw new Error(data.error || 'No se pudo cancelar la suscripción.');
       }
-      setSubscription('cancelled');
-      setPlanStatus('cancelled');
+      // La API ya no quita el acceso de inmediato: si devuelve una fecha
+      // planCancelaEn, el usuario queda en periodo de gracia hasta ese día.
+      // Si no la devuelve (por ejemplo, cuenta antigua sin datos de cobro),
+      // se cae de vuelta al comportamiento anterior (cancelado ya mismo).
+      if (data.planCancelaEn) {
+        setPlanStatus('pending_cancellation');
+        setPlanCancelaEn(data.planCancelaEn);
+      } else {
+        setSubscription('cancelled');
+        setPlanStatus('cancelled');
+        setPlanCancelaEn('');
+      }
     } catch (err) {
       console.error(err);
       setCancelError(t('No se pudo cancelar la suscripción. Intenta de nuevo en unos segundos.', 'Could not cancel the subscription. Try again in a few seconds.'));
@@ -403,7 +418,14 @@ function ProfilePageInner() {
     return null;
   }
 
-  const esPro = subscription === 'pro' && planStatus === 'active';
+  // Periodo de gracia: canceló, pero sigue teniendo acceso porque ya pagó
+  // ese mes (planCancelaEn = ultimoCobroAt + 1 mes, calculado en el servidor
+  // al cancelar). Deja de ser válido en cuanto pasa esa fecha.
+  const enGracia =
+    planStatus === 'pending_cancellation' &&
+    Boolean(planCancelaEn) &&
+    new Date(planCancelaEn).getTime() > Date.now();
+  const esPro = subscription === 'pro' && (planStatus === 'active' || enGracia);
   const countryName = COUNTRY_NAMES[country] || country;
 
   return (
@@ -673,7 +695,38 @@ function ProfilePageInner() {
           <Card className="p-6">
             <h2 className="text-sm font-semibold text-foreground">{t('Tu plan', 'Your plan')}</h2>
             <div className="mt-4 flex flex-col gap-3">
-              {esPro ? (
+              {enGracia ? (
+                <div className="flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                  <div>
+                    <p className="font-medium text-amber-800">
+                      {t('Suscripción cancelada', 'Subscription cancelled')}
+                    </p>
+                    <p className="mt-0.5 text-sm text-amber-700">
+                      {t(
+                        'Ya no se te volverá a cobrar. Conservas el plan completo hasta el ',
+                        'You will not be charged again. You keep full access until '
+                      ) +
+                        new Date(planCancelaEn).toLocaleDateString(dispLang === 'en' ? 'en-US' : 'es-MX', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        }) +
+                        t(
+                          '. Después de esa fecha volverás automáticamente al plan gratuito.',
+                          '. After that date you will automatically move to the free plan.'
+                        )}
+                    </p>
+                  </div>
+                  <div className="ml-auto flex flex-col items-end gap-1">
+                    <Button onClick={handlePagar} disabled={payLoading}>
+                      {payLoading
+                        ? t('Abriendo Mercado Pago...', 'Opening Mercado Pago...')
+                        : t('Reactivar suscripción', 'Reactivate subscription')}
+                    </Button>
+                    {payError && <p className="text-sm text-red-600">{payError}</p>}
+                  </div>
+                </div>
+              ) : esPro ? (
                 <div className="flex flex-wrap items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
                   <div>
                     <p className="font-medium text-emerald-800">{t('Plan completo activo', 'Full plan active')}</p>

@@ -93,6 +93,7 @@ interface UserRow {
   totalMaturity?: number | null;
   subscription?: string;
   planStatus?: string;
+  planCancelaEn?: string | null;
   accesoManualPremium?: boolean;
   totalInvertido?: number;
   actividad?: { assessments?: number; sesionesBabel?: number; pagos?: number };
@@ -381,6 +382,13 @@ export default function AdminPage() {
                       <td className="px-3 py-2 text-xs text-muted-foreground">
                         {u.subscription === 'pro' && u.planStatus === 'active' ? (
                           <span className="text-emerald-700">{t('Pro activo', 'Pro active')}</span>
+                        ) : u.planStatus === 'pending_cancellation' && u.planCancelaEn ? (
+                          <span className="text-amber-700">
+                            {t('Cancela el ', 'Cancels on ') +
+                              new Date(u.planCancelaEn).toLocaleDateString(
+                                dispLang === 'en' ? 'en-US' : 'es-MX'
+                              )}
+                          </span>
                         ) : u.accesoManualPremium ? (
                           <span className="text-teal-700">{t('Acceso manual', 'Manual access')}</span>
                         ) : (

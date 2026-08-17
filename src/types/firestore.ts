@@ -26,8 +26,21 @@ export interface UserDoc {
   subscription: SubscriptionStatus;
   subscriptionStart?: Timestamp;
   stripeCustomerId?: string;
+  // 'active' | 'pending' | 'paused' | 'pending_cancellation' | 'cancelled'.
+  // 'pending_cancellation': el usuario canceló, pero YA PAGÓ el mes en
+  // curso — sigue teniendo acceso pro hasta planCancelaEn (ver
+  // src/lib/premium.ts). Después de esa fecha se comporta como 'cancelled'.
   planStatus?: string;
   planActivatedAt?: string;
+  // Fecha (ISO) del cobro exitoso más reciente de la suscripción — se pone
+  // la primera vez que se autoriza y se actualiza en cada cobro mensual
+  // aprobado. Se usa SOLO internamente para calcular planCancelaEn cuando el
+  // usuario cancela (ultimoCobroAt + 1 mes) — no se muestra al usuario.
+  ultimoCobroAt?: string;
+  // Fecha (ISO) hasta la que el usuario conserva el acceso pro después de
+  // cancelar (= ultimoCobroAt + 1 mes en el momento de la cancelación). Solo
+  // tiene sentido cuando planStatus === 'pending_cancellation'.
+  planCancelaEn?: string;
   mercadoPagoPaymentId?: string;
   // id de la suscripcion (PreApproval) activa en Mercado Pago; se usa
   // para poder cancelarla desde /perfil (ver /api/pagos/cancelar-suscripcion).

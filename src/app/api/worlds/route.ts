@@ -41,10 +41,34 @@ export async function GET(req: NextRequest) {
       ? worldsRaw.partida.map((n) => Number(n)).filter((n) => Number.isFinite(n) && n >= 1 && n <= MISIONES_PART_LABELS.length)
       : [];
     const puntos = parseNum(uData.puntosClub, 0);
+
+    // Autocorrección silenciosa: si el usuario está en periodo de gracia
+    // (canceló, pero seguía teniendo acceso hasta planCancelaEn) y esa
+    // fecha ya pasó, lo bajamos a 'cancelled' aquí mismo. No es
+    // indispensable para la seguridad — esUsuarioPremium ya niega el
+    // acceso por fecha aunque este registro no se actualice — pero mantiene
+    // Firestore (y el panel de /admin) al día sin necesitar un proceso
+    // programado aparte.
+    let planStatusActual = (uData.planStatus as string) ?? null;
+    let planCancelaEnActual = (uData.planCancelaEn as string) ?? null;
+    if (
+      planStatusActual === 'pending_cancellation' &&
+      planCancelaEnActual &&
+      new Date(planCancelaEnActual).getTime() <= Date.now()
+    ) {
+      await db.collection('users').doc(uid).set(
+        { subscription: 'cancelled', planStatus: 'cancelled' },
+        { merge: true }
+      );
+      planStatusActual = 'cancelled';
+      planCancelaEnActual = null;
+    }
+
     const premium = esUsuarioPremium({
       roles: Array.isArray(uData.roles) ? (uData.roles as string[]) : null,
       subscription: (uData.subscription as string) ?? null,
-      planStatus: (uData.planStatus as string) ?? null,
+      planStatus: planStatusActual,
+      planCancelaEn: planCancelaEnActual,
       accesoManualPremium: uData.accesoManualPremium === true,
     });
     return NextResponse.json({

@@ -6,15 +6,21 @@
 // Qué hace: el usuario da clic en "Cancelar suscripción" en /perfil → esta
 // ruta (1) verifica quién es, (2) si tiene una suscripción de Mercado Pago
 // asociada (mercadoPagoPreapprovalId), la cancela ahí de verdad — así deja
-// de cobrarse cada mes — y (3) le quita el acceso pro en Firestore de
-// inmediato (la cancelación es inmediata, no espera a que termine el
-// periodo ya pagado).
+// de cobrarse cada mes — y (3) actualiza Firestore.
 //
-// Nota: si por algún motivo el usuario no tiene un mercadoPagoPreapprovalId
-// guardado (por ejemplo, si su plan quedó activo manualmente, o si nunca
-// llegó a completar el checkout de la suscripción), esta ruta igual le
-// quita el acceso pro en Firestore — solo que no hay nada que cancelar del
-// lado de Mercado Pago.
+// IMPORTANTE — periodo de gracia: la cancelación YA NO quita el acceso de
+// inmediato. El usuario ya pagó el mes en curso, así que conserva el plan
+// completo hasta que termine ese periodo (planStatus queda en
+// 'pending_cancellation' con una fecha planCancelaEn = ultimoCobroAt + 1
+// mes). Después de esa fecha, esUsuarioPremium() (ver src/lib/premium.ts)
+// deja de darle acceso automáticamente — no hace falta ningún proceso
+// programado para que esto funcione, solo se compara la fecha cada vez que
+// se revisa si el usuario es premium.
+//
+// Si no hay una fecha confiable de la que partir (cuenta muy antigua sin
+// ultimoCobroAt/planActivatedAt, o esa fecha ya pasó), se cae de vuelta al
+// comportamiento anterior: se le quita el acceso de inmediato, para no
+// arriesgarse a dar acceso "de más" sin una base real.
 //
 // Variable de entorno requerida:
 //   MERCADOPAGO_ACCESS_TOKEN_SUSCRIPCION (de la app de Suscripciones en
@@ -24,6 +30,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MercadoPagoConfig, PreApproval } from 'mercadopago';
 import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
+import { sumarUnMes } from '@/lib/premium';
 
 export async function POST(req: NextRequest) {
   try {
@@ -64,20 +71,54 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Revocar el acceso pro de inmediato en Firestore, tenga o no una
-    // suscripción de Mercado Pago asociada.
-    await userRef.set(
-      {
-        subscription: 'cancelled',
-        planStatus: 'cancelled',
-        planCanceladoAt: new Date().toISOString(),
-      },
-      { merge: true }
-    );
+    // Base para calcular hasta cuándo ya pagó: el cobro exitoso más
+    // reciente si lo tenemos guardado, o si no, la fecha en que activó el
+    // plan por primera vez.
+    const ultimoCobroAt =
+      (userData?.ultimoCobroAt as string | undefined) ||
+      (userData?.planActivatedAt as string | undefined) ||
+      null;
+
+    let planCancelaEn: string | null = null;
+    if (ultimoCobroAt) {
+      const candidato = sumarUnMes(ultimoCobroAt);
+      // Solo damos el periodo de gracia si esa fecha todavía no pasó — si ya
+      // pasó (por ejemplo, una cuenta muy antigua sin datos actualizados),
+      // no tiene sentido "regalar" acceso retroactivo.
+      if (new Date(candidato).getTime() > Date.now()) {
+        planCancelaEn = candidato;
+      }
+    }
+
+    if (planCancelaEn) {
+      // Mantiene el acceso pro activo (esUsuarioPremium respeta este
+      // estado) hasta planCancelaEn. No se le vuelve a cobrar — Mercado
+      // Pago ya quedó cancelado arriba.
+      await userRef.set(
+        {
+          planStatus: 'pending_cancellation',
+          planCancelaEn,
+          planCanceladoAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+    } else {
+      // Sin una fecha confiable de la que partir: quitamos el acceso de
+      // inmediato, como antes de este cambio.
+      await userRef.set(
+        {
+          subscription: 'cancelled',
+          planStatus: 'cancelled',
+          planCanceladoAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+    }
 
     return NextResponse.json({
       ok: true,
       canceladaEnMercadoPago: Boolean(preapprovalId),
+      planCancelaEn,
     });
   } catch (err) {
     console.error('[cancelar-suscripcion] Error:', err);
