@@ -1,3 +1,5 @@
+import { registrarRecargaIALedger } from '@/lib/ecori-ledger';
+
 // ---------------------------------------------------------------------------
 // Gancho de recarga agentica de Ecori (Circle) en la cadena de proveedores IA.
 // Cuando Gemini/Groq/OpenRouter/DeepSeek fallan con 429/402 (tokens agotados,
@@ -17,14 +19,20 @@ export function generarPedidoId(): string {
 export interface ResultadoRecarga {
   recargada: boolean;
   txId?: string;
+  proveedor?: string;
+  montoUsd?: number;
+  explorerUrl?: string;
   modo: string;
 }
 
-async function llamarEcori(
+export async function solicitarRecargaEcori(
   proveedor: string,
-  pedidoId: string,
-  estado: 'quota_excedida' | 'sin_balance'
+  estado: 'quota_excedida' | 'sin_balance',
+  pedidoId?: string
 ): Promise<ResultadoRecarga> {
+  if (!ECORI_SERVICE_URL || !ECORI_SERVICE_SECRET) {
+    return { recargada: false, modo: 'no_configurado' };
+  }
   try {
     const res = await fetch(ECORI_SERVICE_URL + '/recargar-ia', {
       method: 'POST',
@@ -32,15 +40,29 @@ async function llamarEcori(
         'Content-Type': 'application/json',
         'x-ecori-secret': ECORI_SERVICE_SECRET,
       },
-      body: JSON.stringify({ proveedor, estado, pedido_id: pedidoId }),
+      body: JSON.stringify({ proveedor, estado, pedido_id: pedidoId || generarPedidoId() }),
       signal: AbortSignal.timeout(15000),
     });
     const data = await res.json().catch(function () { return null; });
-    return {
+    const resultado: ResultadoRecarga = {
       recargada: res.ok && !!data && data.recarga_ejecutada === true,
       txId: data && data.detalle_pago ? data.detalle_pago.tx_id : undefined,
+      proveedor: proveedor,
+      montoUsd: data && typeof data.monto_usd === 'number' ? data.monto_usd : undefined,
+      explorerUrl: data && typeof data.explorer_url === 'string' ? data.explorer_url : undefined,
       modo: 'ecori',
     };
+    if (resultado.recargada) {
+      await registrarRecargaIALedger({
+        proveedor: proveedor,
+        estado: estado,
+        montoUsd: resultado.montoUsd ?? 0,
+        txId: resultado.txId,
+        explorerUrl: resultado.explorerUrl,
+        creadoEn: Date.now(),
+      });
+    }
+    return resultado;
   } catch (err) {
     console.error('[ia-recarga] No se pudo llamar al servicio de Ecori:', err);
     return { recargada: false, modo: 'error' };
@@ -51,8 +73,5 @@ export async function intentarRecargaIA(
   proveedor: string,
   pedidoId?: string
 ): Promise<ResultadoRecarga> {
-  if (!ECORI_SERVICE_URL || !ECORI_SERVICE_SECRET) {
-    return { recargada: false, modo: 'no_configurado' };
-  }
-  return llamarEcori(proveedor, pedidoId || generarPedidoId(), 'quota_excedida');
+  return solicitarRecargaEcori(proveedor, 'quota_excedida', pedidoId);
 }

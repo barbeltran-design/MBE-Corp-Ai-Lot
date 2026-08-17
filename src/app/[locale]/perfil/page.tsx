@@ -20,6 +20,7 @@ import AgentAvatar from '@/components/agentes/AgentAvatar';
 import { BABEL_AYUDA_EVENT } from '@/components/babel/BabelAvatar';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 import type { CompanySize, Industry, Language, UserDoc } from '@/types/firestore';
+import EcoriDataBudget from '@/components/agents/EcoriDataBudget';
 
 const COUNTRIES = ['MX', 'CO', 'AR', 'CL', 'PE', 'US', 'ES', 'OTHER'] as const;
 const INDUSTRIES: { value: Industry; es: string; en: string }[] = [
@@ -727,6 +728,8 @@ function ProfilePageInner() {
               </div>
             </div>
           </Card>
+
+          <EcoriDataBudget lang={dispLang} />
 
           <Card className="p-6">
             <h2 className="text-sm font-semibold text-foreground">{t('Tu empresa', 'Your company')}</h2>
