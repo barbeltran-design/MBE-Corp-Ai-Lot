@@ -98,6 +98,21 @@
       "minPassword": "La contraseña debe tener al menos 8 caracteres",
       "generic": "Algo salió mal. Intenta de nuevo.",
       "emailInUse": "Ya existe una cuenta con este correo."
+    },
+    "legal": {
+      "acceptPrefix": "He leído y acepto los",
+      "termsLabel": "Términos de Uso",
+      "join": "y el",
+      "privacyLabel": "Aviso de Privacidad",
+      "acceptRequired": "Debes aceptar los Términos de Uso y el Aviso de Privacidad para continuar.",
+      "minorLabel": "Quien se está registrando es menor de edad",
+      "guardianTitle": "Datos del padre, madre o tutor legal",
+      "guardianName": "Nombre completo del padre, madre o tutor",
+      "guardianNameRequired": "Escribe el nombre completo del padre, madre o tutor.",
+      "guardianEmail": "Correo electrónico del padre, madre o tutor",
+      "guardianEmailRequired": "Escribe el correo del padre, madre o tutor.",
+      "guardianConsent": "Yo, como padre, madre o tutor legal, acepto los Términos de Uso y el Aviso de Privacidad en representación del menor y asumo la responsabilidad de su uso de la plataforma.",
+      "guardianConsentRequired": "El padre, madre o tutor debe aceptar en representación del menor."
     }
   },
   "footer": {

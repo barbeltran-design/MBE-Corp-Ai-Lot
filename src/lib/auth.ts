@@ -18,6 +18,13 @@ export interface RegistrationInput {
   size: CompanySize;
   country: string;
   language: Language;
+  // Consentimiento legal capturado en el formulario de registro (checkbox de
+  // Términos de Uso + Aviso de Privacidad). Opcionales para no romper el
+  // flujo de Google (que usa placeholders por defecto).
+  aceptoTerminosAt?: string;
+  esMenorDeEdad?: boolean;
+  tutorNombre?: string;
+  tutorEmail?: string;
 }
 
 const PENDING_GOOGLE_REGISTRATION_KEY = 'mbe_pending_google_registration';
@@ -57,6 +64,13 @@ export async function createUserAndCompanyDocs(user: User, input: RegistrationIn
     currentMonth: 1,
     totalMaturity: 0,
   };
+
+  // Solo se agregan si el formulario los mandó (el flujo de Google no
+  // pasa por el checkbox de consentimiento manual, así que no los pisa).
+  if (input.aceptoTerminosAt) userDoc.aceptoTerminosAt = input.aceptoTerminosAt;
+  if (input.esMenorDeEdad !== undefined) userDoc.esMenorDeEdad = input.esMenorDeEdad;
+  if (input.tutorNombre) userDoc.tutorNombre = input.tutorNombre;
+  if (input.tutorEmail) userDoc.tutorEmail = input.tutorEmail;
 
   const companyDoc: CompanyDoc = {
     uid: user.uid,

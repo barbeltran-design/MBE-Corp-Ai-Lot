@@ -40,6 +40,27 @@ export function RegisterForm() {
   const [submitting, setSubmitting] = React.useState(false);
   const [googleSubmitting, setGoogleSubmitting] = React.useState(false);
 
+  // Consentimiento legal (Términos de Uso + Aviso de Privacidad). Se maneja
+  // fuera de react-hook-form/zod porque debe gatear DOS caminos distintos:
+  // el submit del formulario y el botón de Google (que no pasa por
+  // handleSubmit). Ver createUserAndCompanyDocs() en src/lib/auth.ts.
+  const [acceptedTerms, setAcceptedTerms] = React.useState(false);
+  const [isMinor, setIsMinor] = React.useState(false);
+  const [guardianName, setGuardianName] = React.useState('');
+  const [guardianEmail, setGuardianEmail] = React.useState('');
+
+  const legalOk = isMinor
+    ? acceptedTerms && guardianName.trim().length > 1 && guardianEmail.trim().length > 3
+    : acceptedTerms;
+
+  function buildLegalConsent() {
+    return {
+      aceptoTerminosAt: new Date().toISOString(),
+      esMenorDeEdad: isMinor,
+      ...(isMinor ? { tutorNombre: guardianName.trim(), tutorEmail: guardianEmail.trim() } : {}),
+    };
+  }
+
   const {
     register,
     handleSubmit,
@@ -69,6 +90,7 @@ export function RegisterForm() {
   }, []);
 
   async function onSubmit(values: FormValues) {
+    if (!legalOk) return;
     setSubmitting(true);
     setServerError(null);
     try {
@@ -79,6 +101,7 @@ export function RegisterForm() {
         size: values.size as CompanySize,
         country: values.country,
         language: locale,
+        ...buildLegalConsent(),
       });
       router.push(`/${locale}/inicio`);
     } catch (err) {
@@ -89,6 +112,7 @@ export function RegisterForm() {
   }
 
   async function onGoogleClick() {
+    if (!legalOk) return;
     setGoogleSubmitting(true);
     setServerError(null);
     try {
@@ -103,6 +127,7 @@ export function RegisterForm() {
         size: '1-5',
         country: 'MX',
         language: locale,
+        ...buildLegalConsent(),
       });
       if (user) {
         // signInWithPopup completed right here — no redirect happened, so we
@@ -130,7 +155,7 @@ export function RegisterForm() {
         variant="outline"
         className="mt-6 w-full"
         onClick={onGoogleClick}
-        disabled={googleSubmitting}
+        disabled={googleSubmitting || !legalOk}
       >
         {googleSubmitting ? t('submit') : t('googleCta')}
       </Button>
@@ -225,11 +250,79 @@ export function RegisterForm() {
 
         {serverError && <p className="text-sm text-red-600">{serverError}</p>}
 
-        <Button type="submit" variant="primary" className="w-full" disabled={submitting}>
+        <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <label className="flex items-start gap-2 text-xs text-slate-600">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={acceptedTerms}
+              onChange={(e) => setAcceptedTerms(e.target.checked)}
+            />
+            {isMinor ? (
+              <span>{t('legal.guardianConsent')}</span>
+            ) : (
+              <span>
+                {t('legal.acceptPrefix')}{' '}
+                <a
+                  href={`/${locale}/legal/terminos`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
+                  {t('legal.termsLabel')}
+                </a>{' '}
+                {t('legal.join')}{' '}
+                <a
+                  href={`/${locale}/legal/privacidad`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
+                  {t('legal.privacyLabel')}
+                </a>
+                .
+              </span>
+            )}
+          </label>
+
+          {isMinor && (
+            <p className="pl-6 text-xs text-slate-500">
+              <a href={`/${locale}/legal/terminos`} target="_blank" rel="noopener noreferrer" className="underline">
+                {t('legal.termsLabel')}
+              </a>{' '}
+              {t('legal.join')}{' '}
+              <a href={`/${locale}/legal/privacidad`} target="_blank" rel="noopener noreferrer" className="underline">
+                {t('legal.privacyLabel')}
+              </a>
+            </p>
+          )}
+
+          <label className="flex items-center gap-2 text-xs text-slate-600">
+            <input type="checkbox" checked={isMinor} onChange={(e) => setIsMinor(e.target.checked)} />
+            {t('legal.minorLabel')}
+          </label>
+
+          {isMinor && (
+            <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50 p-2">
+              <p className="text-xs font-medium text-amber-800">{t('legal.guardianTitle')}</p>
+              <Input
+                placeholder={t('legal.guardianName')}
+                value={guardianName}
+                onChange={(e) => setGuardianName(e.target.value)}
+              />
+              <Input
+                type="email"
+                placeholder={t('legal.guardianEmail')}
+                value={guardianEmail}
+                onChange={(e) => setGuardianEmail(e.target.value)}
+              />
+            </div>
+          )}
+        </div>
+
+        <Button type="submit" variant="primary" className="w-full" disabled={submitting || !legalOk}>
           {submitting ? t('submit') : t('submit')}
         </Button>
-
-        <p className="text-center text-xs text-slate-400">{t('terms')}</p>
       </form>
     </div>
   );

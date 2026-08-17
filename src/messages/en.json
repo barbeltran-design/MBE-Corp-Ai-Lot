@@ -98,6 +98,21 @@
       "minPassword": "Password must be at least 8 characters",
       "generic": "Something went wrong. Please try again.",
       "emailInUse": "An account with this email already exists."
+    },
+    "legal": {
+      "acceptPrefix": "I have read and accept the",
+      "termsLabel": "Terms of Use",
+      "join": "and the",
+      "privacyLabel": "Privacy Notice",
+      "acceptRequired": "You must accept the Terms of Use and Privacy Notice to continue.",
+      "minorLabel": "The person registering is a minor",
+      "guardianTitle": "Parent or legal guardian information",
+      "guardianName": "Full name of parent or guardian",
+      "guardianNameRequired": "Enter the full name of the parent or guardian.",
+      "guardianEmail": "Email of parent or guardian",
+      "guardianEmailRequired": "Enter the email of the parent or guardian.",
+      "guardianConsent": "As parent or legal guardian, I accept the Terms of Use and Privacy Notice on behalf of the minor and take responsibility for their use of the platform.",
+      "guardianConsentRequired": "The parent or guardian must consent on behalf of the minor."
     }
   },
   "footer": {

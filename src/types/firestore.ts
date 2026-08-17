@@ -73,6 +73,15 @@ export interface UserDoc {
   // MBE Worlds: misiones completadas del Mundo de Partida (1-2) y desbloqueo
   // del Tablero de Retos (true al cerrar la misión 2, Objetivos Estratégicos).
   worlds?: { partida?: number[]; tablero?: boolean };
+  // Consentimiento legal capturado en el registro (checkbox de Términos de
+  // Uso + Aviso de Privacidad). ISO date string, no Timestamp, porque se
+  // genera en el cliente antes de llamar a Firebase Auth.
+  aceptoTerminosAt?: string;
+  // true si el usuario declaró ser menor de edad al registrarse; en ese caso
+  // se requieren los tres campos de tutor a continuación.
+  esMenorDeEdad?: boolean;
+  tutorNombre?: string;
+  tutorEmail?: string;
 }
 
 /** Firestore collection: companies/{uid} */
