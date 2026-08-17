@@ -2,8 +2,11 @@ import {
   createUserWithEmailAndPassword,
   getRedirectResult,
   onAuthStateChanged,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
   signInWithPopup,
   signInWithRedirect,
+  signOut,
   updateProfile,
   type User,
 } from 'firebase/auth';
@@ -162,8 +165,80 @@ export function subscribeToPendingGoogleRedirect(
   return unsubscribe;
 }
 
-export function mapAuthErrorToMessageKey(error: unknown): 'emailInUse' | 'generic' {
+/**
+ * Inicia sesión con correo y contraseña. A diferencia del registro, esta
+ * función NUNCA crea una cuenta nueva: si las credenciales no corresponden
+ * a un usuario existente, Firebase Auth rechaza la promesa
+ * (auth/invalid-credential en el SDK modular actual).
+ */
+export async function signInWithEmail(email: string, password: string) {
+  const auth = getFirebaseAuth();
+  const credential = await signInWithEmailAndPassword(auth, email, password);
+  return credential.user;
+}
+
+/**
+ * Inicia sesión con Google desde la pantalla de LOGIN (no de registro).
+ * A propósito NO llama a createUserAndCompanyDocs: si la cuenta de Google
+ * no tiene ya un documento en companies/{uid}, significa que nunca se
+ * registró (o nunca aceptó Términos/Aviso de Privacidad) — así que cerramos
+ * la sesión de inmediato y devolvemos un error claro en vez de crear una
+ * cuenta nueva sin pasar por el consentimiento legal del formulario de
+ * registro (ver RegisterForm).
+ */
+export async function signInWithGoogle(): Promise<User> {
+  const auth = getFirebaseAuth();
+  const provider = getGoogleProvider();
+  const credential = await signInWithPopup(auth, provider);
+
+  const db = getFirebaseDb();
+  const companySnap = await getDoc(doc(db, 'companies', credential.user.uid));
+
+  if (!companySnap.exists()) {
+    await signOut(auth);
+    const err = new Error('No existe una cuenta registrada para esta cuenta de Google.') as Error & {
+      code?: string;
+    };
+    err.code = 'mbe/no-account';
+    throw err;
+  }
+
+  return credential.user;
+}
+
+/**
+ * Envía el correo de recuperación de contraseña de Firebase Auth. Por
+ * seguridad (para que nadie pueda usar este formulario para "probar" qué
+ * correos están registrados en la plataforma), tragamos a propósito el
+ * error auth/user-not-found: el formulario que llama a esta función debe
+ * mostrar SIEMPRE el mismo mensaje de éxito, exista o no una cuenta con
+ * ese correo. Cualquier otro error (p. ej. correo mal formado) sí se
+ * propaga normalmente.
+ */
+export async function sendPasswordReset(email: string) {
+  const auth = getFirebaseAuth();
+  try {
+    await sendPasswordResetEmail(auth, email);
+  } catch (err) {
+    const code = (err as { code?: string })?.code;
+    if (code === 'auth/user-not-found') return;
+    throw err;
+  }
+}
+
+export function mapAuthErrorToMessageKey(
+  error: unknown
+): 'emailInUse' | 'invalidCredential' | 'noAccount' | 'tooManyRequests' | 'generic' {
   const code = (error as { code?: string })?.code;
   if (code === 'auth/email-already-in-use') return 'emailInUse';
+  if (
+    code === 'auth/invalid-credential' ||
+    code === 'auth/wrong-password' ||
+    code === 'auth/user-not-found'
+  ) {
+    return 'invalidCredential';
+  }
+  if (code === 'mbe/no-account') return 'noAccount';
+  if (code === 'auth/too-many-requests') return 'tooManyRequests';
   return 'generic';
 }

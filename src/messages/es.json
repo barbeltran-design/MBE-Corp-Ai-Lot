@@ -113,6 +113,49 @@
       "guardianEmailRequired": "Escribe el correo del padre, madre o tutor.",
       "guardianConsent": "Yo, como padre, madre o tutor legal, acepto los Términos de Uso y el Aviso de Privacidad en representación del menor y asumo la responsabilidad de su uso de la plataforma.",
       "guardianConsentRequired": "El padre, madre o tutor debe aceptar en representación del menor."
+    },
+    "haveAccountPrefix": "¿Ya tienes cuenta?",
+    "loginLink": "Inicia sesión"
+  },
+  "login": {
+    "title": "Inicia sesión",
+    "subtitle": "Entra a tu cuenta para continuar con tu diagnóstico y tus agentes de IA",
+    "googleCta": "Continuar con Google",
+    "orDivider": "o con tu correo",
+    "fields": {
+      "email": "Correo electrónico",
+      "emailPlaceholder": "tu@empresa.com",
+      "password": "Contraseña"
+    },
+    "submit": "Iniciar sesión",
+    "submitting": "Iniciando sesión...",
+    "forgotPasswordLink": "¿Olvidaste tu contraseña?",
+    "noAccountPrefix": "¿Aún no tienes cuenta?",
+    "registerLink": "Regístrate gratis",
+    "errors": {
+      "required": "Este campo es obligatorio",
+      "invalidEmail": "Correo electrónico inválido",
+      "invalidCredential": "Correo o contraseña incorrectos.",
+      "noAccount": "No existe una cuenta registrada con esta cuenta de Google. Regístrate primero.",
+      "emailInUse": "Ya existe una cuenta con este correo.",
+      "tooManyRequests": "Demasiados intentos. Espera unos minutos e intenta de nuevo.",
+      "generic": "Algo salió mal. Intenta de nuevo."
+    }
+  },
+  "forgotPassword": {
+    "title": "Recupera tu contraseña",
+    "subtitle": "Escribe tu correo y te enviaremos un enlace para crear una nueva contraseña",
+    "fields": {
+      "email": "Correo electrónico",
+      "emailPlaceholder": "tu@empresa.com"
+    },
+    "submit": "Enviar enlace de recuperación",
+    "submitting": "Enviando...",
+    "successMessage": "Si existe una cuenta con ese correo, te enviamos un enlace para recuperar tu contraseña. Revisa tu bandeja de entrada (y la carpeta de spam).",
+    "backToLoginLink": "Volver a iniciar sesión",
+    "errors": {
+      "invalidEmail": "Correo electrónico inválido",
+      "generic": "Algo salió mal. Intenta de nuevo."
     }
   },
   "footer": {

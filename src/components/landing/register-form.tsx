@@ -324,6 +324,13 @@ export function RegisterForm() {
           {submitting ? t('submit') : t('submit')}
         </Button>
       </form>
+
+      <p className="mt-6 text-center text-xs text-slate-500">
+        {t('haveAccountPrefix')}{' '}
+        <a href={`/${locale}/login`} className="text-primary underline">
+          {t('loginLink')}
+        </a>
+      </p>
     </div>
   );
 }

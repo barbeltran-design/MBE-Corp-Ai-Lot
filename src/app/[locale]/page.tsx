@@ -30,7 +30,15 @@ export default async function LandingPage({ params }: { params: Promise<{ locale
           </a>
         </nav>
 
-        <LanguageSwitcher />
+        <div className="flex items-center gap-4">
+          <a
+            href={`/${locale}/login`}
+            className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900"
+          >
+            {tNav('login')}
+          </a>
+          <LanguageSwitcher />
+        </div>
       </header>
 
       <section id="beneficios" className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-6 py-10 lg:grid-cols-2 lg:py-20">

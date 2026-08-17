@@ -113,6 +113,49 @@
       "guardianEmailRequired": "Enter the email of the parent or guardian.",
       "guardianConsent": "As parent or legal guardian, I accept the Terms of Use and Privacy Notice on behalf of the minor and take responsibility for their use of the platform.",
       "guardianConsentRequired": "The parent or guardian must consent on behalf of the minor."
+    },
+    "haveAccountPrefix": "Already have an account?",
+    "loginLink": "Log in"
+  },
+  "login": {
+    "title": "Log in",
+    "subtitle": "Sign in to your account to continue your assessment and your AI agents",
+    "googleCta": "Continue with Google",
+    "orDivider": "or with your email",
+    "fields": {
+      "email": "Email",
+      "emailPlaceholder": "you@company.com",
+      "password": "Password"
+    },
+    "submit": "Log in",
+    "submitting": "Logging in...",
+    "forgotPasswordLink": "Forgot your password?",
+    "noAccountPrefix": "Don't have an account yet?",
+    "registerLink": "Sign up for free",
+    "errors": {
+      "required": "This field is required",
+      "invalidEmail": "Invalid email address",
+      "invalidCredential": "Incorrect email or password.",
+      "noAccount": "There is no registered account for this Google account. Please register first.",
+      "emailInUse": "An account with this email already exists.",
+      "tooManyRequests": "Too many attempts. Please wait a few minutes and try again.",
+      "generic": "Something went wrong. Please try again."
+    }
+  },
+  "forgotPassword": {
+    "title": "Reset your password",
+    "subtitle": "Enter your email and we'll send you a link to create a new password",
+    "fields": {
+      "email": "Email",
+      "emailPlaceholder": "you@company.com"
+    },
+    "submit": "Send reset link",
+    "submitting": "Sending...",
+    "successMessage": "If an account exists with that email, we've sent a link to reset your password. Check your inbox (and spam folder).",
+    "backToLoginLink": "Back to login",
+    "errors": {
+      "invalidEmail": "Invalid email address",
+      "generic": "Something went wrong. Please try again."
     }
   },
   "footer": {
