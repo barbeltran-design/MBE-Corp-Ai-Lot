@@ -15,11 +15,16 @@ const ThemeContext = React.createContext<ThemeContextValue | undefined>(undefine
 
 const STORAGE_KEY = 'mbe-theme';
 
-// La landing (página de registro) es la única ruta con <=1 segmento (`/`, `/{locale}`)
-// y se fuerza SIEMPRE en light para que el logotipo (tinta oscura) sea visible.
+// Rutas que SIEMPRE se fuerzan a light porque muestran el logotipo MBE (tinta oscura,
+// no se distingue sobre fondo dark): la landing/registro (`/`, `/{locale}`, <=1 segmento)
+// y las páginas de autenticación con el mismo header (login, recuperar contraseña).
 // Mismo criterio que el script anti-flash de [locale]/layout.tsx.
-function isLandingPath(pathname: string): boolean {
-  return pathname.split('/').filter(Boolean).length <= 1;
+const FORCED_LIGHT_ROUTES = ['login', 'recuperar-contrasena'];
+
+function isForcedLightPath(pathname: string): boolean {
+  const segments = pathname.split('/').filter(Boolean);
+  if (segments.length <= 1) return true;
+  return segments.length === 2 && FORCED_LIGHT_ROUTES.includes(segments[1]);
 }
 
 /**
@@ -37,12 +42,13 @@ function getInitialTheme(): Theme {
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = React.useState<Theme>(getInitialTheme);
   const pathname = usePathname();
-  const isLanding = React.useMemo(() => isLandingPath(pathname), [pathname]);
+  const isForcedLight = React.useMemo(() => isForcedLightPath(pathname), [pathname]);
 
   React.useEffect(() => {
     const root = document.documentElement;
-    if (isLanding) {
-      // Landing/registro siempre en light: el logotipo no se distingue en dark.
+    if (isForcedLight) {
+      // Landing/registro/login/recuperar-contraseña siempre en light: el logotipo
+      // no se distingue en dark.
       root.classList.remove('dark');
     } else {
       root.classList.toggle('dark', theme === 'dark');
@@ -53,7 +59,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       // localStorage puede fallar en modo privado/incógnito — el tema simplemente
       // no persiste entre sesiones, pero la app sigue funcionando.
     }
-  }, [theme, isLanding]);
+  }, [theme, isForcedLight]);
 
   const setTheme = React.useCallback((next: Theme) => setThemeState(next), []);
   const toggleTheme = React.useCallback(
