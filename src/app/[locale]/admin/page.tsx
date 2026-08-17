@@ -66,6 +66,22 @@ function PagoStatusBadge({ status, t }: { status: string; t: (es: string, en: st
   );
 }
 
+function EstatusBadge({ estatus, t }: { estatus?: string; t: (es: string, en: string) => string }) {
+  const cancelado = estatus === 'cancelado';
+  return (
+    <span
+      className={
+        'rounded-full px-2 py-0.5 text-xs font-medium ' +
+        (cancelado
+          ? 'bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-200'
+          : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200')
+      }
+    >
+      {cancelado ? t('Cancelado', 'Cancelled') : t('Activo', 'Active')}
+    </span>
+  );
+}
+
 function SolicitudBadge({ estado, t }: { estado: string; t: (es: string, en: string) => string }) {
   const color =
     estado === 'pendiente'
@@ -89,6 +105,7 @@ interface UserRow {
   roles?: string[];
   especialistaTemas?: string[];
   certificado?: boolean;
+  estatus?: string;
   companyName?: string;
   totalMaturity?: number | null;
   subscription?: string;
@@ -118,12 +135,16 @@ export default function AdminPage() {
 
   // Usuarios y roles
   const [usuarios, setUsuarios] = React.useState<UserRow[]>([]);
+  const [userSearch, setUserSearch] = React.useState('');
   const [selUid, setSelUid] = React.useState('');
   const [selRoles, setSelRoles] = React.useState<string[]>([]);
   const [selTemas, setSelTemas] = React.useState<string[]>([]);
   const [selCert, setSelCert] = React.useState(false);
   const [selAccesoPremium, setSelAccesoPremium] = React.useState(false);
   const [rolesMsg, setRolesMsg] = React.useState('');
+  const [estatusMsg, setEstatusMsg] = React.useState('');
+  const [confirmDeleteUid, setConfirmDeleteUid] = React.useState('');
+  const [deletingUid, setDeletingUid] = React.useState('');
 
   // Pagos
   const [pagos, setPagos] = React.useState<any[]>([]);
@@ -136,6 +157,14 @@ export default function AdminPage() {
     fechaPago: '',
   });
   const [pagoEspMsg, setPagoEspMsg] = React.useState('');
+  const [editPagoEspId, setEditPagoEspId] = React.useState('');
+  const [editPagoEspForm, setEditPagoEspForm] = React.useState({
+    monto: '',
+    concepto: '',
+    metodo: 'Transferencia',
+    fechaPago: '',
+  });
+  const [pagoEspEditMsg, setPagoEspEditMsg] = React.useState('');
 
   // Solicitudes
   const [solicitudes, setSolicitudes] = React.useState<any[]>([]);
@@ -237,6 +266,50 @@ export default function AdminPage() {
     await loadUsers();
   }
 
+  const usuariosFiltrados = React.useMemo(() => {
+    const q = userSearch.trim().toLowerCase();
+    if (!q) return usuarios;
+    return usuarios.filter((u) => {
+      const nombre = (u.name || '').toLowerCase();
+      const correo = (u.email || '').toLowerCase();
+      const empresa = (u.companyName || '').toLowerCase();
+      return nombre.includes(q) || correo.includes(q) || empresa.includes(q);
+    });
+  }, [usuarios, userSearch]);
+
+  async function setUserEstatus(uid: string, estatus: 'activo' | 'cancelado') {
+    const headers = await tokenHeaders();
+    const res = await fetch('/api/admin/users', {
+      method: 'PATCH',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uid, estatus }),
+    });
+    if (!res.ok) {
+      setEstatusMsg(t('No se pudo cambiar el estatus.', 'Could not change status.'));
+      return;
+    }
+    setEstatusMsg('');
+    await loadUsers();
+  }
+
+  async function deleteUsuario(uid: string) {
+    setDeletingUid(uid);
+    const headers = await tokenHeaders();
+    const res = await fetch(`/api/admin/users?uid=${encodeURIComponent(uid)}`, {
+      method: 'DELETE',
+      headers,
+    });
+    setDeletingUid('');
+    setConfirmDeleteUid('');
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setEstatusMsg(data?.error || t('No se pudo borrar el usuario.', 'Could not delete the user.'));
+      return;
+    }
+    if (selUid === uid) setSelUid('');
+    await loadUsers();
+  }
+
   async function savePagoEsp() {
     const headers = await tokenHeaders();
     const res = await fetch('/api/admin/pagos-especialistas', {
@@ -256,6 +329,50 @@ export default function AdminPage() {
     }
     setPagoEspMsg(t('Pago registrado.', 'Payment registered.'));
     setPagoEspForm({ especialistaUid: '', monto: '', concepto: 'Honorarios', metodo: 'Transferencia', fechaPago: '' });
+    await loadPagos();
+  }
+
+  async function setPagoEspEstatus(id: string, estatus: 'activo' | 'cancelado') {
+    const headers = await tokenHeaders();
+    const res = await fetch('/api/admin/pagos-especialistas', {
+      method: 'PATCH',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, estatus }),
+    });
+    if (res.ok) await loadPagos();
+  }
+
+  function startEditPagoEsp(p: any) {
+    setEditPagoEspId(p.id);
+    setEditPagoEspForm({
+      monto: p.monto != null ? String(p.monto) : '',
+      concepto: p.concepto || '',
+      metodo: p.metodo || 'Transferencia',
+      fechaPago: p.fechaPago ? String(p.fechaPago).slice(0, 10) : '',
+    });
+    setPagoEspEditMsg('');
+  }
+
+  async function guardarEdicionPagoEsp() {
+    if (!editPagoEspId) return;
+    const headers = await tokenHeaders();
+    const res = await fetch('/api/admin/pagos-especialistas', {
+      method: 'PATCH',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: editPagoEspId,
+        monto: Number(editPagoEspForm.monto),
+        concepto: editPagoEspForm.concepto,
+        metodo: editPagoEspForm.metodo,
+        fechaPago: editPagoEspForm.fechaPago || undefined,
+      }),
+    });
+    if (!res.ok) {
+      setPagoEspEditMsg(t('No se pudo guardar el cambio.', 'Could not save the change.'));
+      return;
+    }
+    setEditPagoEspId('');
+    setPagoEspEditMsg('');
     await loadPagos();
   }
 
@@ -340,12 +457,22 @@ export default function AdminPage() {
               </p>
             </div>
 
+            <Input
+              type="search"
+              placeholder={t('Buscar por nombre, correo o empresa...', 'Search by name, email or company...')}
+              value={userSearch}
+              onChange={(e) => setUserSearch(e.target.value)}
+              className="max-w-sm"
+            />
+            {estatusMsg && <p className="text-sm text-red-700">{estatusMsg}</p>}
+
             <div className="max-h-[420px] overflow-auto rounded-lg border border-slate-200 dark:border-slate-700">
               <table className="w-full text-left text-sm">
                 <thead className="sticky top-0 bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-900 dark:text-slate-300">
                   <tr>
                     <th className="px-3 py-2 font-medium">{t('Usuario', 'User')}</th>
                     <th className="px-3 py-2 font-medium">{t('Roles', 'Roles')}</th>
+                    <th className="px-3 py-2 font-medium">{t('Estatus', 'Status')}</th>
                     <th className="px-3 py-2 font-medium">{t('Madurez', 'Maturity')}</th>
                     <th className="px-3 py-2 font-medium">{t('Actividad', 'Activity')}</th>
                     <th className="px-3 py-2 font-medium">{t('Plan', 'Plan')}</th>
@@ -354,7 +481,7 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {usuarios.map((u) => (
+                  {usuariosFiltrados.map((u) => (
                     <tr key={u.uid} className="border-t border-slate-100 dark:border-slate-800">
                       <td className="px-3 py-2">
                         <div className="font-medium text-foreground">{u.name || '—'}</div>
@@ -370,6 +497,9 @@ export default function AdminPage() {
                             </span>
                           )}
                         </div>
+                      </td>
+                      <td className="px-3 py-2">
+                        <EstatusBadge estatus={u.estatus} t={t} />
                       </td>
                       <td className="px-3 py-2 text-muted-foreground">
                         {u.totalMaturity != null ? `${u.totalMaturity}` : '—'}
@@ -401,27 +531,70 @@ export default function AdminPage() {
                           : '—'}
                       </td>
                       <td className="px-3 py-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelUid(u.uid);
-                            setSelRoles(Array.isArray(u.roles) ? u.roles : []);
-                            setSelTemas(Array.isArray(u.especialistaTemas) ? u.especialistaTemas : []);
-                            setSelCert(u.certificado === true);
-                            setSelAccesoPremium(u.accesoManualPremium === true);
-                          }}
-                        >
-                          {t('Asignar roles', 'Assign roles')}
-                        </Button>
+                        <div className="flex flex-wrap gap-1.5">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelUid(u.uid);
+                              setSelRoles(Array.isArray(u.roles) ? u.roles : []);
+                              setSelTemas(Array.isArray(u.especialistaTemas) ? u.especialistaTemas : []);
+                              setSelCert(u.certificado === true);
+                              setSelAccesoPremium(u.accesoManualPremium === true);
+                            }}
+                          >
+                            {t('Asignar roles', 'Assign roles')}
+                          </Button>
+                          {u.estatus === 'cancelado' ? (
+                            <Button type="button" variant="outline" size="sm" onClick={() => setUserEstatus(u.uid, 'activo')}>
+                              {t('Reactivar', 'Reactivate')}
+                            </Button>
+                          ) : (
+                            <Button type="button" variant="outline" size="sm" onClick={() => setUserEstatus(u.uid, 'cancelado')}>
+                              {t('Cancelar', 'Cancel')}
+                            </Button>
+                          )}
+                          {confirmDeleteUid === u.uid ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-medium text-red-700">
+                                {t('¿Borrar permanentemente?', 'Delete permanently?')}
+                              </span>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="border-red-500 bg-red-600 text-white hover:bg-red-700"
+                                disabled={deletingUid === u.uid}
+                                onClick={() => deleteUsuario(u.uid)}
+                              >
+                                {deletingUid === u.uid ? t('Borrando...', 'Deleting...') : t('Sí, borrar', 'Yes, delete')}
+                              </Button>
+                              <Button type="button" size="sm" variant="ghost" onClick={() => setConfirmDeleteUid('')}>
+                                {t('No', 'No')}
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="text-red-700 hover:bg-red-50 dark:text-red-300"
+                              onClick={() => setConfirmDeleteUid(u.uid)}
+                            >
+                              {t('Borrar', 'Delete')}
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
-                  {usuarios.length === 0 && (
+                  {usuariosFiltrados.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="px-3 py-8 text-center text-sm text-muted-foreground">
-                        {t('Sin usuarios todavía.', 'No users yet.')}
+                      <td colSpan={7} className="px-3 py-8 text-center text-sm text-muted-foreground">
+                        {usuarios.length === 0
+                          ? t('Sin usuarios todavía.', 'No users yet.')
+                          : t('Ningún usuario coincide con la búsqueda.', 'No users match your search.')}
                       </td>
                     </tr>
                   )}
@@ -644,6 +817,8 @@ export default function AdminPage() {
                     <th className="px-3 py-2 font-medium">{t('Concepto', 'Concept')}</th>
                     <th className="px-3 py-2 font-medium">{t('Método', 'Method')}</th>
                     <th className="px-3 py-2 font-medium">{t('Fecha', 'Date')}</th>
+                    <th className="px-3 py-2 font-medium">{t('Estatus', 'Status')}</th>
+                    <th className="px-3 py-2" />
                   </tr>
                 </thead>
                 <tbody>
@@ -659,11 +834,30 @@ export default function AdminPage() {
                       <td className="px-3 py-2 text-muted-foreground">{p.concepto ?? '—'}</td>
                       <td className="px-3 py-2 text-muted-foreground">{p.metodo ?? '—'}</td>
                       <td className="px-3 py-2 text-xs text-muted-foreground">{formatDate(p.fechaPago ?? p.createdAt, dispLang)}</td>
+                      <td className="px-3 py-2">
+                        <EstatusBadge estatus={p.estatus} t={t} />
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="flex flex-wrap gap-1.5">
+                          <Button type="button" variant="outline" size="sm" onClick={() => startEditPagoEsp(p)}>
+                            {t('Editar', 'Edit')}
+                          </Button>
+                          {p.estatus === 'cancelado' ? (
+                            <Button type="button" variant="outline" size="sm" onClick={() => setPagoEspEstatus(p.id, 'activo')}>
+                              {t('Reactivar', 'Reactivate')}
+                            </Button>
+                          ) : (
+                            <Button type="button" variant="outline" size="sm" onClick={() => setPagoEspEstatus(p.id, 'cancelado')}>
+                              {t('Cancelar', 'Cancel')}
+                            </Button>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                   {pagosEsp.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="px-3 py-8 text-center text-sm text-muted-foreground">
+                      <td colSpan={7} className="px-3 py-8 text-center text-sm text-muted-foreground">
                         {t('Sin pagos registrados.', 'No payments registered yet.')}
                       </td>
                     </tr>
@@ -671,6 +865,58 @@ export default function AdminPage() {
                 </tbody>
               </table>
             </div>
+
+            {editPagoEspId && (
+              <div className="rounded-lg border border-slate-200 p-5 dark:border-slate-700">
+                <h3 className="text-sm font-semibold text-foreground">{t('Modificar pago', 'Edit payment')}</h3>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="space-y-1">
+                    <Label>{t('Monto MXN', 'Amount MXN')}</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={editPagoEspForm.monto}
+                      onChange={(e) => setEditPagoEspForm((f) => ({ ...f, monto: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>{t('Concepto', 'Concept')}</Label>
+                    <Input
+                      value={editPagoEspForm.concepto}
+                      onChange={(e) => setEditPagoEspForm((f) => ({ ...f, concepto: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>{t('Método', 'Method')}</Label>
+                    <Select
+                      value={editPagoEspForm.metodo}
+                      onChange={(e) => setEditPagoEspForm((f) => ({ ...f, metodo: e.target.value }))}
+                    >
+                      <option value="Transferencia">Transferencia</option>
+                      <option value="Efectivo">Efectivo</option>
+                      <option value="Tarjeta">Tarjeta</option>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label>{t('Fecha', 'Date')}</Label>
+                    <Input
+                      type="date"
+                      value={editPagoEspForm.fechaPago}
+                      onChange={(e) => setEditPagoEspForm((f) => ({ ...f, fechaPago: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                {pagoEspEditMsg && <p className="mt-3 text-sm text-red-700">{pagoEspEditMsg}</p>}
+                <div className="mt-4 flex gap-2">
+                  <Button type="button" onClick={guardarEdicionPagoEsp}>
+                    {t('Guardar cambios', 'Save changes')}
+                  </Button>
+                  <Button type="button" variant="ghost" onClick={() => setEditPagoEspId('')}>
+                    {t('Cancelar', 'Cancel')}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

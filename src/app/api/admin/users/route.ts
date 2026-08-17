@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminDb } from '@/lib/firebase-admin';
+import { getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
 import { requireRole } from '@/lib/server-roles';
 import { APP_ROLES, TEMAS_ESPECIALISTA } from '@/lib/roles';
 
@@ -39,6 +39,7 @@ export async function GET(req: NextRequest) {
           roles: Array.isArray(data.roles) ? data.roles : [],
           especialistaTemas: Array.isArray(data.especialistaTemas) ? data.especialistaTemas : [],
           certificado: data.certificado === true,
+          estatus: data.estatus === 'cancelado' ? 'cancelado' : 'activo',
           subscription: data.subscription ?? 'free',
           planStatus: data.planStatus ?? '',
           planCancelaEn: typeof data.planCancelaEn === 'string' ? data.planCancelaEn : null,
@@ -111,5 +112,70 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error('[admin/users/roles] POST error', err);
     return NextResponse.json({ error: 'No se pudieron guardar los roles.' }, { status: 500 });
+  }
+}
+
+// PATCH /api/admin/users — cambia el estatus de un usuario (activo/cancelado)
+// sin tocar sus roles. Se usa desde el botón "Cancelar"/"Reactivar" del panel.
+export async function PATCH(req: NextRequest) {
+  const guard = await requireRole(req, 'admin');
+  if (guard instanceof NextResponse) return guard;
+
+  try {
+    const body = await req.json();
+    const uid = body?.uid;
+    const estatus = body?.estatus;
+    if (typeof uid !== 'string' || !uid) {
+      return NextResponse.json({ error: 'Falta el uid del usuario.' }, { status: 400 });
+    }
+    if (estatus !== 'activo' && estatus !== 'cancelado') {
+      return NextResponse.json({ error: 'Estatus inválido.' }, { status: 400 });
+    }
+
+    await getAdminDb().collection('users').doc(uid).set(
+      {
+        estatus,
+        estatusPor: guard.uid,
+        estatusAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error('[admin/users] PATCH error', err);
+    return NextResponse.json({ error: 'No se pudo actualizar el estatus.' }, { status: 500 });
+  }
+}
+
+// DELETE /api/admin/users?uid=... — borra al usuario por completo: su cuenta
+// de acceso (Firebase Auth) y su documento en Firestore (users/{uid}). No
+// borra el historial que haya dejado en otras colecciones (evaluaciones,
+// sesiones, pagos) para no perder esos registros contables/históricos.
+export async function DELETE(req: NextRequest) {
+  const guard = await requireRole(req, 'admin');
+  if (guard instanceof NextResponse) return guard;
+
+  try {
+    const uid = req.nextUrl.searchParams.get('uid');
+    if (!uid) {
+      return NextResponse.json({ error: 'Falta el uid del usuario.' }, { status: 400 });
+    }
+    if (uid === guard.uid) {
+      return NextResponse.json({ error: 'No puedes borrar tu propia cuenta de administrador.' }, { status: 400 });
+    }
+
+    try {
+      await getAdminAuth().deleteUser(uid);
+    } catch (authErr) {
+      // Si ya no existe en Firebase Auth (por ejemplo, se borró antes),
+      // seguimos adelante y borramos igual el documento en Firestore.
+      console.warn('[admin/users] no se pudo borrar en Firebase Auth (se ignora):', authErr);
+    }
+
+    await getAdminDb().collection('users').doc(uid).delete();
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error('[admin/users] DELETE error', err);
+    return NextResponse.json({ error: 'No se pudo borrar el usuario.' }, { status: 500 });
   }
 }

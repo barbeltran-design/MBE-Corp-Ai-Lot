@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
       concepto: typeof body?.concepto === 'string' ? body.concepto : 'Honorarios',
       metodo: typeof body?.metodo === 'string' ? body.metodo : 'Transferencia',
       fechaPago: typeof body?.fechaPago === 'string' && body.fechaPago ? body.fechaPago : new Date().toISOString(),
+      estatus: 'activo',
       registradoPor: guard.uid,
       createdAt: new Date().toISOString(),
     });
@@ -48,5 +49,48 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error('[admin/pagos-especialistas] POST error', err);
     return NextResponse.json({ error: 'No se pudo registrar el pago.' }, { status: 500 });
+  }
+}
+
+// PATCH /api/admin/pagos-especialistas — modifica un pago existente (monto,
+// concepto, método, fecha) y/o cambia su estatus (activo/cancelado).
+export async function PATCH(req: NextRequest) {
+  const guard = await requireRole(req, 'admin');
+  if (guard instanceof NextResponse) return guard;
+
+  try {
+    const body = await req.json();
+    const id = body?.id;
+    if (typeof id !== 'string' || !id) {
+      return NextResponse.json({ error: 'Falta el id del pago.' }, { status: 400 });
+    }
+
+    const patch: Record<string, unknown> = {};
+
+    if (body?.monto !== undefined) {
+      const monto = Number(body.monto);
+      if (!Number.isFinite(monto) || monto <= 0) {
+        return NextResponse.json({ error: 'El monto no es válido.' }, { status: 400 });
+      }
+      patch.monto = monto;
+    }
+    if (typeof body?.concepto === 'string') patch.concepto = body.concepto;
+    if (typeof body?.metodo === 'string') patch.metodo = body.metodo;
+    if (typeof body?.fechaPago === 'string' && body.fechaPago) patch.fechaPago = body.fechaPago;
+    if (typeof body?.especialistaNombre === 'string') patch.especialistaNombre = body.especialistaNombre;
+    if (body?.estatus === 'activo' || body?.estatus === 'cancelado') patch.estatus = body.estatus;
+
+    if (Object.keys(patch).length === 0) {
+      return NextResponse.json({ error: 'No hay cambios que guardar.' }, { status: 400 });
+    }
+
+    patch.editadoPor = guard.uid;
+    patch.editadoAt = new Date().toISOString();
+
+    await getAdminDb().collection('pagosEspecialistas').doc(id).set(patch, { merge: true });
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error('[admin/pagos-especialistas] PATCH error', err);
+    return NextResponse.json({ error: 'No se pudo modificar el pago.' }, { status: 500 });
   }
 }
