@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { intentarRecargaIA, generarPedidoId } from '@/lib/ia-recarga';
 
 // ---------------------------------------------------------------------------
 // Babel AI — ruta de servidor para Gemini.
@@ -360,7 +361,7 @@ async function tryGemini(
     parts: [{ text: m.content }],
   }));
   try {
-    const res = await fetch(GEMINI_ENDPOINT, {
+    const intentar = () => fetch(GEMINI_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({
@@ -369,6 +370,12 @@ async function tryGemini(
         generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
       }),
     });
+    let res = await intentar();
+
+    if (!res.ok && (res.status === 429 || res.status === 402)) {
+      const rec = await intentarRecargaIA('gemini', generarPedidoId());
+      if (rec.recargada) res = await intentar();
+    }
 
     if (!res.ok) {
       const errText = (await res.text()).slice(0, 300);
@@ -423,7 +430,7 @@ async function tryOpenAICompatible(
   }));
 
   const tryFetch = async function (msgs: Record<string, unknown>[]): Promise<{ reply: string } | null> {
-    const res = await fetch(endpoint, {
+    const intentar = () => fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
@@ -433,6 +440,12 @@ async function tryOpenAICompatible(
         max_tokens: 8192,
       }),
     });
+    let res = await intentar();
+
+    if (!res.ok && (res.status === 429 || res.status === 402)) {
+      const rec = await intentarRecargaIA(label, generarPedidoId());
+      if (rec.recargada) res = await intentar();
+    }
 
     if (!res.ok) {
       const errText = (await res.text()).slice(0, 300);

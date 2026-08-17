@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { intentarRecargaIA, generarPedidoId } from '@/lib/ia-recarga';
 
 // ---------------------------------------------------------------------------
 // Ruta NUEVA e independiente. NO modifica src/app/api/babel/route.ts,
@@ -107,7 +108,7 @@ function extractJsonArray(text: string): unknown {
   return JSON.parse(cleaned);
 }
 
-async function tryGemini(systemPrompt: string, userMessage: string, diagnostics: Diagnostic[]): Promise<unknown[] | null> {
+async function tryGemini(systemPrompt: string, userMessage: string, diagnostics: Diagnostic[], reintento = false, pedidoId?: string): Promise<unknown[] | null> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
   try {
@@ -121,6 +122,10 @@ async function tryGemini(systemPrompt: string, userMessage: string, diagnostics:
       }),
     });
     const data = await res.json();
+  if (!res.ok && (res.status === 429 || res.status === 402) && !reintento) {
+    const rec = await intentarRecargaIA('gemini', pedidoId || generarPedidoId());
+    if (rec.recargada) return tryGemini(systemPrompt, userMessage, diagnostics, true, pedidoId);
+  }
     if (!res.ok) {
       diagnostics.push({ provider: 'gemini', status: 'error', error: JSON.stringify(data).slice(0, 300) });
       return null;
@@ -156,6 +161,8 @@ async function tryOpenAICompatible(
   apiKey: string | undefined,
   label: string,
   diagnostics: Diagnostic[],
+  reintento = false,
+  pedidoId?: string,
 ): Promise<unknown[] | null> {
   if (!apiKey) return null;
   try {
@@ -173,6 +180,10 @@ async function tryOpenAICompatible(
       }),
     });
     const data = await res.json();
+  if (!res.ok && (res.status === 429 || res.status === 402) && !reintento) {
+    const rec = await intentarRecargaIA('gemini', pedidoId || generarPedidoId());
+    if (rec.recargada) return tryGemini(systemPrompt, userMessage, diagnostics, true, pedidoId);
+  }
     if (!res.ok) {
       diagnostics.push({ provider: label, status: 'error', error: JSON.stringify(data).slice(0, 300) });
       return null;

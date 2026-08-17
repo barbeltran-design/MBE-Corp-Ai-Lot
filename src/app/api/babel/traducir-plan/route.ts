@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { intentarRecargaIA, generarPedidoId } from '@/lib/ia-recarga';
 
 // ---------------------------------------------------------------------------
 // Ruta para traducir el documento del Plan Estrategico Compilado al idioma
@@ -74,7 +75,7 @@ function buildSystemPrompt(language: TraducirLang): string {
   );
 }
 
-async function tryGemini(systemPrompt: string, userMessage: string, diagnostics: Diagnostic[]): Promise<string | null> {
+async function tryGemini(systemPrompt: string, userMessage: string, diagnostics: Diagnostic[], reintento = false, pedidoId?: string): Promise<string | null> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
   try {
@@ -88,6 +89,10 @@ async function tryGemini(systemPrompt: string, userMessage: string, diagnostics:
       }),
     });
     const data = await res.json();
+    if (!res.ok && (res.status === 429 || res.status === 402) && !reintento) {
+      const rec = await intentarRecargaIA('gemini', pedidoId || generarPedidoId());
+      if (rec.recargada) return tryGemini(systemPrompt, userMessage, diagnostics, true, pedidoId);
+    }
     if (!res.ok) {
       diagnostics.push({ provider: 'gemini', status: 'error', error: JSON.stringify(data).slice(0, 300) });
       return null;
@@ -119,7 +124,9 @@ async function tryOpenAICompatible(
   model: string,
   apiKey: string | undefined,
   label: string,
-  diagnostics: Diagnostic[],
+diagnostics: Diagnostic[],
+  reintento = false,
+  pedidoId?: string,
 ): Promise<string | null> {
   if (!apiKey) return null;
   try {
@@ -137,6 +144,10 @@ async function tryOpenAICompatible(
       }),
     });
     const data = await res.json();
+    if (!res.ok && (res.status === 429 || res.status === 402) && !reintento) {
+      const rec = await intentarRecargaIA(label, pedidoId || generarPedidoId());
+      if (rec.recargada) return tryOpenAICompatible(systemPrompt, userMessage, endpoint, model, apiKey, label, diagnostics, true, pedidoId);
+    }
     if (!res.ok) {
       diagnostics.push({ provider: label, status: 'error', error: JSON.stringify(data).slice(0, 300) });
       return null;
