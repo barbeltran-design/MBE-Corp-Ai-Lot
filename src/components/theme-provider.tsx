@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { usePathname } from 'next/navigation';
 
 type Theme = 'light' | 'dark';
 
@@ -13,6 +14,13 @@ interface ThemeContextValue {
 const ThemeContext = React.createContext<ThemeContextValue | undefined>(undefined);
 
 const STORAGE_KEY = 'mbe-theme';
+
+// La landing (página de registro) es la única ruta con <=1 segmento (`/`, `/{locale}`)
+// y se fuerza SIEMPRE en light para que el logotipo (tinta oscura) sea visible.
+// Mismo criterio que el script anti-flash de [locale]/layout.tsx.
+function isLandingPath(pathname: string): boolean {
+  return pathname.split('/').filter(Boolean).length <= 1;
+}
 
 /**
  * Lee el tema resuelto por el script inline de <head> (ver [locale]/layout.tsx),
@@ -28,17 +36,24 @@ function getInitialTheme(): Theme {
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = React.useState<Theme>(getInitialTheme);
+  const pathname = usePathname();
+  const isLanding = React.useMemo(() => isLandingPath(pathname), [pathname]);
 
   React.useEffect(() => {
     const root = document.documentElement;
-    root.classList.toggle('dark', theme === 'dark');
+    if (isLanding) {
+      // Landing/registro siempre en light: el logotipo no se distingue en dark.
+      root.classList.remove('dark');
+    } else {
+      root.classList.toggle('dark', theme === 'dark');
+    }
     try {
       window.localStorage.setItem(STORAGE_KEY, theme);
     } catch {
       // localStorage puede fallar en modo privado/incógnito — el tema simplemente
       // no persiste entre sesiones, pero la app sigue funcionando.
     }
-  }, [theme]);
+  }, [theme, isLanding]);
 
   const setTheme = React.useCallback((next: Theme) => setThemeState(next), []);
   const toggleTheme = React.useCallback(

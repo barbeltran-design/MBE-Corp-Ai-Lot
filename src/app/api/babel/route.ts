@@ -20,7 +20,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // Nivel 1 — Gemini (paga):
 //   API key: aistudio.google.com/apikey | Modelo: gemini-3.5-flash (GEMINI_MODEL)
 // Nivel 2 — Groq (gratis, 30 req/min):
-//   API key: console.groq.com | Modelo: llama-3.3-70b-versatile
+//   API key: console.groq.com | Modelo: openai/gpt-oss-120b
 // Nivel 3 — OpenRouter (auto = OpenRouter elige el mejor modelo gratuito disponible):
 //   API key: openrouter.ai/keys | Modelo: auto
 // Nivel 4 — DeepSeek (paga):
@@ -30,7 +30,7 @@ const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 const FALLBACK_ENDPOINT = process.env.FALLBACK_ENDPOINT || 'https://api.groq.com/openai/v1/chat/completions';
-const FALLBACK_MODEL = process.env.FALLBACK_MODEL || 'llama-3.3-70b-versatile';
+const FALLBACK_MODEL = process.env.FALLBACK_MODEL || 'openai/gpt-oss-120b';
 
 const TERTIARY_ENDPOINT = process.env.TERTIARY_ENDPOINT || 'https://openrouter.ai/api/v1/chat/completions';
 const TERTIARY_MODEL = process.env.TERTIARY_MODEL || 'openai/gpt-oss-20b:free';

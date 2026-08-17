@@ -25,7 +25,11 @@ const geistMono = localFont({
 // del primer pintado, evitando el "flash" de tema incorrecto. También expone el valor
 // resuelto en `window.__MBE_THEME__` para que <ThemeProvider> inicialice su estado de
 // React ya sincronizado con el DOM real, sin un segundo render ni warning de hidratación.
-const NO_FLASH_THEME_SCRIPT = `(function(){try{var s=localStorage.getItem('mbe-theme');var t=(s==='light'||s==='dark')?s:'dark';window.__MBE_THEME__=t;if(t==='dark'){document.documentElement.classList.add('dark');}}catch(e){window.__MBE_THEME__='dark';document.documentElement.classList.add('dark');}})();`;
+// La LANDING (página de registro, ruta raíz `/{locale}` — único path con <=1 segmento)
+// se fuerza SIEMPRE en light: el logotipo MBE usa tinta oscura y no se distingue sobre
+// el fondo dark. ThemeProvider replica esta regla (y la revierte al navegar), ver
+// theme-provider.tsx.
+const NO_FLASH_THEME_SCRIPT = `(function(){var landing=window.location.pathname.split('/').filter(Boolean).length<=1;try{var s=localStorage.getItem('mbe-theme');var t=(s==='light'||s==='dark')?s:'dark';window.__MBE_THEME__=t;if(t==='dark'&&!landing){document.documentElement.classList.add('dark');}}catch(e){window.__MBE_THEME__='dark';if(!landing){document.documentElement.classList.add('dark');}}})();`;
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));

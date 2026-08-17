@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 const PROVIDERS = [
-  { label: 'Groq', endpoint: 'https://api.groq.com/openai/v1/chat/completions', model: 'llama3-70b-8192', key: process.env.FALLBACK_API_KEY },
+  { label: 'Groq', endpoint: 'https://api.groq.com/openai/v1/chat/completions', model: 'Qwen3.6 27B', key: process.env.FALLBACK_API_KEY },
   { label: 'OpenRouter', endpoint: 'https://openrouter.ai/api/v1/chat/completions', model: process.env.TERTIARY_MODEL || 'auto', key: process.env.TERTIARY_API_KEY },
   { label: 'DeepSeek', endpoint: (process.env.DEEPSEEK_ENDPOINT || 'https://api.deepseek.com/chat/completions'), model: process.env.DEEPSEEK_MODEL || 'deepseek-chat', key: process.env.DEEPSEEK_API_KEY },
 ];
