@@ -49,8 +49,8 @@ export async function GET(req: NextRequest) {
     // acceso por fecha aunque este registro no se actualice — pero mantiene
     // Firestore (y el panel de /admin) al día sin necesitar un proceso
     // programado aparte.
-    let planStatusActual = (uData.planStatus as string) ?? null;
-    let planCancelaEnActual = (uData.planCancelaEn as string) ?? null;
+    let planStatusActual: string | null = (uData.planStatus as string) ?? null;
+    let planCancelaEnActual: string | null = (uData.planCancelaEn as string) ?? null;
     if (
       planStatusActual === 'pending_cancellation' &&
       planCancelaEnActual &&
