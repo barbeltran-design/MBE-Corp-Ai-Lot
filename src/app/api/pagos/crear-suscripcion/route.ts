@@ -108,6 +108,13 @@ export async function POST(req: NextRequest) {
         external_reference: uid,
         payer_email: payerEmail,
         back_url: `${siteUrl}/${locale}${returnPath}?suscripcion=procesando`,
+        // IMPORTANTE: sin esto, Mercado Pago solo avisa de los cobros de esta
+        // suscripción si el webhook está registrado manualmente en el
+        // dashboard de la app de Suscripciones — igual que ya se hace en
+        // crear-preferencia/route.ts para los pagos únicos. Con esto, cada
+        // suscripción creada le dice explícitamente a Mercado Pago a dónde
+        // avisar, sin depender de esa configuración manual.
+        notification_url: `${siteUrl}/api/webhooks/mercadopago`,
         auto_recurring: {
           frequency: 1,
           frequency_type: 'months',
