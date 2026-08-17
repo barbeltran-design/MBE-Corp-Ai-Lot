@@ -187,6 +187,7 @@ export function ReferencePlaceBuilder() {
 
   const [tab, setTab] = React.useState<TabId>('mercado');
   const [busqueda, setBusqueda] = React.useState('');
+  const [participantesBusqueda, setParticipantesBusqueda] = React.useState('');
 
   // Forms solicitud
   const [solEmpresa, setSolEmpresa] = React.useState('');
@@ -199,6 +200,18 @@ export function ReferencePlaceBuilder() {
   const [ofRubro, setOfRubro] = React.useState('');
   const [ofDesc, setOfDesc] = React.useState('');
   const [ofComision, setOfComision] = React.useState('5');
+  // Editar solicitud propia
+  const [editSol, setEditSol] = React.useState<SolicitudReferencia | null>(null);
+  const [editSolEmpresa, setEditSolEmpresa] = React.useState('');
+  const [editSolRubro, setEditSolRubro] = React.useState('');
+  const [editSolDesc, setEditSolDesc] = React.useState('');
+  const [editSolComision, setEditSolComision] = React.useState('5');
+  // Editar oferta propia
+  const [editOf, setEditOf] = React.useState<OfertaRepSale | null>(null);
+  const [editOfEmpresa, setEditOfEmpresa] = React.useState('');
+  const [editOfRubro, setEditOfRubro] = React.useState('');
+  const [editOfDesc, setEditOfDesc] = React.useState('');
+  const [editOfComision, setEditOfComision] = React.useState('5');
   // Forms reunión
   const [reTitulo, setReTitulo] = React.useState('');
   const [reTipo, setReTipo] = React.useState<TipoReunion>('asesoria');
@@ -323,6 +336,32 @@ export function ReferencePlaceBuilder() {
     }
   }
 
+  function abrirEditarSolicitud(s: SolicitudReferencia) {
+    setEditSol(s);
+    setEditSolEmpresa(s.empresaObjetivo);
+    setEditSolRubro(s.rubro || '');
+    setEditSolDesc(s.descripcion || '');
+    setEditSolComision(String(s.comisionPct ?? 0));
+  }
+
+  function borrarSolicitud(s: SolicitudReferencia) {
+    if (!window.confirm(t('¿Borrar esta solicitud? Esta acción no se puede deshacer.', 'Delete this request? This cannot be undone.'))) return;
+    void act('borrar-solicitud', { solicitudId: s.id }, t('Solicitud borrada.', 'Request deleted.'));
+  }
+
+  function abrirEditarOferta(o: OfertaRepSale) {
+    setEditOf(o);
+    setEditOfEmpresa(o.empresa);
+    setEditOfRubro(o.rubro || '');
+    setEditOfDesc(o.descripcion || '');
+    setEditOfComision(String(o.comisionPct ?? 0));
+  }
+
+  function borrarOferta(o: OfertaRepSale) {
+    if (!window.confirm(t('¿Borrar esta oferta? Esta acción no se puede deshacer.', 'Delete this offer? This cannot be undone.'))) return;
+    void act('borrar-oferta', { ofertaId: o.id }, t('Oferta borrada.', 'Offer deleted.'));
+  }
+
   const esRep = yo?.rolRepSale || false;
   const otrosMiembros = yo ? miembros.filter((m) => m.uid !== yo.uid) : [];
   const repsSales = miembros.filter((m) => m.rolRepSale);
@@ -432,7 +471,7 @@ export function ReferencePlaceBuilder() {
                 <div className="glass-panel p-4">
                   <div className="flex items-center gap-2">
                     <Target className="h-4 w-4 text-teal-600" />
-                    <h2 className="text-sm font-semibold text-foreground">{t('Solicitar referencia', 'Request a reference')}</h2>
+                    <h2 className="text-sm font-semibold text-foreground">{t('Aplicar a una referencia', 'Apply to a referral')}</h2>
                   </div>
                   <p className="mt-1 text-xs text-slate-500 dark:text-slate-200">
                     {t('Pide a la comunidad certificada (o a un Rep Sale) que te consiga una cita con una empresa, a cambio de una comisión al concretar.', 'Ask the certified community (or a Rep Sale) to get you a meeting with a company, for a success fee.')}
@@ -528,6 +567,25 @@ export function ReferencePlaceBuilder() {
                             {t('Apoyar con reunión', 'Help with a meeting')}
                           </button>
                         )}
+                        {s.uid === yo.uid && (
+                          <div className="mt-2 flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => abrirEditarSolicitud(s)}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-glass-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                            >
+                              {t('Editar', 'Edit')}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => borrarSolicitud(s)}
+                              disabled={busy === 'borrar-solicitud'}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-50 disabled:opacity-60 dark:border-red-500/40 dark:text-red-300 dark:hover:bg-red-500/10"
+                            >
+                              {t('Borrar', 'Delete')}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))}
                     {solicitudes.length === 0 && <p className="text-sm text-muted-foreground">{t('No hay solicitudes abiertas.', 'No open requests yet.')}</p>}
@@ -621,22 +679,43 @@ export function ReferencePlaceBuilder() {
                           </p>
                           {o.descripcion && <p className="mt-1 text-sm text-muted-foreground">{o.descripcion}</p>}
                         </div>
-                        {yo.puedeB2B && (
-                          <button
-                            type="button"
-                            onClick={() => act('crear-reunion', {
-                              titulo: t('Solicito contacto: ' + o.empresa, 'Contact request: ' + o.empresa),
-                              tipo: 'referencia',
-                              descripcion: '',
-                              participantes: [o.uid],
-                              fechaPropuesta: new Date().toISOString(),
-                            }, t('Se solicitó la reunión.', 'A meeting was requested.'))}
-                            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-teal-700"
-                          >
-                            <CalendarClock className="h-3.5 w-3.5" />
-                            {t('Solicitar cita', 'Request meeting')}
-                          </button>
-                        )}
+                        <div className="flex shrink-0 flex-col items-end gap-2">
+                          {yo.puedeB2B && (
+                            <button
+                              type="button"
+                              onClick={() => act('crear-reunion', {
+                                titulo: t('Solicito contacto: ' + o.empresa, 'Contact request: ' + o.empresa),
+                                tipo: 'referencia',
+                                descripcion: '',
+                                participantes: [o.uid],
+                                fechaPropuesta: new Date().toISOString(),
+                              }, t('Se solicitó la reunión.', 'A meeting was requested.'))}
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-teal-700"
+                            >
+                              <CalendarClock className="h-3.5 w-3.5" />
+                              {t('Solicitar cita', 'Request meeting')}
+                            </button>
+                          )}
+                          {o.uid === yo.uid && (
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => abrirEditarOferta(o)}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-glass-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                              >
+                                {t('Editar', 'Edit')}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => borrarOferta(o)}
+                                disabled={busy === 'borrar-oferta'}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-50 disabled:opacity-60 dark:border-red-500/40 dark:text-red-300 dark:hover:bg-red-500/10"
+                              >
+                                {t('Borrar', 'Delete')}
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -684,8 +763,20 @@ export function ReferencePlaceBuilder() {
                     />
                     <div>
                       <p className="mb-1 text-xs font-medium text-muted-foreground">{t('Participantes (además de ti)', 'Participants (besides you)')}</p>
+                      <input
+                        className="mb-1.5 w-full rounded-lg border border-glass-border bg-glass px-2.5 py-1.5 text-xs text-foreground"
+                        value={participantesBusqueda}
+                        onChange={(e) => setParticipantesBusqueda(e.target.value)}
+                        placeholder={t('Buscar por nombre...', 'Search by name...')}
+                      />
                       <div className="max-h-44 space-y-1 overflow-y-auto rounded-lg border border-glass-border p-1">
-                        {otrosMiembros.map((m) => (
+                        {otrosMiembros
+                          .filter((m) => {
+                            const q = participantesBusqueda.trim().toLowerCase();
+                            if (!q) return true;
+                            return (m.nombre || '').toLowerCase().includes(q) || (m.email || '').toLowerCase().includes(q);
+                          })
+                          .map((m) => (
                           <label key={m.uid} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1 text-sm hover:bg-accent">
                             <input
                               type="checkbox"
@@ -695,7 +786,7 @@ export function ReferencePlaceBuilder() {
                               }}
                               className="rounded border-slate-300 text-teal-600"
                             />
-                            <span className="min-w-0 flex-1 truncate text-foreground">{m.nombre}</span>
+                            <span className="min-w-0 flex-1 truncate text-foreground">{m.nombre || m.email}</span>
                             <span className="text-xs text-muted-foreground">{nivelLabel(m.nivel, dispLang)}</span>
                           </label>
                         ))}
@@ -821,6 +912,8 @@ export function ReferencePlaceBuilder() {
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {miembros
                   .filter((m) => !busqueda || m.nombre.toLowerCase().includes(busqueda.toLowerCase()) || m.empresa.toLowerCase().includes(busqueda.toLowerCase()))
+                  .slice()
+                  .sort((a, b) => (b.puntosClub || 0) - (a.puntosClub || 0))
                   .map((m) => (
                     <button
                       key={m.uid}
@@ -830,16 +923,16 @@ export function ReferencePlaceBuilder() {
                     >
                       <div className="flex items-center gap-3">
                         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-teal-600 text-sm font-bold text-white">
-                          {m.nombre.slice(0, 2).toUpperCase() || '?'}
+                          {(m.nombre || m.email).slice(0, 2).toUpperCase() || '?'}
                         </div>
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-foreground">{m.nombre}</p>
+                          <p className="truncate text-sm font-semibold text-foreground">{m.nombre || m.email}</p>
                           <p className="truncate text-xs text-slate-600 dark:text-slate-200">{m.empresa || m.giro || m.pais}</p>
                         </div>
                       </div>
                       <div className="mt-3 flex flex-wrap gap-1.5">
                         <span className="rounded-full bg-teal-600/10 px-2 py-0.5 text-xs font-medium text-teal-700 dark:text-teal-300">
-                          {nivelLabel(m.nivel, dispLang)}
+                          {nivelLabel(m.nivel, dispLang)} · {m.puntosClub || 0} {t('pts', 'pts')}
                         </span>
                         {m.certificado && (
                           <span className="rounded-full bg-emerald-600/10 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">✓ {t('Certificado', 'Certified')}</span>
@@ -914,7 +1007,7 @@ export function ReferencePlaceBuilder() {
                     <p className="mt-1 text-lg font-bold text-emerald-700 dark:text-emerald-300">{fmtMoneda(perfilData.montoResultados)}</p>
                   </div>
                   <div className="rounded-lg border border-glass-border bg-glass p-3">
-                    <p className="text-xs text-slate-600 dark:text-slate-200">{t('Puntos del club (nivel)', 'Club points (level)')}</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-200">{t('Puntos de la comunidad (nivel)', 'Community points (level)')}</p>
                     <p className="mt-1 text-lg font-bold text-foreground">{perfilData.puntosClub}</p>
                   </div>
                   <div className="rounded-lg border border-glass-border bg-glass p-3">
@@ -1052,6 +1145,128 @@ export function ReferencePlaceBuilder() {
           </div>
         </div>
       )}
+      {/* Modal editar solicitud propia */}
+      {editSol && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setEditSol(null)}>
+          <div className="glass-panel relative w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+            <button type="button" onClick={() => setEditSol(null)} className="absolute right-3 top-3 text-muted-foreground hover:text-foreground">
+              <X className="h-5 w-5" />
+            </button>
+            <h2 className="text-base font-semibold text-foreground">{t('Editar solicitud', 'Edit request')}</h2>
+            <div className="mt-4 space-y-3">
+              <input
+                className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                value={editSolEmpresa}
+                onChange={(e) => setEditSolEmpresa(e.target.value)}
+                placeholder={t('Empresa objetivo', 'Target company')}
+              />
+              <input
+                className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                value={editSolRubro}
+                onChange={(e) => setEditSolRubro(e.target.value)}
+                placeholder={t('Rubro / giro', 'Industry')}
+              />
+              <textarea
+                className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                rows={2}
+                value={editSolDesc}
+                onChange={(e) => setEditSolDesc(e.target.value)}
+                placeholder={t('¿Qué buscas conseguir?', 'What do you want to achieve?')}
+              />
+              <div>
+                <p className="mb-1 text-xs font-medium text-muted-foreground">{t('% de Comisión Ofrecida', 'Offered fee %')}</p>
+                <input
+                  type="number"
+                  className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                  value={editSolComision}
+                  onChange={(e) => setEditSolComision(e.target.value)}
+                />
+              </div>
+              <button
+                type="button"
+                disabled={busy === 'editar-solicitud' || !editSolEmpresa.trim()}
+                onClick={async () => {
+                  if (!editSol) return;
+                  await act('editar-solicitud', {
+                    solicitudId: editSol.id,
+                    empresaObjetivo: editSolEmpresa,
+                    rubro: editSolRubro,
+                    descripcion: editSolDesc,
+                    comisionPct: Number(editSolComision) || 0,
+                  }, t('Solicitud actualizada.', 'Request updated.'));
+                  setEditSol(null);
+                }}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:opacity-60"
+              >
+                {busy === 'editar-solicitud' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                {t('Guardar cambios', 'Save changes')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal editar oferta propia */}
+      {editOf && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setEditOf(null)}>
+          <div className="glass-panel relative w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+            <button type="button" onClick={() => setEditOf(null)} className="absolute right-3 top-3 text-muted-foreground hover:text-foreground">
+              <X className="h-5 w-5" />
+            </button>
+            <h2 className="text-base font-semibold text-foreground">{t('Editar oferta', 'Edit offer')}</h2>
+            <div className="mt-4 space-y-3">
+              <input
+                className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                value={editOfEmpresa}
+                onChange={(e) => setEditOfEmpresa(e.target.value)}
+                placeholder={t('Empresa que puedes referir', 'Company you can refer')}
+              />
+              <input
+                className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                value={editOfRubro}
+                onChange={(e) => setEditOfRubro(e.target.value)}
+                placeholder={t('Rubro / giro', 'Industry')}
+              />
+              <textarea
+                className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                rows={2}
+                value={editOfDesc}
+                onChange={(e) => setEditOfDesc(e.target.value)}
+                placeholder={t('¿Qué productos / servicios busca?', 'What products / services is it looking for?')}
+              />
+              <div>
+                <p className="mb-1 text-xs font-medium text-muted-foreground">{t('% de Comisión solicitada', 'Requested fee %')}</p>
+                <input
+                  type="number"
+                  className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                  value={editOfComision}
+                  onChange={(e) => setEditOfComision(e.target.value)}
+                />
+              </div>
+              <button
+                type="button"
+                disabled={busy === 'editar-oferta' || !editOfEmpresa.trim()}
+                onClick={async () => {
+                  if (!editOf) return;
+                  await act('editar-oferta', {
+                    ofertaId: editOf.id,
+                    empresa: editOfEmpresa,
+                    rubro: editOfRubro,
+                    descripcion: editOfDesc,
+                    comisionPct: Number(editOfComision) || 0,
+                  }, t('Oferta actualizada.', 'Offer updated.'));
+                  setEditOf(null);
+                }}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:opacity-60"
+              >
+                {busy === 'editar-oferta' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                {t('Guardar cambios', 'Save changes')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <PageTour pageId="refplace" steps={dispLang === 'en' ? PASOS_TOUR_REFPLACE.en : PASOS_TOUR_REFPLACE.es} lang={dispLang} />
     </div>
   );

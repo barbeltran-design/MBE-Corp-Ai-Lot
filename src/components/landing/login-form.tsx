@@ -44,7 +44,7 @@ export function LoginForm() {
     setServerError(null);
     try {
       await signInWithEmail(values.email, values.password);
-      router.push(`/${locale}/inicio`);
+      router.push(`/${locale}/perfil`);
     } catch (err) {
       setServerError(t(`errors.${mapAuthErrorToMessageKey(err)}`));
     } finally {
@@ -57,7 +57,7 @@ export function LoginForm() {
     setServerError(null);
     try {
       await signInWithGoogle();
-      router.push(`/${locale}/inicio`);
+      router.push(`/${locale}/perfil`);
     } catch (err) {
       setServerError(t(`errors.${mapAuthErrorToMessageKey(err)}`));
     } finally {

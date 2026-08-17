@@ -144,6 +144,8 @@ export function ExecutiveShell({
   headerRight,
 }: ExecutiveShellProps) {
   const pathname = usePathname();
+  const localeSeg = pathname.split('/')[1] || 'es';
+  const homeHref = `/${localeSeg}/inicio`;
   const { theme, toggleTheme } = useTheme();
   const collapsed = React.useSyncExternalStore(
     subscribeSidebarCollapsed,
@@ -299,16 +301,18 @@ export function ExecutiveShell({
           )}
         >
           <div className="flex h-14 items-center gap-2 border-b border-glass-border px-3">
-            {logoSrc && !logoFailed ? (
-              <img src={logoSrc} alt={brandLabel} className="h-9 w-9 shrink-0 rounded" onError={() => setLogoFailed(true)} />
-            ) : (
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-xs font-bold text-primary-foreground">
-                M
-              </div>
-            )}
-            {!collapsed ? (
-              <span className="truncate text-sm font-semibold tracking-tight">{brandLabel}</span>
-            ) : null}
+            <Link href={homeHref} className="flex min-w-0 items-center gap-2" title="Inicio">
+              {logoSrc && !logoFailed ? (
+                <img src={logoSrc} alt={brandLabel} className="h-9 w-9 shrink-0 rounded" onError={() => setLogoFailed(true)} />
+              ) : (
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-primary text-xs font-bold text-primary-foreground">
+                  M
+                </div>
+              )}
+              {!collapsed ? (
+                <span className="truncate text-sm font-semibold tracking-tight">{brandLabel}</span>
+              ) : null}
+            </Link>
           </div>
 
           <nav className="flex-1 space-y-1 overflow-y-auto p-2">

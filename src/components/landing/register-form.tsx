@@ -78,7 +78,7 @@ export function RegisterForm() {
     // here it routes them straight to Inicio.
     const unsubscribe = subscribeToPendingGoogleRedirect(
       () => {
-        router.push(`/${locale}/inicio`);
+        router.push(`/${locale}/perfil`);
       },
       (err) => {
         console.error('[MBE Auth Error - google redirect]', err);
@@ -103,7 +103,7 @@ export function RegisterForm() {
         language: locale,
         ...buildLegalConsent(),
       });
-      router.push(`/${locale}/inicio`);
+      router.push(`/${locale}/perfil`);
     } catch (err) {
       setServerError(t(`errors.${mapAuthErrorToMessageKey(err)}`));
     } finally {
@@ -132,7 +132,7 @@ export function RegisterForm() {
       if (user) {
         // signInWithPopup completed right here — no redirect happened, so we
         // navigate directly instead of waiting on the redirect-handling effect.
-        router.push(`/${locale}/inicio`);
+        router.push(`/${locale}/perfil`);
       }
       // If user is undefined, the popup was blocked and registerWithGoogle
       // fell back to signInWithRedirect, which navigates the browser away —

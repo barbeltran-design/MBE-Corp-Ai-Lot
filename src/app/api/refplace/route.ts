@@ -103,6 +103,7 @@ export async function GET(req: NextRequest) {
         rolRepSale: esRep,
         reunionesCompletadas: stats.completadas,
         montoResultados: stats.monto,
+        puntosClub,
       });
     }
 
@@ -209,6 +210,10 @@ export async function GET(req: NextRequest) {
 //   'aceptar-reunion'   {reunionId}      (cualquier participante)
 //   'registrar-resultado' {reunionId, tipo, monto, descripcion} (cualquier participante)
 //   'cerrar-solicitud'  {solicitudId}    (el autor o un rep_sale)
+//   'editar-solicitud'  {solicitudId, empresaObjetivo, descripcion, comisionPct, rubro?, repSaleUid?} (solo el autor)
+//   'borrar-solicitud'  {solicitudId}    (solo el autor)
+//   'editar-oferta'     {ofertaId, empresa, rubro, descripcion, comisionPct} (solo el autor)
+//   'borrar-oferta'     {ofertaId}       (solo el autor)
 export async function POST(req: NextRequest) {
   let uid: string;
   try {
@@ -374,6 +379,90 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'No puedes cerrar esta solicitud.' }, { status: 403 });
       }
       await ref.update({ estatus: 'cerrada', cerradaEn: now });
+      return NextResponse.json({ ok: true });
+    }
+
+    if (accion === 'editar-solicitud') {
+      const solicitudId = String(body?.solicitudId ?? '');
+      if (!solicitudId) return NextResponse.json({ error: 'Falta la solicitud.' }, { status: 400 });
+      const ref = db.collection('solicitudes_referencia').doc(solicitudId);
+      const sSnap = await ref.get();
+      if (!sSnap.exists) return NextResponse.json({ error: 'Solicitud no encontrada.' }, { status: 404 });
+      const s = sSnap.data() as Record<string, unknown>;
+      if (s.uid !== uid) {
+        return NextResponse.json({ error: 'Solo el autor puede editar esta solicitud.' }, { status: 403 });
+      }
+      const empresaObjetivo = String(body?.empresaObjetivo ?? '').trim();
+      if (!empresaObjetivo) {
+        return NextResponse.json({ error: 'Falta la empresa objetivo.' }, { status: 400 });
+      }
+      let repSaleUid: string | null = null;
+      let repSaleNombre: string | null = null;
+      const repUid = (body?.repSaleUid as string | undefined) || '';
+      if (repUid) {
+        repSaleUid = repUid;
+        const rsSnap = await db.collection('users').doc(repUid).get();
+        if (rsSnap.exists) repSaleNombre = (rsSnap.data()?.name as string) || '';
+      }
+      await ref.update({
+        empresaObjetivo,
+        rubro: String(body?.rubro ?? '').trim(),
+        descripcion: String(body?.descripcion ?? '').trim(),
+        comisionPct: parseNum(body?.comisionPct, 0),
+        repSaleUid,
+        repSaleNombre,
+        editadaEn: now,
+      });
+      return NextResponse.json({ ok: true });
+    }
+
+    if (accion === 'borrar-solicitud') {
+      const solicitudId = String(body?.solicitudId ?? '');
+      if (!solicitudId) return NextResponse.json({ error: 'Falta la solicitud.' }, { status: 400 });
+      const ref = db.collection('solicitudes_referencia').doc(solicitudId);
+      const sSnap = await ref.get();
+      if (!sSnap.exists) return NextResponse.json({ error: 'Solicitud no encontrada.' }, { status: 404 });
+      const s = sSnap.data() as Record<string, unknown>;
+      if (s.uid !== uid) {
+        return NextResponse.json({ error: 'Solo el autor puede borrar esta solicitud.' }, { status: 403 });
+      }
+      await ref.delete();
+      return NextResponse.json({ ok: true });
+    }
+
+    if (accion === 'editar-oferta') {
+      const ofertaId = String(body?.ofertaId ?? '');
+      if (!ofertaId) return NextResponse.json({ error: 'Falta la oferta.' }, { status: 400 });
+      const ref = db.collection('ofertas_rep_sale').doc(ofertaId);
+      const oSnap = await ref.get();
+      if (!oSnap.exists) return NextResponse.json({ error: 'Oferta no encontrada.' }, { status: 404 });
+      const o = oSnap.data() as Record<string, unknown>;
+      if (o.uid !== uid) {
+        return NextResponse.json({ error: 'Solo el autor puede editar esta oferta.' }, { status: 403 });
+      }
+      const empresa = String(body?.empresa ?? '').trim();
+      if (!empresa) return NextResponse.json({ error: 'Falta la empresa.' }, { status: 400 });
+      await ref.update({
+        empresa,
+        rubro: String(body?.rubro ?? '').trim(),
+        descripcion: String(body?.descripcion ?? '').trim(),
+        comisionPct: parseNum(body?.comisionPct, 0),
+        editadaEn: now,
+      });
+      return NextResponse.json({ ok: true });
+    }
+
+    if (accion === 'borrar-oferta') {
+      const ofertaId = String(body?.ofertaId ?? '');
+      if (!ofertaId) return NextResponse.json({ error: 'Falta la oferta.' }, { status: 400 });
+      const ref = db.collection('ofertas_rep_sale').doc(ofertaId);
+      const oSnap = await ref.get();
+      if (!oSnap.exists) return NextResponse.json({ error: 'Oferta no encontrada.' }, { status: 404 });
+      const o = oSnap.data() as Record<string, unknown>;
+      if (o.uid !== uid) {
+        return NextResponse.json({ error: 'Solo el autor puede borrar esta oferta.' }, { status: 403 });
+      }
+      await ref.delete();
       return NextResponse.json({ ok: true });
     }
 

@@ -16,6 +16,9 @@ import { useDisplayLang } from '@/components/display-lang-provider';
 import { AVATAR_COLORS, avatarBgColor, initialsOf } from '@/lib/avatar';
 import { TEMAS_ESPECIALISTA, TEMA_LABELS, ROLE_LABELS } from '@/lib/roles';
 import { nivelLabel, nivelPorPuntos } from '@/lib/refplace';
+import AgentAvatar from '@/components/agentes/AgentAvatar';
+import { BABEL_AYUDA_EVENT } from '@/components/babel/BabelAvatar';
+import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 import type { CompanySize, Industry, Language, UserDoc } from '@/types/firestore';
 
 const COUNTRIES = ['MX', 'CO', 'AR', 'CL', 'PE', 'US', 'ES', 'OTHER'] as const;
@@ -40,6 +43,43 @@ const COUNTRY_NAMES: Record<string, string> = {
   US: 'Estados Unidos',
   ES: 'España',
   OTHER: 'Otro',
+};
+
+const PASOS_TOUR_PERFIL: Record<'es' | 'en', TourStep[]> = {
+  es: [
+    {
+      selector: '#perfil-title',
+      title: 'Tu perfil',
+      description: 'Aquí completas tus datos, subes tu foto y administras tu plan de MBE Corpilot AI.',
+    },
+    {
+      selector: '#perfil-foto',
+      title: 'Foto y plan',
+      description: 'Sube tu foto de perfil y, justo al lado, revisa tu plan actual: si es gratuito puedes pagarlo, y si ya lo pagaste puedes cancelarlo aquí mismo.',
+    },
+    {
+      selector: '#perfil-datos',
+      title: 'Datos personales',
+      description: 'Completa tu teléfono, cumpleaños y revisa tu nivel y puntos en la comunidad.',
+    },
+  ],
+  en: [
+    {
+      selector: '#perfil-title',
+      title: 'Your profile',
+      description: 'Here you complete your data, upload your photo and manage your MBE Corpilot AI plan.',
+    },
+    {
+      selector: '#perfil-foto',
+      title: 'Photo and plan',
+      description: 'Upload your profile photo and, right next to it, check your current plan: pay it if it is free, or cancel it here if it is already active.',
+    },
+    {
+      selector: '#perfil-datos',
+      title: 'Personal data',
+      description: 'Complete your phone, birthday and check your community level and points.',
+    },
+  ],
 };
 
 function ProfilePageInner() {
@@ -431,11 +471,19 @@ function ProfilePageInner() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">{t('Mi perfil', 'My profile')}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t('Completa tus datos, sube tu foto y administra tu plan.', 'Complete your data, upload your photo and manage your plan.')}
-          </p>
+        <div className="flex items-start gap-3">
+          <AgentAvatar
+            agente="Babel"
+            size={48}
+            className="mt-0.5 shrink-0"
+            onClick={() => window.dispatchEvent(new CustomEvent(BABEL_AYUDA_EVENT))}
+          />
+          <div>
+            <h1 id="perfil-title" className="text-xl font-semibold text-foreground">{t('Mi perfil', 'My profile')}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t('Completa tus datos, sube tu foto y administra tu plan.', 'Complete your data, upload your photo and manage your plan.')}
+            </p>
+          </div>
         </div>
         <Button type="button" variant="outline" size="sm" onClick={handleLogout}>
           {t('Cerrar sesión', 'Log out')}
@@ -458,7 +506,7 @@ function ProfilePageInner() {
         </div>
       )}
 
-      <Card className="p-6">
+      <Card id="perfil-foto" className="p-6">
         <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
           <div
             style={{ backgroundColor: avatarBgColor(avatarColor) }}
@@ -515,6 +563,35 @@ function ProfilePageInner() {
             </div>
             {uploadError && <p className="text-sm text-red-600">{uploadError}</p>}
           </div>
+
+          <div className="flex flex-col items-start gap-2 sm:ml-auto sm:items-end">
+            <span className="text-xs font-medium text-muted-foreground">{t('Tu plan', 'Your plan')}</span>
+            {esPro ? (
+              <>
+                <span className="rounded-full bg-emerald-600/10 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                  {enGracia
+                    ? t('Pro (cancelado, activo hasta fin de periodo)', 'Pro (cancelled, active until period end)')
+                    : t('Pro (activo)', 'Pro (active)')}
+                </span>
+                {!enGracia && (
+                  <Button type="button" variant="outline" size="sm" onClick={handleCancelarSuscripcion} disabled={cancelLoading}>
+                    {cancelLoading ? t('Cancelando...', 'Cancelling...') : t('Cancelar plan', 'Cancel plan')}
+                  </Button>
+                )}
+                {cancelError && <p className="text-xs text-red-600">{cancelError}</p>}
+              </>
+            ) : (
+              <>
+                <span className="rounded-full bg-slate-500/10 px-3 py-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                  {t('Plan gratuito', 'Free plan')}
+                </span>
+                <Button type="button" variant="primary" size="sm" onClick={handlePagar} disabled={payLoading}>
+                  {payLoading ? t('Redirigiendo...', 'Redirecting...') : t('Pagar plan', 'Pay plan')}
+                </Button>
+                {payError && <p className="text-xs text-red-600">{payError}</p>}
+              </>
+            )}
+          </div>
         </div>
       </Card>
 
@@ -524,7 +601,7 @@ function ProfilePageInner() {
 
       {loaded && (
         <>
-          <Card className="p-6">
+          <Card id="perfil-datos" className="p-6">
             <h2 className="text-sm font-semibold text-foreground">{t('Datos personales', 'Personal data')}</h2>
             <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1">
@@ -813,6 +890,12 @@ function ProfilePageInner() {
           </Card>
         </>
       )}
+
+      <PageTour
+        pageId="perfil"
+        steps={dispLang === 'en' ? PASOS_TOUR_PERFIL.en : PASOS_TOUR_PERFIL.es}
+        lang={dispLang}
+      />
     </div>
   );
 }

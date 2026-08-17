@@ -137,6 +137,7 @@ export interface MiembroComunidad {
   rolRepSale: boolean;
   reunionesCompletadas: number;
   montoResultados: number;
+  puntosClub: number; // Puntos de la comunidad (nivel), para ordenar el directorio.
 }
 
 export function montoRequerido(tipo: TipoResultado): boolean {

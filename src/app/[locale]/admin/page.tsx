@@ -12,8 +12,38 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { APP_ROLES, ROLE_LABELS, TEMAS_ESPECIALISTA, TEMA_LABELS, PRODUCTOS_PAGO, PRODUCTO_LABELS } from '@/lib/roles';
 import { DEFAULT_CATALOG, type CatalogItem } from '@/lib/catalog';
+import AgentAvatar from '@/components/agentes/AgentAvatar';
+import { BABEL_AYUDA_EVENT } from '@/components/babel/BabelAvatar';
+import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 
-type TabKey = 'catalog' | 'users' | 'pagos' | 'pagosEsp' | 'solicitudes';
+type TabKey = 'catalog' | 'users' | 'pagos' | 'pagosEsp' | 'solicitudes' | 'refplace';
+
+const PASOS_TOUR_ADMIN: Record<'es' | 'en', TourStep[]> = {
+  es: [
+    {
+      selector: '#admin-title',
+      title: 'Panel de administración',
+      description: 'Aquí gestionas precios, usuarios y roles, pagos recibidos, pagos a especialistas y solicitudes de rol.',
+    },
+    {
+      selector: '#admin-tabs',
+      title: 'Secciones',
+      description: 'Cambia entre las pestañas para ver cada área: precios, usuarios, pagos y solicitudes.',
+    },
+  ],
+  en: [
+    {
+      selector: '#admin-title',
+      title: 'Admin panel',
+      description: 'Here you manage prices, users and roles, received payments, specialist payments and role requests.',
+    },
+    {
+      selector: '#admin-tabs',
+      title: 'Sections',
+      description: 'Switch between the tabs to see each area: prices, users, payments and requests.',
+    },
+  ],
+};
 
 const TAB_DEFS: { key: TabKey; es: string; en: string }[] = [
   { key: 'catalog', es: 'Precios y promociones', en: 'Prices & promotions' },
@@ -21,6 +51,7 @@ const TAB_DEFS: { key: TabKey; es: string; en: string }[] = [
   { key: 'pagos', es: 'Pagos recibidos', en: 'Received payments' },
   { key: 'pagosEsp', es: 'Pagos a especialistas', en: 'Specialist payments' },
   { key: 'solicitudes', es: 'Solicitudes de rol', en: 'Role requests' },
+  { key: 'refplace', es: 'Referencias (Reference Place)', en: 'Referrals (Reference Place)' },
 ];
 
 const fmtMoney = (n: number | null | undefined) =>
@@ -169,6 +200,19 @@ export default function AdminPage() {
   // Solicitudes
   const [solicitudes, setSolicitudes] = React.useState<any[]>([]);
 
+  // Refplace (referencias y Rep Sale) — edición/borrado desde administración
+  const [refplaceSolicitudes, setRefplaceSolicitudes] = React.useState<any[]>([]);
+  const [refplaceOfertas, setRefplaceOfertas] = React.useState<any[]>([]);
+  const [refplaceMsg, setRefplaceMsg] = React.useState('');
+  const [editRefplace, setEditRefplace] = React.useState<{
+    tipo: 'solicitud' | 'oferta';
+    id: string;
+    empresa: string;
+    rubro: string;
+    descripcion: string;
+    comisionPct: string;
+  } | null>(null);
+
   React.useEffect(() => {
     const auth = getFirebaseAuth();
     const unsub = onAuthStateChanged(auth, (u) => setUser(u));
@@ -227,6 +271,15 @@ export default function AdminPage() {
     if (Array.isArray(data.solicitudes)) setSolicitudes(data.solicitudes);
   }, [tokenHeaders]);
 
+  const loadRefplace = React.useCallback(async () => {
+    const headers = await tokenHeaders();
+    const res = await fetch('/api/admin/refplace', { headers });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (Array.isArray(data.solicitudes)) setRefplaceSolicitudes(data.solicitudes);
+    if (Array.isArray(data.ofertas)) setRefplaceOfertas(data.ofertas);
+  }, [tokenHeaders]);
+
   React.useEffect(() => {
     if (!administracion || !user) return;
     const loaders: Record<TabKey, () => Promise<void>> = {
@@ -235,9 +288,61 @@ export default function AdminPage() {
       pagos: loadPagos,
       pagosEsp: loadPagos,
       solicitudes: loadSolicitudes,
+      refplace: loadRefplace,
     };
     loaders[tab]().catch(() => {});
-  }, [administracion, user, tab, loadCatalog, loadUsers, loadPagos, loadSolicitudes]);
+  }, [administracion, user, tab, loadCatalog, loadUsers, loadPagos, loadSolicitudes, loadRefplace]);
+
+  function abrirEditarRefplace(tipo: 'solicitud' | 'oferta', item: any) {
+    setEditRefplace({
+      tipo,
+      id: item.id,
+      empresa: tipo === 'solicitud' ? item.empresaObjetivo : item.empresa,
+      rubro: item.rubro || '',
+      descripcion: item.descripcion || '',
+      comisionPct: String(item.comisionPct ?? 0),
+    });
+    setRefplaceMsg('');
+  }
+
+  async function guardarEdicionRefplace() {
+    if (!editRefplace) return;
+    const headers = await tokenHeaders();
+    const body: Record<string, unknown> = {
+      tipo: editRefplace.tipo,
+      id: editRefplace.id,
+      rubro: editRefplace.rubro,
+      descripcion: editRefplace.descripcion,
+      comisionPct: Number(editRefplace.comisionPct) || 0,
+    };
+    if (editRefplace.tipo === 'solicitud') body.empresaObjetivo = editRefplace.empresa;
+    else body.empresa = editRefplace.empresa;
+    const res = await fetch('/api/admin/refplace', {
+      method: 'PATCH',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      setRefplaceMsg(t('No se pudo guardar el cambio.', 'Could not save the change.'));
+      return;
+    }
+    setEditRefplace(null);
+    setRefplaceMsg('');
+    await loadRefplace();
+  }
+
+  async function borrarRefplace(tipo: 'solicitud' | 'oferta', id: string) {
+    const headers = await tokenHeaders();
+    const res = await fetch(`/api/admin/refplace?tipo=${tipo}&id=${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers,
+    });
+    if (!res.ok) {
+      setRefplaceMsg(t('No se pudo borrar.', 'Could not delete.'));
+      return;
+    }
+    await loadRefplace();
+  }
 
   async function saveCatalogItem(id: string, patch: Partial<CatalogItem>) {
     const headers = await tokenHeaders();
@@ -406,14 +511,22 @@ export default function AdminPage() {
   return (
     <div className="px-4 py-8">
       <div className="mx-auto max-w-6xl space-y-6">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">{t('Administración', 'Administration')}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t('Gestiona precios, roles, usuarios, pagos y solicitudes.', 'Manage prices, roles, users, payments and requests.')}
-          </p>
+        <div className="flex items-start gap-3">
+          <AgentAvatar
+            agente="Babel"
+            size={48}
+            className="mt-0.5 shrink-0"
+            onClick={() => window.dispatchEvent(new CustomEvent(BABEL_AYUDA_EVENT))}
+          />
+          <div>
+            <h1 id="admin-title" className="text-xl font-semibold text-foreground">{t('Administración', 'Administration')}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t('Gestiona precios, roles, usuarios, pagos y solicitudes.', 'Manage prices, roles, users, payments and requests.')}
+            </p>
+          </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div id="admin-tabs" className="flex flex-wrap gap-2">
           {TAB_DEFS.map((m) => (
             <Button
               key={m.key}
@@ -989,6 +1102,175 @@ export default function AdminPage() {
             </div>
           </div>
         )}
+
+        {tab === 'refplace' && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">{t('Referencias solicitadas', 'Requested referrals')}</h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {t('Puedes editar o borrar cualquier solicitud de referencia o oferta de Rep Sale, la haya creado quien sea.', 'You can edit or delete any referral request or Rep Sale offer, regardless of who created it.')}
+              </p>
+            </div>
+            {refplaceMsg && <p className="text-sm text-red-700">{refplaceMsg}</p>}
+
+            <div className="max-h-[420px] overflow-auto rounded-lg border border-slate-200 dark:border-slate-700">
+              <table className="w-full text-left text-sm">
+                <thead className="sticky top-0 bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-900 dark:text-slate-300">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">{t('Empresa objetivo', 'Target company')}</th>
+                    <th className="px-3 py-2 font-medium">{t('Rubro', 'Industry')}</th>
+                    <th className="px-3 py-2 font-medium">{t('Autor', 'Author')}</th>
+                    <th className="px-3 py-2 font-medium">{t('Comisión', 'Fee')}</th>
+                    <th className="px-3 py-2 font-medium">{t('Estatus', 'Status')}</th>
+                    <th className="px-3 py-2" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {refplaceSolicitudes.map((s) => (
+                    <tr key={s.id} className="border-t border-slate-100 dark:border-slate-800">
+                      <td className="px-3 py-2 font-medium text-foreground">{s.empresaObjetivo || '—'}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{s.rubro || '—'}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{s.nombre || s.email || s.uid}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{s.comisionPct != null ? `${s.comisionPct}%` : '—'}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{s.estatus || t('abierta', 'open')}</td>
+                      <td className="px-3 py-2">
+                        <div className="flex flex-wrap gap-1.5">
+                          <Button type="button" variant="outline" size="sm" onClick={() => abrirEditarRefplace('solicitud', s)}>
+                            {t('Editar', 'Edit')}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="text-red-700 hover:bg-red-50 dark:text-red-300"
+                            onClick={() => {
+                              if (window.confirm(t('¿Borrar esta solicitud?', 'Delete this request?'))) borrarRefplace('solicitud', s.id);
+                            }}
+                          >
+                            {t('Borrar', 'Delete')}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {refplaceSolicitudes.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="px-3 py-8 text-center text-sm text-muted-foreground">
+                        {t('No hay solicitudes de referencia.', 'No referral requests.')}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">{t('Ofertas de Rep Sale', 'Rep Sale offers')}</h2>
+            </div>
+            <div className="max-h-[420px] overflow-auto rounded-lg border border-slate-200 dark:border-slate-700">
+              <table className="w-full text-left text-sm">
+                <thead className="sticky top-0 bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-900 dark:text-slate-300">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">{t('Empresa', 'Company')}</th>
+                    <th className="px-3 py-2 font-medium">{t('Rubro', 'Industry')}</th>
+                    <th className="px-3 py-2 font-medium">{t('Autor', 'Author')}</th>
+                    <th className="px-3 py-2 font-medium">{t('Comisión', 'Fee')}</th>
+                    <th className="px-3 py-2" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {refplaceOfertas.map((o) => (
+                    <tr key={o.id} className="border-t border-slate-100 dark:border-slate-800">
+                      <td className="px-3 py-2 font-medium text-foreground">{o.empresa || '—'}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{o.rubro || '—'}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{o.nombre || o.email || o.uid}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{o.comisionPct != null ? `${o.comisionPct}%` : '—'}</td>
+                      <td className="px-3 py-2">
+                        <div className="flex flex-wrap gap-1.5">
+                          <Button type="button" variant="outline" size="sm" onClick={() => abrirEditarRefplace('oferta', o)}>
+                            {t('Editar', 'Edit')}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="text-red-700 hover:bg-red-50 dark:text-red-300"
+                            onClick={() => {
+                              if (window.confirm(t('¿Borrar esta oferta?', 'Delete this offer?'))) borrarRefplace('oferta', o.id);
+                            }}
+                          >
+                            {t('Borrar', 'Delete')}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {refplaceOfertas.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-3 py-8 text-center text-sm text-muted-foreground">
+                        {t('No hay ofertas de Rep Sale.', 'No Rep Sale offers.')}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {editRefplace && (
+              <div className="rounded-lg border border-slate-200 p-5 dark:border-slate-700">
+                <h3 className="text-sm font-semibold text-foreground">
+                  {editRefplace.tipo === 'solicitud' ? t('Editar solicitud', 'Edit request') : t('Editar oferta', 'Edit offer')}
+                </h3>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="space-y-1">
+                    <Label>{editRefplace.tipo === 'solicitud' ? t('Empresa objetivo', 'Target company') : t('Empresa', 'Company')}</Label>
+                    <Input
+                      value={editRefplace.empresa}
+                      onChange={(e) => setEditRefplace((f) => (f ? { ...f, empresa: e.target.value } : f))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>{t('Rubro', 'Industry')}</Label>
+                    <Input
+                      value={editRefplace.rubro}
+                      onChange={(e) => setEditRefplace((f) => (f ? { ...f, rubro: e.target.value } : f))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>{t('Comisión %', 'Fee %')}</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={editRefplace.comisionPct}
+                      onChange={(e) => setEditRefplace((f) => (f ? { ...f, comisionPct: e.target.value } : f))}
+                    />
+                  </div>
+                  <div className="space-y-1 sm:col-span-2 lg:col-span-4">
+                    <Label>{t('Descripción', 'Description')}</Label>
+                    <Input
+                      value={editRefplace.descripcion}
+                      onChange={(e) => setEditRefplace((f) => (f ? { ...f, descripcion: e.target.value } : f))}
+                    />
+                  </div>
+                </div>
+                <div className="mt-4 flex gap-2">
+                  <Button type="button" onClick={guardarEdicionRefplace}>
+                    {t('Guardar cambios', 'Save changes')}
+                  </Button>
+                  <Button type="button" variant="ghost" onClick={() => setEditRefplace(null)}>
+                    {t('Cancelar', 'Cancel')}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <PageTour
+          pageId="admin"
+          steps={dispLang === 'en' ? PASOS_TOUR_ADMIN.en : PASOS_TOUR_ADMIN.es}
+          lang={dispLang}
+        />
       </div>
     </div>
   );

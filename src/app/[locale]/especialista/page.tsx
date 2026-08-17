@@ -11,8 +11,48 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { TEMAS_ESPECIALISTA, TEMA_LABELS, type TemaEspecialista } from '@/lib/roles';
+import AgentAvatar from '@/components/agentes/AgentAvatar';
+import { BABEL_AYUDA_EVENT } from '@/components/babel/BabelAvatar';
+import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 
 type TabKey = 'panel' | 'perfil';
+
+const PASOS_TOUR_ESPECIALISTA: Record<'es' | 'en', TourStep[]> = {
+  es: [
+    {
+      selector: '#especialista-title',
+      title: 'Panel de Mentor',
+      description: 'Aquí ves tu agenda, tus usuarios asignados, tus actividades y tus pagos como mentor.',
+    },
+    {
+      selector: '#especialista-tabs',
+      title: 'Pestañas',
+      description: '"Mi panel" muestra tus usuarios y actividades. "Perfil y agenda" es donde conectas tu calendario y tus datos bancarios.',
+    },
+    {
+      selector: '#especialista-usuarios',
+      title: 'Usuarios en tus temas',
+      description: 'Aquí ves el nivel de madurez de cada usuario en los temas que atiendes y cuántos pendientes tiene.',
+    },
+  ],
+  en: [
+    {
+      selector: '#especialista-title',
+      title: 'Mentor Panel',
+      description: 'Here you see your calendar, your assigned users, your activities and your payments as a mentor.',
+    },
+    {
+      selector: '#especialista-tabs',
+      title: 'Tabs',
+      description: '"My panel" shows your users and activities. "Profile & calendar" is where you connect your calendar and bank details.',
+    },
+    {
+      selector: '#especialista-usuarios',
+      title: 'Users in your themes',
+      description: 'Here you see each user\'s maturity level in the themes you cover and how many pending items they have.',
+    },
+  ],
+};
 
 const NIVEL_ES: Record<string, string> = {
   execution: 'Ejecución',
@@ -196,14 +236,22 @@ export default function EspecialistaPage() {
   return (
     <div className="px-4 py-8">
       <div className="mx-auto max-w-6xl space-y-6">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">{t('Panel de Mentor', 'Mentor Panel')}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t('Agenda, usuarios por tema, actividades y pagos.', 'Calendar, users per theme, activities and payments.')}
-          </p>
+        <div className="flex items-start gap-3">
+          <AgentAvatar
+            agente="Babel"
+            size={48}
+            className="mt-0.5 shrink-0"
+            onClick={() => window.dispatchEvent(new CustomEvent(BABEL_AYUDA_EVENT))}
+          />
+          <div>
+            <h1 id="especialista-title" className="text-xl font-semibold text-foreground">{t('Panel de Mentor', 'Mentor Panel')}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t('Agenda, usuarios por tema, actividades y pagos.', 'Calendar, users per theme, activities and payments.')}
+            </p>
+          </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div id="especialista-tabs" className="flex flex-wrap gap-2">
           <Button type="button" variant={tab === 'panel' ? 'default' : 'outline'} size="sm" onClick={() => setTab('panel')}>
             {t('Mi panel', 'My panel')}
           </Button>
@@ -286,7 +334,7 @@ export default function EspecialistaPage() {
               <InfoChip label={t('Pagos recibidos', 'Payments received')} value={String(pagosRecibidos.length)} />
             </div>
 
-            <div>
+            <div id="especialista-usuarios">
               <h2 className="text-sm font-semibold text-foreground">{t('Usuarios y su nivel de madurez en mis temas', 'Users and their maturity level in my themes')}</h2>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {t('Los pendientes de madurez y de plan de acción se sincronizan cuando el usuario trabaja sus secciones.', 'Maturity and action plan pending items sync when the user works on their sections.')}
@@ -468,6 +516,12 @@ export default function EspecialistaPage() {
             </div>
           </div>
         )}
+
+        <PageTour
+          pageId="especialista"
+          steps={dispLang === 'en' ? PASOS_TOUR_ESPECIALISTA.en : PASOS_TOUR_ESPECIALISTA.es}
+          lang={dispLang}
+        />
       </div>
     </div>
   );
