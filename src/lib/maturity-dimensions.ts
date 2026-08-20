@@ -113,17 +113,17 @@ const LEVEL_TUTORIAL_EN: {
   {
     nivel: 'Systemic Execution',
     pregunta: 'How do I execute it?',
-    explicacion: 'I manage day-to-day operations using proven industry methodologies, leaving a traceable data trail.',
+    explicacion: 'I manage day-to-day operations using proven industry methodologies, leaving a traceable data trail',
   },
   {
     nivel: 'Dynamic Documentation',
     pregunta: 'How do I document it?',
-    explicacion: 'My processes are active, not dusty manuals; they live on centralized platforms that the team consults and provides organic feedback on.',
+    explicacion: 'My processes are active, not dusty manuals; they live on centralized platforms that the team consults and provides organic feedback on',
   },
   {
     nivel: 'Predictive Control',
     pregunta: 'How do I control it?',
-    explicacion: 'I measure organizational performance using key indicators, combining descriptive analytics with early warnings to anticipate failures.',
+    explicacion: 'I measure organizational performance using key indicators, combining descriptive analytics with early warnings to anticipate failures',
   },
   {
     nivel: 'Agile Continuous Improvement',
@@ -133,7 +133,7 @@ const LEVEL_TUTORIAL_EN: {
   {
     nivel: 'Automated Excellence',
     pregunta: 'How do I get on the path to being the best?',
-    explicacion: 'My company operates using workflow automation and agile, decentralized decision-making.',
+    explicacion: 'My company operates using workflow automation and agile, decentralized decision-making',
   },
   {
     nivel: 'Influence',
@@ -301,7 +301,7 @@ const CONTENT: Record<Language, Record<DimensionId, DimensionText>> = {
       explicacion: 'Grow the Money',
       levels: [
         ['I record every cash inflow and outflow daily, linking transactions to company operations', 'Cloud-based accounting software directly connected to the bank, featuring automated, up-to-date reconciliation'],
-        ['I design the company's budgets, separating personal capital from business capital', 'Budgeting policy with departmental spending limits'],
+        ['I design the company budget, separating personal capital from business capital', 'Budgeting policy with departmental spending limits'],
         ['I measure the profitability of each product/service and client, identifying cash flow risks', 'A pricing calculator based on gross margin and a weekly accounts receivable and payable report'],
         ['I identify cash leaks, cut unnecessary costs, and optimize working capital usage', 'A financial variance analysis report and cost-reduction plan'],
         ['I project my business’s cash flow and financial health over several years using different scenarios', 'An automated 3-year financial projection model'],
