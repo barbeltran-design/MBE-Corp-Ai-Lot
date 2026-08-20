@@ -288,8 +288,8 @@ const CONTENT: Record<Language, Record<DimensionId, DimensionText>> = {
       tema: 'Strategic Direction',
       explicacion: 'Where we are headed',
       levels: [
-        ['I document where I want to go and how to achieve it, based on an analysis of the company's results and environmental challenges', 'Action plan with strategic objectives to capitalize on market opportunities and minimize problems'],
-        ['I document the steps to define a business model that helps achieve my objectives and builds trust among my stakeholders', 'A list of topics to analyze —both within and outside my company— that could impact the achievement of my objectives'],
+        ['I document where I want to go and how to achieve it, based on an analysis of the results of the company and environmental challenges', 'Action plan with strategic objectives to capitalize on market opportunities and minimize problems'],
+        ['I document the steps to define a business model that helps achieve my objectives and builds trust among my stakeholders', 'A list of topics to analyze, both within and outside my company, that could impact the achievement of my objectives'],
         ['I constantly evaluate the progress and impact of my decisions in order to make timely adjustments', 'A business intelligence dashboard that links operational, customer, and financial results in real time'],
         ['I nimbly adjust my priorities in response to internal or external unforeseen events', 'A digital log of how I adapted the company to the new situation'],
         ['I analyze future scenarios for my company', 'Businesses models by scenario'],
