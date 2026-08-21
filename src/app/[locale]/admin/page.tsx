@@ -15,8 +15,14 @@ import { DEFAULT_CATALOG, type CatalogItem } from '@/lib/catalog';
 import AgentAvatar from '@/components/agentes/AgentAvatar';
 import { BABEL_AYUDA_EVENT } from '@/components/babel/BabelAvatar';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
+import {
+  DATOS_CONVOCATORIAS,
+  ESTADOS_MX,
+  TIPO_LBL,
+  type Convocatoria,
+} from '@/lib/convocatorias-data';
 
-type TabKey = 'catalog' | 'users' | 'pagos' | 'pagosEsp' | 'solicitudes' | 'refplace';
+type TabKey = 'catalog' | 'users' | 'pagos' | 'pagosEsp' | 'solicitudes' | 'refplace' | 'convocatorias';
 
 const PASOS_TOUR_ADMIN: Record<'es' | 'en', TourStep[]> = {
   es: [
@@ -52,6 +58,7 @@ const TAB_DEFS: { key: TabKey; es: string; en: string }[] = [
   { key: 'pagosEsp', es: 'Pagos a especialistas', en: 'Specialist payments' },
   { key: 'solicitudes', es: 'Solicitudes de rol', en: 'Role requests' },
   { key: 'refplace', es: 'Referencias (Reference Place)', en: 'Referrals (Reference Place)' },
+  { key: 'convocatorias', es: 'Convocatorias', en: 'Funding calls' },
 ];
 
 const fmtMoney = (n: number | null | undefined) =>
@@ -213,6 +220,18 @@ export default function AdminPage() {
     comisionPct: string;
   } | null>(null);
 
+  // Convocatorias — agregar por URL (con revision antes de publicar) y
+  // borrar/ocultar convocatorias existentes desde administración.
+  const [convoUrl, setConvoUrl] = React.useState('');
+  const [convoExtrayendo, setConvoExtrayendo] = React.useState(false);
+  const [convoBorrador, setConvoBorrador] = React.useState<
+    (Partial<Convocatoria> & { fuenteUrl?: string }) | null
+  >(null);
+  const [convoExtra, setConvoExtra] = React.useState<any[]>([]);
+  const [convoOcultas, setConvoOcultas] = React.useState<any[]>([]);
+  const [convoMsg, setConvoMsg] = React.useState('');
+  const [convoBuscar, setConvoBuscar] = React.useState('');
+
   React.useEffect(() => {
     const auth = getFirebaseAuth();
     const unsub = onAuthStateChanged(auth, (u) => setUser(u));
@@ -280,6 +299,15 @@ export default function AdminPage() {
     if (Array.isArray(data.ofertas)) setRefplaceOfertas(data.ofertas);
   }, [tokenHeaders]);
 
+  const loadConvocatorias = React.useCallback(async () => {
+    const headers = await tokenHeaders();
+    const res = await fetch('/api/admin/convocatorias', { headers });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (Array.isArray(data.extra)) setConvoExtra(data.extra);
+    if (Array.isArray(data.ocultas)) setConvoOcultas(data.ocultas);
+  }, [tokenHeaders]);
+
   React.useEffect(() => {
     if (!administracion || !user) return;
     const loaders: Record<TabKey, () => Promise<void>> = {
@@ -289,9 +317,10 @@ export default function AdminPage() {
       pagosEsp: loadPagos,
       solicitudes: loadSolicitudes,
       refplace: loadRefplace,
+      convocatorias: loadConvocatorias,
     };
     loaders[tab]().catch(() => {});
-  }, [administracion, user, tab, loadCatalog, loadUsers, loadPagos, loadSolicitudes, loadRefplace]);
+  }, [administracion, user, tab, loadCatalog, loadUsers, loadPagos, loadSolicitudes, loadRefplace, loadConvocatorias]);
 
   function abrirEditarRefplace(tipo: 'solicitud' | 'oferta', item: any) {
     setEditRefplace({
@@ -342,6 +371,102 @@ export default function AdminPage() {
       return;
     }
     await loadRefplace();
+  }
+
+  // --- Convocatorias -------------------------------------------------
+
+  async function extraerConvocatoria() {
+    const url = convoUrl.trim();
+    if (!url) {
+      setConvoMsg(t('Pega primero la liga de la convocatoria.', 'Paste the funding-call link first.'));
+      return;
+    }
+    setConvoExtrayendo(true);
+    setConvoMsg('');
+    try {
+      const headers = await tokenHeaders();
+      const res = await fetch('/api/admin/convocatorias/extraer', {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setConvoMsg(data?.error || t('No se pudieron extraer los datos.', 'Could not extract the data.'));
+        return;
+      }
+      setConvoBorrador(data.datos || { liga: url });
+    } catch {
+      setConvoMsg(t('No se pudo conectar con el servidor.', 'Could not reach the server.'));
+    } finally {
+      setConvoExtrayendo(false);
+    }
+  }
+
+  function cancelarBorradorConvocatoria() {
+    setConvoBorrador(null);
+    setConvoUrl('');
+    setConvoMsg('');
+  }
+
+  async function publicarConvocatoria() {
+    if (!convoBorrador) return;
+    if (!convoBorrador.convocatoria || !convoBorrador.liga) {
+      setConvoMsg(t('Falta el nombre y/o la liga de la convocatoria.', 'The name and/or link are missing.'));
+      return;
+    }
+    const headers = await tokenHeaders();
+    const res = await fetch('/api/admin/convocatorias', {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(convoBorrador),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setConvoMsg(data?.error || t('No se pudo publicar.', 'Could not publish.'));
+      return;
+    }
+    setConvoBorrador(null);
+    setConvoUrl('');
+    setConvoMsg(t('Convocatoria publicada.', 'Funding call published.'));
+    await loadConvocatorias();
+  }
+
+  async function borrarConvoExtra(id: string) {
+    if (!window.confirm(t('¿Borrar esta convocatoria?', 'Delete this funding call?'))) return;
+    const headers = await tokenHeaders();
+    await fetch(`/api/admin/convocatorias?origen=extra&id=${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers,
+    });
+    await loadConvocatorias();
+  }
+
+  async function ocultarConvoSheet(nombre: string) {
+    if (
+      !window.confirm(
+        t(
+          '¿Ocultar esta convocatoria de la página pública? No se borra de la hoja de Google; solo deja de mostrarse aquí.',
+          'Hide this funding call from the public page? It is not deleted from the Google Sheet; it just stops showing here.'
+        )
+      )
+    )
+      return;
+    const headers = await tokenHeaders();
+    await fetch(`/api/admin/convocatorias?origen=sheet&nombre=${encodeURIComponent(nombre)}`, {
+      method: 'DELETE',
+      headers,
+    });
+    await loadConvocatorias();
+  }
+
+  async function restaurarConvoSheet(nombre: string) {
+    const headers = await tokenHeaders();
+    await fetch(`/api/admin/convocatorias?origen=restaurar&nombre=${encodeURIComponent(nombre)}`, {
+      method: 'DELETE',
+      headers,
+    });
+    await loadConvocatorias();
   }
 
   async function saveCatalogItem(id: string, patch: Partial<CatalogItem>) {
@@ -1263,6 +1388,298 @@ export default function AdminPage() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {tab === 'convocatorias' && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">
+                {t('Agregar convocatoria por URL', 'Add a funding call by URL')}
+              </h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {t(
+                  'Pega la liga de la convocatoria, extrae los datos, revísalos/edítalos y publica. Este es el único paso de revisión antes de que aparezca en la página pública.',
+                  'Paste the funding-call link, extract the data, review/edit it, and publish. This is the single review step before it appears on the public page.'
+                )}
+              </p>
+            </div>
+
+            {convoMsg && <p className="text-sm text-red-700">{convoMsg}</p>}
+
+            {!convoBorrador && (
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input
+                  className="flex-1"
+                  placeholder="https://..."
+                  value={convoUrl}
+                  onChange={(e) => setConvoUrl(e.target.value)}
+                />
+                <Button type="button" onClick={extraerConvocatoria} disabled={convoExtrayendo}>
+                  {convoExtrayendo ? t('Extrayendo...', 'Extracting...') : t('Extraer datos', 'Extract data')}
+                </Button>
+              </div>
+            )}
+
+            {convoBorrador && (
+              <div className="rounded-lg border border-slate-200 p-5 dark:border-slate-700">
+                <h3 className="text-sm font-semibold text-foreground">
+                  {t('Revisa y edita antes de publicar', 'Review and edit before publishing')}
+                </h3>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="space-y-1 sm:col-span-2 lg:col-span-2">
+                    <Label>{t('Nombre de la convocatoria', 'Funding-call name')}</Label>
+                    <Input
+                      value={convoBorrador.convocatoria || ''}
+                      onChange={(e) => setConvoBorrador((f) => (f ? { ...f, convocatoria: e.target.value } : f))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>{t('Tipo', 'Type')}</Label>
+                    <Select
+                      value={convoBorrador.tipo || ''}
+                      onChange={(e) => setConvoBorrador((f) => (f ? { ...f, tipo: e.target.value } : f))}
+                    >
+                      <option value="">{t('Selecciona...', 'Select...')}</option>
+                      {Object.entries(TIPO_LBL).map(([val, lbl]) => (
+                        <option key={val} value={val}>
+                          {lbl}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label>{t('Ámbito', 'Scope')}</Label>
+                    <Input
+                      value={convoBorrador.ambito || ''}
+                      onChange={(e) => setConvoBorrador((f) => (f ? { ...f, ambito: e.target.value } : f))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>ODS</Label>
+                    <Input
+                      placeholder="ODS 1, ODS 8"
+                      value={convoBorrador.ods || ''}
+                      onChange={(e) => setConvoBorrador((f) => (f ? { ...f, ods: e.target.value } : f))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>{t('Monto / apoyo', 'Amount / support')}</Label>
+                    <Input
+                      value={convoBorrador.monto || ''}
+                      onChange={(e) => setConvoBorrador((f) => (f ? { ...f, monto: e.target.value } : f))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>{t('Fecha límite', 'Deadline')}</Label>
+                    <Input
+                      type="date"
+                      value={convoBorrador.fecha_limite || ''}
+                      onChange={(e) => setConvoBorrador((f) => (f ? { ...f, fecha_limite: e.target.value } : f))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>{t('Estatus', 'Status')}</Label>
+                    <Select
+                      value={convoBorrador.estatus || 'Abierta'}
+                      onChange={(e) => setConvoBorrador((f) => (f ? { ...f, estatus: e.target.value } : f))}
+                    >
+                      <option value="Abierta">{t('Abierta', 'Open')}</option>
+                      <option value="Cerrada">{t('Cerrada', 'Closed')}</option>
+                    </Select>
+                  </div>
+                  <div className="space-y-1 sm:col-span-2 lg:col-span-2">
+                    <Label>{t('Liga de la convocatoria', 'Funding-call link')}</Label>
+                    <Input
+                      value={convoBorrador.liga || ''}
+                      onChange={(e) => setConvoBorrador((f) => (f ? { ...f, liga: e.target.value } : f))}
+                    />
+                  </div>
+                  <div className="space-y-1 sm:col-span-2 lg:col-span-4">
+                    <Label>{t('Descripción', 'Description')}</Label>
+                    <textarea
+                      className="min-h-[72px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      value={convoBorrador.descripcion || ''}
+                      onChange={(e) => setConvoBorrador((f) => (f ? { ...f, descripcion: e.target.value } : f))}
+                    />
+                  </div>
+                  <div className="space-y-1 sm:col-span-2 lg:col-span-4">
+                    <Label>{t('Requisitos', 'Requirements')}</Label>
+                    <textarea
+                      className="min-h-[72px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      value={convoBorrador.requisitos || ''}
+                      onChange={(e) => setConvoBorrador((f) => (f ? { ...f, requisitos: e.target.value } : f))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>{t('Alcance geográfico', 'Geographic scope')}</Label>
+                    <Select
+                      value={convoBorrador.criterios?.alcance_geo || ''}
+                      onChange={(e) =>
+                        setConvoBorrador((f) =>
+                          f
+                            ? { ...f, criterios: { ...(f.criterios || {}), alcance_geo: e.target.value || null } }
+                            : f
+                        )
+                      }
+                    >
+                      <option value="">{t('Sin especificar', 'Not specified')}</option>
+                      <option value="Nacional">{t('Nacional', 'National')}</option>
+                      <option value="Internacional">{t('Internacional', 'International')}</option>
+                      <option value="Estatal">{t('Estatal', 'State-level')}</option>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label>{t('Estado (si aplica solo a uno)', 'State (if it only applies to one)')}</Label>
+                    <Select
+                      value={convoBorrador.criterios?.estado || ''}
+                      onChange={(e) =>
+                        setConvoBorrador((f) =>
+                          f ? { ...f, criterios: { ...(f.criterios || {}), estado: e.target.value || null } } : f
+                        )
+                      }
+                    >
+                      <option value="">{t('Sin especificar', 'Not specified')}</option>
+                      {ESTADOS_MX.map((edo) => (
+                        <option key={edo} value={edo}>
+                          {edo}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                </div>
+                <div className="mt-4 flex gap-2">
+                  <Button type="button" onClick={publicarConvocatoria}>
+                    {t('Publicar convocatoria', 'Publish funding call')}
+                  </Button>
+                  <Button type="button" variant="ghost" onClick={cancelarBorradorConvocatoria}>
+                    {t('Cancelar', 'Cancel')}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">
+                {t('Convocatorias agregadas desde aquí', 'Funding calls added here')}
+              </h2>
+            </div>
+            <div className="max-h-[300px] overflow-auto rounded-lg border border-slate-200 dark:border-slate-700">
+              <table className="w-full text-left text-sm">
+                <thead className="sticky top-0 bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-900 dark:text-slate-300">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">{t('Convocatoria', 'Funding call')}</th>
+                    <th className="px-3 py-2 font-medium">{t('Estatus', 'Status')}</th>
+                    <th className="px-3 py-2 font-medium">{t('Fecha límite', 'Deadline')}</th>
+                    <th className="px-3 py-2" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {convoExtra.map((c) => (
+                    <tr key={c.id} className="border-t border-slate-100 dark:border-slate-800">
+                      <td className="px-3 py-2 font-medium text-foreground">
+                        <a href={c.liga} target="_blank" rel="noreferrer" className="hover:underline">
+                          {c.convocatoria}
+                        </a>
+                      </td>
+                      <td className="px-3 py-2 text-muted-foreground">{c.estatus || '—'}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{c.fecha_limite || '—'}</td>
+                      <td className="px-3 py-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="text-red-700 hover:bg-red-50 dark:text-red-300"
+                          onClick={() => borrarConvoExtra(c.id)}
+                        >
+                          {t('Borrar', 'Delete')}
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                  {convoExtra.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="px-3 py-8 text-center text-sm text-muted-foreground">
+                        {t('No has agregado ninguna convocatoria todavía.', 'You have not added any funding call yet.')}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">
+                {t('Convocatorias del catálogo (hoja de Google)', 'Catalog funding calls (Google Sheet)')}
+              </h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {t(
+                  'Ocultar no borra el renglón de la hoja de Google; solo deja de mostrarse en la página pública. Para borrarla de verdad, hazlo directamente en la hoja de cálculo.',
+                  'Hiding does not delete the row from the Google Sheet; it just stops showing on the public page. To truly delete it, do so directly in the spreadsheet.'
+                )}
+              </p>
+              <div className="mt-2">
+                <Input
+                  placeholder={t('Buscar por nombre...', 'Search by name...')}
+                  value={convoBuscar}
+                  onChange={(e) => setConvoBuscar(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="max-h-[420px] overflow-auto rounded-lg border border-slate-200 dark:border-slate-700">
+              <table className="w-full text-left text-sm">
+                <thead className="sticky top-0 bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-900 dark:text-slate-300">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">{t('Convocatoria', 'Funding call')}</th>
+                    <th className="px-3 py-2 font-medium">{t('Tipo', 'Type')}</th>
+                    <th className="px-3 py-2 font-medium">{t('Ámbito', 'Scope')}</th>
+                    <th className="px-3 py-2" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {DATOS_CONVOCATORIAS.filter((c) =>
+                    c.convocatoria.toLowerCase().includes(convoBuscar.trim().toLowerCase())
+                  ).map((c) => {
+                    const oculta = convoOcultas.some(
+                      (o: any) => (o.nombre || '').trim().toLowerCase() === c.convocatoria.trim().toLowerCase()
+                    );
+                    return (
+                      <tr key={c.convocatoria} className="border-t border-slate-100 dark:border-slate-800">
+                        <td className="px-3 py-2 font-medium text-foreground">
+                          <a href={c.liga} target="_blank" rel="noreferrer" className="hover:underline">
+                            {c.convocatoria}
+                          </a>
+                          {oculta && (
+                            <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500 dark:bg-slate-800">
+                              {t('oculta', 'hidden')}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-muted-foreground">{TIPO_LBL[c.tipo] || c.tipo}</td>
+                        <td className="px-3 py-2 text-muted-foreground">{c.ambito}</td>
+                        <td className="px-3 py-2">
+                          {oculta ? (
+                            <Button type="button" variant="outline" size="sm" onClick={() => restaurarConvoSheet(c.convocatoria)}>
+                              {t('Restaurar', 'Unhide')}
+                            </Button>
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="text-red-700 hover:bg-red-50 dark:text-red-300"
+                              onClick={() => ocultarConvoSheet(c.convocatoria)}
+                            >
+                              {t('Ocultar', 'Hide')}
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 

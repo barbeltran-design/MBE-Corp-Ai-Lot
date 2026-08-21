@@ -267,20 +267,74 @@ export default function ConvocatoriasBuilder({ lang }: { lang: ConvoLang }) {
   const [fTipo, setFTipo] = React.useState('');
   const [fAmbito, setFAmbito] = React.useState('');
 
+  // Convocatorias que un administrador agrego a mano desde /admin (por URL) y
+  // ya publico, y nombres de convocatorias del catalogo estatico que un
+  // administrador decidio ocultar de esta pagina. Si la peticion falla, se
+  // comporta exactamente igual que antes (solo el catalogo estatico).
+  const [extra, setExtra] = React.useState<Convocatoria[]>([]);
+  const [ocultas, setOcultas] = React.useState<string[]>([]);
+
   React.useEffect(() => {
     setHoy(new Date());
   }, []);
 
+  React.useEffect(() => {
+    let cancelado = false;
+    fetch('/api/babel/convocatorias-extra')
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelado) return;
+        setExtra(Array.isArray(data?.publicadas) ? data.publicadas : []);
+        setOcultas(Array.isArray(data?.ocultas) ? data.ocultas : []);
+      })
+      .catch(() => {
+        // Silencioso: la pagina publica sigue mostrando el catalogo estatico.
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
   const hoyD = hoy ?? new Date();
 
-  const datos = React.useMemo(() => ordenarPorVencimiento(DATOS_CONVOCATORIAS, hoyD), [hoyD]);
+  const normNombre = React.useCallback(
+    (s: string) =>
+      (s || '')
+        .toString()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim(),
+    []
+  );
+
+  // Catalogo estatico (de la hoja de Google) menos lo oculto por un
+  // administrador, mas lo agregado a mano desde /admin. Si extra/ocultas
+  // vienen vacios (estado inicial o si fallo la peticion), esto es
+  // exactamente igual a DATOS_CONVOCATORIAS.
+  const catalogoCompleto = React.useMemo(() => {
+    const nombresOcultos = new Set(ocultas.map((n) => normNombre(n)));
+    const base = nombresOcultos.size
+      ? DATOS_CONVOCATORIAS.filter((c) => !nombresOcultos.has(normNombre(c.convocatoria)))
+      : DATOS_CONVOCATORIAS;
+    return extra.length ? [...extra, ...base] : base;
+  }, [extra, ocultas, normNombre]);
+
+  const datos = React.useMemo(() => ordenarPorVencimiento(catalogoCompleto, hoyD), [catalogoCompleto, hoyD]);
   const abiertas = React.useMemo(
     () => datos.filter((c) => estatusReal(c, hoyD).startsWith('Abierta')).length,
     [datos, hoyD]
   );
-  const monto = React.useMemo(() => calcularMontoAbiertas(DATOS_CONVOCATORIAS, hoyD), [hoyD]);
-  const tiposUnicos = React.useMemo(() => Array.from(new Set(DATOS_CONVOCATORIAS.map((c) => c.tipo))).sort(), []);
-  const ambitosUnicos = React.useMemo(() => Array.from(new Set(DATOS_CONVOCATORIAS.map((c) => c.ambito))).sort(), []);
+  const monto = React.useMemo(() => calcularMontoAbiertas(catalogoCompleto, hoyD), [catalogoCompleto, hoyD]);
+  const tiposUnicos = React.useMemo(
+    () => Array.from(new Set(catalogoCompleto.map((c) => c.tipo))).sort(),
+    [catalogoCompleto]
+  );
+  const ambitosUnicos = React.useMemo(
+    () => Array.from(new Set(catalogoCompleto.map((c) => c.ambito))).sort(),
+    [catalogoCompleto]
+  );
 
   const toggleOds = (n: number) =>
     setOdsSel((prev) => (prev.includes(n) ? prev.filter((x) => x !== n) : [...prev, n]));
@@ -311,7 +365,7 @@ export default function ConvocatoriasBuilder({ lang }: { lang: ConvoLang }) {
       mujeres,
       indigenas,
     };
-    const evaluadas = DATOS_CONVOCATORIAS.map((c) => ({ c, r: evaluarConvocatoria(c, perfil) }));
+    const evaluadas = catalogoCompleto.map((c) => ({ c, r: evaluarConvocatoria(c, perfil) }));
     const eleg = evaluadas
       .filter((x) => x.r.elegible)
       .sort(
@@ -528,20 +582,7 @@ export default function ConvocatoriasBuilder({ lang }: { lang: ConvoLang }) {
             {Object.keys(ODS_NAMES).map((k) => {
               const n = Number(k);
               const on = odsSel.includes(n);
-if (!hoy) {
-    return (
-      <div className="flex items-center gap-3">
-        <AgentAvatar agente="Ecori" size={56} className="shrink-0" onClick={() => window.dispatchEvent(new CustomEvent(BABEL_AYUDA_EVENT))} />
-        <div>
-          <h3 id="convocatorias-title" className="text-xl font-bold text-slate-800">
-            {t.title}
-          </h3>
-        </div>
-      </div>
-    );
-  }
-
-  return (
+              return (
                 <label key={n} className="flex cursor-pointer items-center gap-2 text-xs text-slate-600">
                   <input type="checkbox" checked={on} onChange={() => toggleOds(n)} className="h-3.5 w-3.5" />
                   {n}. {ODS_NAMES[n]}
