@@ -1518,7 +1518,23 @@ export default function AdminPage() {
                       onChange={(e) =>
                         setConvoBorrador((f) =>
                           f
-                            ? { ...f, criterios: { ...(f.criterios || {}), alcance_geo: e.target.value || null } }
+                            ? {
+                                ...f,
+                                criterios: {
+                                  ...(f.criterios || {
+                                    alcance_geo: null,
+                                    estado: null,
+                                    tipos_elegibles: [],
+                                    ods_num: [],
+                                    edad_min: null,
+                                    edad_max: null,
+                                    anios_min_operacion: null,
+                                    anios_max_operacion: null,
+                                    liderazgo: null,
+                                  }),
+                                  alcance_geo: e.target.value || null,
+                                },
+                              }
                             : f
                         )
                       }
@@ -1535,7 +1551,25 @@ export default function AdminPage() {
                       value={convoBorrador.criterios?.estado || ''}
                       onChange={(e) =>
                         setConvoBorrador((f) =>
-                          f ? { ...f, criterios: { ...(f.criterios || {}), estado: e.target.value || null } } : f
+                          f
+                            ? {
+                                ...f,
+                                criterios: {
+                                  ...(f.criterios || {
+                                    alcance_geo: null,
+                                    estado: null,
+                                    tipos_elegibles: [],
+                                    ods_num: [],
+                                    edad_min: null,
+                                    edad_max: null,
+                                    anios_min_operacion: null,
+                                    anios_max_operacion: null,
+                                    liderazgo: null,
+                                  }),
+                                  estado: e.target.value || null,
+                                },
+                              }
+                            : f
                         )
                       }
                     >
