@@ -225,7 +225,7 @@ export default function AdminPage() {
   const [convoUrl, setConvoUrl] = React.useState('');
   const [convoExtrayendo, setConvoExtrayendo] = React.useState(false);
   const [convoBorrador, setConvoBorrador] = React.useState<
-    (Partial<Convocatoria> & { fuenteUrl?: string }) | null
+    (Partial<Convocatoria> & { fuenteUrl?: string; id?: string }) | null
   >(null);
   const [convoExtra, setConvoExtra] = React.useState<any[]>([]);
   const [convoOcultas, setConvoOcultas] = React.useState<any[]>([]);
@@ -415,21 +415,45 @@ export default function AdminPage() {
       setConvoMsg(t('Falta el nombre y/o la liga de la convocatoria.', 'The name and/or link are missing.'));
       return;
     }
+    const editando = Boolean(convoBorrador.id);
     const headers = await tokenHeaders();
     const res = await fetch('/api/admin/convocatorias', {
-      method: 'POST',
+      method: editando ? 'PUT' : 'POST',
       headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify(convoBorrador),
     });
     const data = await res.json();
     if (!res.ok) {
-      setConvoMsg(data?.error || t('No se pudo publicar.', 'Could not publish.'));
+      setConvoMsg(data?.error || t('No se pudo guardar.', 'Could not save.'));
       return;
     }
     setConvoBorrador(null);
     setConvoUrl('');
-    setConvoMsg(t('Convocatoria publicada.', 'Funding call published.'));
+    setConvoMsg(
+      editando
+        ? t('Cambios guardados.', 'Changes saved.')
+        : t('Convocatoria publicada.', 'Funding call published.')
+    );
     await loadConvocatorias();
+  }
+
+  function editarConvoExtra(c: any) {
+    setConvoMsg('');
+    setConvoBorrador({
+      id: c.id,
+      convocatoria: c.convocatoria || '',
+      tipo: c.tipo || '',
+      ambito: c.ambito || '',
+      ods: c.ods || '',
+      descripcion: c.descripcion || '',
+      requisitos: c.requisitos || '',
+      monto: c.monto || '',
+      fecha_limite: c.fecha_limite || '',
+      estatus: c.estatus || 'Abierta',
+      liga: c.liga || '',
+      fuenteUrl: c.fuenteUrl || c.liga || '',
+      criterios: c.criterios || null,
+    });
   }
 
   async function borrarConvoExtra(id: string) {
@@ -1424,7 +1448,9 @@ export default function AdminPage() {
             {convoBorrador && (
               <div className="rounded-lg border border-slate-200 p-5 dark:border-slate-700">
                 <h3 className="text-sm font-semibold text-foreground">
-                  {t('Revisa y edita antes de publicar', 'Review and edit before publishing')}
+                  {convoBorrador.id
+                    ? t('Editando convocatoria', 'Editing funding call')
+                    : t('Revisa y edita antes de publicar', 'Review and edit before publishing')}
                 </h3>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="space-y-1 sm:col-span-2 lg:col-span-2">
@@ -1484,9 +1510,22 @@ export default function AdminPage() {
                       value={convoBorrador.estatus || 'Abierta'}
                       onChange={(e) => setConvoBorrador((f) => (f ? { ...f, estatus: e.target.value } : f))}
                     >
-                      <option value="Abierta">{t('Abierta', 'Open')}</option>
+                      <option value="Abierta">{t('Abierta (con fecha límite)', 'Open (with deadline)')}</option>
+                      <option value="Abierta (permanente)">
+                        {t('Abierta (permanente / rolling)', 'Open (permanent / rolling)')}
+                      </option>
+                      <option value="Anual (por confirmar)">
+                        {t('Anual (fecha por confirmar)', 'Annual (date to be confirmed)')}
+                      </option>
+                      <option value="Variable">{t('Variable', 'Variable')}</option>
                       <option value="Cerrada">{t('Cerrada', 'Closed')}</option>
                     </Select>
+                    <p className="text-xs text-muted-foreground">
+                      {t(
+                        'Usa "Abierta (permanente)" cuando la fuente diga que recibe solicitudes todo el año, sin fecha límite real.',
+                        'Use "Open (permanent)" when the source states it accepts applications year-round, with no real deadline.'
+                      )}
+                    </p>
                   </div>
                   <div className="space-y-1 sm:col-span-2 lg:col-span-2">
                     <Label>{t('Liga de la convocatoria', 'Funding-call link')}</Label>
@@ -1584,7 +1623,9 @@ export default function AdminPage() {
                 </div>
                 <div className="mt-4 flex gap-2">
                   <Button type="button" onClick={publicarConvocatoria}>
-                    {t('Publicar convocatoria', 'Publish funding call')}
+                    {convoBorrador.id
+                      ? t('Guardar cambios', 'Save changes')
+                      : t('Publicar convocatoria', 'Publish funding call')}
                   </Button>
                   <Button type="button" variant="ghost" onClick={cancelarBorradorConvocatoria}>
                     {t('Cancelar', 'Cancel')}
@@ -1619,15 +1660,20 @@ export default function AdminPage() {
                       <td className="px-3 py-2 text-muted-foreground">{c.estatus || '—'}</td>
                       <td className="px-3 py-2 text-muted-foreground">{c.fecha_limite || '—'}</td>
                       <td className="px-3 py-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="text-red-700 hover:bg-red-50 dark:text-red-300"
-                          onClick={() => borrarConvoExtra(c.id)}
-                        >
-                          {t('Borrar', 'Delete')}
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button type="button" variant="outline" size="sm" onClick={() => editarConvoExtra(c)}>
+                            {t('Editar', 'Edit')}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="text-red-700 hover:bg-red-50 dark:text-red-300"
+                            onClick={() => borrarConvoExtra(c.id)}
+                          >
+                            {t('Borrar', 'Delete')}
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}

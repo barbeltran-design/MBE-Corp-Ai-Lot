@@ -12,9 +12,14 @@
  *  5. Copia la URL (https://script.google.com/macros/s/AKfy.../exec) y úsala como
  *     secreto SHEETS_WEB_APP_URL en GitHub (Settings → Secrets and variables → Actions).
  *
- * El workflow hace POST { "filas": [ [c1..c11], ... ] }. Cada fila respeta las 11
- * columnas de la fila 3 de la hoja. Se hace deduplicado por nombre normalizado
- * contra lo que ya existe para no escribir duplicados.
+ * El workflow semanal hace POST { "filas": [ [c1..c11], ... ] }. Cada fila
+ * respeta las 11 columnas de la fila 3 de la hoja. Se hace deduplicado por
+ * nombre normalizado contra lo que ya existe para no escribir duplicados.
+ *
+ * El panel de administración (al agregar o editar una convocatoria a mano)
+ * hace POST { "fila": [c1..c11] } (una sola fila, sin corchetes anidados):
+ * si ya existe un renglon con ese nombre normalizado lo actualiza, si no
+ * existe lo agrega al final.
  */
 
 var HOJA_NOMBRE = 'Convocatorias, Premios y Grants alineados a los ODS — Organizaciones en México';
@@ -44,14 +49,54 @@ function configurarEncabezado() {
 }
 
 function doGet(e) {
-  return jsonResp({ ok: true, status: 'Endpoint activo. POST {filas:[[c1..c11],...]}' });
+  return jsonResp({
+    ok: true,
+    status: 'Endpoint activo. POST {filas:[[c1..c11],...]} (bulk) o {fila:[c1..c11]} (una sola, upsert).',
+  });
+}
+
+// Agrega o actualiza UN renglon (usado por el panel de administración al
+// agregar/editar una convocatoria a mano). Si ya existe un renglon con el
+// mismo nombre normalizado, lo sobreescribe; si no existe, lo agrega al
+// final de la hoja.
+function upsertUnaFila(filaEntrada) {
+  var f = filaEntrada.slice(0, 11);
+  while (f.length < 11) f.push('');
+  var n = normalizar(f[0]);
+  if (!n) return jsonResp({ ok: false, error: 'La convocatoria necesita un nombre.' }, 400);
+
+  var h = obtenerHoja();
+  if (h.getLastRow() < 3) {
+    h.getRange(3, 1, 1, ENCABEZADO.length).setValues([ENCABEZADO]);
+  }
+  var ultima = h.getLastRow();
+  var existentes = ultima >= 4 ? h.getRange(4, 1, ultima - 3, 11).getValues() : [];
+
+  var hoy = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy');
+  if (!f[10]) f[10] = hoy;
+
+  for (var i = 0; i < existentes.length; i++) {
+    if (normalizar(existentes[i][0]) === n) {
+      h.getRange(4 + i, 1, 1, 11).setValues([f]);
+      return jsonResp({ ok: true, accion: 'actualizado' });
+    }
+  }
+
+  var filaInicio = h.getLastRow() + 1;
+  h.getRange(filaInicio, 1, 1, 11).setValues([f]);
+  return jsonResp({ ok: true, accion: 'insertado' });
 }
 
 function doPost(e) {
   try {
     var body = JSON.parse(e.postData.contents);
+
+    if (body && Array.isArray(body.fila)) {
+      return upsertUnaFila(body.fila);
+    }
+
     if (!body || !Array.isArray(body.filas) || body.filas.length === 0 || !Array.isArray(body.filas[0])) {
-      return jsonResp({ ok: false, error: 'Espera { "filas": [[c1..c11], ...] }' }, 400);
+      return jsonResp({ ok: false, error: 'Espera { "filas": [[c1..c11], ...] } o { "fila": [c1..c11] }' }, 400);
     }
     var h = obtenerHoja();
     if (h.getLastRow() < 3) {
