@@ -97,7 +97,11 @@
       "invalidEmail": "Correo electrónico inválido",
       "minPassword": "La contraseña debe tener al menos 8 caracteres",
       "generic": "Algo salió mal. Intenta de nuevo.",
-      "emailInUse": "Ya existe una cuenta con este correo."
+      "emailInUse": "Ya existe una cuenta con este correo.",
+      "invalidCredential": "Correo o contraseña incorrectos.",
+      "noAccount": "No existe una cuenta registrada con esta cuenta de Google. Regístrate primero.",
+      "tooManyRequests": "Demasiados intentos. Espera unos minutos e intenta de nuevo.",
+      "accountExistsDifferentCredential": "Ya existe una cuenta con este correo, creada con contraseña. Inicia sesión con tu correo y contraseña en vez de usar Google."
     },
     "legal": {
       "acceptPrefix": "He leído y acepto los",
@@ -139,7 +143,8 @@
       "noAccount": "No existe una cuenta registrada con esta cuenta de Google. Regístrate primero.",
       "emailInUse": "Ya existe una cuenta con este correo.",
       "tooManyRequests": "Demasiados intentos. Espera unos minutos e intenta de nuevo.",
-      "generic": "Algo salió mal. Intenta de nuevo."
+      "generic": "Algo salió mal. Intenta de nuevo.",
+      "accountExistsDifferentCredential": "Ya existe una cuenta con este correo, creada con contraseña. Inicia sesión con tu correo y contraseña en vez de usar Google."
     }
   },
   "forgotPassword": {

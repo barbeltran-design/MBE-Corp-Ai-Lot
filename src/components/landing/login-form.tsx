@@ -114,7 +114,7 @@ export function LoginForm() {
 
       <p className="mt-6 text-center text-xs text-slate-500">
         {t('noAccountPrefix')}{' '}
-        <a href={`/${locale}`} className="text-primary underline">
+        <a href={`/${locale}/registro`} className="text-primary underline">
           {t('registerLink')}
         </a>
       </p>

@@ -228,7 +228,13 @@ export async function sendPasswordReset(email: string) {
 
 export function mapAuthErrorToMessageKey(
   error: unknown
-): 'emailInUse' | 'invalidCredential' | 'noAccount' | 'tooManyRequests' | 'generic' {
+):
+  | 'emailInUse'
+  | 'invalidCredential'
+  | 'noAccount'
+  | 'tooManyRequests'
+  | 'accountExistsDifferentCredential'
+  | 'generic' {
   const code = (error as { code?: string })?.code;
   if (code === 'auth/email-already-in-use') return 'emailInUse';
   if (
@@ -240,5 +246,13 @@ export function mapAuthErrorToMessageKey(
   }
   if (code === 'mbe/no-account') return 'noAccount';
   if (code === 'auth/too-many-requests') return 'tooManyRequests';
+  // El usuario ya tiene una cuenta con este correo creada con OTRO metodo
+  // (normalmente correo+contrasena) y esta intentando entrar/registrarse con
+  // Google usando el mismo correo. Firebase bloquea el popup con este codigo
+  // en vez de fusionar las cuentas automaticamente. Antes caia en "generic"
+  // (mensaje inutil); ahora se le dice exactamente que pasa.
+  if (code === 'auth/account-exists-with-different-credential') {
+    return 'accountExistsDifferentCredential';
+  }
   return 'generic';
 }
