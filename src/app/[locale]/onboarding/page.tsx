@@ -389,6 +389,9 @@ function OnboardingInner() {
             <p className="mt-1 text-base font-medium text-emerald-700 dark:text-emerald-400">
               {currentLevel.tutorial.pregunta}
             </p>
+            <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">
+              {currentLevel.description}
+            </p>
 
             <button
               type="button"
@@ -407,7 +410,6 @@ function OnboardingInner() {
                     {t('levelExplanationLabel')}
                   </p>
                   <p className="mt-1 text-slate-700 dark:text-slate-300">{currentLevel.tutorial.explicacion}</p>
-                  <p className="mt-1 text-slate-700 dark:text-slate-300">{currentLevel.description}</p>
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
