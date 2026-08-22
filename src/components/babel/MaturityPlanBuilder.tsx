@@ -60,6 +60,7 @@ const MENTOR_COLOR: Record<MentorAgente, string> = {
   Karmetin: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-200',
   Normau: 'bg-sky-100 text-sky-800 dark:bg-sky-500/20 dark:text-sky-200',
   Atech: 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200',
+  Ecori: 'bg-lime-100 text-lime-800 dark:bg-lime-500/20 dark:text-lime-200',
 };
 
 const LABELS = {
