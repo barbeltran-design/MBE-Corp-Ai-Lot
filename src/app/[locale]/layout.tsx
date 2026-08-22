@@ -29,7 +29,7 @@ const geistMono = localFont({
 // contraseña) se fuerzan SIEMPRE en light: el logotipo usa tinta oscura y no se
 // distingue sobre el fondo dark. ThemeProvider replica esta regla (y la revierte al
 // navegar), ver theme-provider.tsx.
-const NO_FLASH_THEME_SCRIPT = `(function(){var seg=window.location.pathname.split('/').filter(Boolean);var forcedLight=seg.length<=1||(seg.length===2&&(seg[1]==='login'||seg[1]==='recuperar-contrasena'));try{var s=localStorage.getItem('mbe-theme');var t=(s==='light'||s==='dark')?s:'dark';window.__MBE_THEME__=t;if(t==='dark'&&!forcedLight){document.documentElement.classList.add('dark');}}catch(e){window.__MBE_THEME__='dark';if(!forcedLight){document.documentElement.classList.add('dark');}}})();`;
+const NO_FLASH_THEME_SCRIPT = `(function(){var seg=window.location.pathname.split('/').filter(Boolean);var forcedLight=seg.length<=1||(seg.length===2&&(seg[1]==='login'||seg[1]==='registro'||seg[1]==='recuperar-contrasena'));try{var s=localStorage.getItem('mbe-theme');var t=(s==='light'||s==='dark')?s:'dark';window.__MBE_THEME__=t;if(t==='dark'&&!forcedLight){document.documentElement.classList.add('dark');}}catch(e){window.__MBE_THEME__='dark';if(!forcedLight){document.documentElement.classList.add('dark');}}})();`;
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));

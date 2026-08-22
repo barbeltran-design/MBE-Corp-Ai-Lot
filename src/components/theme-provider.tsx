@@ -16,10 +16,11 @@ const ThemeContext = React.createContext<ThemeContextValue | undefined>(undefine
 const STORAGE_KEY = 'mbe-theme';
 
 // Rutas que SIEMPRE se fuerzan a light porque muestran el logotipo MBE (tinta oscura,
-// no se distingue sobre fondo dark): la landing/registro (`/`, `/{locale}`, <=1 segmento)
-// y las páginas de autenticación con el mismo header (login, recuperar contraseña).
+// no se distingue sobre fondo dark): la landing/registro (`/`, `/{locale}`, <=1 segmento,
+// y `/{locale}/registro` explícitamente) y las páginas de autenticación con el mismo
+// header (login, recuperar contraseña).
 // Mismo criterio que el script anti-flash de [locale]/layout.tsx.
-const FORCED_LIGHT_ROUTES = ['login', 'recuperar-contrasena'];
+const FORCED_LIGHT_ROUTES = ['login', 'registro', 'recuperar-contrasena'];
 
 function isForcedLightPath(pathname: string): boolean {
   const segments = pathname.split('/').filter(Boolean);

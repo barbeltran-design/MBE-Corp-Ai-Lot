@@ -19,7 +19,8 @@
       "features": "What it does",
       "agents": "AI Agents",
       "pricing": "Pricing",
-      "login": "Log in"
+      "login": "Log in",
+      "register": "Create account"
     },
     "hero": {
       "eyebrow": "Powered by Gemini on Google Cloud",

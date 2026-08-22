@@ -19,7 +19,8 @@
       "features": "Qué hace",
       "agents": "Agentes IA",
       "pricing": "Precios",
-      "login": "Iniciar sesión"
+      "login": "Iniciar sesión",
+      "register": "Crear cuenta"
     },
     "hero": {
       "eyebrow": "Con Gemini de Google Cloud",
