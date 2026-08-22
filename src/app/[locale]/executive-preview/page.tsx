@@ -41,13 +41,34 @@ import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 import AgentAvatar from '@/components/agentes/AgentAvatar';
 import { getFirebaseAuth, getFirebaseDb } from '@/lib/firebase';
 import { useUserRoles } from '@/lib/use-user-roles';
-import { getMaturityDimensions } from '@/lib/maturity-dimensions';
+import { getMaturityDimensions, DIMENSION_IDS, type DimensionId } from '@/lib/maturity-dimensions';
 import { computeResults, type AssessmentResult, type DimensionAnswers } from '@/lib/maturity-scoring';
 import { getAssessmentHistory, getLatestAssessmentAnswers, type AssessmentHistoryPoint } from '@/lib/assessment';
 import { getBabelSessionIfExists } from '@/lib/babel-session';
 import type { BabelPhaseRecord, MaturityLevel, SessionDoc, UserDoc } from '@/types/firestore';
 import type { FinancialGoalsInput, FinancialGoalsResult } from '@/lib/deliverables';
 import { MISIONES_PART_LABELS, SUBMUNDOS_ESTRATEGIA_LABELS, nivelLabelPuntos } from '@/lib/worlds';
+import { MENTORES, PRACTICAS_POR_TEMA, type MentorAgente } from '@/lib/madurez-practicas';
+import type { Objetivo, Accion, Estatus as AccionEstatus } from '@/lib/plan-accion';
+
+// Mapeo mundo -> mentor(es), confirmado por el usuario. Estrategia y Cultura
+// comparten a Babel (duplicado intencional); cada mundo Premium restante
+// tiene un unico mentor.
+const MUNDO_MENTORES: { id: string; icono: string; titulo: [string, string]; mentor: MentorAgente }[] = [
+  { id: 'estrategia', icono: '👑', titulo: ['Mundo de la Estrategia', 'Strategy World'], mentor: 'Babel' },
+  { id: 'cultura', icono: '🏛️', titulo: ['Mundo de la Cultura', 'Culture World'], mentor: 'Babel' },
+  { id: 'dinero', icono: '💰', titulo: ['Mundo del Dinero', 'Money World'], mentor: 'Fisnando' },
+  { id: 'normativo', icono: '⚖️', titulo: ['Mundo Normativo', 'Compliance World'], mentor: 'Normau' },
+  { id: 'cliente', icono: '🤝', titulo: ['Mundo del Cliente', 'Customer World'], mentor: 'Karmetin' },
+  { id: 'operativo', icono: '⚙️', titulo: ['Mundo Operativo', 'Operations World'], mentor: 'Atech' },
+  { id: 'socioambiental', icono: '🌱', titulo: ['Mundo SocioAmbiental', 'Socio-Environmental World'], mentor: 'Ecori' },
+];
+
+const ESTATUS_LABEL: Record<AccionEstatus, [string, string]> = {
+  pendiente: ['Pendiente', 'Pending'],
+  en_proceso: ['En proceso', 'In progress'],
+  terminado: ['Terminado', 'Done'],
+};
 
 const NAV_ICON_MAP = { Home, LayoutDashboard, Globe, Medal, Wrench, Crown, Compass, ShieldCheck, UserCheck2, Coins, Handshake, Scale, Cog, Landmark };
 
@@ -199,11 +220,24 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
   const [userDoc, setUserDoc] = React.useState<UserDoc | null>(null);
   const [sessionDoc, setSessionDoc] = React.useState<SessionDoc | null>(null);
   const [planCounts, setPlanCounts] = React.useState<{ objetivos: number; acciones: number; entornos: number; convocatorias: number; metasFinancieras: number } | null>(null);
+  const [planObjetivos, setPlanObjetivos] = React.useState<Objetivo[]>([]);
+  const [planAcciones, setPlanAcciones] = React.useState<Accion[]>([]);
+  const [tienePlan, setTienePlan] = React.useState(false);
   const [finGoals, setFinGoals] = React.useState<{ input: FinancialGoalsInput; result: FinancialGoalsResult; savedAt: string } | null>(null);
   const [worldsYo, setWorldsYo] = React.useState<{ puntos: number; nivel: string; partida: number[]; tablero: boolean } | null>(null);
   const [madurezPlan, setMadurezPlan] = React.useState<{ cumplidas: number; compromisosMes: number } | null>(null);
+  const [madurezCompletados, setMadurezCompletados] = React.useState<Partial<Record<DimensionId, number>>>({});
   const [orgRoles, setOrgRoles] = React.useState(0);
   const [companyName, setCompanyName] = React.useState('');
+  const [refplaceYo, setRefplaceYo] = React.useState<{ reunionesCompletadas: number; solicitudesAbiertas: number; ofertasActivas: number } | null>(null);
+  const [clubYo, setClubYo] = React.useState<{
+    nivel: string;
+    puntos: number;
+    proximaJunta: { nombre: string; fecha: string; hora: string } | null;
+    misRoles: string[];
+    posicionTrimestre: number | null;
+    posicionTotal: number | null;
+  } | null>(null);
 
   React.useEffect(() => {
     const auth = getFirebaseAuth();
@@ -249,6 +283,7 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
       const raw = window.localStorage.getItem(PLAN_STORAGE_KEY);
       if (!raw) return;
       const parsed = JSON.parse(raw);
+      setTienePlan(true);
       setPlanCounts({
         objetivos: Array.isArray(parsed.objetivos) ? parsed.objetivos.length : 0,
         acciones: Array.isArray(parsed.acciones) ? parsed.acciones.length : 0,
@@ -256,6 +291,8 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
         convocatorias: Array.isArray(parsed.convocatorias) ? parsed.convocatorias.length : 0,
         metasFinancieras: Array.isArray(parsed.fds) ? parsed.fds.length : 0,
       });
+      setPlanObjetivos(Array.isArray(parsed.objetivos) ? (parsed.objetivos as Objetivo[]) : []);
+      setPlanAcciones(Array.isArray(parsed.acciones) ? (parsed.acciones as Accion[]) : []);
     } catch (err) {
       console.error('[MBE ExecutivePreview] failed to read plan from localStorage', err);
     }
@@ -299,6 +336,72 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
     };
   }, [user]);
 
+  // Toolbox: Reference Place — mis reuniones B2B completadas, solicitudes
+  // abiertas y ofertas activas (GET /api/refplace ya calcula stats por uid).
+  React.useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch('/api/refplace', { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        if (cancelled || !data || data.error) return;
+        const uid = user.uid;
+        const miembros: { uid: string; reunionesCompletadas?: number }[] = Array.isArray(data.miembros) ? data.miembros : [];
+        const solicitudes: { uid: string }[] = Array.isArray(data.solicitudes) ? data.solicitudes : [];
+        const ofertas: { uid: string }[] = Array.isArray(data.ofertas) ? data.ofertas : [];
+        setRefplaceYo({
+          reunionesCompletadas: miembros.find((m) => m.uid === uid)?.reunionesCompletadas ?? 0,
+          solicitudesAbiertas: solicitudes.filter((s) => s.uid === uid).length,
+          ofertasActivas: ofertas.filter((o) => o.uid === uid).length,
+        });
+      } catch (err) {
+        console.error('[MBE ExecutivePreview] failed to load refplace summary', err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  // Toolbox: Juntas de Mentoria — próxima junta, rol/asistencia, nivel,
+  // puntaje y ranking (trimestral y total; GET /api/club ya los calcula).
+  React.useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch('/api/club', { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        if (cancelled || !data || data.error) return;
+        const uid = user.uid;
+        const rankT: { uid: string; posicion: number }[] = Array.isArray(data.rankings?.trimestre) ? data.rankings.trimestre : [];
+        const rankH: { uid: string; posicion: number }[] = Array.isArray(data.rankings?.historico) ? data.rankings.historico : [];
+        setClubYo({
+          nivel: String(data.yo?.nivel ?? ''),
+          puntos: Number(data.yo?.puntos ?? 0),
+          proximaJunta: data.juntaActual
+            ? {
+                nombre: String(data.juntaActual.nombre ?? ''),
+                fecha: String(data.juntaActual.fecha ?? ''),
+                hora: String(data.juntaActual.hora ?? ''),
+              }
+            : null,
+          misRoles: Array.isArray(data.misRolesJunta) ? data.misRolesJunta.map(String) : [],
+          posicionTrimestre: rankT.find((r) => r.uid === uid)?.posicion ?? null,
+          posicionTotal: rankH.find((r) => r.uid === uid)?.posicion ?? null,
+        });
+      } catch (err) {
+        console.error('[MBE ExecutivePreview] failed to load club summary', err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
   // Plan de madurez (Mundo de Retos): prácticas completadas del mes actual.
   React.useEffect(() => {
     try {
@@ -308,6 +411,7 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
       let cumplidas = 0;
       if (parsed && typeof parsed.completados === 'object' && parsed.completados !== null) {
         cumplidas = Object.values(parsed.completados).reduce((acc: number, v) => acc + Number(v ?? 0), 0);
+        setMadurezCompletados(parsed.completados as Partial<Record<DimensionId, number>>);
       }
       const mesActual = new Date().toISOString().slice(0, 7);
       const compromisosMes = Array.isArray(parsed?.compromisos?.[mesActual]) ? parsed.compromisos[mesActual].length : 0;
@@ -384,6 +488,53 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
     userDoc?.telefono &&
     String(userDoc.telefono).trim() &&
     companyName.trim()
+  );
+
+  // ── Mundo de Partida: objetivos estrategicos por perspectiva (validados vs por validar) ──
+  const objetivosPorPerspectiva = React.useMemo(() => {
+    const grupos = new Map<string, { validados: number; porValidar: number }>();
+    for (const o of planObjetivos) {
+      const key = o.perspectiva && o.perspectiva.trim() ? o.perspectiva : t('Sin perspectiva', 'No perspective');
+      const g = grupos.get(key) ?? { validados: 0, porValidar: 0 };
+      if (o.validado) g.validados += 1;
+      else g.porValidar += 1;
+      grupos.set(key, g);
+    }
+    return Array.from(grupos.entries()).map(([perspectiva, c]) => ({ perspectiva, ...c }));
+  }, [planObjetivos, t]);
+
+  // ── Mundo de Retos: siguiente practica sugerida por agente (solo lectura) ──
+  const retosProximas = React.useMemo(() => {
+    const baseNivel = (themeId: DimensionId): number => {
+      if (!answers) return 0;
+      const arr = answers[themeId];
+      if (!arr) return 0;
+      for (let i = 0; i < 6; i++) {
+        if (arr[i] !== 'yes') return i;
+      }
+      return 6;
+    };
+    const siguienteNivel = (themeId: DimensionId): number => {
+      const b = baseNivel(themeId) + (madurezCompletados[themeId] ?? 0);
+      return b > 6 ? 6 : b;
+    };
+    const dims = getMaturityDimensions(locale);
+    const temaDe = (id: DimensionId) => dims.find((d) => d.id === id)?.tema ?? id;
+    return MENTORES.map((mentor) => {
+      for (const id of DIMENSION_IDS) {
+        const n = siguienteNivel(id);
+        if (n >= 6) continue;
+        const practica = PRACTICAS_POR_TEMA[id][n];
+        if (practica.mentor === mentor) return { mentor, tema: temaDe(id), practica: practica.practica };
+      }
+      return { mentor, tema: '', practica: '' };
+    });
+  }, [answers, madurezCompletados, locale]);
+
+  // ── Mundos Premium por mentor: acciones del Plan de Accion asignadas a cada agente ──
+  const accionesDeMentor = React.useCallback(
+    (mentor: MentorAgente) => planAcciones.filter((a) => a.mentor === mentor),
+    [planAcciones]
   );
 
   const insignias = React.useMemo(() => {
@@ -710,6 +861,24 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
                     );
                   })}
                 </ul>
+                {finGoals ? (
+                  <div className="mt-3 flex items-center justify-between rounded-lg border border-border/50 bg-accent/20 px-2.5 py-1.5 text-xs">
+                    <span className="text-muted-foreground">{t('Objetivos financieros', 'Financial goals')}</span>
+                    <span className="font-mono font-bold text-foreground">{fmtMoney(finGoals.result.targetRevenueWithMarketing)}</span>
+                  </div>
+                ) : null}
+                {objetivosPorPerspectiva.length > 0 ? (
+                  <div className="mt-2 space-y-1">
+                    {objetivosPorPerspectiva.map((g) => (
+                      <div key={g.perspectiva} className="flex items-center justify-between text-xs">
+                        <span className="truncate text-muted-foreground">{g.perspectiva}</span>
+                        <span className="ml-auto shrink-0 font-mono text-[11px] text-foreground">
+                          {t(`${g.validados} validados · ${g.porValidar} por validar`, `${g.validados} validated · ${g.porValidar} to validate`)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => router.push(`/${routeLocale}/worlds/partida`)}
@@ -796,6 +965,21 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
                     <span className="ml-auto shrink-0 font-mono text-[11px] text-muted-foreground">{Math.max(history.length - 1, 0)}</span>
                   </li>
                 </ul>
+                {retosProximas.length > 0 ? (
+                  <div className="mt-3 rounded-lg border border-border/50 bg-accent/20 p-2">
+                    <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      {t('Tarea siguiente por agente (sugerida)', 'Next task per agent (suggested)')}
+                    </p>
+                    <ul className="space-y-1">
+                      {retosProximas.map((r) => (
+                        <li key={r.mentor} className="flex items-start gap-1.5 text-[11px]">
+                          <span className="shrink-0 font-semibold text-primary">{r.mentor}</span>
+                          <span className="truncate text-muted-foreground">{r.practica}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {insignias.filter((b) => ['reevaluado', 'rumbo60', 'influencer', 'reto'].includes(b.id) && b.earned).map((b) => (
                     <span key={b.id} className="rounded-full bg-teal-50 px-2 py-0.5 text-[10px] font-bold text-teal-700 dark:bg-teal-900/30 dark:text-teal-200">
@@ -845,6 +1029,40 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
                     </li>
                   ))}
                 </ul>
+                <div className="mt-2 space-y-1.5 rounded-lg border border-border/50 bg-accent/20 p-2 text-[11px]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">{t('Convocatorias vigentes', 'Open calls')}</span>
+                    <span className="font-mono font-semibold text-foreground">{planCounts?.convocatorias ?? 0}</span>
+                  </div>
+                  {refplaceYo ? (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">{t('Reuniones B2B completadas', 'Completed B2B meetings')}</span>
+                        <span className="font-mono font-semibold text-foreground">{refplaceYo.reunionesCompletadas}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">{t('Referencias aplicadas', 'Applied referrals')}</span>
+                        <span className="font-mono font-semibold text-foreground">
+                          {t(`${refplaceYo.solicitudesAbiertas} solicitadas · ${refplaceYo.ofertasActivas} publicadas`, `${refplaceYo.solicitudesAbiertas} requested · ${refplaceYo.ofertasActivas} published`)}
+                        </span>
+                      </div>
+                    </>
+                  ) : null}
+                  {clubYo ? (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">{t('Próxima junta', 'Next meeting')}</span>
+                        <span className="font-mono font-semibold text-foreground">{clubYo.proximaJunta ? `${clubYo.proximaJunta.fecha} ${clubYo.proximaJunta.hora}` : t('Sin agendar', 'Not scheduled')}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">{t('Ranking trimestral · total', 'Quarterly · all-time rank')}</span>
+                        <span className="font-mono font-semibold text-foreground">
+                          {clubYo.posicionTrimestre ?? '—'} · {clubYo.posicionTotal ?? '—'}
+                        </span>
+                      </div>
+                    </>
+                  ) : null}
+                </div>
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {insignias.filter((b) => ['clubero', 'orquesta'].includes(b.id) && b.earned).map((b) => (
                     <span key={b.id} className="rounded-full bg-teal-50 px-2 py-0.5 text-[10px] font-bold text-teal-700 dark:bg-teal-900/30 dark:text-teal-200">
@@ -853,6 +1071,59 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
                   ))}
                 </div>
               </div>
+            </div>
+          </GlassCard>
+        </div>
+
+        <div id="resumen-mundos-mentor" className="animate-slide-up" style={{ animationDelay: '220ms' }}>
+          <GlassCard>
+            <div className="mb-4">
+              <h2 className="text-sm font-semibold text-foreground">{t('Mundos por mentor', 'Mentor worlds')}</h2>
+              <p className="text-xs text-muted-foreground">
+                {t(
+                  'Acciones del Plan de Acción asignadas a cada mentor y su estatus.',
+                  'Action Plan tasks assigned to each mentor and their status.'
+                )}
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {MUNDO_MENTORES.map((mundo) => {
+                const acciones = accionesDeMentor(mundo.mentor);
+                return (
+                  <div key={mundo.id} className="rounded-xl border border-border/60 bg-background/40 p-4">
+                    <div className="mb-2 flex items-center gap-2">
+                      <span className="text-lg">{mundo.icono}</span>
+                      <h3 className="flex-1 truncate text-sm font-semibold text-foreground">{t(mundo.titulo[0], mundo.titulo[1])}</h3>
+                      <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                        {mundo.mentor}
+                      </span>
+                    </div>
+                    {!tienePlan ? (
+                      <p className="text-xs text-muted-foreground">{t('Pendiente por hacer', 'Pending to do')}</p>
+                    ) : acciones.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">
+                        {t('Sin acciones asignadas todavía', 'No actions assigned yet')}
+                      </p>
+                    ) : (
+                      <ul className="space-y-1.5 text-xs">
+                        {acciones.map((a) => (
+                          <li key={a.id} className="flex items-start gap-2">
+                            <span className="mt-0.5 shrink-0">
+                              {a.estatus === 'terminado' ? '✅' : a.estatus === 'en_proceso' ? '🔄' : '⭕'}
+                            </span>
+                            <span className={cn('flex-1 truncate', a.estatus === 'terminado' ? 'text-muted-foreground line-through' : 'text-foreground')}>
+                              {a.descripcion}
+                            </span>
+                            <span className="shrink-0 rounded-full bg-accent/60 px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground">
+                              {t(ESTATUS_LABEL[a.estatus][0], ESTATUS_LABEL[a.estatus][1])}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </GlassCard>
         </div>
