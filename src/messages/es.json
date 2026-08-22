@@ -171,8 +171,14 @@
   "assessment": {
     "loading": "Cargando...",
     "stepLabel": "Diagnóstico de madurez · Tema {current} de {total}",
+    "levelOf": "Nivel {current} de {total}",
     "nivel": "Nivel",
     "expectedEvidence": "Evidencia esperada:",
+    "showReferences": "Ver referencias",
+    "hideReferences": "Ocultar referencias",
+    "levelExplanationLabel": "Explicación del nivel",
+    "evidenceExampleLabel": "Ejemplo de evidencia",
+    "doYouMeetIt": "¿Lo cumples?",
     "answers": {
       "yes": "Sí",
       "partial": "Parcialmente",
@@ -183,7 +189,17 @@
     "finish": "Ver resultados",
     "finishing": "Guardando tu diagnóstico...",
     "saveError": "No se pudo guardar tu diagnóstico. Verifica tu conexión e intenta de nuevo.",
-    "retry": "Reintentar"
+    "retry": "Reintentar",
+    "temaCompleteTitle": "¡Tema completado!",
+    "temaCompleteBody": "Terminaste los 6 niveles de \"{tema}\".",
+    "continueNextTema": "Continuar con el siguiente tema",
+    "saveAndContinueLater": "Guardar y continuar después",
+    "allDoneTitle": "¡Completaste tu diagnóstico de madurez!",
+    "allDoneBody": "Ya respondiste los 11 temas. Vamos a ver tu reporte de madurez.",
+    "mission2PromptTitle": "¿Listo para el siguiente paso?",
+    "mission2PromptBody": "Ya tienes tu diagnóstico. Ahora puedes definir tus Objetivos Estratégicos (Misión 2) para desbloquear el Tablero de Retos, o seguir explorando la plataforma por tu cuenta.",
+    "goToMission2": "Definir mis Objetivos Estratégicos",
+    "keepExploring": "Seguir explorando"
   },
   "dashboard": {
     "loading": "Cargando...",
@@ -200,7 +216,7 @@
     "colNextStep": "Próximo paso recomendado",
     "totalRow": "Total (promedio de los 11 temas)",
     "masteredLabel": "Nivel máximo alcanzado",
-    "retakeLink": "Repetir el diagnóstico",
+    "retakeLink": "Vuelve a hacer el diagnóstico y compara tu evolución",
     "babelTitle": "Babel AI — tu arquitecto estratégico",
     "babelBody": "Construye tu Plan de Negocio Estratégico Socioambiental paso a paso con Babel AI.",
     "babelCta": "Hablar con Babel AI",

@@ -14,6 +14,14 @@ export interface InsigniaDef {
 
 export const INSIGNIAS: InsigniaDef[] = [
   {
+    id: 'diagnostico_completo',
+    es: 'Diagnóstico Completo',
+    en: 'Assessment Completed',
+    descEs: 'Completaste tu Diagnóstico de Madurez de los 11 temas.',
+    descEn: 'You completed your 11-topic Maturity Assessment.',
+    icon: '🧭',
+  },
+  {
     id: 'caminante',
     es: 'Caminante',
     en: 'Wayfarer',

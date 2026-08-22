@@ -171,8 +171,14 @@
   "assessment": {
     "loading": "Loading...",
     "stepLabel": "Maturity Assessment · Topic {current} of {total}",
+    "levelOf": "Level {current} of {total}",
     "nivel": "Level",
     "expectedEvidence": "Expected evidence:",
+    "showReferences": "View references",
+    "hideReferences": "Hide references",
+    "levelExplanationLabel": "Level explanation",
+    "evidenceExampleLabel": "Evidence example",
+    "doYouMeetIt": "Do you meet this?",
     "answers": {
       "yes": "Yes",
       "partial": "Partially",
@@ -183,7 +189,17 @@
     "finish": "View results",
     "finishing": "Saving your assessment...",
     "saveError": "We couldn't save your assessment. Check your connection and try again.",
-    "retry": "Retry"
+    "retry": "Retry",
+    "temaCompleteTitle": "Topic complete!",
+    "temaCompleteBody": "You finished all 6 levels of \"{tema}\".",
+    "continueNextTema": "Continue to the next topic",
+    "saveAndContinueLater": "Save and continue later",
+    "allDoneTitle": "You completed your Maturity Assessment!",
+    "allDoneBody": "You answered all 11 topics. Let's look at your maturity report.",
+    "mission2PromptTitle": "Ready for the next step?",
+    "mission2PromptBody": "You've completed your assessment. You can now define your Strategic Objectives (Mission 2) to unlock the Challenges Board, or keep exploring the platform on your own.",
+    "goToMission2": "Define my Strategic Objectives",
+    "keepExploring": "Keep exploring"
   },
   "dashboard": {
     "loading": "Loading...",
@@ -200,7 +216,7 @@
     "colNextStep": "Recommended next step",
     "totalRow": "Total (average of the 11 topics)",
     "masteredLabel": "Maximum level reached",
-    "retakeLink": "Retake the assessment",
+    "retakeLink": "Retake the assessment and compare your progress",
     "babelTitle": "Babel AI — your strategic architect",
     "babelBody": "Build your Socio-Environmental Strategic Business Plan step by step with Babel AI.",
     "babelCta": "Talk to Babel AI",

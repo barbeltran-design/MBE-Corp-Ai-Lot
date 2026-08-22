@@ -883,7 +883,12 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
                               {en(I.abrirHerramienta)}
                             </button>
                           )}
-                          {!done && (
+                          {/* Misión 1 (Evaluación de Madurez) ya no tiene botón manual de
+                              "completar": se completa sola cuando el usuario termina el
+                              diagnóstico real en /onboarding (ver handleFinish allí). El
+                              único CTA para la Misión 1 es "Abrir herramienta" (arriba),
+                              que lleva a /dashboard y de ahí a /onboarding si falta. */}
+                          {!done && m.n !== 1 && (
                             <button
                               className="rounded-lg border border-teal-400/60 bg-white/40 px-3 py-1.5 text-xs font-extrabold text-teal-700 backdrop-blur-md transition hover:bg-white/70 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white/10 dark:text-teal-200 dark:hover:bg-white/20"
                               disabled={bloqueada || completando !== null}
