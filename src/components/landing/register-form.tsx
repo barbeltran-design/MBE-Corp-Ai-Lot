@@ -90,7 +90,10 @@ export function RegisterForm() {
   }, []);
 
   async function onSubmit(values: FormValues) {
-    if (!legalOk) return;
+    if (!legalOk) {
+      setServerError(t('legal.acceptRequired'));
+      return;
+    }
     setSubmitting(true);
     setServerError(null);
     try {
@@ -112,7 +115,10 @@ export function RegisterForm() {
   }
 
   async function onGoogleClick() {
-    if (!legalOk) return;
+    if (!legalOk) {
+      setServerError(t('legal.acceptRequired'));
+      return;
+    }
     setGoogleSubmitting(true);
     setServerError(null);
     try {
@@ -155,10 +161,12 @@ export function RegisterForm() {
         variant="outline"
         className="mt-6 w-full"
         onClick={onGoogleClick}
-        disabled={googleSubmitting || !legalOk}
+        disabled={googleSubmitting}
       >
         {googleSubmitting ? t('submit') : t('googleCta')}
       </Button>
+
+      {serverError && <p className="mt-2 text-sm text-red-600">{serverError}</p>}
 
       <div className="my-5 flex items-center gap-3 text-xs text-slate-400">
         <div className="h-px flex-1 bg-slate-200" />
@@ -320,7 +328,7 @@ export function RegisterForm() {
           )}
         </div>
 
-        <Button type="submit" variant="primary" className="w-full" disabled={submitting || !legalOk}>
+        <Button type="submit" variant="primary" className="w-full" disabled={submitting}>
           {submitting ? t('submit') : t('submit')}
         </Button>
       </form>
