@@ -11,7 +11,7 @@ import { getMaturityDimensions } from '@/lib/maturity-dimensions';
 import { nivelDesdePuntos } from '@/lib/club';
 import { getBabelSessionIfExists } from '@/lib/babel-session';
 import type { MentorAgente } from '@/lib/madurez-practicas';
-import { loadPlanAccion, type Accion, type PlanData } from '@/lib/plan-accion';
+import { loadPlanAccion, accionesDeObjetivo, type Accion, type PlanData } from '@/lib/plan-accion';
 import {
   MISIONES_PART_LABELS,
   SUBMUNDOS_ESTRATEGIA_LABELS,
@@ -24,10 +24,10 @@ import { insigniasNuevas, insigniasVistas, marcarInsigniasVistas } from '@/lib/i
 import PageTour from '@/components/ui/executive/PageTour';
 import type { TourStep } from '@/components/ui/executive/PageTour';
 
-type Vista = 'mapa' | 'partida' | 'tablero' | 'estrategia' | 'dinero' | 'cliente' | 'normativo' | 'operativo' | 'cultura';
-type VistaPremium = 'dinero' | 'cliente' | 'normativo' | 'operativo' | 'cultura';
+type Vista = 'mapa' | 'partida' | 'tablero' | 'estrategia' | 'dinero' | 'cliente' | 'normativo' | 'operativo' | 'cultura' | 'socioambiental';
+type VistaPremium = 'dinero' | 'cliente' | 'normativo' | 'operativo' | 'cultura' | 'socioambiental';
 
-const VISTAS_PREMIUM: VistaPremium[] = ['dinero', 'cliente', 'normativo', 'operativo', 'cultura'];
+const VISTAS_PREMIUM: VistaPremium[] = ['dinero', 'cliente', 'normativo', 'operativo', 'cultura', 'socioambiental'];
 
 interface Progreso {
   nombre: string;
@@ -184,7 +184,7 @@ const t2 = (lang: 'es' | 'en') => (p: Params) => (lang === 'en' ? p[1] : p[0]);
 // con Babel). Cada acción guarda su `mentor` (agente de IA sugerido para
 // implementarla), así que el panel agrupa las acciones por agente.
 
-const AGENTES5: MentorAgente[] = ['Babel', 'Fisnando', 'Karmetin', 'Normau', 'Atech'];
+const AGENTES5: MentorAgente[] = ['Babel', 'Fisnando', 'Karmetin', 'Normau', 'Atech', 'Ecori'];
 
 function mentorDeAccion(a: Accion): MentorAgente | null {
   return (AGENTES5 as string[]).indexOf(a.mentor ?? '') !== -1 ? (a.mentor as MentorAgente) : null;
@@ -194,13 +194,20 @@ function PanelActividadesPlanAccion({
   agente,
   lang,
   planAccion,
+  soloIds,
 }: {
   agente: MentorAgente | 'todos';
   lang: 'es' | 'en';
   planAccion: PlanData | null;
+  soloIds?: string[] | null;
 }) {
   const en = t2(lang);
-  const acciones = planAccion?.acciones ?? [];
+  const acciones = React.useMemo(() => {
+    const base = planAccion?.acciones ?? [];
+    if (!soloIds) return base;
+    const permitidas = new Set(soloIds);
+    return base.filter((a) => permitidas.has(a.id));
+  }, [planAccion, soloIds]);
 
   const grupos = React.useMemo<{ agente: MentorAgente | ''; items: Accion[] }[]>(() => {
     if (agente === 'todos') {
@@ -283,6 +290,7 @@ function MisionPlanAccion({
   planAccion,
   onIrPlan,
   esPremium,
+  soloIds,
 }: {
   agente: MentorAgente;
   lang: 'es' | 'en';
@@ -290,6 +298,7 @@ function MisionPlanAccion({
   planAccion: PlanData | null;
   onIrPlan: () => void;
   esPremium: boolean;
+  soloIds?: string[] | null;
 }) {
   const en = t2(lang);
   const desbloqueada = planAccionDefinido && esPremium;
@@ -329,7 +338,7 @@ function MisionPlanAccion({
             <b className="text-teal-700 dark:text-teal-300">{agente}</b>
           </p>
           <div className="mt-2">
-            <PanelActividadesPlanAccion agente={agente} lang={lang} planAccion={planAccion} />
+            <PanelActividadesPlanAccion agente={agente} lang={lang} planAccion={planAccion} soloIds={soloIds} />
           </div>
           <button
             className="mt-3 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 px-3 py-1.5 text-xs font-extrabold text-white shadow-md shadow-teal-500/30 transition hover:opacity-90"
@@ -636,6 +645,21 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
   const hechas = yo?.partida ?? [];
   const mundoVista = MUNDOS_PREMIUM_LABELS.find((m) => m.id === vista);
   const vistaPremium = mundoVista?.id;
+
+  // Mundo de la Cultura: solo deben verse las acciones cuyo objetivo
+  // estratégico pertenece a la perspectiva "Aprendizaje y Crecimiento".
+  // El resto de mundos premium sigue mostrando todas las acciones del
+  // agente sin este filtro (comportamiento sin cambios).
+  const accionesCulturaPermitidas = React.useMemo(() => {
+    if (!planAccion) return null;
+    const ids: string[] = [];
+    planAccion.objetivos
+      .filter((o) => o.perspectiva === 'aprendizaje_crecimiento')
+      .forEach((o) => {
+        accionesDeObjetivo(o.id, planAccion).forEach((a) => ids.push(a.id));
+      });
+    return ids;
+  }, [planAccion]);
 
   return (
     <div className="relative min-h-screen">
@@ -1071,6 +1095,7 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
                     planAccion={planAccion}
                     onIrPlan={() => abrirMision(irPlanAccion)}
                     esPremium={esPremium}
+                    soloIds={vista === 'cultura' ? accionesCulturaPermitidas : null}
                   />
                 </div>
               </>

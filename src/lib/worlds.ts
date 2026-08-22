@@ -36,6 +36,7 @@ export const MUNDOS_PREMIUM_LABELS = [
   { id: 'normativo', icon: '⚖️', agente: 'Normau', subs: 4, es: 'Normativo', en: 'Compliance', esDesc: 'Marca y patente, plan de normatividad…', enDesc: 'Brand & patent, compliance plan…' },
   { id: 'operativo', icon: '⚙️', agente: 'Atech', subs: 5, es: 'Operativo', en: 'Operations', esDesc: 'Digitalización, decisiones, resultados…', enDesc: 'Digitalization, decisions, results…' },
   { id: 'cultura', icon: '🌱', agente: 'Babel', subs: 5, es: 'Cultura', en: 'Culture', esDesc: 'Clima laboral, plan de carrera, 9 cajas…', enDesc: 'Work climate, career plan, 9 boxes…' },
+  { id: 'socioambiental', icon: '🌎', agente: 'Ecori', subs: 5, es: 'Socioambiental', en: 'Social-Environmental', esDesc: 'Alianzas, impacto social y ambiental, congruencia con tu comunidad…', enDesc: 'Partnerships, social & environmental impact, community alignment…' },
 ] as const;
 
 // Tabla de niveles de puntos (misma que el Club; aquí solo se exponen las

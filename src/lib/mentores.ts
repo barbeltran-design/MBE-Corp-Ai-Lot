@@ -61,13 +61,15 @@ export function matchMentorPorTexto(texto: string): MentorId | null {
 // en src/lib/plan-accion.ts) al mentor que le corresponde. Se usa como
 // segundo respaldo cuando el catalogo de Buenas Practicas no encuentra
 // coincidencia: Financieros -> Fisnando, Clientes -> Karmetin, Procesos ->
-// Atech, Aprendizaje -> Babel, Socioambientales -> Normau.
+// Atech, Aprendizaje -> Babel, Socioambientales -> Ecori, Normatividad ->
+// Normau.
 export const PERSPECTIVA_MENTOR: Record<string, MentorId> = {
   financiera: 'Fisnando',
   clientes: 'Karmetin',
   procesos_internos: 'Atech',
   aprendizaje_crecimiento: 'Babel',
   socioambiental: 'Ecori',
+  normatividad: 'Normau',
 };
 
 export function mentorPorPerspectiva(perspectiva: string): MentorId | null {

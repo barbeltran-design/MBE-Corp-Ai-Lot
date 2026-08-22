@@ -55,7 +55,6 @@ import type { Objetivo, Accion, Estatus as AccionEstatus } from '@/lib/plan-acci
 // comparten a Babel (duplicado intencional); cada mundo Premium restante
 // tiene un unico mentor.
 const MUNDO_MENTORES: { id: string; icono: string; titulo: [string, string]; mentor: MentorAgente }[] = [
-  { id: 'estrategia', icono: '👑', titulo: ['Mundo de la Estrategia', 'Strategy World'], mentor: 'Babel' },
   { id: 'cultura', icono: '🏛️', titulo: ['Mundo de la Cultura', 'Culture World'], mentor: 'Babel' },
   { id: 'dinero', icono: '💰', titulo: ['Mundo del Dinero', 'Money World'], mentor: 'Fisnando' },
   { id: 'normativo', icono: '⚖️', titulo: ['Mundo Normativo', 'Compliance World'], mentor: 'Normau' },

@@ -249,6 +249,7 @@ export const PERSPECTIVAS: PerspectivaEstilo[] = [
   { key: 'procesos_internos', es: 'Procesos', en: 'Processes', chip: 'bg-indigo-100 text-indigo-800', soft: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-800' },
   { key: 'aprendizaje_crecimiento', es: 'Aprendizaje', en: 'Learning', chip: 'bg-purple-100 text-purple-800', soft: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-800' },
   { key: 'socioambiental', es: 'Socioambientales', en: 'Social-Environmental', chip: 'bg-green-100 text-green-800', soft: 'bg-green-50', border: 'border-green-200', text: 'text-green-800' },
+  { key: 'normatividad', es: 'Normatividad', en: 'Compliance', chip: 'bg-amber-100 text-amber-800', soft: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-800' },
 ];
 
 export const SIN_PERSPECTIVA_STYLE: PerspectivaEstilo = {

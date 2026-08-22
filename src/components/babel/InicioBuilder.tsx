@@ -164,6 +164,17 @@ const MUNDOS_PREMIUM: MundoPremium[] = [
     ],
     href: '/worlds/cultura',
   },
+  {
+    id: 'socioambiental',
+    icono: '🌎',
+    agente: 'Ecori',
+    titulo: ['Mundo Socioambiental', 'Socio-Environmental World'],
+    desc: [
+      'Genera alianzas y un impacto social y ambiental congruente con tu comunidad.',
+      'Build partnerships and a social and environmental impact aligned with your community.',
+    ],
+    href: '/worlds/socioambiental',
+  },
 ];
 
 type ToolboxItem = {
