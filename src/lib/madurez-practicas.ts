@@ -15,9 +15,9 @@
 import type { DimensionId } from '@/lib/maturity-dimensions';
 import type { MaturityLevel } from '@/types/firestore';
 
-export type MentorAgente = 'Babel' | 'Fisnando' | 'Karmetin' | 'Normau' | 'Atech';
+export type MentorAgente = 'Babel' | 'Fisnando' | 'Karmetin' | 'Normau' | 'Atech' | 'Ecori';
 
-export const MENTORES: MentorAgente[] = ['Babel', 'Fisnando', 'Karmetin', 'Normau', 'Atech'];
+export const MENTORES: MentorAgente[] = ['Babel', 'Fisnando', 'Karmetin', 'Normau', 'Atech', 'Ecori'];
 
 export interface PracticaMadurez {
   nivel: MaturityLevel; // en orden Ejecucion..Influencer
@@ -65,7 +65,7 @@ export const PRACTICAS_POR_TEMA: Record<DimensionId, PracticaMadurez[]> = {
     p('influencer', 'Consejo de clientes para desarrollo de productos', 'Karmetin'),
   ],
   compliance: [
-    p('execution', 'Alta fiscal, Acta Constitutiva, Registro de Marca', 'Fisnando'),
+    p('execution', 'Alta fiscal, Acta Constitutiva, Registro de Marca', 'Normau'),
     p('standard', 'Contratos marco y Carpeta de Normatividad', 'Normau'),
     p('control', 'Matriz de Riesgos Legales y Fiscales y reportes de cumplimiento normativo', 'Normau'),
     p('optimization', 'Plan de mitigacion de Riesgos Normativos', 'Normau'),
@@ -89,20 +89,20 @@ export const PRACTICAS_POR_TEMA: Record<DimensionId, PracticaMadurez[]> = {
     p('influencer', 'Sistema Autonomo de Decisiones Operativas y reporte de Benchmarking', 'Atech'),
   ],
 alliances: [
-    p('execution', 'Directorio de contactos de la zona o industria', 'Normau'),
-    p('standard', 'Base de datos de sinergias con Proveedores, Competidores y Complementadores', 'Normau'),
-    p('control', 'Reporte Mensual de Clientes Referidos de Aliados', 'Normau'),
-    p('optimization', 'BD de asociaciones empresariales del giro y clientes', 'Normau'),
-    p('excellence', 'Firma de acuerdos de colaboracion con los grupos de interes', 'Normau'),
-    p('influencer', 'Constitucion de grupo empresarial', 'Normau'),
+    p('execution', 'Directorio de contactos de la zona o industria', 'Ecori'),
+    p('standard', 'Base de datos de sinergias con Proveedores, Competidores y Complementadores', 'Ecori'),
+    p('control', 'Reporte Mensual de Clientes Referidos de Aliados', 'Ecori'),
+    p('optimization', 'BD de asociaciones empresariales del giro y clientes', 'Ecori'),
+    p('excellence', 'Firma de acuerdos de colaboracion con los grupos de interes', 'Ecori'),
+    p('influencer', 'Constitucion de grupo empresarial', 'Ecori'),
   ],
   esg: [
-    p('execution', 'Cooperacion con la comunidad', 'Normau'),
-    p('standard', 'Codigo de Etica Comercial y Politica de No Discriminacion firmada', 'Normau'),
-    p('control', 'Tablero de Eco-eficiencia (Consumo/Mermas) y Reporte de impacto socioambiental', 'Normau'),
-    p('optimization', 'Programa de Responsabilidad Socioambiental Congruente', 'Normau'),
-    p('excellence', 'Reporte Socioambiental auditado externamente', 'Normau'),
-    p('influencer', 'Medicion en dinero del Retorno de Inversion Social de cada programa sociambiental', 'Normau'),
+    p('execution', 'Cooperacion con la comunidad', 'Ecori'),
+    p('standard', 'Codigo de Etica Comercial y Politica de No Discriminacion firmada', 'Ecori'),
+    p('control', 'Tablero de Eco-eficiencia (Consumo/Mermas) y Reporte de impacto socioambiental', 'Ecori'),
+    p('optimization', 'Programa de Responsabilidad Socioambiental Congruente', 'Ecori'),
+    p('excellence', 'Reporte Socioambiental auditado externamente', 'Ecori'),
+    p('influencer', 'Medicion en dinero del Retorno de Inversion Social de cada programa sociambiental', 'Ecori'),
   ],
   hr: [
     p('execution', 'Directorio basico con los nombres y telefonos del personal actual', 'Babel'),

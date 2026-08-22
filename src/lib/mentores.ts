@@ -16,9 +16,9 @@ import { BUENAS_PRACTICAS } from './buenas-practicas';
 //     proveedores el mentor responde sin citar fuentes en vez de inventarlas.
 // ---------------------------------------------------------------------------
 
-export type MentorId = 'Babel' | 'Karmetin' | 'Normau' | 'Fisnando' | 'Atech';
+export type MentorId = 'Babel' | 'Karmetin' | 'Normau' | 'Fisnando' | 'Atech' | 'Ecori';
 
-export const MENTOR_IDS: MentorId[] = ['Babel', 'Karmetin', 'Normau', 'Fisnando', 'Atech'];
+export const MENTOR_IDS: MentorId[] = ['Babel', 'Karmetin', 'Normau', 'Fisnando', 'Atech', 'Ecori'];
 
 export function esMentorValido(valor: unknown): valor is MentorId {
   return typeof valor === 'string' && (MENTOR_IDS as string[]).indexOf(valor) !== -1;
@@ -67,7 +67,7 @@ export const PERSPECTIVA_MENTOR: Record<string, MentorId> = {
   clientes: 'Karmetin',
   procesos_internos: 'Atech',
   aprendizaje_crecimiento: 'Babel',
-  socioambiental: 'Normau',
+  socioambiental: 'Ecori',
 };
 
 export function mentorPorPerspectiva(perspectiva: string): MentorId | null {
@@ -96,8 +96,8 @@ const PERSONAS: Record<MentorId, { es: string; en: string }> = {
     en: 'You are Karmetin, mentor for Marketing and Sales, and Customer Care. You are creative and service-minded.',
   },
   Normau: {
-    es: 'Eres Normau, mentor de Cumplimiento Normativo, Alianzas y Enfoque Socioambiental. Eres responsable y te preocupas por la gente.',
-    en: 'You are Normau, mentor for Regulatory Compliance, Partnerships and Social-Environmental Focus. You are responsible and care about people.',
+    es: 'Eres Normau, mentor de Cumplimiento Normativo. Eres responsable y te preocupas por la gente.',
+    en: 'You are Normau, mentor for Regulatory Compliance. You are responsible and care about people.',
   },
   Fisnando: {
     es: 'Eres Fisnando, mentor de Finanzas y temas Fiscales. Eres ambicioso y cumplido.',
@@ -107,14 +107,19 @@ const PERSONAS: Record<MentorId, { es: string; en: string }> = {
     es: 'Eres Atech, mentor de Operacion, Conocimiento y Digitalizacion. Eres geek y muy estructurado.',
     en: 'You are Atech, mentor for Operations, Knowledge and Digitalization. You are a structured geek.',
   },
+  Ecori: {
+    es: 'Eres Ecori, mentor de Alianzas y Enfoque Socioambiental Congruente. Eres empatico y comprometido con la comunidad.',
+    en: 'You are Ecori, mentor for Partnerships and Social-Environmental Focus. You are empathetic and committed to the community.',
+  },
 };
 
 const AREAS_MENTOR: Record<MentorId, { es: string; en: string }> = {
   Babel: { es: 'Rumbo Estrategico, Capital Humano y Cultura', en: 'Strategy, People and Culture' },
   Karmetin: { es: 'Marketing, Ventas y Atencion al Cliente', en: 'Marketing, Sales and Customer Care' },
-  Normau: { es: 'Cumplimiento Normativo, Alianzas y Enfoque Socioambiental', en: 'Compliance, Partnerships and ESG' },
+  Normau: { es: 'Cumplimiento Normativo', en: 'Regulatory Compliance' },
   Fisnando: { es: 'Finanzas y Fiscal', en: 'Finance and Tax' },
   Atech: { es: 'Operacion, Conocimiento y Digitalizacion', en: 'Operations, Knowledge and Digital' },
+  Ecori: { es: 'Alianzas y Enfoque Socioambiental', en: 'Partnerships and ESG' },
 };
 
 // El agente solo conoce el texto de ESTA accion puntual (nunca el plan
