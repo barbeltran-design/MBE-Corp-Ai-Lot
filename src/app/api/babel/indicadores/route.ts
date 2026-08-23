@@ -66,8 +66,7 @@ APRENDIZAJE Y CONOCIMIENTO (Nuestro equipo):
 - "Capacitación": "Lograr que el 100% del personal cumpla su plan de capacitación en los siguientes 12 meses."
 - "Clima Laboral": "Incrementar a 95% de personal satisfecho en los siguientes 12 meses."
 
-SOCIOAMBIENTAL:
-- "Descarbonización (NIIF S2 - Reducción de contaminación)": "Disminuir la huella de carbono en un 50% en emisiones alcance 1 (combustión propia, flotillas) y Alcance 2 (electricidad consumida) en los siguientes 12 meses."
+SOCIOAMBIENTAL (nota: los objetivos fijos "Gobernanza y Transparencia (NIIF S1)" y "Descarbonización de Operaciones (NIIF S2)" se agregan automáticamente por el sistema; solo propone los del catálogo de abajo):
 - "Economía Circular e Impacto Financiero (NIIF S1/S2)": "Separar y vender o reusar el x% de [proponer el porcentaje y los residuos o productos de acuerdo al giro] mensualmente en los siguientes 12 meses."`;
 
 const CATALOGO_EN = `MANDATORY BALANCED SCORECARD OBJECTIVE CATALOG (5 perspectives):
@@ -96,8 +95,7 @@ LEARNING AND GROWTH (Our team):
 - "Training": "Ensure that 100% of staff complete their training plan over the next 12 months."
 - "Work Climate": "Increase satisfied staff to 95% over the next 12 months."
 
-SOCIAL-ENVIRONMENTAL:
-- "Decarbonization (IFRS S2 - Pollution reduction)": "Reduce the carbon footprint by 50% in scope 1 emissions (own combustion, fleets) and Scope 2 (consumed electricity) over the next 12 months."
+SOCIAL-ENVIRONMENTAL (note: the fixed objectives "Governance and Transparency (IFRS S1)" and "Operational Decarbonization (IFRS S2)" are added automatically by the system; only propose the ones from the catalog below):
 - "Circular Economy and Financial Impact (IFRS S1/S2)": "Separate and sell or reuse x% of [propose the percentage and the waste or products according to the business type] monthly over the next 12 months."`;
 
 function buildSystemPrompt(language: 'es' | 'en'): string {
@@ -107,7 +105,9 @@ function buildSystemPrompt(language: 'es' | 'en'): string {
       'You are Babel, a strategic business architect. The user defines Balanced Scorecard strategic objectives from a standard catalog ' +
       'and gives you their saved financial goals as context.\n\n' +
       'Your task: propose between 10 and 18 strategic objectives from the catalog below, covering ALL 5 perspectives ' +
-      '(at least 2 per perspective, and ALWAYS all 4 financial ones when financial data exists). For each one, ' +
+      '(at least 2 per perspective — except Socio-environmental, where the fixed objectives Governance and Transparency (IFRS S1) ' +
+      'and Operational Decarbonization (IFRS S2) are added automatically and you only propose the remaining catalog items —, and ' +
+      'ALWAYS all 4 financial ones when financial data exists). For each one, ' +
       'copy the exact "name" and the exact "wording", replacing ONLY the [bracketed] parts with concrete, realistic values ' +
       '(use the financial context values for the financial perspective; otherwise propose plausible values for the declared income channels). ' +
       'Do NOT add, remove or reword any other part of the wording.\n\n' +
@@ -122,7 +122,9 @@ function buildSystemPrompt(language: 'es' | 'en'): string {
     'Eres Babel, un arquitecto estrategico de negocios. El usuario define objetivos estrategicos Balanced Scorecard a partir de un catalogo ' +
     'estandar y te da sus objetivos financieros guardados como contexto.\n\n' +
     'Tu tarea: propone entre 10 y 18 objetivos estrategicos del catalogo de abajo, cubriendo TODAS las 5 perspectivas ' +
-    '(al menos 2 por perspectiva, y SIEMPRE los 4 de la financiera cuando existan datos financieros). Para cada uno, ' +
+    '(al menos 2 por perspectiva — excepto Socioambiental, donde los objetivos fijos "Gobernanza y Transparencia (NIIF S1)" y ' +
+    '"Descarbonización de Operaciones (NIIF S2)" ya se agregan automaticamente y solo debes proponer los restantes del catalogo —, y ' +
+    'SIEMPRE los 4 de la financiera cuando existan datos financieros). Para cada uno, ' +
     'copia el "nombre" y la "redaccion" exactos, sustituyendo SOLO las partes entre corchetes [ ] por valores concretos y realistas ' +
     '(usa los valores del contexto financiero para la perspectiva financiera; si no hay datos, propone valores plausibles para los canales declarados). ' +
     'NO agregues, quites ni reformules ninguna otra parte de la redaccion.\n\n' +
@@ -297,12 +299,13 @@ function objetivosNormatividadFijos(language: 'es' | 'en'): Record<string, strin
   ];
 }
 
-// Objetivo "Gobernanza y Transparencia (NIIF S1 - Impacto economico directo e
-// indirecto)" de la perspectiva Socioambiental: es fijo y exacto (sin partes
-// entre corchetes que la IA deba completar), asi que se agrega de forma
-// deterministica en cada respuesta, igual que los fijos de Normatividad.
-// Reemplaza al bullet anterior de "Gobernanza y Transparencia" del catalogo
-// (que se elimino de CATALOGO_ES/CATALOGO_EN para no duplicar el objetivo).
+// Objetivos FIJOS de la perspectiva Socioambiental: "Gobernanza y
+// Transparencia (NIIF S1 - Impacto economico directo e indirecto)" y
+// "Descarbonización de Operaciones (NIIF S2 - Emisiones)". Son fijos y exactos
+// (sin partes entre corchetes que la IA deba completar), asi que se agregan de
+// forma deterministica en cada respuesta, igual que los fijos de Normatividad.
+// Reemplazan a los bullets anteriores del catalogo (eliminados de
+// CATALOGO_ES/CATALOGO_EN para no duplicar objetivos).
 function objetivosSocioambientalFijos(language: 'es' | 'en'): Record<string, string>[] {
   if (language === 'en') {
     return [
@@ -316,6 +319,15 @@ function objetivosSocioambientalFijos(language: 'es' | 'en'): Record<string, str
         unidadMedida: '%',
         frecuencia: 'mensual',
       },
+      {
+        perspectiva: 'socioambiental',
+        nombre: 'Operational Decarbonization (IFRS S2 - Emissions)',
+        formula: 'Absolute GHG emissions Scope 1 + Scope 2 (tCO2eq) vs baseline',
+        objetivo: 'Reduce absolute Scope 1 and Scope 2 Greenhouse Gas (GHG) emissions by 25% within 12 months.',
+        meta: '25',
+        unidadMedida: '% reduction',
+        frecuencia: 'mensual',
+      },
     ];
   }
   return [
@@ -327,6 +339,15 @@ function objetivosSocioambientalFijos(language: 'es' | 'en'): Record<string, str
       objetivo: 'Incrementar a 100% de las iniciativas socioambientales con impacto económico en los siguientes 12 meses.',
       meta: '100',
       unidadMedida: '%',
+      frecuencia: 'mensual',
+    },
+    {
+      perspectiva: 'socioambiental',
+      nombre: 'Descarbonización de Operaciones (NIIF S2 - Emisiones)',
+      formula: 'Emisiones absolutas de GEI Alcance 1 + Alcance 2 (tCO2eq) vs línea base',
+      objetivo: 'Reducir las emisiones absolutas de Gases de Efecto Invernadero (GEI) de Alcance 1 y 2 en un 25% en 12 meses.',
+      meta: '25',
+      unidadMedida: '% reducción',
       frecuencia: 'mensual',
     },
   ];
@@ -412,7 +433,12 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // FIX: el corte anterior .slice(0, 18) RECORTABA los objetivos generados por
+  // la IA (los socioambientales van al final del arreglo y eran los primeros
+  // en desaparecer cada vez que se agregaba un fijo). El limite ahora es
+  // dinamico: todos los fijos + el maximo que puede devolver la IA (18).
+  const limiteTotal = normatividadFijos.length + socioambientalFijos.length + 18;
   return NextResponse.json({
-    indicadores: [...normatividadFijos, ...socioambientalFijos, ...result].slice(0, 18),
+    indicadores: [...normatividadFijos, ...socioambientalFijos, ...result].slice(0, limiteTotal),
   });
 }

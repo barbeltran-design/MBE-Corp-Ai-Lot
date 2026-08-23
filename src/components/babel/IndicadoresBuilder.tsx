@@ -340,7 +340,14 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
         setGenError((data && data.error) || (lang === 'en' ? 'Unknown error contacting Babel.' : 'Error desconocido al contactar a Babel.'));
         return;
       }
-      const nuevos: Indicador[] = (data.indicadores as RawIndicadorIA[]).slice(0, 18).map((raw) => {
+      // FIX: aqui habia un .slice(0, 18) que RECORTABA la propuesta (los
+      // socioambientales generados van al final y desaparecian). El servidor
+      // ya limita correctamente; ademas se omiten duplicados por nombre para
+      // no acumular repetidos al volver a generar.
+      const nombresExistentes = new Set(
+        indicadores.map((it) => (it.nombre || '').trim().toLowerCase()).filter(Boolean)
+      );
+      const nuevos: Indicador[] = (data.indicadores as RawIndicadorIA[]).map((raw) => {
         const perspectivaRaw = (raw.perspectiva || '').trim().toLowerCase();
         const frecuenciaRaw = (raw.frecuencia || 'mensual').trim().toLowerCase();
         return {
@@ -356,7 +363,13 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
           validado: false,
         };
       });
-      setIndicadores((prev) => prev.concat(nuevos));
+      const nuevosSinDuplicados = nuevos.filter((it) => {
+        const clave = (it.nombre || '').trim().toLowerCase();
+        if (!clave || nombresExistentes.has(clave)) return false;
+        nombresExistentes.add(clave);
+        return true;
+      });
+      setIndicadores((prev) => prev.concat(nuevosSinDuplicados));
     } catch (err) {
       setGenError(lang === 'en' ? 'Connection error while contacting Babel.' : 'Error de conexion al contactar a Babel.');
       console.error(err);
