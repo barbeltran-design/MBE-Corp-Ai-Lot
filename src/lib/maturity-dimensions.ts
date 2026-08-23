@@ -275,7 +275,7 @@ const CONTENT: Record<Language, Record<DimensionId, DimensionText>> = {
       explicacion: 'El ambiente dentro del negocio',
       levels: [
         ['Publico el propósito común, misión, visión y valores', 'Plataforma oficial de comunicación corporativa'],
-        ['Escribo los valores y conductas aceptables', 'Reglamento de Trabajo y código de conduta firmados'],
+        ['Escribo los valores y conductas aceptables', 'Reglamento de Trabajo y código de conducta firmados'],
         ['Mido el estrés del equipo y su alineación a los valores de la empresa', 'Encuesta de Riesgos Psicosociales y 360'],
         ['Promuevo una cultura que favorece la innovación', 'Concursos de innovación interáreas'],
         ['Mantengo un equipo autogestionado de alto desempeño', 'Matriz de Talento (Desempeño vs. Valores)'],
