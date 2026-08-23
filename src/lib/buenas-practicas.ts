@@ -1,7 +1,7 @@
 // Catalogo de Buenas Practicas de negocio (fase 1 de un catalogo mayor).
 // Cada practica tiene el Tema (que coincide con los temas de la Evaluacion
 // de Madurez), la Buena Practica, la Perspectiva del BSC que impacta y el
-// Mentor sugerido (Babel, Fisnando, Karmetin, Normau, Atech).
+// Mentor sugerido (Babel, Fisnando, Karmetin, Normau, Atech, Ecori).
 //
 // Se usa como contexto estatico en la ruta /api/babel/extractor-plan-accion
 // (paso 'acciones') para que Babel proponga acciones alineadas con el
@@ -47,8 +47,8 @@ export const BUENAS_PRACTICAS: BuenaPractica[] = [
   { tema: 'Operacion', practica: 'Plan de contingencia', perspectiva: 'Procesos Internos', mentor: 'Atech' },
   { tema: 'Conocimiento', practica: 'Documentacion de procesos y aprendizaje', perspectiva: 'Aprendizaje y Crecimiento', mentor: 'Atech' },
   { tema: 'Conocimiento', practica: 'Pasantias y formacion continua', perspectiva: 'Aprendizaje y Crecimiento', mentor: 'Atech' },
-  { tema: 'Enfoque SocioAmbiental Congruente', practica: 'Transparencia socioambiental', perspectiva: 'Procesos Internos', mentor: 'Normau' },
-  { tema: 'Enfoque SocioAmbiental Congruente', practica: 'Estrategia ESG documentada', perspectiva: 'Procesos Internos', mentor: 'Normau' },
+  { tema: 'Enfoque SocioAmbiental Congruente', practica: 'Transparencia socioambiental', perspectiva: 'Procesos Internos', mentor: 'Ecori' },
+  { tema: 'Enfoque SocioAmbiental Congruente', practica: 'Estrategia ESG documentada', perspectiva: 'Procesos Internos', mentor: 'Ecori' },
   { tema: 'Capital Humano', practica: 'Perfiles y Descriptivos de Puestos y Onboarding', perspectiva: 'Aprendizaje y Crecimiento', mentor: 'Babel' },
   { tema: 'Capital Humano', practica: 'Capacitacion y certificaciones', perspectiva: 'Aprendizaje y Crecimiento', mentor: 'Babel' },
   { tema: 'Capital Humano', practica: 'Evaluacion de desempeno', perspectiva: 'Aprendizaje y Crecimiento', mentor: 'Babel' },
