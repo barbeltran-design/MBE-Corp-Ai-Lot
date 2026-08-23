@@ -144,7 +144,7 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
     },
     {
       selector: '#resumen-plan',
-      title: t('Tu plan de negocio', 'Your business plan'),
+      title: t('Tu plan estratégico', 'Your strategic plan'),
       description: t(
         'Resumen de tu plan, fases aprobadas y plan de acción, con accesos directos para editarlos.',
         'Summary of your plan, approved phases and action plan, with shortcuts to edit them.'
@@ -451,9 +451,16 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
     }
   }, []);
 
-  const approvedPhases: BabelPhaseRecord[] = [...(sessionDoc?.phases ?? [])]
-    .filter((p) => p.phase >= 0 && p.phase <= 4)
-    .sort((a, b) => a.phase - b.phase);
+  // Se agrupa por numero de fase (Map conserva el ultimo registro de cada
+  // una) para que datos viejos con fases duplicadas -bug ya corregido en
+  // approveBabelPhase- nunca muestren mas de las 5 fases reales (0-4).
+  const approvedPhases: BabelPhaseRecord[] = Array.from(
+    new Map(
+      (sessionDoc?.phases ?? [])
+        .filter((p) => p.phase >= 0 && p.phase <= 4)
+        .map((p) => [p.phase, p] as const)
+    ).values()
+  ).sort((a, b) => a.phase - b.phase);
   const currentPhase = Math.min(Math.max(sessionDoc?.currentPhase ?? 0, 0), 5);
   const approvedCount = approvedPhases.length;
   const allPhasesDone = currentPhase >= 5;
@@ -1164,7 +1171,7 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
         <GlassCard id="resumen-plan" className="animate-slide-up" style={{ animationDelay: '260ms' }}>
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h2 className="text-sm font-semibold text-foreground">{t('Tu plan de negocio', 'Your business plan')}</h2>
+              <h2 className="text-sm font-semibold text-foreground">{t('Tu plan estratégico', 'Your strategic plan')}</h2>
               <p className="text-xs text-muted-foreground">
                 {t('Estado de las fases aprobadas y del plan de acción.', 'Status of approved phases and the action plan.')}
               </p>
@@ -1194,17 +1201,6 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
                     {t(
                       `${planCounts.objetivos} objetivos · ${planCounts.acciones} acciones`,
                       `${planCounts.objetivos} objectives · ${planCounts.acciones} actions`
-                    )}
-                  </span>
-                </div>
-              ) : null}
-              {planCounts && planCounts.entornos + planCounts.convocatorias + planCounts.metasFinancieras > 0 ? (
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">{t('Entorno y finanzas', 'Environment & finance')}</span>
-                  <span className="font-medium text-foreground">
-                    {t(
-                      `${planCounts.entornos} amenazas · ${planCounts.convocatorias} convocatorias · ${planCounts.metasFinancieras} metas`,
-                      `${planCounts.entornos} threats · ${planCounts.convocatorias} opportunities · ${planCounts.metasFinancieras} goals`
                     )}
                   </span>
                 </div>

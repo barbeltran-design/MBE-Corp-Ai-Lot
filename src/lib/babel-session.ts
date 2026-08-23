@@ -73,6 +73,10 @@ export async function approveBabelPhase(
   const ref = doc(db, 'sessions', babelSessionId(uid));
   const snap = await getDoc(ref);
   const existing = (snap.data() as SessionDoc | undefined)?.phases ?? [];
+  // Si esta fase ya tenia un registro (doble clic, reintento, o una carrera
+  // entre el auto-aprobado y la aprobacion manual), se reemplaza en vez de
+  // agregarse de nuevo para que "Fases aprobadas" nunca cuente duplicados.
+  const sinEstaFase = existing.filter((p) => p.phase !== phase);
   const nextPhase = phase + 1;
   const topics = babelPhaseTopics(language);
 
@@ -84,7 +88,7 @@ export async function approveBabelPhase(
   };
 
   await updateDoc(ref, {
-    phases: [...existing, record],
+    phases: [...sinEstaFase, record],
     currentPhase: nextPhase,
     topic: topics[nextPhase] ?? topics[topics.length - 1],
   });
