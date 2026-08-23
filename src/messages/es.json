@@ -171,6 +171,8 @@
   "assessment": {
     "loading": "Cargando...",
     "stepLabel": "Diagnóstico de madurez · Tema {current} de {total}",
+    "temaTabsLabel": "Ir directo a un tema",
+    "levelTabsLabel": "Ir directo a un nivel de este tema",
     "levelOf": "Nivel {current} de {total}",
     "nivel": "Nivel",
     "expectedEvidence": "Evidencia esperada:",

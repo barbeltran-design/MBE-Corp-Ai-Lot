@@ -248,6 +248,49 @@ function OnboardingInner() {
     }
   }
 
+  // Avanza un nivel (o marca el tema como terminado si ya estaba en el
+  // último nivel). Complemento explícito de handleBack para que el usuario
+  // pueda moverse hacia adelante sin depender solo del auto-avance tras
+  // responder.
+  function handleForward() {
+    if (phase === 'temaDone') return;
+    if (levelStep < LEVELS_PER_TEMA - 1) {
+      setLevelStep(levelStep + 1);
+      setShowRef(false);
+    } else {
+      setPhase('temaDone');
+    }
+  }
+
+  // Salta directamente a un nivel del tema actual (pestañas de nivel).
+  function goToLevel(i: number) {
+    setLevelStep(i);
+    setPhase('question');
+    setShowRef(false);
+  }
+
+  // Primer nivel sin responder de un tema (o el último si ya está completo),
+  // para que saltar a un tema desde las pestañas de arriba caiga en un lugar
+  // útil en vez de siempre el nivel 1.
+  function firstOpenLevel(temaId: keyof DimensionAnswers): number {
+    const arr = answers[temaId];
+    const idx = arr.findIndex((v) => v === null);
+    return idx === -1 ? LEVELS_PER_TEMA - 1 : idx;
+  }
+
+  function isTemaComplete(temaId: keyof DimensionAnswers): boolean {
+    return answers[temaId].every((v) => v !== null);
+  }
+
+  // Salta directamente a un tema (pestañas de los 11 temas de arriba).
+  function goToTema(temaIndex: number) {
+    const tema = dimensions[temaIndex];
+    setStep(temaIndex);
+    setLevelStep(firstOpenLevel(tema.id));
+    setPhase('question');
+    setShowRef(false);
+  }
+
   function handleContinueNextTema() {
     setStep((s) => Math.min(s + 1, totalSteps - 1));
     setLevelStep(0);
@@ -346,6 +389,34 @@ function OnboardingInner() {
     <main className="min-h-screen bg-gradient-to-b from-emerald-50/40 to-white px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-2xl">
         <div className="sticky top-14 z-10 -mx-4 border-b border-slate-200 bg-card/95 px-4 pb-4 pt-2 backdrop-blur-sm dark:border-slate-700 sm:-mx-6 sm:px-6">
+          <div
+            role="tablist"
+            aria-label={t('temaTabsLabel')}
+            className="-mx-1 mb-2 flex gap-1.5 overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {dimensions.map((d, i) => {
+              const isActive = i === step;
+              const done = isTemaComplete(d.id);
+              return (
+                <button
+                  key={d.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => goToTema(i)}
+                  className={`min-h-8 shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                    isActive
+                      ? 'border-emerald-600 bg-emerald-600 text-white'
+                      : done
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-300'
+                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
+                  }`}
+                >
+                  {i + 1}. {d.tema}
+                </button>
+              );
+            })}
+          </div>
           <p className="text-xs font-medium uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
             {t('stepLabel', { current: step + 1, total: totalSteps })}
           </p>
@@ -367,19 +438,34 @@ function OnboardingInner() {
               <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300">
                 {t('levelOf', { current: levelStep + 1, total: LEVELS_PER_TEMA })}
               </span>
-              <div className="flex gap-1.5" aria-hidden>
-                {Array.from({ length: LEVELS_PER_TEMA }).map((_v, i) => (
-                  <span
-                    key={i}
-                    className={`h-2 w-2 rounded-full transition-colors ${
-                      i < levelStep
-                        ? 'bg-emerald-600'
-                        : i === levelStep
-                          ? 'bg-emerald-600 ring-2 ring-emerald-200 dark:ring-emerald-900'
-                          : 'bg-slate-200 dark:bg-slate-700'
-                    }`}
-                  />
-                ))}
+              <div
+                role="tablist"
+                aria-label={t('levelTabsLabel')}
+                className="flex flex-wrap justify-end gap-1"
+              >
+                {currentDimension.levels.map((lvl, i) => {
+                  const answered = answers[currentDimension.id][i] !== null;
+                  const isActive = i === levelStep;
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      role="tab"
+                      aria-selected={isActive}
+                      onClick={() => goToLevel(i)}
+                      title={lvl.tutorial.nivel}
+                      className={`rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors ${
+                        isActive
+                          ? 'border-emerald-600 bg-emerald-600 text-white'
+                          : answered
+                            ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-300'
+                            : 'border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400'
+                      }`}
+                    >
+                      {lvl.tutorial.nivel}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -443,7 +529,7 @@ function OnboardingInner() {
 
             {saveError && <p className="mt-4 text-sm text-red-600 dark:text-red-400">{saveError}</p>}
 
-            <div className="mt-8 flex items-center justify-between">
+            <div className="mt-8 flex items-center justify-between gap-3">
               <Button
                 type="button"
                 variant="outline"
@@ -455,6 +541,14 @@ function OnboardingInner() {
               <span className="text-xs text-slate-400">
                 {step + 1}/{totalSteps} · {levelStep + 1}/{LEVELS_PER_TEMA}
               </span>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleForward}
+                disabled={finishing}
+              >
+                {t('next')}
+              </Button>
             </div>
           </Card>
         ) : (

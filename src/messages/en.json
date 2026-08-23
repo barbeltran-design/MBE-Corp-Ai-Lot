@@ -171,6 +171,8 @@
   "assessment": {
     "loading": "Loading...",
     "stepLabel": "Maturity Assessment · Topic {current} of {total}",
+    "temaTabsLabel": "Jump to a topic",
+    "levelTabsLabel": "Jump to a level of this topic",
     "levelOf": "Level {current} of {total}",
     "nivel": "Level",
     "expectedEvidence": "Expected evidence:",
