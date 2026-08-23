@@ -617,6 +617,12 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                 {finHistory.map(function (entry, idx) {
                   const isLatest = idx === 0;
                   const marketingShown = entry.form?.marketingPct ?? Math.round((entry.input.marketingPct ?? 0) * 100);
+                  let liveResult: FinancialGoalsResult = entry.result;
+                  try {
+                    liveResult = computeFinancialGoals(entry.input);
+                  } catch {
+                    liveResult = entry.result;
+                  }
                   return (
                     <div key={entry.id} className={'rounded-lg border p-3 ' + (isLatest ? 'border-[#32BAD0] bg-[#E1F6FA]/50' : 'border-slate-200 bg-slate-50')}>
                       <div className="flex items-center justify-between gap-2">
@@ -634,7 +640,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                         </div>
                         <div>
                           <p className="text-[10px] uppercase tracking-wide text-slate-500">{lang === 'en' ? 'Break-even' : 'Punto de equilibrio'}</p>
-                          <p className="text-base font-bold text-slate-900">{fmtMoney(entry.result.breakEvenWithMarketing ?? 0)}</p>
+                          <p className="text-base font-bold text-slate-900">{fmtMoney(liveResult.breakEvenWithMarketing ?? 0)}</p>
                         </div>
                       </div>
                       {(() => {
@@ -648,10 +654,9 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                         } catch {
                           channelRows = [];
                         }
-                        const targetRevenue = entry.result.targetRevenueWithMarketing ?? 0;
-                        const totalVarCosts = channelRows.reduce(function (s, c) {
-                          return s + targetRevenue * c.pct * c.varPct;
-                        }, 0);
+                        const targetRevenue = liveResult.targetRevenueWithMarketing ?? 0;
+                        const desiredProfitEntry = entry.form?.desiredProfit ?? entry.input.desiredProfit ?? 0;
+                        const totalGastos = targetRevenue - desiredProfitEntry;
                         return (
                           <div className="mt-2 rounded-lg border border-slate-200 bg-white p-2">
                             <div className="flex items-center justify-between gap-2">
@@ -672,21 +677,21 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                                       <div className="min-w-0">
                                         <p className="truncate font-medium text-slate-800">{ch.name || (lang === 'en' ? '(unnamed)' : '(sin nombre)')}</p>
                                         <p className="text-[10px] text-slate-500">
-                                          {lang === 'en' ? 'Share' : 'Participación'}: {(ch.pct * 100).toFixed(1)}% | {lang === 'en' ? 'Var.' : 'Var.'}: {(ch.varPct * 100).toFixed(1)}%
+                                          {lang === 'en' ? 'Share' : 'Participación'}: {(ch.pct * 100).toFixed(1)}% | {lang === 'en' ? 'Expenses' : 'Gastos'}: {(ch.varPct * 100).toFixed(1)}%
                                         </p>
                                       </div>
                                       <div className="shrink-0 text-right">
                                         <p className="font-semibold text-slate-800">{fmtMoney(chTarget)}</p>
                                         <p className="text-[10px] text-slate-500">
-                                          {lang === 'en' ? 'Var. costs' : 'Costos variables'}: {fmtMoney(chVar)}
+                                          {lang === 'en' ? 'Expenses' : 'Gastos'}: {fmtMoney(chVar)}
                                         </p>
                                       </div>
                                     </div>
                                   );
                                 })}
                                 <div className="flex items-center justify-between pt-1 text-[11px]">
-                                  <p className="font-semibold text-slate-800">{lang === 'en' ? 'Total variable costs' : 'Costos variables totales'}</p>
-                                  <p className="font-semibold text-slate-800">{fmtMoney(totalVarCosts)}</p>
+                                  <p className="font-semibold text-slate-800">{lang === 'en' ? 'Total expenses (fixed + variable + marketing)' : 'Gastos totales (fijos + variables + mercadotecnia)'}</p>
+                                  <p className="font-semibold text-slate-800">{fmtMoney(totalGastos)}</p>
                                 </div>
                               </div>
                             )}
@@ -1136,7 +1141,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                               <div className="min-w-0">
                                 <p className="truncate font-medium">{ch.name || (lang === 'en' ? '(unnamed)' : '(sin nombre)')}</p>
                                 <p className="text-[10px] text-slate-500">
-                                  {lang === 'en' ? 'Share' : 'Participación'}: {(ch.pct * 100).toFixed(1)}% | {lang === 'en' ? 'Var.' : 'Var.'}: {(ch.varPct * 100).toFixed(1)}%
+                                  {lang === 'en' ? 'Share' : 'Participación'}: {(ch.pct * 100).toFixed(1)}% | {lang === 'en' ? 'Expenses' : 'Gastos'}: {(ch.varPct * 100).toFixed(1)}%
                                 </p>
                               </div>
                               <p className="shrink-0 font-semibold">{fmtMoney(targetRevenue * ch.pct)}</p>
