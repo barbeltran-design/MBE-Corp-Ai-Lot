@@ -68,7 +68,6 @@ APRENDIZAJE Y CONOCIMIENTO (Nuestro equipo):
 
 SOCIOAMBIENTAL:
 - "Descarbonización (NIIF S2 - Reducción de contaminación)": "Disminuir la huella de carbono en un 50% en emisiones alcance 1 (combustión propia, flotillas) y Alcance 2 (electricidad consumida) en los siguientes 12 meses."
-- "Gobernanza y Transparencia (NIIF S1 - Reglas y registros claros)": "Registrar el 100% de los impactos a los grupos de interés mensualmente en los siguientes 12 meses."
 - "Economía Circular e Impacto Financiero (NIIF S1/S2)": "Separar y vender o reusar el x% de [proponer el porcentaje y los residuos o productos de acuerdo al giro] mensualmente en los siguientes 12 meses."`;
 
 const CATALOGO_EN = `MANDATORY BALANCED SCORECARD OBJECTIVE CATALOG (5 perspectives):
@@ -99,7 +98,6 @@ LEARNING AND GROWTH (Our team):
 
 SOCIAL-ENVIRONMENTAL:
 - "Decarbonization (IFRS S2 - Pollution reduction)": "Reduce the carbon footprint by 50% in scope 1 emissions (own combustion, fleets) and Scope 2 (consumed electricity) over the next 12 months."
-- "Governance and Transparency (IFRS S1 - Clear rules and records)": "Record 100% of stakeholder impacts monthly over the next 12 months."
 - "Circular Economy and Financial Impact (IFRS S1/S2)": "Separate and sell or reuse x% of [propose the percentage and the waste or products according to the business type] monthly over the next 12 months."`;
 
 function buildSystemPrompt(language: 'es' | 'en'): string {
@@ -299,6 +297,41 @@ function objetivosNormatividadFijos(language: 'es' | 'en'): Record<string, strin
   ];
 }
 
+// Objetivo "Gobernanza y Transparencia (NIIF S1 - Impacto economico directo e
+// indirecto)" de la perspectiva Socioambiental: es fijo y exacto (sin partes
+// entre corchetes que la IA deba completar), asi que se agrega de forma
+// deterministica en cada respuesta, igual que los fijos de Normatividad.
+// Reemplaza al bullet anterior de "Gobernanza y Transparencia" del catalogo
+// (que se elimino de CATALOGO_ES/CATALOGO_EN para no duplicar el objetivo).
+function objetivosSocioambientalFijos(language: 'es' | 'en'): Record<string, string>[] {
+  if (language === 'en') {
+    return [
+      {
+        perspectiva: 'socioambiental',
+        nombre: 'Governance and Transparency (IFRS S1 - Direct and indirect economic impact)',
+        formula:
+          'Number of social-environmental initiatives with economic impact (Direct benefit + Indirect benefit) / Total social-environmental initiatives * 100',
+        objetivo: 'Increase to 100% the social-environmental initiatives with economic impact over the next 12 months.',
+        meta: '100',
+        unidadMedida: '%',
+        frecuencia: 'mensual',
+      },
+    ];
+  }
+  return [
+    {
+      perspectiva: 'socioambiental',
+      nombre: 'Gobernanza y Transparencia (NIIF S1 - Impacto económico directo e indirecto)',
+      formula:
+        'Número de iniciativas socioambientales con impacto económico (Beneficio directo + Beneficio indirecto) / Total de iniciativas socioambientales * 100',
+      objetivo: 'Incrementar a 100% de las iniciativas socioambientales con impacto económico en los siguientes 12 meses.',
+      meta: '100',
+      unidadMedida: '%',
+      frecuencia: 'mensual',
+    },
+  ];
+}
+
 export async function POST(req: NextRequest) {
   let body: IndicadoresRequestBody;
   try {
@@ -362,13 +395,15 @@ export async function POST(req: NextRequest) {
   }
 
   const normatividadFijos = objetivosNormatividadFijos(language);
+  const socioambientalFijos = objetivosSocioambientalFijos(language);
 
   if (!result) {
-    // Aunque ningun proveedor de IA respondio, los dos objetivos fijos de
-    // Normatividad se devuelven igual: no dependen de la IA y el usuario
-    // pidio que aparezcan siempre que se presione "Generar propuesta con Babel".
+    // Aunque ningun proveedor de IA respondio, los objetivos fijos de
+    // Normatividad y Socioambiental se devuelven igual: no dependen de la IA y
+    // el usuario pidio que aparezcan siempre que se presione "Generar
+    // propuesta con Babel".
     return NextResponse.json({
-      indicadores: normatividadFijos,
+      indicadores: [...normatividadFijos, ...socioambientalFijos],
       aiError:
         language === 'en'
           ? 'None of the configured AI providers could generate the rest of the proposal.'
@@ -377,5 +412,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  return NextResponse.json({ indicadores: [...normatividadFijos, ...result].slice(0, 18) });
+  return NextResponse.json({
+    indicadores: [...normatividadFijos, ...socioambientalFijos, ...result].slice(0, 18),
+  });
 }
