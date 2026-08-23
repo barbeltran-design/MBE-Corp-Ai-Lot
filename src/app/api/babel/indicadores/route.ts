@@ -41,27 +41,23 @@ interface IndicadoresRequestBody {
 // se proporcionan); el "nombre" y el resto de la redaccion quedan verbatim.
 // ---------------------------------------------------------------------------
 const CATALOGO_ES = `CATALOGO OBLIGATORIO DE OBJETIVOS BALANCED SCORECARD (5 perspectivas):
-Para cada objetivo usa EXACTAMENTE el "nombre" de la lista y la "redaccion" tal como aparece: tu UNICA intervencion es sustituir SOLO el contenido de los corchetes [ ] por valores concretos y realistas, usando los datos financieros del contexto cuando existan. No cambies ninguna otra palabra del texto.
+Para cada objetivo usa EXACTAMENTE el "nombre" de la lista y la "redaccion" tal como aparece: tu UNICA intervencion es sustituir SOLO el contenido de los corchetes [ ] por valores concretos y realistas, usando los datos financieros del contexto cuando existan. No cambies ninguna otra palabra del texto. Cuando un objetivo indique "formula obligatoria" y/o "meta obligatoria", usa EXACTAMENTE esa formula y/o meta en los campos "formula" y "meta" (no inventes otra).
 
 FINANCIERA (Dinero del negocio):
 - "Ingresos (Ventas)": "Aumentar las ventas de [punto de equilibrio definido] a [ingreso meta] pesos mensuales en 12 meses."
-- "Gastos Fijos": "Reducir los gastos fijos en x% [meta para acelerar la utilidad deseada] con relación a los ingresos en 12 meses."
-- "Gastos Variables": "Reducir los gastos variables en x% [% realista de los ya calculados] con relación a los ingresos en 12 meses."
+- "Gastos Fijos y Variables": "Reducir los gastos fijos en x% [suma del % de gastos variables + % de gastos fijos, incluyendo el % de mercadotecnia] con relación a los ingresos en 12 meses." (formula obligatoria: "% de gastos variables + % de gastos fijos (incluye % de mercadotecnia)")
 - "Utilidad (Ganancia real)": "Lograr [utilidad deseada definida] mensuales en 12 meses."
 
 CLIENTES:
 - "Satisfacción de clientes": "Mantener al 95% de clientes satisfechos mensual en los siguientes 12 meses."
-- "Quejas de clientes": "Menos de 2 quejas de clientes mensuales en los siguientes 12 meses"
-- "Número de Clientes al Mes": "Captar [número de clientes necesarios al mes para alcanzar la meta en 12 meses por canal de ingresos] clientes nuevos cada mes en los siguientes 12 meses."
+- "Cantidad de Clientes": "Captar [# Unidades] de [Producto/Servicio 1], [# Unidades] de [Producto/Servicio 2] y así sucesivamente al mes durante los siguientes 12 meses." (formula obligatoria: "Número de compras en el mes"; meta obligatoria: la suma de todas las unidades de todos los productos/servicios registrados)
 - "Cartera Vencida (Cuentas por cobrar)": "Reducir a menos del 10% la cartera vencida de clientes mensual en los siguientes 12 meses."
 
 PROCESOS INTERNOS (Cómo trabajamos):
-- "Tiempo de Entrega": "Cumplir al 95% las entregas mensuales al cliente comprometidas en los siguientes 12 meses."
-- "Calidad del Producto": "Disminuir a menos del 5% los rechazos por parte del cliente del [producto y/o servicio dependiendo del giro y productos o servicios declarados] mensuales en los siguientes 12 meses."
+- "Cumplimiento al Cliente": "Cumplir al 95% las entregas mensuales al cliente comprometidas en tiempo y sin rechazos en los siguientes 12 meses." (formula obligatoria: "Entregas a tiempo y sin rechazos / Entregas totales")
 - "Atención a requerimientos y problemas": "Cumplir mensualmente al 95% en tiempo y forma la solución de los requerimientos y problemas reportados por el cliente que no estén contemplados en [el producto y/o servicio declarados en las etapas anteriores] en los siguientes 12 meses."
 
 APRENDIZAJE Y CONOCIMIENTO (Nuestro equipo):
-- "Retención de Personal": "Reducir al 3% mensual la rotación del personal en los siguientes 12 meses."
 - "Desempeño": "Incrementar a 95% de cumplimiento mensual del personal en sus objetivos individuales en los siguientes 12 meses."
 - "Capacitación": "Lograr que el 100% del personal cumpla su plan de capacitación en los siguientes 12 meses."
 - "Clima Laboral": "Incrementar a 95% de personal satisfecho en los siguientes 12 meses."
@@ -70,27 +66,23 @@ SOCIOAMBIENTAL (nota: los objetivos fijos "Gobernanza y Transparencia (NIIF S1)"
 - "Economía Circular e Impacto Financiero (NIIF S1/S2)": "Separar y vender o reusar el x% de [proponer el porcentaje y los residuos o productos de acuerdo al giro] mensualmente en los siguientes 12 meses."`;
 
 const CATALOGO_EN = `MANDATORY BALANCED SCORECARD OBJECTIVE CATALOG (5 perspectives):
-For each objective use EXACTLY the "name" from the list and the "wording" as it appears: your ONLY intervention is to substitute ONLY the content of the square brackets [ ] with concrete, realistic values, using the financial data from the context when available. Do not change any other word of the text.
+For each objective use EXACTLY the "name" from the list and the "wording" as it appears: your ONLY intervention is to substitute ONLY the content of the square brackets [ ] with concrete, realistic values, using the financial data from the context when available. Do not change any other word of the text. When an objective states a "mandatory formula" and/or "mandatory target", use EXACTLY that formula and/or target in the "formula" and "meta" fields (do not invent another one).
 
 FINANCIAL (Business money):
 - "Income (Sales)": "Increase sales from [defined break-even point] to [goal revenue] pesos per month in 12 months."
-- "Fixed Expenses": "Reduce fixed expenses by x% [target to accelerate the desired profit] relative to income in 12 months."
-- "Variable Expenses": "Reduce variable expenses by x% [realistic percentage of the already calculated ones] relative to income in 12 months."
+- "Fixed and Variable Expenses": "Reduce fixed expenses by x% [sum of the % of variable expenses + % of fixed expenses, including the % of marketing] relative to income in 12 months." (mandatory formula: "% of variable expenses + % of fixed expenses (includes % of marketing)")
 - "Profit (Real Earnings)": "Achieve [defined desired profit] per month in 12 months."
 
 CUSTOMERS:
 - "Customer Satisfaction": "Keep 95% of customers satisfied monthly over the next 12 months."
-- "Customer Complaints": "Fewer than 2 customer complaints per month over the next 12 months."
-- "Number of Customers per Month": "Attract [number of new customers needed per month to reach the goal in 12 months per income channel] new customers each month over the next 12 months."
+- "Number of Customers": "Attract [# Units] of [Product/Service 1], [# Units] of [Product/Service 2] and so on each month over the next 12 months." (mandatory formula: "Number of purchases in the month"; mandatory target: the sum of all units across every registered product/service)
 - "Overdue Portfolio (Accounts Receivable)": "Reduce the overdue customer portfolio to under 10% monthly over the next 12 months."
 
 INTERNAL PROCESSES (How we work):
-- "Delivery Time": "Meet 95% of the monthly deliveries committed to the customer over the next 12 months."
-- "Product Quality": "Reduce customer rejections of [product and/or service depending on the business type and the declared products or services] to under 5% monthly over the next 12 months."
+- "Customer Fulfillment": "Meet 95% of the monthly deliveries committed to the customer on time and with no rejections over the next 12 months." (mandatory formula: "On-time deliveries with no rejections / Total deliveries")
 - "Requirements and Issues Response": "Monthly, resolve 95% of customer requirements and reported issues on time and properly that are not covered by [the product and/or service declared in the previous stages] over the next 12 months."
 
 LEARNING AND GROWTH (Our team):
-- "Staff Retention": "Reduce monthly staff turnover to 3% over the next 12 months."
 - "Performance": "Increase monthly staff compliance with their individual objectives to 95% over the next 12 months."
 - "Training": "Ensure that 100% of staff complete their training plan over the next 12 months."
 - "Work Climate": "Increase satisfied staff to 95% over the next 12 months."
@@ -104,10 +96,10 @@ function buildSystemPrompt(language: 'es' | 'en'): string {
     return (
       'You are Babel, a strategic business architect. The user defines Balanced Scorecard strategic objectives from a standard catalog ' +
       'and gives you their saved financial goals as context.\n\n' +
-      'Your task: propose between 10 and 18 strategic objectives from the catalog below, covering ALL 5 perspectives ' +
+      'Your task: propose between 10 and 12 strategic objectives from the catalog below, covering ALL 5 perspectives ' +
       '(at least 2 per perspective — except Socio-environmental, where the fixed objectives Governance and Transparency (IFRS S1) ' +
       'and Operational Decarbonization (IFRS S2) are added automatically and you only propose the remaining catalog items —, and ' +
-      'ALWAYS all 4 financial ones when financial data exists). For each one, ' +
+      'ALWAYS all 3 financial ones when financial data exists). For each one, ' +
       'copy the exact "name" and the exact "wording", replacing ONLY the [bracketed] parts with concrete, realistic values ' +
       '(use the financial context values for the financial perspective; otherwise propose plausible values for the declared income channels). ' +
       'Do NOT add, remove or reword any other part of the wording.\n\n' +
@@ -121,10 +113,10 @@ function buildSystemPrompt(language: 'es' | 'en'): string {
   return (
     'Eres Babel, un arquitecto estrategico de negocios. El usuario define objetivos estrategicos Balanced Scorecard a partir de un catalogo ' +
     'estandar y te da sus objetivos financieros guardados como contexto.\n\n' +
-    'Tu tarea: propone entre 10 y 18 objetivos estrategicos del catalogo de abajo, cubriendo TODAS las 5 perspectivas ' +
+    'Tu tarea: propone entre 10 y 12 objetivos estrategicos del catalogo de abajo, cubriendo TODAS las 5 perspectivas ' +
     '(al menos 2 por perspectiva — excepto Socioambiental, donde los objetivos fijos "Gobernanza y Transparencia (NIIF S1)" y ' +
     '"Descarbonización de Operaciones (NIIF S2)" ya se agregan automaticamente y solo debes proponer los restantes del catalogo —, y ' +
-    'SIEMPRE los 4 de la financiera cuando existan datos financieros). Para cada uno, ' +
+    'SIEMPRE los 3 de la financiera cuando existan datos financieros). Para cada uno, ' +
     'copia el "nombre" y la "redaccion" exactos, sustituyendo SOLO las partes entre corchetes [ ] por valores concretos y realistas ' +
     '(usa los valores del contexto financiero para la perspectiva financiera; si no hay datos, propone valores plausibles para los canales declarados). ' +
     'NO agregues, quites ni reformules ninguna otra parte de la redaccion.\n\n' +
