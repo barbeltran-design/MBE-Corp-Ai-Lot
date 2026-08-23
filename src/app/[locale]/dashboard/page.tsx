@@ -36,7 +36,12 @@ import { useLocale, useTranslations } from 'next-intl';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 import AgentAvatar from '@/components/agentes/AgentAvatar';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { getLatestAssessmentAnswers } from '@/lib/assessment';
+import {
+  deleteAllAssessments,
+  getAssessmentComparison,
+  getLatestAssessmentAnswers,
+  type AssessmentComparison,
+} from '@/lib/assessment';
 import {
   Radar,
   RadarChart,
@@ -69,6 +74,8 @@ function DashboardPageInner() {
   const [user, setUser] = React.useState<User | null | undefined>(undefined);
   const [result, setResult] = React.useState<AssessmentResult | null>(null);
   const [loadError, setLoadError] = React.useState(false);
+  const [comparison, setComparison] = React.useState<AssessmentComparison | null>(null);
+  const [deleting, setDeleting] = React.useState(false);
 
   const dimensions = React.useMemo(() => getMaturityDimensions(locale), [locale]);
 
@@ -89,13 +96,17 @@ function DashboardPageInner() {
     let cancelled = false;
     (async () => {
       try {
-        const answers = await getLatestAssessmentAnswers(user.uid);
+        const [answers, cmp] = await Promise.all([
+          getLatestAssessmentAnswers(user.uid),
+          getAssessmentComparison(user.uid),
+        ]);
         if (cancelled) return;
         if (!answers) {
           setLoadError(true);
           return;
         }
         setResult(computeResults(dimensions, answers));
+        setComparison(cmp);
       } catch (err) {
         console.error('[MBE Dashboard] failed to load assessment', err);
         if (!cancelled) setLoadError(true);
@@ -105,6 +116,20 @@ function DashboardPageInner() {
       cancelled = true;
     };
   }, [user, locale]);
+
+  async function handleDeleteMaturity() {
+    if (!user) return;
+    const confirmed = window.confirm(t('deleteConfirm'));
+    if (!confirmed) return;
+    setDeleting(true);
+    try {
+      await deleteAllAssessments(user.uid);
+      router.push(`/${locale}/onboarding`);
+    } catch (err) {
+      console.error('[MBE Dashboard] failed to delete assessment', err);
+      setDeleting(false);
+    }
+  }
 
   if (user === undefined || (!result && !loadError)) {
     return (
@@ -182,6 +207,14 @@ function DashboardPageInner() {
             >
               {t('retakeLink')}
             </button>
+            <button
+              type="button"
+              onClick={() => void handleDeleteMaturity()}
+              disabled={deleting}
+              className="text-xs font-medium text-red-600 underline underline-offset-2 hover:text-red-700 disabled:opacity-60"
+            >
+              {deleting ? t('deleting') : t('deleteMaturityLink')}
+            </button>
           </div>
         </div>
 
@@ -195,6 +228,37 @@ function DashboardPageInner() {
             <p className="mt-1 text-2xl font-semibold text-slate-900">{tLevel(result.overallLevel)}</p>
           </Card>
         </div>
+
+        {comparison?.previous && (
+          <Card id="dashboard-comparacion" className="mt-6 p-6">
+            <h2 className="text-sm font-semibold text-slate-700">{t('comparisonTitle')}</h2>
+            <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs text-slate-500">{t('comparisonScoreLabel')}</p>
+                <p className="mt-1 text-lg font-semibold text-slate-900">
+                  {Math.round(comparison.previous.totalScore)}% → {Math.round(comparison.current.totalScore)}%
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">{t('comparisonLevelLabel')}</p>
+                <p className="mt-1 text-lg font-semibold text-slate-900">
+                  {tLevel(comparison.previous.totalLevel)} → {tLevel(comparison.current.totalLevel)}
+                </p>
+              </div>
+            </div>
+            {(() => {
+              const delta = comparison.current.totalScore - comparison.previous.totalScore;
+              const colorClass = delta > 0 ? 'text-emerald-600' : delta < 0 ? 'text-red-600' : 'text-slate-500';
+              const message =
+                delta > 0
+                  ? t('comparisonImproved', { points: Math.round(delta) })
+                  : delta < 0
+                    ? t('comparisonDeclined', { points: Math.round(Math.abs(delta)) })
+                    : t('comparisonSame');
+              return <p className={`mt-4 text-sm ${colorClass}`}>{message}</p>;
+            })()}
+          </Card>
+        )}
 
         <div id="dashboard-graficas" className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
           <Card className="p-6">

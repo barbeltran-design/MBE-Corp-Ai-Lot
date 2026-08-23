@@ -1,6 +1,6 @@
-import { collection, doc, getDocs, limit, orderBy, query, serverTimestamp, setDoc, Timestamp } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDocs, limit, orderBy, query, serverTimestamp, setDoc, Timestamp } from 'firebase/firestore';
 import { getFirebaseDb } from '@/lib/firebase';
-import type { AssessmentDoc } from '@/types/firestore';
+import type { AssessmentDoc, MaturityLevel } from '@/types/firestore';
 import { DIMENSION_IDS } from '@/lib/maturity-dimensions';
 import { buildDimensionsDoc, type AssessmentResult, type DimensionAnswers, type Answer } from '@/lib/maturity-scoring';
 
@@ -92,4 +92,62 @@ export async function getAssessmentHistory(uid: string, max = 8): Promise<Assess
       totalScore: typeof raw.totalScore === 'number' ? raw.totalScore : 0,
     };
   });
+}
+
+export interface AssessmentSnapshot {
+  timestamp: Date;
+  totalScore: number;
+  totalLevel: MaturityLevel;
+  dimensions: AssessmentDoc['dimensions'];
+}
+
+export interface AssessmentComparison {
+  current: AssessmentSnapshot;
+  previous: AssessmentSnapshot | null;
+}
+
+function toSnapshot(raw: AssessmentDoc): AssessmentSnapshot {
+  return {
+    timestamp: raw.timestamp instanceof Timestamp ? raw.timestamp.toDate() : new Date(),
+    totalScore: typeof raw.totalScore === 'number' ? raw.totalScore : 0,
+    totalLevel: raw.totalLevel,
+    dimensions: raw.dimensions,
+  };
+}
+
+/**
+ * Lee los 2 diagnósticos más recientes (el actual y, si existe, el
+ * inmediatamente anterior) para que el Dashboard pueda mostrar "tu último
+ * diagnóstico vs este nuevo" después de que el usuario vuelve a hacer la
+ * evaluación (botón "Vuelve a hacer el diagnóstico"). `previous` es null si
+ * este es el único diagnóstico que el usuario ha guardado — en ese caso no
+ * hay nada que comparar todavía.
+ */
+export async function getAssessmentComparison(uid: string): Promise<AssessmentComparison | null> {
+  const db = getFirebaseDb();
+  const entriesQuery = query(collection(db, 'assessments', uid, 'entries'), orderBy('timestamp', 'desc'), limit(2));
+  const snap = await getDocs(entriesQuery);
+  if (snap.empty) return null;
+
+  const docs = snap.docs.map((d) => d.data() as AssessmentDoc);
+  return {
+    current: toSnapshot(docs[0]),
+    previous: docs[1] ? toSnapshot(docs[1]) : null,
+  };
+}
+
+/**
+ * Borra todos los diagnósticos guardados del usuario (assessments/{uid}/entries/*)
+ * y revierte users/{uid}.assessmentCompleted a false (más totalMaturity a 0),
+ * para que el flujo obligatorio de registro/login -> ¿tiene diagnóstico? lo
+ * vuelva a mandar a /onboarding la próxima vez. Usado por el botón "Borrar mi
+ * nivel de madurez" del Dashboard. Acción irreversible — la pantalla que la
+ * llama debe confirmar con el usuario antes de invocarla.
+ */
+export async function deleteAllAssessments(uid: string): Promise<void> {
+  const db = getFirebaseDb();
+  const entriesQuery = query(collection(db, 'assessments', uid, 'entries'));
+  const snap = await getDocs(entriesQuery);
+  await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)));
+  await setDoc(doc(db, 'users', uid), { assessmentCompleted: false, totalMaturity: 0 }, { merge: true });
 }
