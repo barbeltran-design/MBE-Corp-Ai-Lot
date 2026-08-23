@@ -196,6 +196,7 @@
     "temaCompleteBody": "You finished all 6 levels of \"{tema}\".",
     "continueNextTema": "Continue to the next topic",
     "saveAndContinueLater": "Save and continue later",
+    "savingDraft": "Saving...",
     "allDoneTitle": "You completed your Maturity Assessment!",
     "allDoneBody": "You answered all 11 topics. Let's look at your maturity report.",
     "mission2PromptTitle": "Ready for the next step?",

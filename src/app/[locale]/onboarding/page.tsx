@@ -120,6 +120,7 @@ function OnboardingInner() {
   const [showRef, setShowRef] = React.useState(false);
   const [answers, setAnswers] = React.useState<DimensionAnswers>(() => loadDraft() ?? emptyAnswers());
   const [finishing, setFinishing] = React.useState(false);
+  const [savingDraft, setSavingDraft] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
   const [badgeToCelebrate, setBadgeToCelebrate] = React.useState<string | null>(null);
   // Array `partida` (misiones completadas del Mundo de Partida) devuelto por
@@ -298,9 +299,26 @@ function OnboardingInner() {
     setPhase('question');
   }
 
-  function handleSaveAndContinueLater() {
-    // answers y position ya están guardados en localStorage por los efectos
-    // de arriba en cada cambio, así que basta con salir.
+  async function handleSaveAndContinueLater() {
+    // Guarda un snapshot parcial en Firestore (aunque falten temas por
+    // responder) para que el Dashboard, al abrirse justo después, muestre el
+    // avance real en vez de un diagnóstico anterior desactualizado o el
+    // mensaje de "no hay diagnóstico guardado". answers y position ya están
+    // respaldados en localStorage por los efectos de arriba en cada cambio,
+    // así que esto es una mejora de "mejor esfuerzo": si falla (sin conexión,
+    // etc.) igual dejamos avanzar al usuario -- su progreso sigue seguro en
+    // localStorage para cuando regrese a /onboarding.
+    if (user) {
+      setSavingDraft(true);
+      try {
+        const result = computeResults(dimensions, answers);
+        await saveAssessment(user.uid, answers, result);
+      } catch (err) {
+        console.error('[MBE Assessment] failed to save partial progress', err);
+      } finally {
+        setSavingDraft(false);
+      }
+    }
     router.push(`/${locale}/dashboard`);
   }
 
@@ -627,10 +645,11 @@ function OnboardingInner() {
                   </Button>
                   <button
                     type="button"
-                    onClick={handleSaveAndContinueLater}
-                    className="text-xs font-medium text-slate-500 underline-offset-2 hover:underline dark:text-slate-400"
+                    onClick={() => void handleSaveAndContinueLater()}
+                    disabled={savingDraft}
+                    className="text-xs font-medium text-slate-500 underline-offset-2 hover:underline disabled:opacity-60 dark:text-slate-400"
                   >
-                    {t('saveAndContinueLater')}
+                    {savingDraft ? t('savingDraft') : t('saveAndContinueLater')}
                   </button>
                 </div>
               </>

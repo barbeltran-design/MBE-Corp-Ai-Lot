@@ -196,6 +196,7 @@
     "temaCompleteBody": "Terminaste los 6 niveles de \"{tema}\".",
     "continueNextTema": "Continuar con el siguiente tema",
     "saveAndContinueLater": "Guardar y continuar después",
+    "savingDraft": "Guardando...",
     "allDoneTitle": "¡Completaste tu diagnóstico de madurez!",
     "allDoneBody": "Ya respondiste los 11 temas. Vamos a ver tu reporte de madurez.",
     "mission2PromptTitle": "¿Listo para el siguiente paso?",
