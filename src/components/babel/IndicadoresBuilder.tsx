@@ -210,7 +210,38 @@ function buildFinancialContext(lang: PlanLang): string {
     const targetRevenue = r.targetRevenueWithMarketing ?? 0;
     const desiredProfit = i.desiredProfit ?? 0;
     const totalGastosPct = targetRevenue > 0 ? ((targetRevenue - desiredProfit) / targetRevenue) * 100 : 0;
-    const products: { name: string; units: number }[] = [];
+    // Filas producto x canal con su ingreso actual (units*unitPrice), igual que
+    // computeFinancialChannels en src/lib/deliverables.ts, para derivar la META de
+    // unidades (no las unidades actuales) de la misma forma que el panel
+    // "Meta por producto/servicio y unidades requeridas" de FinancialGoalsBuilder.
+    type Row = { name: string; income: number; unitPrice: number; explicitPct: number };
+    const rows: Row[] = [];
+    let totalIncome = 0;
+    if (Array.isArray(i.channels)) {
+      i.channels.forEach((c: any) => {
+        if (Array.isArray(c.products)) {
+          c.products.forEach((p: any) => {
+            if (!p || !p.name) return;
+            const income = (p.units || 0) * (p.unitPrice || 0);
+            totalIncome += income;
+            rows.push({
+              name: p.name,
+              income,
+              unitPrice: p.unitPrice || 0,
+              explicitPct: typeof p.pct === 'number' && isFinite(p.pct) && p.pct > 0 ? p.pct : 0,
+            });
+          });
+        }
+      });
+    }
+    const explicitSum = rows.reduce((s, row) => s + row.explicitPct, 0);
+    const useExplicit = explicitSum > 0;
+    const productTargets = rows.map((row) => {
+      const pct = useExplicit ? row.explicitPct / explicitSum : totalIncome > 0 ? row.income / totalIncome : 0;
+      const pTarget = targetRevenue * pct;
+      const targetUnits = row.unitPrice > 0 ? Math.ceil(pTarget / row.unitPrice) : null;
+      return { name: row.name, targetUnits };
+    });
     const channels =
       Array.isArray(i.channels) && i.channels.length > 0
         ? i.channels
@@ -218,9 +249,6 @@ function buildFinancialContext(lang: PlanLang): string {
               const hasProducts = Array.isArray(c.products) && c.products.length > 0;
               if (hasProducts) {
                 const income = c.products.reduce((s2: number, p: any) => s2 + (p.units || 0) * (p.unitPrice || 0), 0);
-                c.products.forEach((p: any) => {
-                  if (p && p.name) products.push({ name: p.name, units: p.units || 0 });
-                });
                 return c.name + ' ($' + Math.round(income).toLocaleString(lang === 'en' ? 'en-US' : 'es-MX') + ' ' + monthly + ')';
               }
               return c.name + ' (' + Math.round(c.pct ?? 0) + '%)';
@@ -229,12 +257,10 @@ function buildFinancialContext(lang: PlanLang): string {
         : lang === 'en'
           ? 'not declared'
           : 'no declarados';
-    const productsLine =
-      products.length > 0
-        ? products
-            .map((p) => p.units + (lang === 'en' ? ' units of ' : ' unidades de ') + p.name + (lang === 'en' ? '/month' : '/mes'))
-            .join(', ')
-        : '';
+    const productsLine = productTargets
+      .filter((p) => p.targetUnits !== null && p.targetUnits > 0)
+      .map((p) => p.targetUnits + (lang === 'en' ? ' units of ' : ' unidades de ') + p.name + (lang === 'en' ? '/month' : '/mes'))
+      .join(', ');
     const lines = [
       (lang === 'en' ? 'Break-even point: ' : 'Punto de equilibrio: ') + money(r.breakEvenWithMarketing) + ' ' + monthly,
       (lang === 'en' ? 'Goal revenue: ' : 'Ingreso meta: ') + money(r.targetRevenueWithMarketing) + ' ' + monthly,
