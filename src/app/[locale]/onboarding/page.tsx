@@ -392,7 +392,7 @@ function OnboardingInner() {
           <div
             role="tablist"
             aria-label={t('temaTabsLabel')}
-            className="-mx-1 mb-2 flex gap-1.5 overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="-mx-1 mb-2 flex gap-1.5 overflow-x-auto px-1 pb-2 [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 dark:[&::-webkit-scrollbar-thumb]:bg-slate-600"
           >
             {dimensions.map((d, i) => {
               const isActive = i === step;
@@ -434,14 +434,14 @@ function OnboardingInner() {
 
         {phase === 'question' ? (
           <Card className="mt-6 p-5 sm:p-8">
-            <div className="flex items-center justify-between gap-3">
-              <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300">
+            <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <span className="inline-flex min-w-[8rem] items-center justify-center rounded-full bg-emerald-100 px-3 py-1 text-center text-xs font-semibold text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300">
                 {t('levelOf', { current: levelStep + 1, total: LEVELS_PER_TEMA })}
               </span>
               <div
                 role="tablist"
                 aria-label={t('levelTabsLabel')}
-                className="flex flex-wrap justify-end gap-1"
+                className="grid w-full grid-cols-3 gap-1 sm:w-auto"
               >
                 {currentDimension.levels.map((lvl, i) => {
                   const answered = answers[currentDimension.id][i] !== null;
@@ -454,7 +454,7 @@ function OnboardingInner() {
                       aria-selected={isActive}
                       onClick={() => goToLevel(i)}
                       title={lvl.tutorial.nivel}
-                      className={`rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors ${
+                      className={`flex items-center justify-center rounded-full border px-2 py-0.5 text-center text-[11px] font-medium transition-colors ${
                         isActive
                           ? 'border-emerald-600 bg-emerald-600 text-white'
                           : answered
