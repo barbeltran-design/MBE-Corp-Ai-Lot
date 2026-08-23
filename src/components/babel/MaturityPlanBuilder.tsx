@@ -85,6 +85,7 @@ const LABELS = {
     temasTitle: 'Practicas por tema',
     temaCompleto: 'Tema al maximo (6 niveles)',
     siguienteCol: 'Siguiente practica',
+    evidenciaEjemplo: 'Ejemplo de evidencia',
     scrumTitle: 'Scrum semanal',
     scrumHint: 'Cada semana se decide UNA accion a realizar y se divide en tareas. Toca una tarjeta para moverla de columna.',
     accionSemana: 'Accion de la semana',
@@ -136,6 +137,7 @@ const LABELS = {
     temasTitle: 'Practices by topic',
     temaCompleto: 'Topic at maximum (6 levels)',
     siguienteCol: 'Next practice',
+    evidenciaEjemplo: 'Evidence example',
     scrumTitle: 'Weekly scrum',
     scrumHint: 'Each week ONE action is chosen and broken into tasks. Tap a card to move it across columns.',
     accionSemana: 'Action of the week',
@@ -373,6 +375,16 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
       return { nivel: n, practica: PRACTICAS_POR_TEMA[themeId][n] };
     },
     [siguienteNivel]
+  );
+
+  // Ejemplo de evidencia (entregable esperado) de la actividad fija de un tema
+  // en un nivel. Vive en maturity-dimensions.ts (levels[n].deliverable, mismo
+  // orden Ejecucion..Influencer que PRACTICAS_POR_TEMA), ya localizado por idioma.
+  const evidenciaDe = React.useCallback(
+    (themeId: DimensionId, nivelIdx: number): string => {
+      return dimensions.find((d) => d.id === themeId)?.levels?.[nivelIdx]?.deliverable || '';
+    },
+    [dimensions]
   );
 
   const siguienteDeAgente = React.useCallback(
@@ -665,6 +677,16 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
     return [{ value: accionSel, label: labelDeAccion(accionSel) }, ...opcionesAccion];
   }, [accionSel, opcionesAccion, labelDeAccion]);
 
+  // Evidencia de la accion seleccionada en el scrum de la semana.
+  const evidenciaAccion = React.useMemo(() => {
+    if (!accionSel) return '';
+    const parts = accionSel.split('|');
+    const id = parts[0] as DimensionId;
+    const n = Number(parts[1]);
+    if (!PRACTICAS_POR_TEMA[id]?.[n]) return '';
+    return evidenciaDe(id, n);
+  }, [accionSel, evidenciaDe]);
+
   const fijarAccion = (value: string) => {
     setPlan((prev) => ({
       ...prev,
@@ -792,6 +814,11 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
             )}
           </select>
           {!accionSel && opcionesAccion.length > 0 ? <p className="mt-1 text-xs text-slate-400">{t.sinAccion}</p> : null}
+          {evidenciaAccion ? (
+            <p className="mt-1.5 rounded-md bg-slate-50 px-2.5 py-1.5 text-xs leading-relaxed text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
+              <span className="font-semibold">{t.evidenciaEjemplo}:</span> {evidenciaAccion}
+            </p>
+          ) : null}
         </div>
 
         <div className="mt-3 flex gap-2">
@@ -926,6 +953,14 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
                           <p className="text-xs text-slate-500">
                             {t.nivelCol}: {LEVEL_LABELS[lang][comp.nivel]}
                           </p>
+                          {(() => {
+                            const ev = evidenciaDe(comp.themeId, comp.nivel);
+                            return ev ? (
+                              <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                                <span className="font-semibold">{t.evidenciaEjemplo}:</span> {ev}
+                              </p>
+                            ) : null;
+                          })()}
                         </div>
                         <select
                           value={comp.estatus}
@@ -1024,9 +1059,19 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-slate-800">{temaDe[id]}</p>
                   {sig ? (
-                    <p className="mt-0.5 text-xs text-slate-600">
-                      {t.siguienteCol}: ({LEVEL_LABELS[lang][sig.nivel]}) {sig.practica.practica}
-                    </p>
+                    <>
+                      <p className="mt-0.5 text-xs text-slate-600">
+                        {t.siguienteCol}: ({LEVEL_LABELS[lang][sig.nivel]}) {sig.practica.practica}
+                      </p>
+                      {(() => {
+                        const ev = evidenciaDe(id, sig.nivel);
+                        return ev ? (
+                          <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                            <span className="font-semibold">{t.evidenciaEjemplo}:</span> {ev}
+                          </p>
+                        ) : null;
+                      })()}
+                    </>
                   ) : (
                     <p className="mt-0.5 text-xs text-green-700">{t.temaCompleto}</p>
                   )}
