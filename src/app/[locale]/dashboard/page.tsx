@@ -314,7 +314,7 @@ function DashboardPageInner() {
                     {d.enProgreso.length > 0 ? (
                       d.enProgreso.map((p, ki) => (
                         <div key={p.levelKey} className={ki > 0 ? 'mt-1.5' : undefined}>
-                          {`${p.description} — ${p.deliverable}`}
+                          {p.description}
                         </div>
                       ))
                     ) : (
@@ -322,7 +322,7 @@ function DashboardPageInner() {
                     )}
                   </td>
                   <td className="py-2 pr-4 text-slate-500">
-                    {d.nextStep ? `${d.nextStep.description} — ${d.nextStep.deliverable}` : t('masteredLabel')}
+                    {d.nextStep ? d.nextStep.description : t('masteredLabel')}
                   </td>
                 </tr>
               ))}
