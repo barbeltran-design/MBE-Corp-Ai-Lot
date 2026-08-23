@@ -45,7 +45,7 @@ Para cada objetivo usa EXACTAMENTE el "nombre" de la lista y la "redaccion" tal 
 
 FINANCIERA (Dinero del negocio):
 - "Ingresos (Ventas)": "Aumentar las ventas de [punto de equilibrio definido] a [ingreso meta] pesos mensuales en 12 meses."
-- "Gastos Fijos y Variables": "Reducir los gastos fijos en x% [suma del % de gastos variables + % de gastos fijos, incluyendo el % de mercadotecnia] con relación a los ingresos en 12 meses." (formula obligatoria: "% de gastos variables + % de gastos fijos (incluye % de mercadotecnia)")
+- "Gastos Fijos y Variables": "Reducir los gastos fijos en x% con relación a los ingresos en 12 meses." (formula obligatoria: "Suma de % de Gastos fijos + Variables + Mercadotecnia"; meta obligatoria: usa el porcentaje del contexto financiero etiquetado como gasto total (fijos + variables + mercadotecnia) como % de ingresos)
 - "Utilidad (Ganancia real)": "Lograr [utilidad deseada definida] mensuales en 12 meses."
 
 CLIENTES:
@@ -62,15 +62,14 @@ APRENDIZAJE Y CONOCIMIENTO (Nuestro equipo):
 - "Capacitación": "Lograr que el 100% del personal cumpla su plan de capacitación en los siguientes 12 meses."
 - "Clima Laboral": "Incrementar a 95% de personal satisfecho en los siguientes 12 meses."
 
-SOCIOAMBIENTAL (nota: los objetivos fijos "Gobernanza y Transparencia (NIIF S1)" y "Descarbonización de Operaciones (NIIF S2)" se agregan automáticamente por el sistema; solo propone los del catálogo de abajo):
-- "Economía Circular e Impacto Financiero (NIIF S1/S2)": "Separar y vender o reusar el x% de [proponer el porcentaje y los residuos o productos de acuerdo al giro] mensualmente en los siguientes 12 meses."`;
+SOCIOAMBIENTAL (nota: los objetivos fijos "Gobernanza y Transparencia (NIIF S1)" y "Descarbonización de Operaciones (NIIF S2)" se agregan automáticamente por el sistema; no propongas objetivos adicionales para esta perspectiva).`;
 
 const CATALOGO_EN = `MANDATORY BALANCED SCORECARD OBJECTIVE CATALOG (5 perspectives):
 For each objective use EXACTLY the "name" from the list and the "wording" as it appears: your ONLY intervention is to substitute ONLY the content of the square brackets [ ] with concrete, realistic values, using the financial data from the context when available. Do not change any other word of the text. When an objective states a "mandatory formula" and/or "mandatory target", use EXACTLY that formula and/or target in the "formula" and "meta" fields (do not invent another one).
 
 FINANCIAL (Business money):
 - "Income (Sales)": "Increase sales from [defined break-even point] to [goal revenue] pesos per month in 12 months."
-- "Fixed and Variable Expenses": "Reduce fixed expenses by x% [sum of the % of variable expenses + % of fixed expenses, including the % of marketing] relative to income in 12 months." (mandatory formula: "% of variable expenses + % of fixed expenses (includes % of marketing)")
+- "Fixed and Variable Expenses": "Reduce fixed expenses by x% relative to income in 12 months." (mandatory formula: "Sum of % of Fixed expenses + Variable + Marketing"; mandatory target: use the percentage from the financial context labeled as total expenses (fixed + variable + marketing) as % of revenue)
 - "Profit (Real Earnings)": "Achieve [defined desired profit] per month in 12 months."
 
 CUSTOMERS:
@@ -87,8 +86,7 @@ LEARNING AND GROWTH (Our team):
 - "Training": "Ensure that 100% of staff complete their training plan over the next 12 months."
 - "Work Climate": "Increase satisfied staff to 95% over the next 12 months."
 
-SOCIAL-ENVIRONMENTAL (note: the fixed objectives "Governance and Transparency (IFRS S1)" and "Operational Decarbonization (IFRS S2)" are added automatically by the system; only propose the ones from the catalog below):
-- "Circular Economy and Financial Impact (IFRS S1/S2)": "Separate and sell or reuse x% of [propose the percentage and the waste or products according to the business type] monthly over the next 12 months."`;
+SOCIAL-ENVIRONMENTAL (note: the fixed objectives "Governance and Transparency (IFRS S1)" and "Operational Decarbonization (IFRS S2)" are added automatically by the system; do not propose additional objectives for this perspective).`;
 
 function buildSystemPrompt(language: 'es' | 'en'): string {
   const catalog = language === 'en' ? CATALOGO_EN : CATALOGO_ES;
@@ -98,7 +96,7 @@ function buildSystemPrompt(language: 'es' | 'en'): string {
       'and gives you their saved financial goals as context.\n\n' +
       'Your task: propose between 10 and 12 strategic objectives from the catalog below, covering ALL 5 perspectives ' +
       '(at least 2 per perspective — except Socio-environmental, where the fixed objectives Governance and Transparency (IFRS S1) ' +
-      'and Operational Decarbonization (IFRS S2) are added automatically and you only propose the remaining catalog items —, and ' +
+      'and Operational Decarbonization (IFRS S2) are added automatically and you must NOT propose any objective for that perspective —, and ' +
       'ALWAYS all 3 financial ones when financial data exists). For each one, ' +
       'copy the exact "name" and the exact "wording", replacing ONLY the [bracketed] parts with concrete, realistic values ' +
       '(use the financial context values for the financial perspective; otherwise propose plausible values for the declared income channels). ' +
@@ -115,7 +113,7 @@ function buildSystemPrompt(language: 'es' | 'en'): string {
     'estandar y te da sus objetivos financieros guardados como contexto.\n\n' +
     'Tu tarea: propone entre 10 y 12 objetivos estrategicos del catalogo de abajo, cubriendo TODAS las 5 perspectivas ' +
     '(al menos 2 por perspectiva — excepto Socioambiental, donde los objetivos fijos "Gobernanza y Transparencia (NIIF S1)" y ' +
-    '"Descarbonización de Operaciones (NIIF S2)" ya se agregan automaticamente y solo debes proponer los restantes del catalogo —, y ' +
+    '"Descarbonización de Operaciones (NIIF S2)" ya se agregan automaticamente y NO debes proponer ningun objetivo para esa perspectiva —, y ' +
     'SIEMPRE los 3 de la financiera cuando existan datos financieros). Para cada uno, ' +
     'copia el "nombre" y la "redaccion" exactos, sustituyendo SOLO las partes entre corchetes [ ] por valores concretos y realistas ' +
     '(usa los valores del contexto financiero para la perspectiva financiera; si no hay datos, propone valores plausibles para los canales declarados). ' +

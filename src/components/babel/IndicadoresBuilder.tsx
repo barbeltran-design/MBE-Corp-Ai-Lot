@@ -207,6 +207,10 @@ function buildFinancialContext(lang: PlanLang): string {
     if (!i || !r) return '';
     const money = (v: number): string => '$' + Math.round(v).toLocaleString(lang === 'en' ? 'en-US' : 'es-MX');
     const monthly = lang === 'en' ? 'monthly' : 'mensuales';
+    const targetRevenue = r.targetRevenueWithMarketing ?? 0;
+    const desiredProfit = i.desiredProfit ?? 0;
+    const totalGastosPct = targetRevenue > 0 ? ((targetRevenue - desiredProfit) / targetRevenue) * 100 : 0;
+    const products: { name: string; units: number }[] = [];
     const channels =
       Array.isArray(i.channels) && i.channels.length > 0
         ? i.channels
@@ -214,6 +218,9 @@ function buildFinancialContext(lang: PlanLang): string {
               const hasProducts = Array.isArray(c.products) && c.products.length > 0;
               if (hasProducts) {
                 const income = c.products.reduce((s2: number, p: any) => s2 + (p.units || 0) * (p.unitPrice || 0), 0);
+                c.products.forEach((p: any) => {
+                  if (p && p.name) products.push({ name: p.name, units: p.units || 0 });
+                });
                 return c.name + ' ($' + Math.round(income).toLocaleString(lang === 'en' ? 'en-US' : 'es-MX') + ' ' + monthly + ')';
               }
               return c.name + ' (' + Math.round(c.pct ?? 0) + '%)';
@@ -222,14 +229,29 @@ function buildFinancialContext(lang: PlanLang): string {
         : lang === 'en'
           ? 'not declared'
           : 'no declarados';
-    return [
+    const productsLine =
+      products.length > 0
+        ? products
+            .map((p) => p.units + (lang === 'en' ? ' units of ' : ' unidades de ') + p.name + (lang === 'en' ? '/month' : '/mes'))
+            .join(', ')
+        : '';
+    const lines = [
       (lang === 'en' ? 'Break-even point: ' : 'Punto de equilibrio: ') + money(r.breakEvenWithMarketing) + ' ' + monthly,
       (lang === 'en' ? 'Goal revenue: ' : 'Ingreso meta: ') + money(r.targetRevenueWithMarketing) + ' ' + monthly,
       (lang === 'en' ? 'Desired profit: ' : 'Utilidad deseada: ') + money(i.desiredProfit) + ' ' + monthly,
       (lang === 'en' ? 'Fixed expenses: ' : 'Gastos fijos: ') + money(r.fixedTotal) + ' ' + monthly,
       (lang === 'en' ? 'Variable expenses: ' : '% Gastos variables: ') + (r.totalVariablePctWithMarketing * 100).toFixed(1) + '%',
+      (lang === 'en'
+        ? 'Total expenses (fixed + variable + marketing) as % of revenue: '
+        : 'Gasto total (fijos + variables + mercadotecnia) como % de ingresos: ') + totalGastosPct.toFixed(1) + '%',
       (lang === 'en' ? 'Income channels: ' : 'Canales de ingreso: ') + channels,
-    ].join(' | ');
+    ];
+    if (productsLine) {
+      lines.push(
+        (lang === 'en' ? 'Products/services and monthly unit targets: ' : 'Productos/servicios y metas de unidades mensuales: ') + productsLine,
+      );
+    }
+    return lines.join(' | ');
   } catch {
     return '';
   }
