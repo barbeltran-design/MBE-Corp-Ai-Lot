@@ -223,13 +223,11 @@ const PASOS_TOUR: Record<PlanLang, TourStep[]> = {
     { selector: '#madurez-plan-title', title: 'Mejora del Nivel de Madurez', description: 'Aquí defines las acciones para mejorar la madurez de tu organización: cada mes una práctica con cada agente, en el orden de los temas de la evaluación.' },
     { selector: '#madurez-scrum', title: 'Scrum semanal', description: 'Semana a semana se elige UNA acción y se divide en tareas. Toca una tarjeta para moverla entre columnas.' },
     { selector: '#madurez-mensual', title: 'Plan del mes', description: 'Cada mes se agenda una práctica con cada agente. Actualiza el estatus a Completada para avanzar automáticamente al siguiente nivel del tema.' },
-    { selector: '#madurez-temas', title: 'Prácticas por tema', description: 'El detalle de los 11 temas: la siguiente práctica a trabajar y, si ya la dominas, márcala completada.' },
   ],
   en: [
     { selector: '#madurez-plan-title', title: 'Maturity Level Improvement', description: 'This is where you define the actions to improve your organization\'s maturity: one practice with each agent per month, following the assessment topic order.' },
     { selector: '#madurez-scrum', title: 'Weekly scrum', description: 'Week by week you choose ONE action and break it into tasks. Tap a card to move it across columns.' },
     { selector: '#madurez-mensual', title: 'Monthly plan', description: 'Each month schedules one practice per agent. Update the status to Completed to automatically advance to the next level of the topic.' },
-    { selector: '#madurez-temas', title: 'Practices by topic', description: 'The detail of the 11 topics: the next practice to work on and, if you already master it, mark it as completed.' },
   ],
 };
 
@@ -1031,49 +1029,6 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
             })}
           </div>
         )}
-      </div>
-
-      {/* Practicas por tema */}
-      <div id="madurez-temas" className="mt-6">
-        <h4 className="text-sm font-semibold text-slate-700">{t.temasTitle}</h4>
-        <div className="mt-2 space-y-2">
-          {DIMENSION_IDS.map((id) => {
-            const sig = proximaPractica(id);
-            return (
-              <div key={id} className="glass-panel flex flex-wrap items-center justify-between gap-2 p-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-slate-800">{temaDe[id]}</p>
-                  {sig ? (
-                    <>
-                      <p className="mt-0.5 text-xs text-slate-600">
-                        {t.siguienteCol}: ({LEVEL_LABELS[lang][sig.nivel]}) {sig.practica.practica}
-                      </p>
-                      {(() => {
-                        const ev = evidenciaDe(id, sig.nivel);
-                        return ev ? (
-                          <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-                            <span className="font-semibold">{t.evidenciaEjemplo}:</span> {ev}
-                          </p>
-                        ) : null;
-                      })()}
-                    </>
-                  ) : (
-                    <p className="mt-0.5 text-xs text-green-700">{t.temaCompleto}</p>
-                  )}
-                </div>
-                {sig ? (
-                  <button
-                    type="button"
-                    onClick={() => marcarTemaCompletado(id)}
-                    className="rounded-lg border border-green-300 bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100"
-                  >
-                    {t.marcarCompletada}
-                  </button>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
       </div>
 
       <p className="mt-4 text-xs text-slate-400">{t.guardado}</p>
