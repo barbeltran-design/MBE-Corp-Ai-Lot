@@ -502,12 +502,19 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
 
   // Reto semanal del Tablero de Retos: ya no es texto de demo. Reusamos
   // computeResults() (misma función que /dashboard) sobre las respuestas
-  // reales del usuario para elegir, cada semana, uno de los temas donde
-  // todavía tiene pendientes (nextStep !== null) — priorizando el más débil
-  // (menor score) — y mostrar su "Próximo paso" y su "Evidencia sugerida"
-  // (deliverable) reales, en vez del texto fijo "Controla tu flujo de caja".
-  // Rota semanalmente entre los temas pendientes del propio usuario para que
-  // no se quede fijo siempre en el mismo tema.
+  // reales del usuario para elegir el tema donde todavía tiene pendientes
+  // (nextStep !== null) con el score MÁS BAJO — es decir, la prioridad #1
+  // vigente según la evaluación de madurez — y mostrar su "Próximo paso" y
+  // su "Evidencia sugerida" (deliverable) reales, en vez del texto fijo
+  // "Controla tu flujo de caja".
+  //
+  // Antes esto rotaba cada semana (día del año % cantidad de pendientes),
+  // así que casi siempre mostraba un tema DISTINTO al que el usuario acababa
+  // de ver en /dashboard como su prioridad — lo que hacía parecer que el
+  // reto seguía "atorado" en una actividad vieja aunque el usuario ya
+  // hubiera actualizado su diagnóstico. Ahora siempre se muestra el mismo
+  // tema prioritario que ve en el Dashboard, y se recalcula automáticamente
+  // en cuanto `respuestas` cambia (nueva evaluación guardada).
   const retoSemanalData = React.useMemo(() => {
     if (!respuestas) return null;
     try {
@@ -517,10 +524,7 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
         .filter((d) => d.nextStep !== null)
         .sort((a, b) => a.score - b.score);
       if (pendientes.length === 0) return null;
-      const hoy = new Date();
-      const inicioAnio = new Date(hoy.getFullYear(), 0, 1);
-      const semanaDelAnio = Math.floor((hoy.getTime() - inicioAnio.getTime()) / (7 * 24 * 60 * 60 * 1000));
-      const elegido = pendientes[semanaDelAnio % pendientes.length];
+      const elegido = pendientes[0];
       return { tema: elegido.tema, nextStep: elegido.nextStep! };
     } catch {
       return null;
