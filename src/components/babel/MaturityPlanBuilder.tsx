@@ -940,7 +940,7 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
                     {comp ? (
                       <>
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-slate-800">
+                          <p className="text-sm font-medium leading-snug text-slate-800">
                             {temaDe[comp.themeId]} - {evidenciaDe(comp.themeId, comp.nivel) || comp.practica}
                           </p>
                           <p className="text-xs text-slate-500">
