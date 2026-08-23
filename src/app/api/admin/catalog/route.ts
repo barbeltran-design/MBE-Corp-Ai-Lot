@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebase-admin';
-import { requireRole } from '@/lib/server-roles';
+import { requireAdminSeccion } from '@/lib/server-roles';
 import { DEFAULT_CATALOG, productIdValido, type CatalogItem } from '@/lib/catalog';
 
 // GET /api/admin/catalog — catálogo de precios (uno por producto pago).
 export async function GET(req: NextRequest) {
-  const guard = await requireRole(req, 'admin');
+  const guard = await requireAdminSeccion(req, 'catalog');
   if (guard instanceof NextResponse) return guard;
 
   try {
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
 
 // PUT /api/admin/catalog — actualiza precio/promoción/estado de un producto.
 export async function PUT(req: NextRequest) {
-  const guard = await requireRole(req, 'admin');
+  const guard = await requireAdminSeccion(req, 'catalog');
   if (guard instanceof NextResponse) return guard;
 
   try {

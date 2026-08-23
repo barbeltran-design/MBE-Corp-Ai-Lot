@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebase-admin';
-import { requireRole } from '@/lib/server-roles';
+import { requireAdminSeccion } from '@/lib/server-roles';
 
 // Mismo algoritmo de normalizacion que scripts/sync-convocatorias.mjs y
 // apps-script/convocatorias-hook.gs, para que el "nombre normalizado" que usa
@@ -96,22 +96,25 @@ async function upsertEnHoja(doc: Parameters<typeof filaParaHoja>[0]): Promise<vo
   }
 }
 
-// GET /api/admin/convocatorias — lista lo agregado a mano (convocatorias_extra)
-// y lo oculto del catalogo de la hoja (convocatorias_ocultas), para la pestana
+// GET /api/admin/convocatorias — lista lo agregado a mano (convocatorias_extra),
+// lo oculto del catalogo de la hoja (convocatorias_ocultas) y las sugerencias
+// de Babel pendientes de revision (convocatorias_sugeridas), para la pestana
 // "Convocatorias" del panel de administracion.
 export async function GET(req: NextRequest) {
-  const guard = await requireRole(req, 'admin');
+  const guard = await requireAdminSeccion(req, 'convocatorias');
   if (guard instanceof NextResponse) return guard;
 
   try {
     const db = getAdminDb();
-    const [extraSnap, ocultasSnap] = await Promise.all([
+    const [extraSnap, ocultasSnap, sugeridasSnap] = await Promise.all([
       db.collection('convocatorias_extra').orderBy('creadaEn', 'desc').get(),
       db.collection('convocatorias_ocultas').get(),
+      db.collection('convocatorias_sugeridas').orderBy('sugeridaEn', 'desc').limit(200).get(),
     ]);
     const extra = extraSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
     const ocultas = ocultasSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    return NextResponse.json({ extra, ocultas });
+    const sugeridas = sugeridasSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    return NextResponse.json({ extra, ocultas, sugeridas });
   } catch (err) {
     console.error('[admin/convocatorias] GET error', err);
     return NextResponse.json({ error: 'No se pudieron leer las convocatorias.' }, { status: 500 });
@@ -124,7 +127,7 @@ export async function GET(req: NextRequest) {
 // revision (el administrador ya vio/edito los campos en /admin antes de
 // llamar aqui).
 export async function POST(req: NextRequest) {
-  const guard = await requireRole(req, 'admin');
+  const guard = await requireAdminSeccion(req, 'convocatorias');
   if (guard instanceof NextResponse) return guard;
 
   try {
@@ -181,7 +184,7 @@ export async function POST(req: NextRequest) {
 // cambio y ya no coincide con ningun renglon) la fila correspondiente en la
 // hoja de Google.
 export async function PUT(req: NextRequest) {
-  const guard = await requireRole(req, 'admin');
+  const guard = await requireAdminSeccion(req, 'convocatorias');
   if (guard instanceof NextResponse) return guard;
 
   try {
@@ -235,7 +238,7 @@ export async function PUT(req: NextRequest) {
   }
 }
 
-// DELETE /api/admin/convocatorias — tres casos:
+// DELETE /api/admin/convocatorias — cuatro casos:
 //   ?origen=extra&id=<docId>      -> borra definitivamente una convocatoria
 //                                     agregada a mano (nunca estuvo en la hoja).
 //   ?origen=sheet&nombre=<texto>  -> oculta una convocatoria del catalogo de
@@ -243,8 +246,11 @@ export async function PUT(req: NextRequest) {
 //                                     renglon de la hoja desde aqui; solo se
 //                                     deja de mostrar en la pagina publica).
 //   ?origen=restaurar&nombre=<texto> -> quita el ocultamiento anterior.
+//   ?origen=sugerida&id=<docId>   -> descarta (o quita, tras publicarla) una
+//                                     sugerencia de Babel de
+//                                     convocatorias_sugeridas.
 export async function DELETE(req: NextRequest) {
-  const guard = await requireRole(req, 'admin');
+  const guard = await requireAdminSeccion(req, 'convocatorias');
   if (guard instanceof NextResponse) return guard;
 
   try {
@@ -256,6 +262,13 @@ export async function DELETE(req: NextRequest) {
       const id = searchParams.get('id');
       if (!id) return NextResponse.json({ error: 'Falta el id.' }, { status: 400 });
       await db.collection('convocatorias_extra').doc(id).delete();
+      return NextResponse.json({ ok: true });
+    }
+
+    if (origen === 'sugerida') {
+      const id = searchParams.get('id');
+      if (!id) return NextResponse.json({ error: 'Falta el id.' }, { status: 400 });
+      await db.collection('convocatorias_sugeridas').doc(id).delete();
       return NextResponse.json({ ok: true });
     }
 
@@ -280,7 +293,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    return NextResponse.json({ error: 'origen invalido (usa extra, sheet o restaurar).' }, { status: 400 });
+    return NextResponse.json({ error: 'origen invalido (usa extra, sugerida, sheet o restaurar).' }, { status: 400 });
   } catch (err) {
     console.error('[admin/convocatorias] DELETE error', err);
     return NextResponse.json({ error: 'No se pudo completar la accion.' }, { status: 500 });

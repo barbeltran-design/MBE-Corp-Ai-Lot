@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
-import { requireRole } from '@/lib/server-roles';
-import { APP_ROLES, TEMAS_ESPECIALISTA } from '@/lib/roles';
+import { requireRole, requireAdminSeccion } from '@/lib/server-roles';
+import { APP_ROLES, SECCIONES_ADMIN, TEMAS_ESPECIALISTA } from '@/lib/roles';
 
 // GET /api/admin/users — lista usuarios con sus roles, empresa, madurez y
 // actividad registrada en la aplicación (assessments, sesiones babel, pagos).
+// Accesible para el admin general o para un admin de la seccion 'users'
+// (solo lectura; los cambios de roles siguen reservados al admin general).
 export async function GET(req: NextRequest) {
-  const guard = await requireRole(req, 'admin');
+  const guard = await requireAdminSeccion(req, 'users');
   if (guard instanceof NextResponse) return guard;
 
   try {
@@ -37,6 +39,9 @@ export async function GET(req: NextRequest) {
           name: data.name ?? '',
           email: data.email ?? '',
           roles: Array.isArray(data.roles) ? data.roles : [],
+          adminSecciones: Array.isArray(data.adminSecciones)
+            ? data.adminSecciones
+            : [],
           especialistaTemas: Array.isArray(data.especialistaTemas) ? data.especialistaTemas : [],
           certificado: data.certificado === true,
           estatus: data.estatus === 'cancelado' ? 'cancelado' : 'activo',
@@ -90,6 +95,15 @@ export async function POST(req: NextRequest) {
     const temas = Array.isArray(body?.especialistaTemas)
       ? (body.especialistaTemas as unknown[]).filter((t): t is string => (TEMAS_ESPECIALISTA as readonly string[]).includes(String(t))).map(String)
       : [];
+    // Administracion por seccion: solo claves validas. Reservado al admin
+    // general (esta ruta ya exige el rol 'admin' completo).
+    const secciones = Array.isArray(body?.adminSecciones)
+      ? (body.adminSecciones as unknown[])
+          .map((s) => String(s))
+          .filter((s): s is (typeof SECCIONES_ADMIN)[number] =>
+            (SECCIONES_ADMIN as readonly string[]).includes(s)
+          )
+      : [];
     if (roles.length === 0 && !body?.roles) {
       return NextResponse.json({ error: 'Faltan los roles.' }, { status: 400 });
     }
@@ -99,6 +113,7 @@ export async function POST(req: NextRequest) {
     const patch: Record<string, unknown> = {
       roles: roles.length ? roles : ['usuario'],
       especialistaTemas: temas,
+      adminSecciones: secciones,
     };
     if (certificado !== undefined) patch.certificado = certificado;
     if (accesoManualPremium !== undefined) {

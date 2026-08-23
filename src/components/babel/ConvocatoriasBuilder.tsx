@@ -17,6 +17,7 @@ import {
   type Evaluacion,
   type PerfilBusqueda,
 } from '@/lib/convocatorias-data';
+import { usePlanEstrategico } from '@/lib/use-plan-estrategico';
 
 type ConvoLang = 'es' | 'en';
 type Vista = 'perfil' | 'catalogo';
@@ -81,6 +82,16 @@ const LABELS = {
     fechaPorConfirmar: 'Fecha por confirmar',
     guardado: 'Directorio de convocatorias con datos de 2025-2026. Verifica siempre los requisitos completos en la liga oficial de cada convocatoria.',
     hoyLabel: '{dia}/{mes}/{anio}',
+    odsTitle: 'ODS sugeridos para ti en tu plan estratégico',
+    odsSub: 'Según el punto 1.2 de tu Propósito (Babel).',
+    progresoPlan: 'Plan en progreso: {n}/{t} fases aprobadas',
+    odsFiltrarBtn: 'Filtrar catálogo por estos ODS',
+    odsQuitarBtn: 'Quitar filtro del plan',
+    odsVacio: 'Tu Propósito aún no menciona ODS específicos. Puede pedirle a Babel que los precise al aprobar tu Fase 1.',
+    sinEstrategiaTitle: 'No has completado el Mundo de la Estrategia',
+    sinEstrategiaDesc: 'Completa tu plan estratégico con Babel y aquí veremos los ODS conectados a tu negocio, junto con convocatorias a tu medida.',
+    btnIrEstrategia: 'Ir al Mundo de la Estrategia',
+    sugerenciaNota: 'Babel detectó {n} convocatoria(s) nueva(s) en tu punto 1.2 y las envió al administrador para su aprobación.',
   },
   en: {
     title: 'Calls & Grants',
@@ -141,6 +152,16 @@ const LABELS = {
     guardado:
       'Calls directory with 2025-2026 data. Always verify the full requirements on the official link of each call.',
     hoyLabel: '{dia}/{mes}/{anio}',
+    odsTitle: 'SDGs suggested for you in your strategic plan',
+    odsSub: 'From point 1.2 of your Purpose (Babel).',
+    progresoPlan: 'Plan in progress: {n}/{t} phases approved',
+    odsFiltrarBtn: 'Filter catalog by these SDGs',
+    odsQuitarBtn: 'Remove plan filter',
+    odsVacio: 'Your Purpose does not mention specific SDGs yet. You can ask Babel to refine them when approving your Phase 1.',
+    sinEstrategiaTitle: 'You have not completed the Strategy World',
+    sinEstrategiaDesc: 'Complete your strategic plan with Babel and we will show you the SDGs connected to your business, plus calls tailored to you.',
+    btnIrEstrategia: 'Go to the Strategy World',
+    sugerenciaNota: 'Babel found {n} new call(s) in your point 1.2 and sent them to the administrator for approval.',
   },
 };
 
@@ -274,6 +295,38 @@ export default function ConvocatoriasBuilder({ lang }: { lang: ConvoLang }) {
   const [extra, setExtra] = React.useState<Convocatoria[]>([]);
   const [ocultas, setOcultas] = React.useState<string[]>([]);
 
+  // Plan estrategico (sesion de Babel): ODS del punto 1.2 + estado del plan.
+  // El hook es reactivo en vivo: si el usuario reinicia su plan, esto se
+  // actualiza solo y la tarjeta vuelve al estado "sin completar".
+  const plan = usePlanEstrategico();
+  const [filtroPlanOds, setFiltroPlanOds] = React.useState(false);
+  const [sugerenciaNuevas, setSugerenciaNuevas] = React.useState(0);
+  const sugerenciaEnviadaRef = React.useRef(false);
+
+  // Cuando hay Fase 1 aprobada, Babel revisa las convocatorias mencionadas en
+  // el punto 1.2 (una vez por visita; el servidor cachea por fingerprint del
+  // resumen, asi que re-visitas no vuelven a gastar IA). Las que no estan en
+  // el directorio se envian al administrador para aprobacion.
+  React.useEffect(() => {
+    if (!plan.user || !plan.fasePropositoAprobada || sugerenciaEnviadaRef.current) return;
+    sugerenciaEnviadaRef.current = true;
+    plan.user
+      .getIdToken()
+      .then((token) =>
+        fetch('/api/babel/sugerir-convocatorias', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      )
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.ok && data.estado === 'nuevo' && Number(data.nuevas) > 0) {
+          setSugerenciaNuevas(Number(data.nuevas));
+        }
+      })
+      .catch(() => {});
+  }, [plan.user, plan.fasePropositoAprobada]);
+
   React.useEffect(() => {
     setHoy(new Date());
   }, []);
@@ -393,19 +446,25 @@ export default function ConvocatoriasBuilder({ lang }: { lang: ConvoLang }) {
 
   const filtradas = React.useMemo(() => {
     const q = busca.toLowerCase();
+    const odsPlan = filtroPlanOds && plan.ods.length ? plan.ods : null;
     return datos.filter((c) => {
       const txt = (c.convocatoria + ' ' + c.descripcion + ' ' + c.ods + ' ' + c.requisitos + ' ' + c.tipo + ' ' + c.ambito).toLowerCase();
       const est = estatusReal(c, hoyD);
       const cumpleEstatus =
         fEstatus === '' || (fEstatus === 'Abierta' ? est !== 'Cerrada' : est === fEstatus);
+      const cumplePlanOds =
+        !odsPlan ||
+        (Array.isArray(c.criterios?.ods_num) && c.criterios!.ods_num.some((n) => odsPlan.includes(n))) ||
+        odsPlan.some((n) => new RegExp('ODS\\s*' + n + '\\b', 'i').test(c.ods || ''));
       return (
         (!q || txt.includes(q)) &&
         cumpleEstatus &&
+        cumplePlanOds &&
         (!fTipo || c.tipo === fTipo) &&
         (!fAmbito || c.ambito === fAmbito)
       );
     });
-  }, [busca, fEstatus, fTipo, fAmbito, datos, hoyD]);
+  }, [busca, fEstatus, fTipo, fAmbito, datos, hoyD, filtroPlanOds, plan.ods]);
 
   const tarjeta = (c: Convocatoria, extraClase?: string, razones?: { si: string[]; no: string[] }) => {
     const est = estatusReal(c, hoyD);    const d = diasTxt(diasRestantes(c, hoyD), t);
@@ -515,6 +574,74 @@ export default function ConvocatoriasBuilder({ lang }: { lang: ConvoLang }) {
           <p className="text-xs text-slate-500">{t.statsAct}</p>
         </div>
       </div>
+
+      {/* ODS sugeridos por el plan estrategico (punto 1.2 del Proposito). */}
+      {plan.cargando ? null : !plan.fasePropositoAprobada ? (
+        <div className="mt-4 flex flex-col gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between dark:border-amber-500/30 dark:bg-amber-500/10">
+          <div>
+            <h4 className="text-sm font-semibold text-amber-900 dark:text-amber-200">🌍 {t.sinEstrategiaTitle}</h4>
+            <p className="mt-1 text-xs leading-relaxed text-amber-800/90 dark:text-amber-200/80">{t.sinEstrategiaDesc}</p>
+          </div>
+          <a
+            href={`/${lang}/worlds/estrategia`}
+            className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+          >
+            🧭 {t.btnIrEstrategia}
+          </a>
+        </div>
+      ) : (
+        <div id="convocatorias-ods-sugeridos" className="glass-panel mt-4 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-100">🌍 {t.odsTitle}</h4>
+              <p className="mt-1 text-xs text-slate-500">
+                {t.odsSub}
+                {!plan.planCompleto
+                  ? ' · ' + t.progresoPlan.replace('{n}', String(plan.fasesAprobadas)).replace('{t}', String(plan.totalFases))
+                  : ''}
+              </p>
+            </div>
+            {plan.ods.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setFiltroPlanOds((v) => !v)}
+                className={
+                  'rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ' +
+                  (filtroPlanOds
+                    ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                    : 'border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:bg-transparent dark:text-slate-200')
+                }
+              >
+                {filtroPlanOds ? t.odsQuitarBtn : t.odsFiltrarBtn}
+              </button>
+            )}
+          </div>
+          {plan.ods.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {plan.ods.map((n) => (
+                <span
+                  key={n}
+                  className={
+                    'rounded-full px-2.5 py-1 text-xs font-semibold ' +
+                    (filtroPlanOds
+                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200'
+                      : 'bg-sky-100 text-sky-900 dark:bg-sky-500/20 dark:text-sky-200')
+                  }
+                >
+                  ODS {n}. {ODS_NAMES[n]}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-2 text-xs text-slate-500">{t.odsVacio}</p>
+          )}
+          {sugerenciaNuevas > 0 && (
+            <p className="mt-2 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+              ✅ {t.sugerenciaNota.replace('{n}', String(sugerenciaNuevas))}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Buscar por perfil */}
       <div id="convocatorias-buscar" className="mt-5 glass-panel p-3">

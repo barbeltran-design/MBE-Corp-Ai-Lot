@@ -10,7 +10,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
-import { APP_ROLES, ROLE_LABELS, TEMAS_ESPECIALISTA, TEMA_LABELS, PRODUCTOS_PAGO, PRODUCTO_LABELS } from '@/lib/roles';
+import {
+  APP_ROLES,
+  ROLE_LABELS,
+  SECCIONES_ADMIN,
+  SECCION_ADMIN_LABELS,
+  TEMAS_ESPECIALISTA,
+  TEMA_LABELS,
+  PRODUCTOS_PAGO,
+  PRODUCTO_LABELS,
+} from '@/lib/roles';
 import { DEFAULT_CATALOG, type CatalogItem } from '@/lib/catalog';
 import AgentAvatar from '@/components/agentes/AgentAvatar';
 import { BABEL_AYUDA_EVENT } from '@/components/babel/BabelAvatar';
@@ -141,6 +150,7 @@ interface UserRow {
   name?: string;
   email?: string;
   roles?: string[];
+  adminSecciones?: string[];
   especialistaTemas?: string[];
   certificado?: boolean;
   estatus?: string;
@@ -163,7 +173,7 @@ export default function AdminPage() {
   React.useEffect(() => { setDispLang(lang); }, [lang]);
   const t = (es: string, en: string) => (dispLang === 'en' ? en : es);
 
-  const { loading, administracion } = useUserRoles();
+  const { loading, administracion, adminGeneral, adminSecciones } = useUserRoles();
   const [user, setUser] = React.useState<User | null>(null);
   const [tab, setTab] = React.useState<TabKey>('catalog');
 
@@ -176,6 +186,7 @@ export default function AdminPage() {
   const [userSearch, setUserSearch] = React.useState('');
   const [selUid, setSelUid] = React.useState('');
   const [selRoles, setSelRoles] = React.useState<string[]>([]);
+  const [selSecciones, setSelSecciones] = React.useState<string[]>([]);
   const [selTemas, setSelTemas] = React.useState<string[]>([]);
   const [selCert, setSelCert] = React.useState(false);
   const [selAccesoPremium, setSelAccesoPremium] = React.useState(false);
@@ -225,10 +236,11 @@ export default function AdminPage() {
   const [convoUrl, setConvoUrl] = React.useState('');
   const [convoExtrayendo, setConvoExtrayendo] = React.useState(false);
   const [convoBorrador, setConvoBorrador] = React.useState<
-    (Partial<Convocatoria> & { fuenteUrl?: string; id?: string }) | null
+    (Partial<Convocatoria> & { fuenteUrl?: string; id?: string; sugeridaId?: string }) | null
   >(null);
   const [convoExtra, setConvoExtra] = React.useState<any[]>([]);
   const [convoOcultas, setConvoOcultas] = React.useState<any[]>([]);
+  const [convoSugeridas, setConvoSugeridas] = React.useState<any[]>([]);
   const [convoMsg, setConvoMsg] = React.useState('');
   const [convoBuscar, setConvoBuscar] = React.useState('');
 
@@ -237,6 +249,22 @@ export default function AdminPage() {
     const unsub = onAuthStateChanged(auth, (u) => setUser(u));
     return unsub;
   }, []);
+
+  // Pestañas visibles segun permisos: el admin general ve todo; un admin de
+  // seccion solo las pestañas asignadas en users/{uid}.adminSecciones.
+  const tabsPermitidos = React.useMemo(() => {
+    if (adminGeneral) return TAB_DEFS.map((m) => m.key);
+    return TAB_DEFS.filter((m) => (adminSecciones as string[] | undefined)?.includes(m.key)).map((m) => m.key);
+  }, [adminGeneral, adminSecciones]);
+
+  // Si la pestaña activa no esta permitida (o es la inicial y no lo es para
+  // este usuario), saltamos a la primera permitida.
+  React.useEffect(() => {
+    if (loading || !administracion) return;
+    if (!tabsPermitidos.includes(tab)) {
+      setTab(tabsPermitidos[0] ?? 'catalog');
+    }
+  }, [loading, administracion, tab, tabsPermitidos]);
 
   const tokenHeaders = React.useCallback(
     async (): Promise<Record<string, string>> => {
@@ -306,6 +334,7 @@ export default function AdminPage() {
     const data = await res.json();
     if (Array.isArray(data.extra)) setConvoExtra(data.extra);
     if (Array.isArray(data.ocultas)) setConvoOcultas(data.ocultas);
+    if (Array.isArray(data.sugeridas)) setConvoSugeridas(data.sugeridas);
   }, [tokenHeaders]);
 
   React.useEffect(() => {
@@ -416,6 +445,7 @@ export default function AdminPage() {
       return;
     }
     const editando = Boolean(convoBorrador.id);
+    const sugeridaId = convoBorrador.sugeridaId;
     const headers = await tokenHeaders();
     const res = await fetch('/api/admin/convocatorias', {
       method: editando ? 'PUT' : 'POST',
@@ -427,6 +457,14 @@ export default function AdminPage() {
       setConvoMsg(data?.error || t('No se pudo guardar.', 'Could not save.'));
       return;
     }
+    // Si se publico desde una sugerencia de Babel, la quitamos del listado
+    // pendiente para que no vuelva a aparecer.
+    if (!editando && sugeridaId) {
+      await fetch(`/api/admin/convocatorias?origen=sugerida&id=${encodeURIComponent(sugeridaId)}`, {
+        method: 'DELETE',
+        headers,
+      }).catch(() => {});
+    }
     setConvoBorrador(null);
     setConvoUrl('');
     setConvoMsg(
@@ -434,6 +472,41 @@ export default function AdminPage() {
         ? t('Cambios guardados.', 'Changes saved.')
         : t('Convocatoria publicada.', 'Funding call published.')
     );
+    await loadConvocatorias();
+  }
+
+  // Prefill del borrador con una sugerencia de Babel, para revisarla/editarla
+  // antes de publicar (mismo flujo de revision que una convocatoria por URL).
+  function publicarDesdeSugerida(s: any) {
+    setConvoMsg('');
+    setConvoBorrador({
+      sugeridaId: s.id,
+      convocatoria: s.nombre || '',
+      tipo: '',
+      ambito: s.tipo === 'internacional' ? 'Internacional' : 'Nacional',
+      ods: '',
+      descripcion: s.requisito || '',
+      requisitos: s.requisito || '',
+      monto: '',
+      fecha_limite: '',
+      estatus: 'Anual (por confirmar)',
+      liga: s.liga || '',
+      fuenteUrl: s.fuenteUrl || s.liga || '',
+      criterios: null,
+    });
+  }
+
+  async function descartarSugerida(id: string) {
+    if (!window.confirm(t('¿Descartar esta sugerencia?', 'Discard this suggestion?'))) return;
+    const headers = await tokenHeaders();
+    const res = await fetch(`/api/admin/convocatorias?origen=sugerida&id=${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers,
+    });
+    if (!res.ok) {
+      setConvoMsg(t('No se pudo descartar la sugerencia.', 'Could not discard the suggestion.'));
+      return;
+    }
     await loadConvocatorias();
   }
 
@@ -510,7 +583,14 @@ export default function AdminPage() {
     const res = await fetch('/api/admin/users', {
       method: 'POST',
       headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ uid: selUid, roles: selRoles, especialistaTemas: selTemas, certificado: selCert, accesoManualPremium: selAccesoPremium }),
+      body: JSON.stringify({
+        uid: selUid,
+        roles: selRoles,
+        especialistaTemas: selTemas,
+        certificado: selCert,
+        accesoManualPremium: selAccesoPremium,
+        adminSecciones: adminGeneral ? selSecciones : undefined,
+      }),
     });
     if (!res.ok) {
       setRolesMsg(t('No se pudieron guardar los roles.', 'Could not save roles.'));
@@ -676,7 +756,7 @@ export default function AdminPage() {
         </div>
 
         <div id="admin-tabs" className="flex flex-wrap gap-2">
-          {TAB_DEFS.map((m) => (
+          {TAB_DEFS.filter((m) => tabsPermitidos.includes(m.key)).map((m) => (
             <Button
               key={m.key}
               type="button"
@@ -753,6 +833,14 @@ export default function AdminPage() {
                         <div className="flex flex-wrap gap-1">
                           {Array.isArray(u.roles) && u.roles.map((r) => <RoleBadge key={r} role={r} lang={dispLang} />)}
                           {(!u.roles || u.roles.length === 0) && <span className="text-xs text-muted-foreground">{t('Usuario', 'User')}</span>}
+                          {Array.isArray(u.adminSecciones) && u.adminSecciones.length > 0 && (
+                            <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800 dark:bg-purple-500/20 dark:text-purple-200">
+                              {t('Admin de: ', 'Admin of: ') +
+                                u.adminSecciones
+                                  .map((s) => SECCION_ADMIN_LABELS[s as keyof typeof SECCION_ADMIN_LABELS]?.[dispLang === 'en' ? 'en' : 'es'] ?? s)
+                                  .join(', ')}
+                            </span>
+                          )}
                           {u.certificado && (
                             <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200">
                               ✓ {t('Certificación MBE Corp', 'MBE Corp Certification')}
@@ -793,6 +881,7 @@ export default function AdminPage() {
                           : '—'}
                       </td>
                       <td className="px-3 py-2">
+                        {adminGeneral ? (
                         <div className="flex flex-wrap gap-1.5">
                           <Button
                             type="button"
@@ -801,6 +890,7 @@ export default function AdminPage() {
                             onClick={() => {
                               setSelUid(u.uid);
                               setSelRoles(Array.isArray(u.roles) ? u.roles : []);
+                              setSelSecciones(Array.isArray(u.adminSecciones) ? u.adminSecciones : []);
                               setSelTemas(Array.isArray(u.especialistaTemas) ? u.especialistaTemas : []);
                               setSelCert(u.certificado === true);
                               setSelAccesoPremium(u.accesoManualPremium === true);
@@ -848,6 +938,11 @@ export default function AdminPage() {
                             </Button>
                           )}
                         </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            {t('Solo lectura', 'Read only')}
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -917,6 +1012,44 @@ export default function AdminPage() {
                       ))}
                     </div>
                   </div>
+                  {adminGeneral && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">
+                        {t(
+                          'Administrador de secciones (facultades parciales del panel, sin rol general de admin):',
+                          'Section admin (partial panel permissions, without the general admin role):'
+                        )}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {SECCIONES_ADMIN.map((sc) => (
+                          <button
+                            key={sc}
+                            type="button"
+                            onClick={() =>
+                              setSelSecciones((prev) =>
+                                prev.includes(sc) ? prev.filter((x) => x !== sc) : [...prev, sc]
+                              )
+                            }
+                            className={
+                              'rounded-full border px-3 py-1 text-xs transition-colors ' +
+                              (selSecciones.includes(sc)
+                                ? 'border-purple-500 bg-purple-500/10 text-purple-700 dark:text-purple-300'
+                                : 'border-slate-300 text-muted-foreground hover:border-purple-400 dark:border-slate-600')
+                            }
+                          >
+                            {selSecciones.includes(sc) ? '✓ ' : ''}
+                            {SECCION_ADMIN_LABELS[sc][dispLang === 'en' ? 'en' : 'es']}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="mt-1.5 text-xs text-muted-foreground">
+                        {t(
+                          'El usuario verá y podrá gestionar únicamente esas pestañas en /admin. Asignar secciones requiere ser administrador general.',
+                          'The user will see and manage only those tabs in /admin. Assigning sections requires being a full administrator.'
+                        )}
+                      </p>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
                     <div>
                       <p className="text-sm font-medium text-foreground">{t('Certificación MBE Corp', 'MBE Corp Certification')}</p>
@@ -1681,6 +1814,134 @@ export default function AdminPage() {
                     <tr>
                       <td colSpan={4} className="px-3 py-8 text-center text-sm text-muted-foreground">
                         {t('No has agregado ninguna convocatoria todavía.', 'You have not added any funding call yet.')}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Sugerencias de Babel pendientes (liga validada OK) */}
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">
+                {t('Sugerencias de Babel — pendientes de aprobación', 'Babel suggestions — pending approval')}
+              </h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {t(
+                  'Convocatorias que Babel detectó en los planes estratégicos de los usuarios y que NO estaban en el directorio. Su liga respondió correctamente. Publícalas (puedes editar los datos antes) o descártalas.',
+                  'Funding calls Babel found in users\' strategic plans that were NOT already in the directory. Their link responded correctly. Publish them (you can edit the data first) or discard them.'
+                )}
+              </p>
+            </div>
+            <div className="max-h-[300px] overflow-auto rounded-lg border border-slate-200 dark:border-slate-700">
+              <table className="w-full text-left text-sm">
+                <thead className="sticky top-0 bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-900 dark:text-slate-300">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">{t('Convocatoria', 'Funding call')}</th>
+                    <th className="px-3 py-2 font-medium">{t('Ámbito', 'Scope')}</th>
+                    <th className="px-3 py-2 font-medium">{t('Requisito', 'Requirement')}</th>
+                    <th className="px-3 py-2 font-medium">{t('Sugeridas', 'Suggested')}</th>
+                    <th className="px-3 py-2" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {convoSugeridas.filter((s) => s.estado === 'pendiente').map((s) => (
+                    <tr key={s.id} className="border-t border-slate-100 dark:border-slate-800">
+                      <td className="px-3 py-2 font-medium text-foreground">
+                        {s.liga ? (
+                          <a href={s.liga} target="_blank" rel="noreferrer" className="hover:underline">
+                            {s.nombre}
+                          </a>
+                        ) : (
+                          s.nombre
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-muted-foreground">{s.tipo || '—'}</td>
+                      <td className="max-w-[280px] px-3 py-2 text-xs text-muted-foreground">{s.requisito || '—'}</td>
+                      <td className="px-3 py-2 text-xs text-muted-foreground">×{s.vecesSugerida ?? 1}</td>
+                      <td className="px-3 py-2">
+                        <div className="flex gap-2">
+                          <Button type="button" size="sm" onClick={() => publicarDesdeSugerida(s)}>
+                            {t('Revisar y publicar', 'Review & publish')}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="text-red-700 hover:bg-red-50 dark:text-red-300"
+                            onClick={() => descartarSugerida(s.id)}
+                          >
+                            {t('Descartar', 'Discard')}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {convoSugeridas.filter((s) => s.estado === 'pendiente').length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-3 py-8 text-center text-sm text-muted-foreground">
+                        {t('No hay sugerencias pendientes.', 'There are no pending suggestions.')}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Sugerencias con error de liga — para busqueda manual */}
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">
+                {t('Sugerencias con error de liga (búsqueda manual)', 'Suggestions with a broken link (manual search)')}
+              </h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {t(
+                  'Estas convocatorias sugeridas no tienen liga válida (o la IA no encontró una segura). Usa la liga de búsqueda para localizar el sitio oficial, extrae los datos por URL y publícalas desde arriba.',
+                  'These suggested calls have no valid link (or the AI could not find a safe one). Use the search link to locate the official site, extract the data by URL and publish from above.'
+                )}
+              </p>
+            </div>
+            <div className="max-h-[260px] overflow-auto rounded-lg border border-slate-200 dark:border-slate-700">
+              <table className="w-full text-left text-sm">
+                <thead className="sticky top-0 bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-900 dark:text-slate-300">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">{t('Convocatoria', 'Funding call')}</th>
+                    <th className="px-3 py-2 font-medium">{t('Ámbito', 'Scope')}</th>
+                    <th className="px-3 py-2 font-medium">{t('Motivo', 'Reason')}</th>
+                    <th className="px-3 py-2" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {convoSugeridas.filter((s) => s.estado === 'error_liga').map((s) => (
+                    <tr key={s.id} className="border-t border-slate-100 dark:border-slate-800">
+                      <td className="px-3 py-2 font-medium text-foreground">{s.nombre}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{s.tipo || '—'}</td>
+                      <td className="px-3 py-2 text-xs text-muted-foreground">
+                        {s.liga ? t('La liga no responde', 'The link does not respond') : t('Sin liga conocida', 'No known link')}
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="flex flex-wrap gap-2">
+                          <a href={s.ligaBusqueda || '#'} target="_blank" rel="noreferrer">
+                            <Button type="button" variant="outline" size="sm">
+                              {t('Buscar', 'Search')}
+                            </Button>
+                          </a>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="text-red-700 hover:bg-red-50 dark:text-red-300"
+                            onClick={() => descartarSugerida(s.id)}
+                          >
+                            {t('Descartar', 'Discard')}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {convoSugeridas.filter((s) => s.estado === 'error_liga').length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="px-3 py-8 text-center text-sm text-muted-foreground">
+                        {t('No hay sugerencias con error de liga.', 'There are no suggestions with broken links.')}
                       </td>
                     </tr>
                   )}

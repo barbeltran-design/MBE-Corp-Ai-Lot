@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebase-admin';
-import { requireRole } from '@/lib/server-roles';
+import { requireAdminSeccion } from '@/lib/server-roles';
 
 function parseNum(v: unknown, dflt: number): number {
   const n = typeof v === 'number' ? v : Number(v);
@@ -11,7 +11,7 @@ function parseNum(v: unknown, dflt: number): number {
 // Rep Sale (incluye cerradas/inactivas), para que administración las pueda
 // revisar, editar o borrar.
 export async function GET(req: NextRequest) {
-  const guard = await requireRole(req, 'admin');
+  const guard = await requireAdminSeccion(req, 'refplace');
   if (guard instanceof NextResponse) return guard;
 
   try {
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
 // de Rep Sale (cualquier campo, sin importar quién la creó).
 //   body: { tipo: 'solicitud'|'oferta', id, empresaObjetivo?, empresa?, rubro?, descripcion?, comisionPct?, estatus? }
 export async function PATCH(req: NextRequest) {
-  const guard = await requireRole(req, 'admin');
+  const guard = await requireAdminSeccion(req, 'refplace');
   if (guard instanceof NextResponse) return guard;
 
   try {
@@ -80,7 +80,7 @@ export async function PATCH(req: NextRequest) {
 // DELETE /api/admin/refplace?tipo=solicitud|oferta&id=... — borra una
 // solicitud de referencia o una oferta de Rep Sale, la haya creado quien sea.
 export async function DELETE(req: NextRequest) {
-  const guard = await requireRole(req, 'admin');
+  const guard = await requireAdminSeccion(req, 'refplace');
   if (guard instanceof NextResponse) return guard;
 
   try {

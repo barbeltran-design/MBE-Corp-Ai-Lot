@@ -179,7 +179,9 @@ export function ClubBuilder() {
   const params = useParams();
   const routeLocale = typeof params.locale === 'string' ? params.locale : 'es';
   const { lang } = useDisplayLang();
-  const { administracion } = useUserRoles();
+  // Moderacion del Club: SOLO admin general. Un "admin de seccion" (con
+  // facultades parciales del panel /admin) no hereda poderes aqui.
+  const { adminGeneral: administracion } = useUserRoles();
   const [dispLang, setDispLang] = React.useState<'es' | 'en'>(routeLocale === 'en' ? 'en' : 'es');
   React.useEffect(() => { setDispLang(lang); }, [lang]);
   const t = (es: string, en: string) => (dispLang === 'en' ? en : es);

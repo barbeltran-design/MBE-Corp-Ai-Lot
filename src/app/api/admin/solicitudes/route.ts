@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebase-admin';
-import { requireRole } from '@/lib/server-roles';
+import { requireAdminSeccion } from '@/lib/server-roles';
 import { TEMAS_ESPECIALISTA, type AppRole } from '@/lib/roles';
 
 // Peticiones de rol: colección `solicitudes/{id}`
@@ -10,7 +10,7 @@ import { TEMAS_ESPECIALISTA, type AppRole } from '@/lib/roles';
 // GET /api/admin/solicitudes — solicitudes de convertir usuario en
 // especialista / rep sale (pendientes primero).
 export async function GET(req: NextRequest) {
-  const guard = await requireRole(req, 'admin');
+  const guard = await requireAdminSeccion(req, 'solicitudes');
   if (guard instanceof NextResponse) return guard;
 
   try {
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
 // POST /api/admin/solicitudes — aprueba o rechaza una solicitud. Al aprobar,
 // agrega el rol y (para especialista) los temas al perfil del usuario.
 export async function POST(req: NextRequest) {
-  const guard = await requireRole(req, 'admin');
+  const guard = await requireAdminSeccion(req, 'solicitudes');
   if (guard instanceof NextResponse) return guard;
 
   try {

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebase-admin';
-import { requireRole } from '@/lib/server-roles';
+import { requireAdminSeccion } from '@/lib/server-roles';
 
 // GET /api/admin/pagos — todos los pagos recibidos vía Mercado Pago
 // (la colección `pagos` la llena el webhook de mercadopago).
 export async function GET(req: NextRequest) {
-  const guard = await requireRole(req, 'admin');
+  const guard = await requireAdminSeccion(req, 'pagos');
   if (guard instanceof NextResponse) return guard;
 
   try {

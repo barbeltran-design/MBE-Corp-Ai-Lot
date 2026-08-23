@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireRole } from '@/lib/server-roles';
+import { requireAdminSeccion } from '@/lib/server-roles';
 
 // POST /api/admin/convocatorias/extraer — recibe { url }, descarga esa pagina
 // del lado del servidor, le quita HTML/scripts/estilos, y le pide a un modelo
@@ -160,7 +160,7 @@ function limpiarHtml(html: string): string {
 }
 
 export async function POST(req: NextRequest) {
-  const guard = await requireRole(req, 'admin');
+  const guard = await requireAdminSeccion(req, 'convocatorias');
   if (guard instanceof NextResponse) return guard;
 
   const diagnostics: Diagnostic[] = [];

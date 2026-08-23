@@ -98,3 +98,49 @@ export function esEspecialista(roles: string[] | undefined): boolean {
 export function esRepSale(roles: string[] | undefined): boolean {
   return hasRole(roles, 'rep_sale');
 }
+
+// ---------------------------------------------------------------------------
+// Administración por sección: un usuario puede tener facultades de
+// administrador SOLO para pestañas específicas del panel /admin sin ser
+// administrador general. Se guarda en users/{uid}.adminSecciones (array de
+// claves de SECCIONES_ADMIN). Un 'admin' general siempre pasa; un admin de
+// sección solo ve/edita su pestaña. La asignación de secciones (y de roles)
+// queda reservada al admin general para evitar escalamiento de privilegios.
+// ---------------------------------------------------------------------------
+
+// Las claves coinciden con las pestañas del panel (TabKey en admin/page.tsx).
+export const SECCIONES_ADMIN = [
+  'catalog',
+  'users',
+  'pagos',
+  'pagosEsp',
+  'solicitudes',
+  'refplace',
+  'convocatorias',
+] as const;
+export type SeccionAdmin = (typeof SECCIONES_ADMIN)[number];
+
+export const SECCION_ADMIN_LABELS: Record<SeccionAdmin, { es: string; en: string }> = {
+  catalog: { es: 'Precios y promociones', en: 'Prices & promotions' },
+  users: { es: 'Usuarios', en: 'Users' },
+  pagos: { es: 'Pagos recibidos', en: 'Received payments' },
+  pagosEsp: { es: 'Pagos a especialistas', en: 'Specialist payments' },
+  solicitudes: { es: 'Solicitudes de rol', en: 'Role requests' },
+  refplace: { es: 'Referencias (Reference Place)', en: 'Referrals (Reference Place)' },
+  convocatorias: { es: 'Convocatorias', en: 'Funding calls' },
+};
+
+export function esAdminDeSeccion(
+  roles: string[] | undefined,
+  adminSecciones: string[] | undefined,
+  seccion: SeccionAdmin
+): boolean {
+  if (esAdmin(roles)) return true;
+  return Array.isArray(adminSecciones) && adminSecciones.includes(seccion);
+}
+
+// ¿Tiene facultades administrativas en ALGUNA sección? Se usa para decidir si
+// puede entrar al panel /admin aunque no sea admin general.
+export function tieneAlgunaSeccionAdmin(adminSecciones: string[] | undefined): boolean {
+  return Array.isArray(adminSecciones) && adminSecciones.length > 0;
+}

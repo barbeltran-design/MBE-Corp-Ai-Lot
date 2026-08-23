@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebase-admin';
-import { requireRole } from '@/lib/server-roles';
+import { requireAdminSeccion } from '@/lib/server-roles';
 
 // GET /api/admin/pagos-especialistas — pagos registrados a especialistas.
 export async function GET(req: NextRequest) {
-  const guard = await requireRole(req, 'admin');
+  const guard = await requireAdminSeccion(req, 'pagosEsp');
   if (guard instanceof NextResponse) return guard;
 
   try {
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/admin/pagos-especialistas — registra un pago manual a un especialista.
 export async function POST(req: NextRequest) {
-  const guard = await requireRole(req, 'admin');
+  const guard = await requireAdminSeccion(req, 'pagosEsp');
   if (guard instanceof NextResponse) return guard;
 
   try {
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
 // PATCH /api/admin/pagos-especialistas — modifica un pago existente (monto,
 // concepto, método, fecha) y/o cambia su estatus (activo/cancelado).
 export async function PATCH(req: NextRequest) {
-  const guard = await requireRole(req, 'admin');
+  const guard = await requireAdminSeccion(req, 'pagosEsp');
   if (guard instanceof NextResponse) return guard;
 
   try {
