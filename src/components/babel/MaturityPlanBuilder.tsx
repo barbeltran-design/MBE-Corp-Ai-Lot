@@ -67,7 +67,7 @@ const LABELS = {
   es: {
     title: 'Plan de Madurez',
     subtitle:
-      'Cada mes se trabaja una practica con cada agente (Babel, Fisnando, Karmetin, Normau y Atech) en el orden de los temas de la Evaluacion de Madurez: se parte del nivel mas bajo de Rumbo Estrategico y se avanza hasta Cultura Organizacional, para regresar en ciclo al siguiente nivel de cada tema. Las practicas sugeridas salen de tu evaluacion (el nivel mas bajo no completado) y todo es editable.',
+      'Cada mes se trabaja una practica con cada agente (Babel, Fisnando, Karmetin, Normau, Atech y Ecori) en el orden de los temas de la Evaluacion de Madurez: se parte del nivel mas bajo de Rumbo Estrategico y se avanza hasta Cultura Organizacional, para regresar en ciclo al siguiente nivel de cada tema. Las practicas sugeridas salen de tu evaluacion (el nivel mas bajo no completado) y todo es editable.',
     sinEvaluacion:
       'Aun no se encontro tu Evaluacion de Madurez. Completa el diagnostico para que las sugerencias partan de tu nivel real; mientras tanto el plan parte del nivel Ejecucion.',
     planMensualTitle: 'Plan del mes',
@@ -119,7 +119,7 @@ const LABELS = {
   en: {
     title: 'Maturity Plan',
     subtitle:
-      'Each month you work on one practice with each agent (Babel, Fisnando, Karmetin, Normau and Atech) following the order of the Maturity Assessment topics: starting from the lowest level of Strategic Direction and advancing through Organizational Culture, then cycling back to the next level of each topic. Suggested practices come from your assessment (lowest incomplete level) and everything is editable.',
+      'Each month you work on one practice with each agent (Babel, Fisnando, Karmetin, Normau, Atech and Ecori) following the order of the Maturity Assessment topics: starting from the lowest level of Strategic Direction and advancing through Organizational Culture, then cycling back to the next level of each topic. Suggested practices come from your assessment (lowest incomplete level) and everything is editable.',
     sinEvaluacion:
       'Your Maturity Assessment was not found yet. Complete the diagnosis so suggestions start from your real level; in the meantime the plan starts from the Execution level.',
     planMensualTitle: 'Monthly plan',
@@ -638,13 +638,21 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
 
   const accionSel = sprint ? sprint.accion : accionPorDefecto;
 
+  // Las opciones del pull down "Accion de la semana" mostraban el nombre de la
+  // practica/actividad (p. ej. "Manual de identidad corporativa, Kit de Ventas").
+  // Ahora muestran directamente su "Ejemplo de evidencia" (deliverable, via
+  // evidenciaDe) para que el usuario vea de una vez el entregable esperado, sin
+  // necesidad de una linea aparte debajo del select.
   const opcionesAccion = React.useMemo(() => {
     const opts: { value: string; label: string }[] = [];
     const mesKey = monthKeyOf(semanaLunes);
     const comps = plan.compromisos[mesKey] ?? [];
     comps.forEach((c) => {
       if (c.estatus !== 'completada') {
-        opts.push({ value: c.themeId + '|' + c.nivel, label: (temaDe[c.themeId] || c.themeId) + ' - ' + c.practica });
+        opts.push({
+          value: c.themeId + '|' + c.nivel,
+          label: (temaDe[c.themeId] || c.themeId) + ' - ' + (evidenciaDe(c.themeId, c.nivel) || c.practica),
+        });
       }
     });
     DIMENSION_IDS.forEach((id) => {
@@ -654,11 +662,11 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
       if (opts.some((o) => o.value === value)) return;
       opts.push({
         value,
-        label: (temaDe[id] || id) + ' (' + LEVEL_LABELS[lang][sig.nivel] + ') - ' + sig.practica.practica,
+        label: (temaDe[id] || id) + ' - ' + (evidenciaDe(id, sig.nivel) || sig.practica.practica),
       });
     });
     return opts;
-  }, [plan.compromisos, proximaPractica, semanaLunes, lang, temaDe]);
+  }, [plan.compromisos, proximaPractica, semanaLunes, temaDe, evidenciaDe]);
 
   const labelDeAccion = React.useCallback(
     (value: string): string => {
@@ -666,9 +674,9 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
       const id = parts[0] as DimensionId;
       const n = Number(parts[1] || 0);
       const pr = PRACTICAS_POR_TEMA[id]?.[n];
-      return (temaDe[id] || id) + ' (' + LEVEL_LABELS[lang][n] + ') - ' + (pr?.practica || '');
+      return (temaDe[id] || id) + ' - ' + (evidenciaDe(id, n) || pr?.practica || '');
     },
-    [lang, temaDe]
+    [temaDe, evidenciaDe]
   );
 
   const opcionesEfectivas = React.useMemo(() => {
@@ -676,16 +684,6 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
     if (opcionesAccion.some((o) => o.value === accionSel)) return opcionesAccion;
     return [{ value: accionSel, label: labelDeAccion(accionSel) }, ...opcionesAccion];
   }, [accionSel, opcionesAccion, labelDeAccion]);
-
-  // Evidencia de la accion seleccionada en el scrum de la semana.
-  const evidenciaAccion = React.useMemo(() => {
-    if (!accionSel) return '';
-    const parts = accionSel.split('|');
-    const id = parts[0] as DimensionId;
-    const n = Number(parts[1]);
-    if (!PRACTICAS_POR_TEMA[id]?.[n]) return '';
-    return evidenciaDe(id, n);
-  }, [accionSel, evidenciaDe]);
 
   const fijarAccion = (value: string) => {
     setPlan((prev) => ({
@@ -814,11 +812,6 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
             )}
           </select>
           {!accionSel && opcionesAccion.length > 0 ? <p className="mt-1 text-xs text-slate-400">{t.sinAccion}</p> : null}
-          {evidenciaAccion ? (
-            <p className="mt-1.5 rounded-md bg-slate-50 px-2.5 py-1.5 text-xs leading-relaxed text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
-              <span className="font-semibold">{t.evidenciaEjemplo}:</span> {evidenciaAccion}
-            </p>
-          ) : null}
         </div>
 
         <div className="mt-3 flex gap-2">
@@ -948,19 +941,11 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
                       <>
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium text-slate-800">
-                            {temaDe[comp.themeId]} - {comp.practica}
+                            {temaDe[comp.themeId]} - {evidenciaDe(comp.themeId, comp.nivel) || comp.practica}
                           </p>
                           <p className="text-xs text-slate-500">
                             {t.nivelCol}: {LEVEL_LABELS[lang][comp.nivel]}
                           </p>
-                          {(() => {
-                            const ev = evidenciaDe(comp.themeId, comp.nivel);
-                            return ev ? (
-                              <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-                                <span className="font-semibold">{t.evidenciaEjemplo}:</span> {ev}
-                              </p>
-                            ) : null;
-                          })()}
                         </div>
                         <select
                           value={comp.estatus}
