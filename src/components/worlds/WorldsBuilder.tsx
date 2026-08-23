@@ -8,6 +8,7 @@ import { useDisplayLang } from '@/components/display-lang-provider';
 import AgentAvatar from '@/components/agentes/AgentAvatar';
 import { getLatestAssessmentAnswers } from '@/lib/assessment';
 import { getMaturityDimensions } from '@/lib/maturity-dimensions';
+import { computeResults, type DimensionAnswers } from '@/lib/maturity-scoring';
 import { nivelDesdePuntos } from '@/lib/club';
 import { getBabelSessionIfExists } from '@/lib/babel-session';
 import type { MentorAgente } from '@/lib/madurez-practicas';
@@ -109,11 +110,14 @@ const I = {
   foda: ['Matriz FODA', 'SWOT Matrix'],
   plantilla: ['Plantilla Plan de Acción', 'Action Plan Template'],
   toolToast: ['Herramienta descargada (demo)', 'Tool downloaded (demo)'],
-  retoSemanal: ['Reto semanal — Finanzas · Nivel 2 (Estándar)', 'Weekly challenge — Finance · Level 2 (Standard)'],
+  retoSemanal: ['Reto semanal', 'Weekly challenge'],
   retoSemanalDesc: [
-    'Práctica: «Controla tu flujo de caja» · Anfitrión: Fisnando. Completa las 5 casillas para el cofre semanal (+20 pts). La agenda real llega en la siguiente fase.',
-    'Practice: "Control your cash flow" · Host: Fisnando. Complete the 5 tiles for the weekly chest (+20 pts). Real scheduling arrives in the next phase.',
+    'Completa la Evaluación de Madurez para recibir tu primer reto semanal personalizado.',
+    'Complete the Maturity Assessment to get your first personalized weekly challenge.',
   ],
+  retoSemanalPrefijo: ['Reto semanal — ', 'Weekly challenge — '],
+  retoSemanalProximoPaso: ['Próximo paso: ', 'Next step: '],
+  retoSemanalEvidencia: ['Evidencia sugerida: ', 'Suggested evidence: '],
   retoMensual: ['Reto mensual — una práctica por agente', 'Monthly challenge — one practice per agent'],
   retoMensualDesc: [
     'Practica con cada agente según tu Plan de Madurez (demo).',
@@ -122,8 +126,8 @@ const I = {
   mapaProgreso: ['Mapa de progreso · 11 temas × 6 niveles', 'Progress map · 11 topics × 6 levels'],
   tema: ['Tema', 'Topic'],
   leyendaMapa: [
-    'Verde = dominado · Ámbar = en curso · Rojo = pendiente. Los retos semanales/mensuales reales llegan en la Fase B.',
-    'Green = mastered · Amber = in progress · Red = pending. Real weekly/monthly challenges arrive in Phase B.',
+    'Verde = dominado · Ámbar = en curso · Rojo = pendiente. El reto mensual por agente sigue en demo.',
+    'Green = mastered · Amber = in progress · Red = pending. The monthly per-agent challenge is still a demo.',
   ],
   sinEvaluacion: [
     'Aún no tienes evaluación. Llena la Evaluación de Madurez para poblar tu mapa.',
@@ -495,6 +499,33 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
       vivo = false;
     };
   }, [uid]);
+
+  // Reto semanal del Tablero de Retos: ya no es texto de demo. Reusamos
+  // computeResults() (misma función que /dashboard) sobre las respuestas
+  // reales del usuario para elegir, cada semana, uno de los temas donde
+  // todavía tiene pendientes (nextStep !== null) — priorizando el más débil
+  // (menor score) — y mostrar su "Próximo paso" y su "Evidencia sugerida"
+  // (deliverable) reales, en vez del texto fijo "Controla tu flujo de caja".
+  // Rota semanalmente entre los temas pendientes del propio usuario para que
+  // no se quede fijo siempre en el mismo tema.
+  const retoSemanalData = React.useMemo(() => {
+    if (!respuestas) return null;
+    try {
+      const dims = getMaturityDimensions(lang === 'en' ? 'en' : 'es');
+      const resultado = computeResults(dims, respuestas as unknown as DimensionAnswers);
+      const pendientes = resultado.dimensions
+        .filter((d) => d.nextStep !== null)
+        .sort((a, b) => a.score - b.score);
+      if (pendientes.length === 0) return null;
+      const hoy = new Date();
+      const inicioAnio = new Date(hoy.getFullYear(), 0, 1);
+      const semanaDelAnio = Math.floor((hoy.getTime() - inicioAnio.getTime()) / (7 * 24 * 60 * 60 * 1000));
+      const elegido = pendientes[semanaDelAnio % pendientes.length];
+      return { tema: elegido.tema, nextStep: elegido.nextStep! };
+    } catch {
+      return null;
+    }
+  }, [respuestas, lang]);
 
   // Misión 0 (Calibración) del Mundo de Estrategia: lee la sesión de Babel del
   // usuario y marca COMPLETADA si la Fase 0 ya fue aprobada.
@@ -948,8 +979,23 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
                   <>
                     <div className="grid gap-4 lg:grid-cols-2">
                       <div className="world-glass world-grain p-5">
-                        <h3 className="text-sm font-extrabold text-slate-800 dark:text-white">📅 {en(I.retoSemanal)}</h3>
-                        <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{en(I.retoSemanalDesc)}</p>
+                        <h3 className="text-sm font-extrabold text-slate-800 dark:text-white">
+                          📅 {retoSemanalData ? `${en(I.retoSemanalPrefijo)}${retoSemanalData.tema}` : en(I.retoSemanal)}
+                        </h3>
+                        {retoSemanalData ? (
+                          <div className="mt-1 space-y-1 text-xs text-slate-600 dark:text-slate-300">
+                            <p>
+                              <span className="font-bold">{en(I.retoSemanalProximoPaso)}</span>
+                              {retoSemanalData.nextStep.description}
+                            </p>
+                            <p>
+                              <span className="font-bold">{en(I.retoSemanalEvidencia)}</span>
+                              {retoSemanalData.nextStep.deliverable}
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{en(I.retoSemanalDesc)}</p>
+                        )}
                         <div className="mt-3 flex gap-2">
                           {[
                             { d: 'Lun', ok: true },
