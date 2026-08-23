@@ -155,7 +155,7 @@ const CONTENT: Record<Language, Record<DimensionId, DimensionText>> = {
       explicacion: 'Hacia dónde voy',
       levels: [
         ['Registro mi rumbo y acciones analizando mis resultados y entorno', 'Plan estratégico para aprovechar oportunidades y minimizar riesgos'],
-        ['Documento como defino mi modelo de negocio para alcanzar metas y generar confianza', 'Lista de factores internos y externos que impactan los objetivos'],
+        ['Documento como defino mi modelo de negocio para alcanzar metas y generar confianza', 'Formato de Reflexión Estratégica'],
         ['Evalúo resultados de acciones estratégicas', 'Reporte de impacto a los objetivos estratégicos'],
         ['Adapto oportunamente mis prioridades ante imprevistos', 'Bitácora de cambios a la estrategia'],
         ['Analizo escenarios futuros de mi empresa', 'Proyección con IA de modelos de negocios'],
@@ -202,7 +202,7 @@ const CONTENT: Record<Language, Record<DimensionId, DimensionText>> = {
       tema: 'Atención al Cliente',
       explicacion: 'Satisfacción del cliente',
       levels: [
-        ['Registro contactos, solicitudes y quejas del cliente', 'Sistema de atención al cliente'],
+        ['Registro contactos, solicitudes y quejas del cliente', 'BD de requerimientos y problemas del cliente'],
         ['Diseño la experiencia al cliente en cada contacto', 'Matriz de solicitudes del cliente con tiempos por escenario'],
         ['Mido la satisfacción de mis clientes al finalizar cada servicio', 'Reporte de satisfacción'],
         ['Analizo reclamos frecuentes para evitar que se repitan', 'Cambios al producto o servicio por quejas de clientes'],
@@ -289,7 +289,7 @@ const CONTENT: Record<Language, Record<DimensionId, DimensionText>> = {
       explicacion: 'Where we are headed',
       levels: [
         ['I Track my direction and actions by analyzing results and the business environment', 'Strategic plan to leverage opportunities and minimize risks'],
-        ['I Document the definition of my business model to achieve goals and build trust', 'List of internal and external factors impacting objectives'],
+        ['I Document the definition of my business model to achieve goals and build trust', 'Strategic Reflection Format'],
         ['I Evaluate the results of strategic actions', 'Report on the impact on strategic objectives'],
         ['I adjust priorities in response to unforeseen events', 'Log of strategy changes'],
         ['I Analyze future scenarios for my company', 'AI-driven projection of business models'],
@@ -336,7 +336,7 @@ const CONTENT: Record<Language, Record<DimensionId, DimensionText>> = {
       tema: 'Customer Service',
       explicacion: 'Customer satisfaction',
       levels: [
-        ['I Log customer contacts, requests, and complaints', 'Customer service system'],
+        ['I Log customer contacts, requests, and complaints', 'Database of customer requirements and issues'],
         ['I Design the customer experience for every touchpoint', 'Customer request matrix with scenario-based timelines'],
         ['I Measure customer satisfaction upon completion of each service', 'Satisfaction report'],
         ['I Analyze frequent complaints to prevent recurrence', 'Product or service changes based on customer complaints'],
