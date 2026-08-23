@@ -4,9 +4,12 @@ import { ChevronDown } from 'lucide-react';
 import FinancialGoalsBuilder from '@/components/babel/FinancialGoalsBuilder';
 import AgentAvatar from '@/components/agentes/AgentAvatar';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
+import type { PerspectivaKey } from '@/lib/plan-accion';
 
 type PlanLang = 'es' | 'en';
-type BSCPerspectiva = 'financiera' | 'clientes' | 'procesos_internos' | 'normatividad' | 'aprendizaje_crecimiento' | 'socioambiental';
+// Alias de PerspectivaKey (definida a partir de PERSPECTIVAS en lib/plan-accion.ts):
+// si se agrega una perspectiva nueva ahi, esto se actualiza solo.
+type BSCPerspectiva = PerspectivaKey;
 type Frecuencia = 'semanal' | 'mensual' | 'trimestral' | 'semestral' | 'anual';
 
 type Indicador = {
@@ -25,14 +28,21 @@ type Indicador = {
 const FIN_GOALS_LAST_KEY = 'babel_financial_goals_v1';
 const INDICADORES_KEY = 'babel_indicadores_v1';
 
-const PERSPECTIVA_OPTIONS: { value: BSCPerspectiva; labelEs: string; labelEn: string }[] = [
-  { value: 'financiera', labelEs: 'Financiera', labelEn: 'Financial' },
-  { value: 'clientes', labelEs: 'Clientes', labelEn: 'Customer' },
-  { value: 'procesos_internos', labelEs: 'Procesos Internos', labelEn: 'Internal Processes' },
-  { value: 'normatividad', labelEs: 'Normatividad', labelEn: 'Regulatory Compliance' },
-  { value: 'aprendizaje_crecimiento', labelEs: 'Aprendizaje y Crecimiento', labelEn: 'Learning and Growth' },
-  { value: 'socioambiental', labelEs: 'Socioambiental', labelEn: 'Social-Environmental' },
-];
+// Record (no array) para que TypeScript obligue a cubrir cada valor de
+// BSCPerspectiva (= PerspectivaKey de plan-accion.ts). Si se agrega una
+// perspectiva nueva ahi y no se agrega su label aqui, esto no compila.
+const PERSPECTIVA_LABELS: Record<BSCPerspectiva, { labelEs: string; labelEn: string }> = {
+  financiera: { labelEs: 'Financiera', labelEn: 'Financial' },
+  clientes: { labelEs: 'Clientes', labelEn: 'Customer' },
+  procesos_internos: { labelEs: 'Procesos Internos', labelEn: 'Internal Processes' },
+  normatividad: { labelEs: 'Normatividad', labelEn: 'Regulatory Compliance' },
+  aprendizaje_crecimiento: { labelEs: 'Aprendizaje y Crecimiento', labelEn: 'Learning and Growth' },
+  socioambiental: { labelEs: 'Socioambiental', labelEn: 'Social-Environmental' },
+};
+
+const PERSPECTIVA_OPTIONS: { value: BSCPerspectiva; labelEs: string; labelEn: string }[] = (
+  Object.keys(PERSPECTIVA_LABELS) as BSCPerspectiva[]
+).map((value) => ({ value, ...PERSPECTIVA_LABELS[value] }));
 
 const FRECUENCIA_OPTIONS: { value: Frecuencia; labelEs: string; labelEn: string }[] = [
   { value: 'semanal', labelEs: 'Semanal', labelEn: 'Weekly' },
@@ -369,13 +379,10 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
   });
   const pendientes = indicadores.length - validados;
 
+  // Derivado de PERSPECTIVA_LABELS en vez de duplicar la lista de claves:
+  // si se agrega una perspectiva nueva ahi, este agrupador la recoge sola.
   const GRUPO_KEYS: (BSCPerspectiva | 'sin_perspectiva')[] = [
-    'financiera',
-    'clientes',
-    'procesos_internos',
-    'normatividad',
-    'aprendizaje_crecimiento',
-    'socioambiental',
+    ...(Object.keys(PERSPECTIVA_LABELS) as BSCPerspectiva[]),
     'sin_perspectiva',
   ];
 

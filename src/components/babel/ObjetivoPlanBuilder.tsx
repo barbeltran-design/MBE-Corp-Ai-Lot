@@ -3,7 +3,7 @@ import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import AgentAvatar from '@/components/agentes/AgentAvatar';
-import { esMentorValido, MENTOR_IDS, type MentorId } from '@/lib/mentores';
+import { esMentorValido, MENTOR_IDS, mentorPorPerspectiva, type MentorId } from '@/lib/mentores';
 import {
   type PlanLang,
   type Estatus,
@@ -147,14 +147,9 @@ export default function ObjetivoPlanBuilder({ lang, objetivoId }: { lang: PlanLa
 
   const mentorDe = (_a: Accion): MentorId => {
     if (esMentorValido(_a.mentor)) return _a.mentor;
-    const p = (objetivo?.perspectiva || '').toLowerCase();
-    if (p.includes('financ')) return 'Fisnando';
-    if (p.includes('client')) return 'Karmetin';
-    if (p.includes('proceso')) return 'Atech';
-    if (p.includes('normativ')) return 'Normau';
-    if (p.includes('aprendiz')) return 'Babel';
-    if (p.includes('socioambient') || p.includes('ambient')) return 'Ecori';
-    return 'Babel';
+    // Fuente unica de la asignacion perspectiva -> mentor: PERSPECTIVA_MENTOR
+    // en lib/mentores.ts (derivada de PERSPECTIVAS en lib/plan-accion.ts).
+    return mentorPorPerspectiva(objetivo?.perspectiva || '') || 'Babel';
   };
 
   const clasificarSiFalta = (a: Accion) => {

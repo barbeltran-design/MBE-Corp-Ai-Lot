@@ -1,4 +1,5 @@
 import { BUENAS_PRACTICAS } from './buenas-practicas';
+import type { PerspectivaKey } from './plan-accion';
 
 // ---------------------------------------------------------------------------
 // src/lib/mentores.ts
@@ -63,19 +64,22 @@ export function matchMentorPorTexto(texto: string): MentorId | null {
 // coincidencia: Financieros -> Fisnando, Clientes -> Karmetin, Procesos ->
 // Atech, Aprendizaje -> Babel, Socioambientales -> Ecori, Normatividad ->
 // Normau.
-export const PERSPECTIVA_MENTOR: Record<string, MentorId> = {
+// Tipado con PerspectivaKey (la misma union derivada de PERSPECTIVAS en
+// plan-accion.ts): si se agrega una perspectiva nueva ahi y no se agrega su
+// mentor aqui, esto deja de compilar en vez de fallar en silencio.
+export const PERSPECTIVA_MENTOR: Record<PerspectivaKey, MentorId> = {
   financiera: 'Fisnando',
   clientes: 'Karmetin',
   procesos_internos: 'Atech',
+  normatividad: 'Normau',
   aprendizaje_crecimiento: 'Babel',
   socioambiental: 'Ecori',
-  normatividad: 'Normau',
 };
 
 export function mentorPorPerspectiva(perspectiva: string): MentorId | null {
   const key = (perspectiva || '').trim();
   if (!key) return null;
-  const mentor = PERSPECTIVA_MENTOR[key];
+  const mentor = (PERSPECTIVA_MENTOR as Record<string, MentorId>)[key];
   return mentor || null;
 }
 

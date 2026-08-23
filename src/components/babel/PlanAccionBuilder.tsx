@@ -823,7 +823,10 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
     );
   };
 
-  const GRUPO_KEYS: string[] = ['financiera', 'clientes', 'procesos_internos', 'normatividad', 'aprendizaje_crecimiento', 'socioambiental', 'sin_perspectiva'];
+  // Derivado de PERSPECTIVAS (fuente unica en lib/plan-accion.ts) en vez de
+  // duplicar la lista de claves aqui: si se agrega una perspectiva nueva ahi,
+  // este agrupador la recoge automaticamente.
+  const GRUPO_KEYS: string[] = [...PERSPECTIVAS.map((p) => p.key), 'sin_perspectiva'];
 
   const grupos = GRUPO_KEYS.map((key) => ({
     key,

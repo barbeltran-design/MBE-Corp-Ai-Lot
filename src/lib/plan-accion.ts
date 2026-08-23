@@ -247,10 +247,18 @@ export const PERSPECTIVAS: PerspectivaEstilo[] = [
   { key: 'financiera', es: 'Financieros', en: 'Financial', chip: 'bg-teal-100 text-teal-800', soft: 'bg-teal-50', border: 'border-teal-200', text: 'text-teal-800' },
   { key: 'clientes', es: 'Clientes', en: 'Customer', chip: 'bg-cyan-100 text-cyan-800', soft: 'bg-cyan-50', border: 'border-cyan-200', text: 'text-cyan-800' },
   { key: 'procesos_internos', es: 'Procesos', en: 'Processes', chip: 'bg-indigo-100 text-indigo-800', soft: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-800' },
+  { key: 'normatividad', es: 'Normatividad', en: 'Compliance', chip: 'bg-amber-100 text-amber-800', soft: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-800' },
   { key: 'aprendizaje_crecimiento', es: 'Aprendizaje', en: 'Learning', chip: 'bg-purple-100 text-purple-800', soft: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-800' },
   { key: 'socioambiental', es: 'Socioambientales', en: 'Social-Environmental', chip: 'bg-green-100 text-green-800', soft: 'bg-green-50', border: 'border-green-200', text: 'text-green-800' },
-  { key: 'normatividad', es: 'Normatividad', en: 'Compliance', chip: 'bg-amber-100 text-amber-800', soft: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-800' },
 ];
+
+// Fuente unica de las claves de perspectiva validas. Cualquier archivo que
+// necesite la lista de perspectivas (selects, agrupaciones, mapeos de mentor)
+// debe derivar de PERSPECTIVAS/PERSPECTIVA_KEYS en vez de mantener su propia
+// copia local, para que agregar una perspectiva nueva solo requiera tocar
+// este archivo.
+export const PERSPECTIVA_KEYS = PERSPECTIVAS.map((p) => p.key);
+export type PerspectivaKey = (typeof PERSPECTIVA_KEYS)[number];
 
 export const SIN_PERSPECTIVA_STYLE: PerspectivaEstilo = {
   key: 'sin_perspectiva',
