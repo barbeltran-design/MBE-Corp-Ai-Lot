@@ -6,7 +6,7 @@ import AgentAvatar from '@/components/agentes/AgentAvatar';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 
 type PlanLang = 'es' | 'en';
-type BSCPerspectiva = 'financiera' | 'clientes' | 'procesos_internos' | 'aprendizaje_crecimiento' | 'socioambiental';
+type BSCPerspectiva = 'financiera' | 'clientes' | 'procesos_internos' | 'normatividad' | 'aprendizaje_crecimiento' | 'socioambiental';
 type Frecuencia = 'semanal' | 'mensual' | 'trimestral' | 'semestral' | 'anual';
 
 type Indicador = {
@@ -29,6 +29,7 @@ const PERSPECTIVA_OPTIONS: { value: BSCPerspectiva; labelEs: string; labelEn: st
   { value: 'financiera', labelEs: 'Financiera', labelEn: 'Financial' },
   { value: 'clientes', labelEs: 'Clientes', labelEn: 'Customer' },
   { value: 'procesos_internos', labelEs: 'Procesos Internos', labelEn: 'Internal Processes' },
+  { value: 'normatividad', labelEs: 'Normatividad', labelEn: 'Regulatory Compliance' },
   { value: 'aprendizaje_crecimiento', labelEs: 'Aprendizaje y Crecimiento', labelEn: 'Learning and Growth' },
   { value: 'socioambiental', labelEs: 'Socioambiental', labelEn: 'Social-Environmental' },
 ];
@@ -70,6 +71,7 @@ const LABELS = {
     summaryFinanciera: 'Perspectiva financiera',
     summaryClientes: 'Perspectiva clientes',
     summaryProcesos: 'Perspectiva procesos internos',
+    summaryNormatividad: 'Perspectiva normatividad',
     summaryAprendizaje: 'Perspectiva aprendizaje y crecimiento',
     summarySocioambiental: 'Perspectiva socioambiental',
     sinPerspectiva: 'Sin perspectiva',
@@ -109,6 +111,7 @@ const LABELS = {
     summaryFinanciera: 'Financial perspective',
     summaryClientes: 'Customer perspective',
     summaryProcesos: 'Internal processes perspective',
+    summaryNormatividad: 'Regulatory compliance perspective',
     summaryAprendizaje: 'Learning and growth perspective',
     summarySocioambiental: 'Social-environmental perspective',
     sinPerspectiva: 'No perspective',
@@ -370,6 +373,7 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
     'financiera',
     'clientes',
     'procesos_internos',
+    'normatividad',
     'aprendizaje_crecimiento',
     'socioambiental',
     'sin_perspectiva',
@@ -545,6 +549,10 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
         <div className="glass-panel p-3 text-center">
           <div className="text-lg font-bold text-slate-800">{perspectivaCount('procesos_internos')}</div>
           <div className="text-xs text-slate-500">{t.summaryProcesos}</div>
+        </div>
+        <div className="glass-panel p-3 text-center">
+          <div className="text-lg font-bold text-slate-800">{perspectivaCount('normatividad')}</div>
+          <div className="text-xs text-slate-500">{t.summaryNormatividad}</div>
         </div>
         <div className="glass-panel p-3 text-center">
           <div className="text-lg font-bold text-slate-800">{perspectivaCount('aprendizaje_crecimiento')}</div>

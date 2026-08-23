@@ -3,7 +3,7 @@ import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import AgentAvatar from '@/components/agentes/AgentAvatar';
-import { esMentorValido, type MentorId } from '@/lib/mentores';
+import { esMentorValido, MENTOR_IDS, type MentorId } from '@/lib/mentores';
 import {
   type PlanLang,
   type Estatus,
@@ -146,12 +146,14 @@ export default function ObjetivoPlanBuilder({ lang, objetivoId }: { lang: PlanLa
   const removeAccion = (id: string) => setAcciones((prev) => prev.filter((a) => a.id !== id));
 
   const mentorDe = (_a: Accion): MentorId => {
+    if (esMentorValido(_a.mentor)) return _a.mentor;
     const p = (objetivo?.perspectiva || '').toLowerCase();
     if (p.includes('financ')) return 'Fisnando';
     if (p.includes('client')) return 'Karmetin';
     if (p.includes('proceso')) return 'Atech';
+    if (p.includes('normativ')) return 'Normau';
     if (p.includes('aprendiz')) return 'Babel';
-    if (p.includes('socioambient') || p.includes('ambient')) return 'Normau';
+    if (p.includes('socioambient') || p.includes('ambient')) return 'Ecori';
     return 'Babel';
   };
 
@@ -436,6 +438,21 @@ export default function ObjetivoPlanBuilder({ lang, objetivoId }: { lang: PlanLa
               {IMPACTO_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {lang === 'en' ? opt.labelEn : opt.labelEs}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-600">Mentor</label>
+            <select
+              value={esMentorValido(a.mentor) ? a.mentor : ''}
+              onChange={(ev) => updateAccion(a.id, { mentor: ev.target.value || undefined })}
+              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+            >
+              <option value="">{lang === 'en' ? 'Auto' : 'Automatico'}</option>
+              {MENTOR_IDS.map((m) => (
+                <option key={m} value={m}>
+                  {m}
                 </option>
               ))}
             </select>

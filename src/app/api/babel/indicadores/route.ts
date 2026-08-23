@@ -250,6 +250,55 @@ export async function GET() {
   return NextResponse.json({ status: 'ok', route: '/api/babel/indicadores', note: 'Propuesta de objetivos Balanced Scorecard' });
 }
 
+// Objetivos de la perspectiva Normatividad: son fijos y exactos (no tienen
+// partes entre corchetes que la IA deba completar), asi que se agregan de
+// forma deterministica en cada respuesta, sin depender de ningun proveedor
+// de IA. Deben aparecer siempre que se presione "Generar propuesta con Babel".
+function objetivosNormatividadFijos(language: 'es' | 'en'): Record<string, string>[] {
+  if (language === 'en') {
+    return [
+      {
+        perspectiva: 'normatividad',
+        nombre: '% of regulatory compliance',
+        formula: 'Number of resolved regulatory risks / Total risks',
+        objetivo: 'Reach 90% regulatory compliance within 12 months',
+        meta: '90',
+        unidadMedida: '%',
+        frecuencia: 'mensual',
+      },
+      {
+        perspectiva: 'normatividad',
+        nombre: 'Fines received',
+        formula: 'Amount of fines received',
+        objetivo: 'Reduce fines from authorities to $0 within 12 months',
+        meta: '0',
+        unidadMedida: '$',
+        frecuencia: 'mensual',
+      },
+    ];
+  }
+  return [
+    {
+      perspectiva: 'normatividad',
+      nombre: '% de cumplimiento normativo',
+      formula: 'Numero de riesgos normativos cumplidos / Total de riesgos',
+      objetivo: 'Alcanzar el 90% de cumplimiento normativo en 12 meses',
+      meta: '90',
+      unidadMedida: '%',
+      frecuencia: 'mensual',
+    },
+    {
+      perspectiva: 'normatividad',
+      nombre: 'Multas recibidas',
+      formula: 'Monto de multas recibidas',
+      objetivo: 'Reducir a $0 multas de las autoridades en 12 meses',
+      meta: '0',
+      unidadMedida: '$',
+      frecuencia: 'mensual',
+    },
+  ];
+}
+
 export async function POST(req: NextRequest) {
   let body: IndicadoresRequestBody;
   try {
@@ -312,22 +361,21 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const normatividadFijos = objetivosNormatividadFijos(language);
+
   if (!result) {
-    return NextResponse.json(
-      {
-        error:
-          language === 'en'
-            ? 'None of the configured AI providers could generate the proposal.'
-            : 'Ninguno de los proveedores de IA configurados pudo generar la propuesta.',
-        diagnostics: diagnostics,
-        tip:
-          language === 'en'
-            ? 'Check that GEMINI_API_KEY, FALLBACK_API_KEY (Groq), TERTIARY_API_KEY (OpenRouter) or DEEPSEEK_API_KEY are set in Vercel.'
-            : 'Verifica que GEMINI_API_KEY, FALLBACK_API_KEY (Groq), TERTIARY_API_KEY (OpenRouter) o DEEPSEEK_API_KEY esten configuradas en Vercel.',
-      },
-      { status: 502 },
-    );
+    // Aunque ningun proveedor de IA respondio, los dos objetivos fijos de
+    // Normatividad se devuelven igual: no dependen de la IA y el usuario
+    // pidio que aparezcan siempre que se presione "Generar propuesta con Babel".
+    return NextResponse.json({
+      indicadores: normatividadFijos,
+      aiError:
+        language === 'en'
+          ? 'None of the configured AI providers could generate the rest of the proposal.'
+          : 'Ninguno de los proveedores de IA configurados pudo generar el resto de la propuesta.',
+      diagnostics: diagnostics,
+    });
   }
 
-  return NextResponse.json({ indicadores: result.slice(0, 18) });
+  return NextResponse.json({ indicadores: [...normatividadFijos, ...result].slice(0, 18) });
 }
