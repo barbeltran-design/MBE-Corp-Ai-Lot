@@ -823,7 +823,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
     );
   };
 
-  const GRUPO_KEYS: string[] = ['financiera', 'clientes', 'procesos_internos', 'aprendizaje_crecimiento', 'socioambiental', 'sin_perspectiva'];
+  const GRUPO_KEYS: string[] = ['financiera', 'clientes', 'procesos_internos', 'normatividad', 'aprendizaje_crecimiento', 'socioambiental', 'sin_perspectiva'];
 
   const grupos = GRUPO_KEYS.map((key) => ({
     key,
