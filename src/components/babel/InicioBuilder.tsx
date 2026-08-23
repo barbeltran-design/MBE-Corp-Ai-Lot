@@ -39,7 +39,7 @@ const CORPILOTES: CorpiloteInfo[] = [
   },
   {
     agente: 'Normau',
-    temas: ['Normas | Alianzas | Socioambiental', 'Rules | Alliances | Socio-environmental'],
+    temas: ['Cumplimiento Normativo', 'Regulatory Compliance'],
     rasgo: ['Te protege del entorno', 'Protects you from the environment'],
   },
   {
@@ -49,8 +49,8 @@ const CORPILOTES: CorpiloteInfo[] = [
   },
   {
     agente: 'Ecori',
-    temas: ['Convocatorias | Fondos', 'Calls | Funds'],
-    rasgo: ['Te guía a ganar', 'Guides you to win'],
+    temas: ['SocioAmbiental | Alianzas', 'Socio-environmental | Alliances'],
+    rasgo: ['Te ayuda a cambiar el mundo', 'Helps you change the world'],
   },
 ];
 
