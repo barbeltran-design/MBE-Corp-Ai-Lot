@@ -14,7 +14,7 @@ import { Select } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useDisplayLang } from '@/components/display-lang-provider';
 import { AVATAR_COLORS, avatarBgColor, initialsOf } from '@/lib/avatar';
-import { TEMAS_ESPECIALISTA, TEMA_LABELS, ROLE_LABELS } from '@/lib/roles';
+import { TEMAS_ESPECIALISTA, TEMA_LABELS, ROLE_LABELS, esAdmin } from '@/lib/roles';
 import { nivelLabel, nivelPorPuntos } from '@/lib/refplace';
 import AgentAvatar from '@/components/agentes/AgentAvatar';
 import { BABEL_AYUDA_EVENT } from '@/components/babel/BabelAvatar';
@@ -729,7 +729,7 @@ function ProfilePageInner() {
             </div>
           </Card>
 
-          <EcoriDataBudget lang={dispLang} />
+          {esAdmin(roles) && <EcoriDataBudget lang={dispLang} />}
 
           <Card className="p-6">
             <h2 className="text-sm font-semibold text-foreground">{t('Tu empresa', 'Your company')}</h2>

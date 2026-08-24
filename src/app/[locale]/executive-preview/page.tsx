@@ -526,12 +526,18 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
     };
     const dims = getMaturityDimensions(locale);
     const temaDe = (id: DimensionId) => dims.find((d) => d.id === id)?.tema ?? id;
+    // Igual que MaturityPlanBuilder.tsx: se prioriza la evidencia/entregable
+    // esperado (contenido actualizado de /babel/madurez) sobre el nombre viejo
+    // de la practica, que solo se usa como respaldo si falta la evidencia.
+    const evidenciaDe = (id: DimensionId, nivel: number) => dims.find((d) => d.id === id)?.levels?.[nivel]?.deliverable ?? '';
     return MENTORES.map((mentor) => {
       for (const id of DIMENSION_IDS) {
         const n = siguienteNivel(id);
         if (n >= 6) continue;
         const practica = PRACTICAS_POR_TEMA[id][n];
-        if (practica.mentor === mentor) return { mentor, tema: temaDe(id), practica: practica.practica };
+        if (practica.mentor === mentor) {
+          return { mentor, tema: temaDe(id), practica: evidenciaDe(id, n) || practica.practica };
+        }
       }
       return { mentor, tema: '', practica: '' };
     });
@@ -1117,7 +1123,7 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
                             <span className="mt-0.5 shrink-0">
                               {a.estatus === 'terminado' ? '✅' : a.estatus === 'en_proceso' ? '🔄' : '⭕'}
                             </span>
-                            <span className={cn('flex-1 truncate', a.estatus === 'terminado' ? 'text-muted-foreground line-through' : 'text-foreground')}>
+                            <span className={cn('flex-1 whitespace-pre-line break-words', a.estatus === 'terminado' ? 'text-muted-foreground line-through' : 'text-foreground')}>
                               {a.descripcion}
                             </span>
                             <span className="shrink-0 rounded-full bg-accent/60 px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground">
