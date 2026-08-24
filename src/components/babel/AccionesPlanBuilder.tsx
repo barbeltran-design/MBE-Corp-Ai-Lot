@@ -146,7 +146,7 @@ export default function AccionesPlanBuilder({ lang }: { lang: PlanLang }) {
         <div className="absolute bottom-0 left-1/3 h-56 w-56 rounded-full bg-emerald-200/25 blur-3xl" />
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/40 bg-white/30 px-4 py-3 shadow-lg shadow-slate-900/5 backdrop-blur-xl backdrop-saturate-150">
+      <div className="flex flex-wrap items-center justify-between gap-3 glass-panel px-4 py-3">
         <div>
           <h3 className="text-xl font-bold text-slate-800">{t.vistaAccionesTitle}</h3>
           <p className="mt-1 text-sm text-slate-500">{t.vistaAccionesSubtitle}</p>
@@ -160,9 +160,9 @@ export default function AccionesPlanBuilder({ lang }: { lang: PlanLang }) {
       </div>
 
       {acciones.length === 0 ? (
-        <p className="mt-6 rounded-xl border border-white/40 bg-white/30 px-4 py-3 text-sm text-slate-500 backdrop-blur-md">{t.sinAccionesPlan}</p>
+        <p className="mt-6 glass-panel px-4 py-3 text-sm text-slate-500">{t.sinAccionesPlan}</p>
       ) : (
-        <div className="mt-5 overflow-x-auto rounded-2xl border border-white/40 bg-white/25 shadow-xl shadow-slate-900/5 backdrop-blur-xl backdrop-saturate-150">
+        <div className="mt-5 overflow-x-auto glass-panel">
           <table className="min-w-full divide-y divide-white/30 text-sm">
             <thead className="bg-white/30 backdrop-blur-md">
               <tr>

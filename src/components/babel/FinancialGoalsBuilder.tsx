@@ -603,7 +603,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
               </Button>
             </div>
           ) : finMenu ? (
-            <div className="overflow-hidden rounded-xl border border-slate-200">
+            <div className="overflow-hidden glass-panel">
               <div className="flex items-center justify-between bg-[#32BAD0] px-4 py-3">
                 <p className="text-sm font-bold uppercase tracking-wide text-white">
                   {lang === 'en' ? 'Saved financial goals' : 'Objetivos financieros guardados'}
@@ -624,7 +624,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                     liveResult = entry.result;
                   }
                   return (
-                    <div key={entry.id} className={'rounded-lg border p-3 ' + (isLatest ? 'border-[#32BAD0] bg-[#E1F6FA]/50' : 'border-slate-200 bg-slate-50')}>
+                    <div key={entry.id} className={'glass-panel p-3 ' + (isLatest ? 'border-[#32BAD0]/60 bg-[#E1F6FA]/30' : '')}>
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-xs font-bold uppercase tracking-wide text-slate-700">{formatFinDate(entry.savedAt, lang)}</p>
                         {isLatest && (
@@ -658,7 +658,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                         const desiredProfitEntry = entry.form?.desiredProfit ?? entry.input.desiredProfit ?? 0;
                         const totalGastos = targetRevenue - desiredProfitEntry;
                         return (
-                          <div className="mt-2 rounded-lg border border-slate-200 bg-white p-2">
+                          <div className="mt-2 glass-panel p-2">
                             <div className="flex items-center justify-between gap-2">
                               <p className="text-[10px] uppercase tracking-wide text-slate-500">
                                 {lang === 'en' ? 'Monthly goal revenue by channel' : 'Ingreso meta mensual por canal de ingreso'}
@@ -808,7 +808,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                       ? c.productos.reduce(function (s2, p) { return s2 + (p.precio || 0); }, 0) / c.productos.length
                       : 0;
                     return (
-                      <div key={ci} className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                      <div key={ci} className="space-y-2 glass-panel p-3">
                         <div className="flex items-center gap-2">
                           <input
                             type="text"
@@ -823,7 +823,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                           const pIngresos = productoIngresos(p);
                           const pVarPct = productoVarPct(p);
                           return (
-                            <div key={pi} className="space-y-2 rounded-md border border-slate-200 bg-white p-2.5">
+                            <div key={pi} className="space-y-2 glass-panel p-2.5">
                               <div className="flex items-center gap-2">
                                 <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
                                   {lang === 'en' ? 'Product/Service' : 'Producto/Servicio'}
@@ -999,7 +999,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                       className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </label>
-                  <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 space-y-1 text-slate-900">
+                  <div className="glass-panel p-3 space-y-1 text-slate-900">
                     <p>{lang === 'en' ? 'Average income per Product(s)/Service(s)' : 'Ingreso promedio por Producto(s)/Servicio(s)'}: {fmtMoney(finPromedioPrecio)}</p>
                     <p>{lang === 'en' ? 'Total fixed expenses' : 'Total gastos fijos'}: {finItemizedFixedTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
                     <p>{lang === 'en' ? '% Variable costs (weighted)' : '% Costos variables (ponderado)'}: {(finTotalVarPct * 100).toFixed(1)}%</p>
@@ -1035,12 +1035,12 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                     const ciVarPct = ciIngresos > 0 ? (ciVar / ciIngresos) * 100 : 0;
                     const ciPart = c.productos.reduce(function (s, p) { return s + (p.participacion || 0); }, 0);
                     return (
-                      <div key={ci} className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                      <div key={ci} className="space-y-2 glass-panel p-3">
                         <p className="font-semibold text-slate-800">{c.nombre || (lang === 'en' ? '(unnamed)' : '(sin nombre)')}</p>
                         {c.productos.map(function (p, pi) {
                           const pIngresos = productoIngresos(p);
                           return (
-                            <div key={pi} className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2">
+                            <div key={pi} className="flex items-center gap-2 glass-panel px-3 py-2">
                               <span className="flex-1 truncate font-medium">{p.nombre || (lang === 'en' ? '(unnamed product)' : '(producto sin nombre)')}</span>
                               <span className="text-xs text-slate-500">{lang === 'en' ? 'Revenue' : 'Ingresos'}: <span className="font-semibold text-slate-800">{fmtMoney(pIngresos)}</span></span>
                               <input
@@ -1095,7 +1095,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                     />
                   </label>
                   {finResultLive && (
-                    <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 space-y-1 text-slate-900">
+                    <div className="glass-panel p-3 space-y-1 text-slate-900">
                       <p>{lang === 'en' ? 'Growth you can expect with that investment' : 'Crecimiento esperado con esa inversión'}: {(finResultLive.expectedGrowthRate * 100).toFixed(1)}% {lang === 'en' ? 'monthly' : 'mensual'}</p>
                       <p>{lang === 'en' ? 'Growth needed to reach your goal in 12 months' : 'Crecimiento necesario para llegar a tu meta en 12 meses'}: {(finResultLive.requiredGrowthRate * 100).toFixed(1)}% {lang === 'en' ? 'monthly' : 'mensual'}</p>
                       {finResultLive.isSufficient ? (
@@ -1127,7 +1127,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
                       return { name: p.name, channel: p.channel, income: p.income, target: pTarget, units: unitPrice > 0 ? Math.ceil(pTarget / unitPrice) : null };
                     });
                     return (
-                      <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 space-y-2 text-slate-900">
+                      <div className="glass-panel p-3 space-y-2 text-slate-900">
                         <p className="font-semibold">
                           {lang === 'en' ? 'Your financial goals (before downloading)' : 'Objetivos financieros (antes de descargar)'}
                         </p>
