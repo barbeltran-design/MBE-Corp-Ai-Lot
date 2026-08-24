@@ -1050,11 +1050,17 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       </div>
 
       <div id="plan-accion-mapa" className="mt-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h4 className="text-sm font-semibold text-slate-800">{t.mapaTitle}</h4>
             <p className="mt-1 text-sm text-slate-500">{t.mapaSubtitle}</p>
           </div>
+          <Link
+            href={'/' + lang + '/babel/plan-accion/acciones'}
+            className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            {t.verPorAcciones}
+          </Link>
         </div>
         {grupos.length > 0 ? (
           <div className="mt-3 grid gap-3 md:grid-cols-2">

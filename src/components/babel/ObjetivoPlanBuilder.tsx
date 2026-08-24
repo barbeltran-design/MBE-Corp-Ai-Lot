@@ -350,13 +350,13 @@ export default function ObjetivoPlanBuilder({ lang, objetivoId }: { lang: PlanLa
         <div className="grid gap-2 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label className="mb-1 block text-xs font-medium text-slate-600">{t.accionDesc}</label>
-            <input
-              type="text"
+            <textarea
               value={tr(a.descripcion)}
               onChange={(ev) => updateAccion(a.id, { descripcion: ev.target.value })}
               onBlur={() => clasificarSiFalta(a)}
               placeholder={t.accionPlaceholder}
-              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+              rows={3}
+              className="w-full resize-y rounded-lg border border-slate-300 px-3 py-1.5 text-sm leading-snug"
             />
           </div>
           <div>
@@ -391,12 +391,12 @@ export default function ObjetivoPlanBuilder({ lang, objetivoId }: { lang: PlanLa
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-600">{t.entregableLabel}</label>
-            <input
-              type="text"
+            <textarea
               value={tr(a.entregable)}
               onChange={(ev) => updateAccion(a.id, { entregable: ev.target.value })}
               placeholder={t.entregablePlaceholder}
-              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+              rows={3}
+              className="w-full resize-y rounded-lg border border-slate-300 px-3 py-1.5 text-sm leading-snug"
             />
           </div>
           <div>

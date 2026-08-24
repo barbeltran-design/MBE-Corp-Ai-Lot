@@ -439,6 +439,38 @@ export function proyectoDeAccion(accionId: string, data: PlanData): Proyecto | u
   return data.proyectos.find((p) => p.id === accion.proyectoId);
 }
 
+// Un proyecto (via su fdId) puede estar ligado a varios entornos, y cada entorno
+// a su vez puede estar ligado a varios objetivos. Por eso un mismo proyecto -y
+// todas sus acciones- puede impactar a 2 o 3 Objetivos Estrategicos distintos.
+export function objetivosDeProyecto(proyectoId: string, data: PlanData): Objetivo[] {
+  const proyecto = data.proyectos.find((p) => p.id === proyectoId);
+  if (!proyecto) return [];
+  const out: Objetivo[] = [];
+  const vistos: Record<string, boolean> = {};
+  data.fds
+    .filter((f) => f.id === proyecto.fdId)
+    .forEach((f) => {
+      f.entornoIds.forEach((entornoId) => {
+        const entorno = data.entornos.find((e) => e.id === entornoId);
+        if (!entorno) return;
+        entorno.objetivoIds.forEach((objetivoId) => {
+          if (vistos[objetivoId]) return;
+          const objetivo = data.objetivos.find((o) => o.id === objetivoId);
+          if (!objetivo) return;
+          vistos[objetivoId] = true;
+          out.push(objetivo);
+        });
+      });
+    });
+  return out;
+}
+
+export function objetivosDeAccion(accionId: string, data: PlanData): Objetivo[] {
+  const proyecto = proyectoDeAccion(accionId, data);
+  if (!proyecto) return [];
+  return objetivosDeProyecto(proyecto.id, data);
+}
+
 export type ResumenObjetivo = {
   total: number;
   pendientes: number;
@@ -570,6 +602,24 @@ export const LABELS = {
     noEncontrado: 'No encontramos ese objetivo en tu plan.',
     volver: 'Volver al Plan de Accion',
     breadcrumbPlan: 'Plan de Accion',
+    verPorAcciones: 'Ver por Acciones',
+    verPorObjetivos: 'Ver por Objetivos',
+    vistaAccionesTitle: 'Plan de Accion - Vista por Acciones',
+    vistaAccionesSubtitle: 'Cada fila es una accion de tu plan. Una accion puede impactar a mas de un objetivo cuando su proyecto esta ligado a varias amenazas u oportunidades. Edita cualquier campo directamente en la tabla.',
+    objetivosImpactadosLabel: 'Objetivos que impacta',
+    verFichaProyecto: 'Ver ficha del proyecto',
+    fichaProyectoTitle: 'Ficha del proyecto',
+    fichaProyectoAccionesTitle: 'Acciones de este proyecto',
+    sinObjetivosVinculados: 'Sin objetivos vinculados todavia',
+    noProyectoEncontrado: 'No encontramos ese proyecto en tu plan.',
+    prioridadCol: 'Prioridad',
+    objetivosCol: 'Objetivos',
+    mentorCol: 'Mentor',
+    responsableCol: 'Responsable',
+    fechaCol: 'Fecha',
+    proyectoCol: 'Proyecto',
+    accionCol: 'Accion',
+    sinAccionesPlan: 'Aun no hay acciones en tu Plan de Accion. Agregalas desde la vista por Objetivos.',
   },
   en: {
     title: 'Strategic Action Plan',
@@ -675,5 +725,23 @@ export const LABELS = {
     noEncontrado: 'We could not find that objective in your plan.',
     volver: 'Back to the Action Plan',
     breadcrumbPlan: 'Action Plan',
+    verPorAcciones: 'View by Actions',
+    verPorObjetivos: 'View by Objectives',
+    vistaAccionesTitle: 'Action Plan - View by Actions',
+    vistaAccionesSubtitle: 'Each row is one action in your plan. An action can impact more than one objective when its project is linked to several threats or opportunities. Edit any field directly in the table.',
+    objetivosImpactadosLabel: 'Objectives it impacts',
+    verFichaProyecto: 'View project record',
+    fichaProyectoTitle: 'Project record',
+    fichaProyectoAccionesTitle: 'Actions in this project',
+    sinObjetivosVinculados: 'No linked objectives yet',
+    noProyectoEncontrado: 'We could not find that project in your plan.',
+    prioridadCol: 'Priority',
+    objetivosCol: 'Objectives',
+    mentorCol: 'Mentor',
+    responsableCol: 'Owner',
+    fechaCol: 'Date',
+    proyectoCol: 'Project',
+    accionCol: 'Action',
+    sinAccionesPlan: 'There are no actions in your Action Plan yet. Add them from the view by Objectives.',
   },
 };
