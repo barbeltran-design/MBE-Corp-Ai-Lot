@@ -11,8 +11,19 @@ import { getMaturityDimensions } from '@/lib/maturity-dimensions';
 import { computeResults, type DimensionAnswers } from '@/lib/maturity-scoring';
 import { nivelDesdePuntos } from '@/lib/club';
 import { getBabelSessionIfExists } from '@/lib/babel-session';
-import type { MentorAgente } from '@/lib/madurez-practicas';
-import { loadPlanAccion, accionesDeObjetivo, type Accion, type PlanData } from '@/lib/plan-accion';
+import { PRACTICAS_POR_TEMA, type MentorAgente } from '@/lib/madurez-practicas';
+import Link from 'next/link';
+import {
+  loadPlanAccion,
+  accionesDeObjetivo,
+  priorityRank,
+  priorityTier,
+  proyectoDeAccion,
+  objetivosResueltosDeAccion,
+  LABELS,
+  type Accion,
+  type PlanData,
+} from '@/lib/plan-accion';
 import {
   MISIONES_PART_LABELS,
   SUBMUNDOS_ESTRATEGIA_LABELS,
@@ -177,6 +188,12 @@ const I = {
     'Las actividades provienen de tu Plan de Acción Estratégico (Misión 6 con Babel): cada acción está asignada al agente que puede ayudarte a cumplirla.',
     'Activities come from your Strategic Action Plan (Mission 6 with Babel): each action is assigned to the agent that can help you get it done.',
   ],
+  retosAgenteTitulo: ['Retos pendientes de', 'Pending challenges for'],
+  retoDeLaSemana: ['Reto de la semana', 'Challenge of the week'],
+  retosAgenteSinPendientes: [
+    'Sin retos pendientes para este agente 🎉',
+    'No pending challenges for this agent 🎉',
+  ],
 } as const;
 
 type Params = readonly [string, string];
@@ -287,6 +304,103 @@ function PanelActividadesPlanAccion({
   );
 }
 
+// ── Vista "por Acciones" (misma tabla enriquecida que /babel/plan-accion,
+// en modo solo lectura) para la Misión de Plan de Acción de cada mundo:
+// muestra solo las acciones del agente anfitrión del mundo (y, en Cultura,
+// solo las de la perspectiva Aprendizaje y Crecimiento vía soloIds). La
+// edición sigue centralizada en /babel/plan-accion; aquí es de consulta.
+function PanelAccionesPorAgente({
+  agente,
+  lang,
+  planAccion,
+  soloIds,
+}: {
+  agente: MentorAgente;
+  lang: 'es' | 'en';
+  planAccion: PlanData | null;
+  soloIds?: string[] | null;
+}) {
+  const en = t2(lang);
+  const t = LABELS[lang];
+  const acciones = React.useMemo(() => {
+    const base = planAccion?.acciones ?? [];
+    const deEsteAgente = base.filter((a) => mentorDeAccion(a) === agente);
+    if (!soloIds) return deEsteAgente;
+    const permitidas = new Set(soloIds);
+    return deEsteAgente.filter((a) => permitidas.has(a.id));
+  }, [planAccion, soloIds, agente]);
+
+  const filas = React.useMemo(
+    () =>
+      acciones.map((a) => {
+        const proyecto = planAccion ? proyectoDeAccion(a.id, planAccion) : undefined;
+        const objetivosRes = planAccion ? objetivosResueltosDeAccion(a.id, planAccion) : [];
+        const rank = priorityRank(a.factibilidad, a.impacto);
+        const tier = priorityTier(rank, lang);
+        return { a, proyecto, objetivosRes, rank, tier };
+      }),
+    [acciones, planAccion, lang]
+  );
+
+  if (filas.length === 0) {
+    return <p className="text-xs text-slate-500 dark:text-slate-400">{en(I.sinAccionesTag)}</p>;
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[640px] text-xs">
+        <thead>
+          <tr className="text-left text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            <th className="pb-2 pr-2">{t.accionCol}</th>
+            <th className="pb-2 pr-2">{t.prioridadCol}</th>
+            <th className="pb-2 pr-2">{t.objetivosCol}</th>
+            <th className="pb-2 pr-2">{t.responsableCol}</th>
+            <th className="pb-2 pr-2">{t.fechaCol}</th>
+            <th className="pb-2">{t.proyectoCol}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filas.map(({ a, proyecto, objetivosRes, rank, tier }) => (
+            <tr key={a.id} className="border-t border-slate-300/40 align-top dark:border-slate-600/40">
+              <td className="max-w-[12rem] py-1.5 pr-2 font-bold text-slate-700 dark:text-slate-200">{a.descripcion || '—'}</td>
+              <td className="py-1.5 pr-2">
+                <span className={'inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-center text-[10px] font-bold shadow-sm ring-1 ring-white/50 ' + tier.classes}>
+                  {'#' + rank + ' - ' + tier.label}
+                </span>
+              </td>
+              <td className="min-w-[10rem] py-1.5 pr-2 text-slate-600 dark:text-slate-300">
+                {objetivosRes.length === 0 ? (
+                  <span className="text-slate-400 dark:text-slate-500">{t.sinObjetivosVinculados}</span>
+                ) : (
+                  <ul className="flex flex-col gap-0.5">
+                    {objetivosRes.map((o) => (
+                      <li key={o.id}>· {o.texto || '—'}</li>
+                    ))}
+                  </ul>
+                )}
+              </td>
+              <td className="py-1.5 pr-2 text-slate-600 dark:text-slate-300">{a.responsableNombre || '—'}</td>
+              <td className="py-1.5 pr-2 whitespace-nowrap text-slate-600 dark:text-slate-300">{a.fecha || '—'}</td>
+              <td className="py-1.5">
+                {proyecto ? (
+                  <Link
+                    href={'/' + lang + '/babel/plan-accion/proyecto/' + proyecto.id}
+                    className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+                  >
+                    {proyecto.nombre || t.proyectoChip}
+                  </Link>
+                ) : (
+                  <span className="text-slate-400 dark:text-slate-500">—</span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function MisionPlanAccion({
   agente,
   lang,
@@ -295,6 +409,7 @@ function MisionPlanAccion({
   onIrPlan,
   esPremium,
   soloIds,
+  retos,
 }: {
   agente: MentorAgente;
   lang: 'es' | 'en';
@@ -303,6 +418,7 @@ function MisionPlanAccion({
   onIrPlan: () => void;
   esPremium: boolean;
   soloIds?: string[] | null;
+  retos?: { tema: string; score: number; nextStep: { levelKey: string; description: string; deliverable: string } }[] | null;
 }) {
   const en = t2(lang);
   const desbloqueada = planAccionDefinido && esPremium;
@@ -342,8 +458,41 @@ function MisionPlanAccion({
             <b className="text-teal-700 dark:text-teal-300">{agente}</b>
           </p>
           <div className="mt-2">
-            <PanelActividadesPlanAccion agente={agente} lang={lang} planAccion={planAccion} soloIds={soloIds} />
+            <PanelAccionesPorAgente agente={agente} lang={lang} planAccion={planAccion} soloIds={soloIds} />
           </div>
+          {retos && retos.length > 0 && (
+            <div className="mt-4">
+              <p className="text-xs font-extrabold text-slate-700 dark:text-slate-200">
+                {en(I.retosAgenteTitulo)} <b className="text-teal-700 dark:text-teal-300">{agente}</b>
+              </p>
+              <div className="mt-2 space-y-2">
+                {retos.map((r, i) => (
+                  <div
+                    key={r.tema}
+                    className={
+                      'rounded-lg border p-2.5 text-xs ' +
+                      (i === 0
+                        ? 'border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/30'
+                        : 'border-slate-300/50 bg-white/40 dark:bg-white/5')
+                    }
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-slate-700 dark:text-slate-200">{r.tema}</span>
+                      {i === 0 && (
+                        <span className="shrink-0 rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-extrabold text-amber-800 dark:bg-amber-800 dark:text-amber-100">
+                          {en(I.retoDeLaSemana)}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1 text-slate-600 dark:text-slate-300">{r.nextStep.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {retos && retos.length === 0 && (
+            <p className="mt-4 text-xs text-slate-500 dark:text-slate-400">{en(I.retosAgenteSinPendientes)}</p>
+          )}
           <button
             className="mt-3 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 px-3 py-1.5 text-xs font-extrabold text-white shadow-md shadow-teal-500/30 transition hover:opacity-90"
             onClick={onIrPlan}
@@ -531,6 +680,35 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
     }
   }, [respuestas, lang]);
 
+  // Retos pendientes por agente, para la Misión de Plan de Acción de cada
+  // mundo premium (parte de la misión, no el reto semanal global de arriba).
+  // Mismo computeResults() de la evaluación de madurez, pero agrupado por el
+  // agente dueño de cada tema — vía PRACTICAS_POR_TEMA, donde los 11 temas
+  // de la evaluación pertenecen cada uno a un solo agente (mismo dueño en
+  // sus 6 niveles). Dentro de cada agente, ordenado por score ascendente: el
+  // primero es "el reto de la semana" de ese agente, el resto son
+  // pendientes adicionales.
+  const retosPorAgente = React.useMemo(() => {
+    if (!respuestas) return null;
+    try {
+      const dims = getMaturityDimensions(lang === 'en' ? 'en' : 'es');
+      const resultado = computeResults(dims, respuestas as unknown as DimensionAnswers);
+      const mapa: Record<
+        MentorAgente,
+        { tema: string; score: number; nextStep: { levelKey: string; description: string; deliverable: string } }[]
+      > = { Babel: [], Fisnando: [], Karmetin: [], Normau: [], Atech: [], Ecori: [] };
+      for (const d of resultado.dimensions) {
+        if (d.nextStep === null) continue;
+        const agenteDim = PRACTICAS_POR_TEMA[d.id][0].mentor;
+        mapa[agenteDim].push({ tema: d.tema, score: d.score, nextStep: d.nextStep! });
+      }
+      (Object.keys(mapa) as MentorAgente[]).forEach((k) => mapa[k].sort((a, b) => a.score - b.score));
+      return mapa;
+    } catch {
+      return null;
+    }
+  }, [respuestas, lang]);
+
   // Misión 0 (Calibración) del Mundo de Estrategia: lee la sesión de Babel del
   // usuario y marca COMPLETADA si la Fase 0 ya fue aprobada.
   React.useEffect(() => {
@@ -680,6 +858,10 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
   const hechas = yo?.partida ?? [];
   const mundoVista = MUNDOS_PREMIUM_LABELS.find((m) => m.id === vista);
   const vistaPremium = mundoVista?.id;
+  // Retos pendientes del agente que hospeda este mundo (ver retosPorAgente
+  // arriba), para la Misión de Plan de Acción del mundo actual.
+  const retosAgenteMundo =
+    mundoVista && retosPorAgente ? retosPorAgente[mundoVista.agente as MentorAgente] : null;
 
   // Mundo de la Cultura: solo deben verse las acciones cuyo objetivo
   // estratégico pertenece a la perspectiva "Aprendizaje y Crecimiento".
@@ -1146,6 +1328,7 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
                     onIrPlan={() => abrirMision(irPlanAccion)}
                     esPremium={esPremium}
                     soloIds={vista === 'cultura' ? accionesCulturaPermitidas : null}
+                    retos={retosAgenteMundo}
                   />
                 </div>
               </>
