@@ -172,7 +172,15 @@ export function ExecutiveShell({
   }, [commandItems, navItems, router]);
 
   const search = typeof window !== 'undefined' ? window.location.search : '';
-  const [openSections, setOpenSections] = React.useState<Record<string, boolean>>({ Toolbox: true });
+  // "Mundos Premium" (es) / "Premium Worlds" (en) empieza expandido por
+  // default, igual que Toolbox. Se guardan ambas etiquetas porque el label
+  // ya viene traducido desde app-shell.tsx / executive-preview y difiere
+  // por idioma, asi que solo una de las dos claves coincide en cada locale.
+  const [openSections, setOpenSections] = React.useState<Record<string, boolean>>({
+    Toolbox: true,
+    'Mundos Premium': true,
+    'Premium Worlds': true,
+  });
   const toggleSection = (label: string) => setOpenSections((prev) => ({ ...prev, [label]: !prev[label] }));
 
   // Al navegar, abre automáticamente la sección que contiene la ruta activa.
@@ -227,6 +235,7 @@ export function ExecutiveShell({
               'flex w-full items-center gap-2 rounded-md text-muted-foreground/70',
               depth > 0 ? 'px-2.5 py-1 text-xs font-semibold normal-case tracking-normal' : 'px-2.5 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider'
             )}
+            title={item.label}
             role={hasChildren ? 'button' : undefined}
             tabIndex={hasChildren ? 0 : undefined}
             onClick={hasChildren ? () => toggleSection(item.label) : undefined}
@@ -270,7 +279,10 @@ export function ExecutiveShell({
         {item.href ? (
           <Link
             href={item.href}
-            title={collapsed ? item.label : undefined}
+            // Con title siempre presente, el navegador muestra el texto
+            // completo al pasar el cursor aunque este truncado (expandido o
+            // contraido).
+            title={item.label}
             onClick={hasChildren ? () => toggleSection(item.label) : undefined}
             className={rowClass}
           >
@@ -279,6 +291,7 @@ export function ExecutiveShell({
         ) : (
           <button
             type="button"
+            title={item.label}
             onClick={hasChildren ? () => toggleSection(item.label) : undefined}
             className={rowClass}
           >
