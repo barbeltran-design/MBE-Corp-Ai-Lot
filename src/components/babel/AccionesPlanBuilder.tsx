@@ -9,17 +9,23 @@ import {
   type FortalezaDebilidad,
   type Proyecto,
   type Accion,
+  type OrgData,
   FACTIBILIDAD_OPTIONS,
   IMPACTO_OPTIONS,
+  ROLE_OPTIONS,
   priorityRank,
   priorityTier,
   suggestedDate,
   loadPlanAccion,
   savePlanAccion,
+  loadOrgData,
+  resolvePersonForRole,
   proyectoDeAccion,
-  objetivosDeAccion,
+  objetivosResueltosDeAccion,
   LABELS,
 } from '@/lib/plan-accion';
+
+type SortKey = 'accion' | 'prioridad' | 'objetivos' | 'mentor' | 'responsable' | 'fecha' | 'proyecto';
 
 export default function AccionesPlanBuilder({ lang }: { lang: PlanLang }) {
   const t = LABELS[lang];
@@ -30,6 +36,9 @@ export default function AccionesPlanBuilder({ lang }: { lang: PlanLang }) {
   const [proyectos, setProyectos] = React.useState<Proyecto[]>([]);
   const [acciones, setAcciones] = React.useState<Accion[]>([]);
   const [loaded, setLoaded] = React.useState(false);
+  const [org, setOrg] = React.useState<OrgData>({ assignments: {}, presidente: '', secretario: '', consejeros: [] });
+  const [sortKey, setSortKey] = React.useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = React.useState<'asc' | 'desc'>('desc');
 
   React.useEffect(() => {
     const plan = loadPlanAccion();
@@ -40,6 +49,7 @@ export default function AccionesPlanBuilder({ lang }: { lang: PlanLang }) {
       setProyectos(plan.proyectos);
       setAcciones(plan.acciones);
     }
+    setOrg(loadOrgData());
     setLoaded(true);
   }, []);
 
@@ -63,6 +73,71 @@ export default function AccionesPlanBuilder({ lang }: { lang: PlanLang }) {
       })
     );
 
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'));
+    } else {
+      setSortKey(key);
+      setSortDir('desc');
+    }
+  };
+
+  const sortIndicator = (key: SortKey) => {
+    if (sortKey !== key) return '';
+    return sortDir === 'desc' ? ' ▼' : ' ▲';
+  };
+
+  const filas = acciones.map((a) => {
+    const proyecto = proyectoDeAccion(a.id, plan);
+    const objetivosRes = objetivosResueltosDeAccion(a.id, plan);
+    const rank = priorityRank(a.factibilidad, a.impacto);
+    const tier = priorityTier(rank, lang);
+    return { a, proyecto, objetivosRes, rank, tier };
+  });
+
+  if (sortKey) {
+    const dir = sortDir === 'asc' ? 1 : -1;
+    filas.sort((x, y) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case 'accion':
+          cmp = (x.a.descripcion || '').localeCompare(y.a.descripcion || '');
+          break;
+        case 'prioridad':
+          cmp = (17 - x.rank) - (17 - y.rank);
+          break;
+        case 'objetivos':
+          cmp = x.objetivosRes.length - y.objetivosRes.length;
+          break;
+        case 'mentor':
+          cmp = (x.a.mentor || '').localeCompare(y.a.mentor || '');
+          break;
+        case 'responsable':
+          cmp = (x.a.responsableNombre || '').localeCompare(y.a.responsableNombre || '');
+          break;
+        case 'fecha':
+          cmp = (x.a.fecha || '').localeCompare(y.a.fecha || '');
+          break;
+        case 'proyecto':
+          cmp = (x.proyecto?.nombre || '').localeCompare(y.proyecto?.nombre || '');
+          break;
+        default:
+          break;
+      }
+      return cmp * dir;
+    });
+  }
+
+  const headerBtn = (key: SortKey, label: string) => (
+    <th
+      className="cursor-pointer select-none whitespace-nowrap px-3 py-2 text-left font-semibold text-slate-600 hover:text-slate-900"
+      onClick={() => toggleSort(key)}
+    >
+      {label}
+      {sortIndicator(key)}
+    </th>
+  );
+
   return (
     <div className="mx-auto max-w-7xl">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -85,21 +160,18 @@ export default function AccionesPlanBuilder({ lang }: { lang: PlanLang }) {
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50">
               <tr>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">{t.accionCol}</th>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">{t.prioridadCol}</th>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">{t.objetivosCol}</th>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">{t.mentorCol}</th>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">{t.responsableCol}</th>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">{t.fechaCol}</th>
-                <th className="px-3 py-2 text-left font-semibold text-slate-600">{t.proyectoCol}</th>
+                {headerBtn('accion', t.accionCol)}
+                {headerBtn('prioridad', t.prioridadCol)}
+                {headerBtn('objetivos', t.objetivosCol)}
+                {headerBtn('mentor', t.mentorCol)}
+                {headerBtn('responsable', t.responsableCol)}
+                {headerBtn('fecha', t.fechaCol)}
+                {headerBtn('proyecto', t.proyectoCol)}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
-              {acciones.map((a) => {
-                const proyecto = proyectoDeAccion(a.id, plan);
-                const objetivosImpactados = objetivosDeAccion(a.id, plan);
-                const rank = priorityRank(a.factibilidad, a.impacto);
-                const tier = priorityTier(rank, lang);
+              {filas.map(({ a, proyecto, objetivosRes, rank, tier }) => {
+                const disponibles = objetivos.filter((o) => !objetivosRes.some((x) => x.id === o.id));
                 return (
                   <tr key={a.id} className="align-top">
                     <td className="max-w-xs px-3 py-2">
@@ -134,18 +206,61 @@ export default function AccionesPlanBuilder({ lang }: { lang: PlanLang }) {
                         </span>
                       </div>
                     </td>
-                    <td className="px-3 py-2">
-                      {objetivosImpactados.length === 0 ? (
-                        <span className="text-xs text-slate-400">{t.sinObjetivosVinculados}</span>
-                      ) : (
-                        <ul className="flex flex-col gap-1">
-                          {objetivosImpactados.map((o) => (
-                            <li key={o.id} className="rounded bg-slate-100 px-2 py-1 text-xs text-slate-700">
-                              {o.texto || '—'}
+                    <td className="min-w-[12rem] px-3 py-2">
+                      <ul className="flex flex-col gap-1">
+                        {objetivosRes.length === 0 ? (
+                          <li className="text-xs text-slate-400">{t.sinObjetivosVinculados}</li>
+                        ) : (
+                          objetivosRes.map((o) => (
+                            <li
+                              key={o.id}
+                              className="flex items-center justify-between gap-2 rounded bg-slate-100 px-2 py-1 text-xs text-slate-700"
+                            >
+                              <span className="flex-1">{o.texto || '—'}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const nuevos = objetivosRes.filter((x) => x.id !== o.id).map((x) => x.id);
+                                  updateAccion(a.id, { objetivoIdsManual: nuevos });
+                                }}
+                                className="shrink-0 text-[11px] font-medium text-red-600 hover:underline"
+                              >
+                                {t.quitarObjetivo}
+                              </button>
                             </li>
+                          ))
+                        )}
+                      </ul>
+                      {disponibles.length > 0 ? (
+                        <select
+                          value=""
+                          onChange={(ev) => {
+                            const id = ev.target.value;
+                            if (!id) return;
+                            const actuales = objetivosRes.map((x) => x.id);
+                            updateAccion(a.id, { objetivoIdsManual: [...actuales, id] });
+                          }}
+                          className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1 text-[11px]"
+                        >
+                          <option value="">{t.agregarObjetivoLabel}</option>
+                          {disponibles.map((o) => (
+                            <option key={o.id} value={o.id}>
+                              {o.texto || '—'}
+                            </option>
                           ))}
-                        </ul>
+                        </select>
+                      ) : (
+                        <p className="mt-1 text-[10px] text-slate-400">{t.todosObjetivosAgregados}</p>
                       )}
+                      {a.objetivoIdsManual !== undefined ? (
+                        <button
+                          type="button"
+                          onClick={() => updateAccion(a.id, { objetivoIdsManual: undefined })}
+                          className="mt-1 text-[11px] font-medium text-blue-600 hover:underline"
+                        >
+                          {t.volverAutomatico}
+                        </button>
+                      ) : null}
                     </td>
                     <td className="px-3 py-2">
                       <select
@@ -162,13 +277,30 @@ export default function AccionesPlanBuilder({ lang }: { lang: PlanLang }) {
                       </select>
                     </td>
                     <td className="px-3 py-2">
-                      <input
-                        type="text"
-                        value={a.responsableNombre}
-                        onChange={(ev) => updateAccion(a.id, { responsableNombre: ev.target.value })}
-                        placeholder={t.responsableNombreLabel}
-                        className="w-full min-w-[9rem] rounded-lg border border-slate-300 px-2 py-1 text-xs"
-                      />
+                      <select
+                        value={a.responsableRoleKey || ''}
+                        onChange={(ev) => {
+                          const roleKey = ev.target.value;
+                          const persona = roleKey ? resolvePersonForRole(roleKey, org) : '';
+                          updateAccion(a.id, { responsableRoleKey: roleKey, responsableNombre: persona });
+                        }}
+                        className="w-full min-w-[11rem] rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                        aria-label={t.responsableLabel}
+                      >
+                        <option value="">{t.responsableSinAsignar}</option>
+                        {ROLE_OPTIONS.map((opt) => {
+                          const persona = resolvePersonForRole(opt.key, org);
+                          const roleName = lang === 'en' ? opt.nameEn : opt.nameEs;
+                          return (
+                            <option key={opt.key} value={opt.key}>
+                              {roleName + (persona ? ' — ' + persona : ' (' + t.responsableSinAsignar + ')')}
+                            </option>
+                          );
+                        })}
+                      </select>
+                      {a.responsableNombre ? (
+                        <span className="mt-1 block text-[11px] text-slate-500">{a.responsableNombre}</span>
+                      ) : null}
                     </td>
                     <td className="px-3 py-2">
                       <input

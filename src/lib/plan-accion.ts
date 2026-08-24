@@ -28,6 +28,10 @@ export type Accion = {
   // Mentor de IA sugerido para ayudar a implementar esta accion (Babel,
   // Karmetin, Normau, Fisnando o Atech). Vacio = aun no clasificada.
   mentor?: string;
+  // Override manual de los objetivos que impacta esta accion. Si es
+  // undefined, se usa la derivacion automatica (objetivosDeAccion). Si es
+  // un array (incluso vacio), el usuario ya lo personalizo y ese array manda.
+  objetivoIdsManual?: string[];
 };
 export type Contacto = { id: string; nombre: string; celular: string; correo: string; roleKeys: string[] };
 export type OrgAssignments = Record<string, { person: string }>;
@@ -471,6 +475,19 @@ export function objetivosDeAccion(accionId: string, data: PlanData): Objetivo[] 
   return objetivosDeProyecto(proyecto.id, data);
 }
 
+// Los objetivos que se muestran/editan para una accion: si el usuario ya
+// personalizo la lista (objetivoIdsManual definido, aunque sea []), esa lista
+// manda; si no, se usa la derivacion automatica Proyecto->FD->Entorno->Objetivo.
+export function objetivosResueltosDeAccion(accionId: string, data: PlanData): Objetivo[] {
+  const accion = data.acciones.find((a) => a.id === accionId);
+  if (accion && Array.isArray(accion.objetivoIdsManual)) {
+    return accion.objetivoIdsManual
+      .map((id) => data.objetivos.find((o) => o.id === id))
+      .filter((o): o is Objetivo => Boolean(o));
+  }
+  return objetivosDeAccion(accionId, data);
+}
+
 export type ResumenObjetivo = {
   total: number;
   pendientes: number;
@@ -620,6 +637,11 @@ export const LABELS = {
     proyectoCol: 'Proyecto',
     accionCol: 'Accion',
     sinAccionesPlan: 'Aun no hay acciones en tu Plan de Accion. Agregalas desde la vista por Objetivos.',
+    responsableSinAsignar: 'Sin asignar',
+    agregarObjetivoLabel: '+ Agregar objetivo',
+    quitarObjetivo: 'Quitar',
+    volverAutomatico: 'Volver a automatico',
+    todosObjetivosAgregados: 'Ya estan todos los objetivos agregados',
   },
   en: {
     title: 'Strategic Action Plan',
@@ -743,5 +765,10 @@ export const LABELS = {
     proyectoCol: 'Project',
     accionCol: 'Action',
     sinAccionesPlan: 'There are no actions in your Action Plan yet. Add them from the view by Objectives.',
+    responsableSinAsignar: 'Unassigned',
+    agregarObjetivoLabel: '+ Add objective',
+    quitarObjetivo: 'Remove',
+    volverAutomatico: 'Reset to automatic',
+    todosObjetivosAgregados: 'All objectives are already added',
   },
 };
