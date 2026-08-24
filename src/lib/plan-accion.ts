@@ -91,14 +91,19 @@ export const ESTATUS_OPTIONS: { value: Estatus; labelEs: string; labelEn: string
   { value: 'terminado', labelEs: 'Terminado', labelEn: 'Done' },
 ];
 
+// Tabla de prioridades oficial (Impacto x Probabilidad de ocurrencia):
+// 1 alto+alto=Muy alta | 2 alto+medio=Alta | 3 medio+alto=Alta
+// 4 alto+bajo=Media | 5 medio+medio=Media | 6 medio+bajo=Media
+// 7 bajo+alto=Baja | 8 bajo+medio=Baja | 9 bajo+bajo=Nula (no se hace)
+// 10-16: cualquier combinacion con factibilidad o impacto "nula/nulo" cae al final.
 const PRIORITY_ORDER: [Factibilidad, Impacto][] = [
   ['alta', 'alto'],
   ['media', 'alto'],
   ['alta', 'medio'],
-  ['media', 'medio'],
   ['baja', 'alto'],
-  ['alta', 'bajo'],
+  ['media', 'medio'],
   ['baja', 'medio'],
+  ['alta', 'bajo'],
   ['media', 'bajo'],
   ['baja', 'bajo'],
   ['nula', 'alto'],
@@ -122,10 +127,10 @@ export function priorityRank(factibilidad: Factibilidad, impacto: Impacto): numb
 }
 
 export function priorityTier(rank: number, lang: PlanLang): { label: string; classes: string } {
-  if (rank <= 3) return { label: lang === 'en' ? 'Very high priority' : 'Prioridad muy alta', classes: 'bg-purple-100 text-purple-800' };
-  if (rank <= 6) return { label: lang === 'en' ? 'High priority' : 'Prioridad alta', classes: 'bg-blue-100 text-blue-800' };
-  if (rank <= 9) return { label: lang === 'en' ? 'Medium priority' : 'Prioridad media', classes: 'bg-yellow-100 text-yellow-800' };
-  if (rank <= 12) return { label: lang === 'en' ? 'Low priority' : 'Prioridad baja', classes: 'bg-orange-100 text-orange-800' };
+  if (rank === 1) return { label: lang === 'en' ? 'Very high priority' : 'Prioridad muy alta', classes: 'bg-purple-100 text-purple-800' };
+  if (rank <= 3) return { label: lang === 'en' ? 'High priority' : 'Prioridad alta', classes: 'bg-blue-100 text-blue-800' };
+  if (rank <= 6) return { label: lang === 'en' ? 'Medium priority' : 'Prioridad media', classes: 'bg-yellow-100 text-yellow-800' };
+  if (rank <= 8) return { label: lang === 'en' ? 'Low priority' : 'Prioridad baja', classes: 'bg-orange-100 text-orange-800' };
   return { label: lang === 'en' ? 'Not worth pursuing' : 'Prioridad nula', classes: 'bg-slate-100 text-slate-500' };
 }
 
@@ -153,11 +158,10 @@ function addDays(base: Date, days: number): string {
 
 export function suggestedDate(rank: number): string {
   const today = new Date();
-  if (rank <= 3) return addDays(today, 14);
-  if (rank <= 6) return addDays(today, 30);
-  if (rank <= 9) return addDays(today, 60);
-  if (rank <= 12) return addDays(today, 90);
-  return addDays(today, 180);
+  if (rank <= 3) return addDays(today, 45); // Corto plazo: 1-3 meses
+  if (rank <= 6) return addDays(today, 180); // Mediano plazo: 3-9 meses
+  if (rank <= 8) return addDays(today, 270); // Largo plazo: 9+ meses
+  return ''; // Nula / No se hace: sin fecha sugerida
 }
 
 export function generateId(): string {
