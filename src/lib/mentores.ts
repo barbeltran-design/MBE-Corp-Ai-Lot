@@ -119,7 +119,7 @@ const PERSONAS: Record<MentorId, { es: string; en: string }> = {
   },
 };
 
-const AREAS_MENTOR: Record<MentorId, { es: string; en: string }> = {
+export const AREAS_MENTOR: Record<MentorId, { es: string; en: string }> = {
   Babel: { es: 'Rumbo Estrategico, Capital Humano y Cultura', en: 'Strategy, People and Culture' },
   Karmetin: { es: 'Marketing, Ventas y Atencion al Cliente', en: 'Marketing, Sales and Customer Care' },
   Normau: { es: 'Cumplimiento Normativo', en: 'Regulatory Compliance' },

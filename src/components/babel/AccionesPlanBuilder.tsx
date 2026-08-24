@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import Link from 'next/link';
-import { esMentorValido, MENTOR_IDS, type MentorId } from '@/lib/mentores';
+import { AREAS_MENTOR, esMentorValido, MENTOR_IDS, type MentorId } from '@/lib/mentores';
 import {
   type PlanLang,
   type Objetivo,
@@ -277,10 +277,13 @@ export default function AccionesPlanBuilder({ lang }: { lang: PlanLang }) {
                         <option value="">{lang === 'en' ? 'Auto' : 'Automatico'}</option>
                         {MENTOR_IDS.map((m) => (
                           <option key={m} value={m}>
-                            {m}
+                            {m + ' — ' + AREAS_MENTOR[m][lang]}
                           </option>
                         ))}
                       </select>
+                      {esMentorValido(a.mentor) ? (
+                        <span className="mt-1 block text-[11px] text-slate-500">{AREAS_MENTOR[a.mentor][lang]}</span>
+                      ) : null}
                     </td>
                     <td className="px-3 py-2">
                       <select
