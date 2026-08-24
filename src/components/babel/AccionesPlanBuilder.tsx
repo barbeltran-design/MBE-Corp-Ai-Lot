@@ -130,7 +130,7 @@ export default function AccionesPlanBuilder({ lang }: { lang: PlanLang }) {
 
   const headerBtn = (key: SortKey, label: string) => (
     <th
-      className="cursor-pointer select-none whitespace-nowrap px-3 py-2 text-left font-semibold text-slate-600 hover:text-slate-900"
+      className="cursor-pointer select-none whitespace-nowrap px-3 py-2 text-left font-semibold text-slate-600 transition-colors hover:bg-white/30 hover:text-slate-900"
       onClick={() => toggleSort(key)}
     >
       {label}
@@ -139,26 +139,32 @@ export default function AccionesPlanBuilder({ lang }: { lang: PlanLang }) {
   );
 
   return (
-    <div className="mx-auto max-w-7xl">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="relative mx-auto max-w-7xl">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden rounded-3xl">
+        <div className="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-blue-300/30 blur-3xl" />
+        <div className="absolute -right-16 top-1/3 h-64 w-64 rounded-full bg-purple-300/30 blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 h-56 w-56 rounded-full bg-emerald-200/25 blur-3xl" />
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/40 bg-white/30 px-4 py-3 shadow-lg shadow-slate-900/5 backdrop-blur-xl backdrop-saturate-150">
         <div>
           <h3 className="text-xl font-bold text-slate-800">{t.vistaAccionesTitle}</h3>
           <p className="mt-1 text-sm text-slate-500">{t.vistaAccionesSubtitle}</p>
         </div>
         <Link
           href={'/' + lang + '/babel/plan-accion'}
-          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          className="rounded-lg border border-white/50 bg-white/40 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm backdrop-blur-md transition-colors hover:bg-white/60"
         >
           {'← ' + t.verPorObjetivos}
         </Link>
       </div>
 
       {acciones.length === 0 ? (
-        <p className="mt-6 text-sm text-slate-500">{t.sinAccionesPlan}</p>
+        <p className="mt-6 rounded-xl border border-white/40 bg-white/30 px-4 py-3 text-sm text-slate-500 backdrop-blur-md">{t.sinAccionesPlan}</p>
       ) : (
-        <div className="mt-5 overflow-x-auto rounded-lg border border-slate-200">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-50">
+        <div className="mt-5 overflow-x-auto rounded-2xl border border-white/40 bg-white/25 shadow-xl shadow-slate-900/5 backdrop-blur-xl backdrop-saturate-150">
+          <table className="min-w-full divide-y divide-white/30 text-sm">
+            <thead className="bg-white/30 backdrop-blur-md">
               <tr>
                 {headerBtn('accion', t.accionCol)}
                 {headerBtn('prioridad', t.prioridadCol)}
@@ -169,11 +175,11 @@ export default function AccionesPlanBuilder({ lang }: { lang: PlanLang }) {
                 {headerBtn('proyecto', t.proyectoCol)}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 bg-white">
+            <tbody className="divide-y divide-white/20 bg-transparent">
               {filas.map(({ a, proyecto, objetivosRes, rank, tier }) => {
                 const disponibles = objetivos.filter((o) => !objetivosRes.some((x) => x.id === o.id));
                 return (
-                  <tr key={a.id} className="align-top">
+                  <tr key={a.id} className="align-top transition-colors hover:bg-white/20">
                     <td className="max-w-xs px-3 py-2">
                       <p className="whitespace-pre-wrap text-slate-800">{a.descripcion || '—'}</p>
                     </td>
@@ -182,7 +188,7 @@ export default function AccionesPlanBuilder({ lang }: { lang: PlanLang }) {
                         <select
                           value={a.factibilidad}
                           onChange={(ev) => updateAccion(a.id, { factibilidad: ev.target.value as Accion['factibilidad'] })}
-                          className="w-full rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                          className="w-full rounded-lg border border-white/40 bg-white/50 px-2 py-1 text-xs text-slate-700 shadow-sm backdrop-blur-sm transition-colors focus:border-white/70 focus:bg-white/70 focus:outline-none"
                         >
                           {FACTIBILIDAD_OPTIONS.map((opt) => (
                             <option key={opt.value} value={opt.value}>
@@ -193,7 +199,7 @@ export default function AccionesPlanBuilder({ lang }: { lang: PlanLang }) {
                         <select
                           value={a.impacto}
                           onChange={(ev) => updateAccion(a.id, { impacto: ev.target.value as Accion['impacto'] })}
-                          className="w-full rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                          className="w-full rounded-lg border border-white/40 bg-white/50 px-2 py-1 text-xs text-slate-700 shadow-sm backdrop-blur-sm transition-colors focus:border-white/70 focus:bg-white/70 focus:outline-none"
                         >
                           {IMPACTO_OPTIONS.map((opt) => (
                             <option key={opt.value} value={opt.value}>
@@ -201,7 +207,7 @@ export default function AccionesPlanBuilder({ lang }: { lang: PlanLang }) {
                             </option>
                           ))}
                         </select>
-                        <span className={'inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-center text-xs font-medium ' + tier.classes}>
+                        <span className={'inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-center text-xs font-medium shadow-sm ring-1 ring-white/50 backdrop-blur-sm ' + tier.classes}>
                           {'#' + rank + ' - ' + tier.label}
                         </span>
                       </div>
@@ -214,7 +220,7 @@ export default function AccionesPlanBuilder({ lang }: { lang: PlanLang }) {
                           objetivosRes.map((o) => (
                             <li
                               key={o.id}
-                              className="flex items-center justify-between gap-2 rounded bg-slate-100 px-2 py-1 text-xs text-slate-700"
+                              className="flex items-center justify-between gap-2 rounded-lg border border-white/30 bg-white/40 px-2 py-1 text-xs text-slate-700 backdrop-blur-sm"
                             >
                               <span className="flex-1">{o.texto || '—'}</span>
                               <button
@@ -240,7 +246,7 @@ export default function AccionesPlanBuilder({ lang }: { lang: PlanLang }) {
                             const actuales = objetivosRes.map((x) => x.id);
                             updateAccion(a.id, { objetivoIdsManual: [...actuales, id] });
                           }}
-                          className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1 text-[11px]"
+                          className="mt-1 w-full rounded-lg border border-white/40 bg-white/50 px-2 py-1 text-[11px] text-slate-700 shadow-sm backdrop-blur-sm transition-colors focus:border-white/70 focus:bg-white/70 focus:outline-none"
                         >
                           <option value="">{t.agregarObjetivoLabel}</option>
                           {disponibles.map((o) => (
@@ -266,7 +272,7 @@ export default function AccionesPlanBuilder({ lang }: { lang: PlanLang }) {
                       <select
                         value={esMentorValido(a.mentor) ? a.mentor : ''}
                         onChange={(ev) => updateAccion(a.id, { mentor: (ev.target.value || undefined) as MentorId | undefined })}
-                        className="w-full rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                        className="w-full rounded-lg border border-white/40 bg-white/50 px-2 py-1 text-xs text-slate-700 shadow-sm backdrop-blur-sm transition-colors focus:border-white/70 focus:bg-white/70 focus:outline-none"
                       >
                         <option value="">{lang === 'en' ? 'Auto' : 'Automatico'}</option>
                         {MENTOR_IDS.map((m) => (
@@ -284,7 +290,7 @@ export default function AccionesPlanBuilder({ lang }: { lang: PlanLang }) {
                           const persona = roleKey ? resolvePersonForRole(roleKey, org) : '';
                           updateAccion(a.id, { responsableRoleKey: roleKey, responsableNombre: persona });
                         }}
-                        className="w-full min-w-[11rem] rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                        className="w-full min-w-[11rem] rounded-lg border border-white/40 bg-white/50 px-2 py-1 text-xs text-slate-700 shadow-sm backdrop-blur-sm transition-colors focus:border-white/70 focus:bg-white/70 focus:outline-none"
                         aria-label={t.responsableLabel}
                       >
                         <option value="">{t.responsableSinAsignar}</option>
@@ -307,7 +313,7 @@ export default function AccionesPlanBuilder({ lang }: { lang: PlanLang }) {
                         type="date"
                         value={a.fecha}
                         onChange={(ev) => updateAccion(a.id, { fecha: ev.target.value })}
-                        className="w-full min-w-[8.5rem] rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                        className="w-full min-w-[8.5rem] rounded-lg border border-white/40 bg-white/50 px-2 py-1 text-xs text-slate-700 shadow-sm backdrop-blur-sm transition-colors focus:border-white/70 focus:bg-white/70 focus:outline-none"
                       />
                     </td>
                     <td className="px-3 py-2">
