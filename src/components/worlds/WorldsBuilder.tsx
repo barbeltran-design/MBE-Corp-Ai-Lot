@@ -129,6 +129,7 @@ const I = {
   retoSemanalPrefijo: ['Reto semanal — ', 'Weekly challenge — '],
   retoSemanalProximoPaso: ['Próximo paso: ', 'Next step: '],
   retoSemanalEvidencia: ['Evidencia sugerida: ', 'Suggested evidence: '],
+  irSeccionRetos: ['Ir a la sección de retos', 'Go to challenges section'],
   retoMensual: ['Reto mensual — una práctica por agente', 'Monthly challenge — one practice per agent'],
   retoMensualDesc: [
     'Practica con cada agente según tu Plan de Madurez (demo).',
@@ -410,6 +411,7 @@ function MisionPlanAccion({
   esPremium,
   soloIds,
   retos,
+  onIrRetos,
 }: {
   agente: MentorAgente;
   lang: 'es' | 'en';
@@ -419,6 +421,7 @@ function MisionPlanAccion({
   esPremium: boolean;
   soloIds?: string[] | null;
   retos?: { tema: string; score: number; nextStep: { levelKey: string; description: string; deliverable: string } }[] | null;
+  onIrRetos?: () => void;
 }) {
   const en = t2(lang);
   const desbloqueada = planAccionDefinido && esPremium;
@@ -492,6 +495,15 @@ function MisionPlanAccion({
           )}
           {retos && retos.length === 0 && (
             <p className="mt-4 text-xs text-slate-500 dark:text-slate-400">{en(I.retosAgenteSinPendientes)}</p>
+          )}
+          {onIrRetos && (
+            <button
+              type="button"
+              onClick={onIrRetos}
+              className="mt-3 block text-xs font-semibold text-teal-700 hover:underline dark:text-teal-300"
+            >
+              {en(I.irSeccionRetos)} →
+            </button>
           )}
           <button
             className="mt-3 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-400 px-3 py-1.5 text-xs font-extrabold text-white shadow-md shadow-teal-500/30 transition hover:opacity-90"
@@ -1215,6 +1227,7 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
                             { icon: '🤝', a: 'Karmetin' },
                             { icon: '⚖️', a: 'Normau' },
                             { icon: '⚙️', a: 'Atech' },
+                            { icon: '🌎', a: 'Ecori' },
                           ].map((g) => (
                             <button
                               key={g.a}
@@ -1329,6 +1342,7 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
                     esPremium={esPremium}
                     soloIds={vista === 'cultura' ? accionesCulturaPermitidas : null}
                     retos={retosAgenteMundo}
+                    onIrRetos={() => (yo.tablero ? setVista('tablero') : notificar(en(I.reqTablero)))}
                   />
                 </div>
               </>

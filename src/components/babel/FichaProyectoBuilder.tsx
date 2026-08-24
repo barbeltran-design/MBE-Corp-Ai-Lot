@@ -12,6 +12,7 @@ import {
   priorityTier,
   daysUntil,
   loadPlanAccion,
+  savePlanAccion,
   objetivosDeProyecto,
   LABELS,
 } from '@/lib/plan-accion';
@@ -38,10 +39,18 @@ export default function FichaProyectoBuilder({ lang, proyectoId }: { lang: PlanL
     setLoaded(true);
   }, []);
 
+  React.useEffect(() => {
+    if (!loaded) return;
+    savePlanAccion({ objetivos, entornos, fds, proyectos, acciones });
+  }, [objetivos, entornos, fds, proyectos, acciones, loaded]);
+
   const plan = { objetivos, entornos, fds, proyectos, acciones };
   const proyecto = proyectos.find((p) => p.id === proyectoId);
   const objetivosImpactados = proyecto ? objetivosDeProyecto(proyecto.id, plan) : [];
   const accionesProyecto = acciones.filter((a) => a.proyectoId === proyectoId);
+
+  const updateProyecto = (patch: Partial<Proyecto>) =>
+    setProyectos((prev) => prev.map((p) => (p.id === proyectoId ? Object.assign({}, p, patch) : p)));
 
   if (loaded && !proyecto) {
     return (
@@ -61,13 +70,43 @@ export default function FichaProyectoBuilder({ lang, proyectoId }: { lang: PlanL
       </Link>
 
       <div className="mt-3 glass-panel p-4">
-        <h3 className="text-xl font-bold text-slate-800">{t.fichaProyectoTitle}</h3>
-        <p className="mt-1 text-lg font-semibold text-slate-700">{proyecto?.nombre || t.proyectoChip}</p>
-        {proyecto?.responsableNombre ? (
-          <p className="mt-1 text-sm text-slate-500">
-            {t.responsableCol}: {proyecto.responsableNombre}
-          </p>
-        ) : null}
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-xl font-bold text-slate-800">{t.fichaProyectoTitle}</h3>
+          {proyecto ? (
+            <button
+              type="button"
+              onClick={() => updateProyecto({ validado: !proyecto.validado })}
+              className={
+                'shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ' +
+                (proyecto.validado ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800')
+              }
+            >
+              {proyecto.validado ? t.validado : t.pendienteValidar}
+            </button>
+          ) : null}
+        </div>
+
+        <div className="mt-3">
+          <label className="mb-1 block text-xs font-medium text-slate-600">{t.proyectoLabel}</label>
+          <input
+            type="text"
+            value={proyecto?.nombre || ''}
+            onChange={(ev) => updateProyecto({ nombre: ev.target.value })}
+            placeholder={t.proyectoPlaceholder}
+            className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-800"
+          />
+        </div>
+
+        <div className="mt-2">
+          <label className="mb-1 block text-xs font-medium text-slate-600">{t.responsableNombreLabel}</label>
+          <input
+            type="text"
+            value={proyecto?.responsableNombre || ''}
+            onChange={(ev) => updateProyecto({ responsableNombre: ev.target.value })}
+            placeholder={t.responsableNombreLabel}
+            className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+          />
+        </div>
       </div>
 
       <div className="mt-4">
@@ -110,6 +149,8 @@ export default function FichaProyectoBuilder({ lang, proyectoId }: { lang: PlanL
           </ul>
         )}
       </div>
+
+      <p className="mt-4 text-xs text-slate-400">{t.savedNote}</p>
     </div>
   );
 }
