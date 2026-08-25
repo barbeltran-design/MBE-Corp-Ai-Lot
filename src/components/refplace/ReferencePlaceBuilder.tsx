@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase';
 import { useDisplayLang } from '@/components/display-lang-provider';
+import { useUserRoles } from '@/lib/use-user-roles';
 import AgentAvatar from '@/components/agentes/AgentAvatar';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 import { BABEL_AYUDA_EVENT } from '@/components/babel/BabelAvatar';
@@ -169,6 +170,7 @@ export function ReferencePlaceBuilder() {
   const params = useParams();
   const routeLocale = typeof params.locale === 'string' ? params.locale : 'es';
   const { lang } = useDisplayLang();
+  const { adminGeneral: esAdminRef } = useUserRoles();
   const [dispLang, setDispLang] = React.useState<'es' | 'en'>(routeLocale === 'en' ? 'en' : 'es');
   React.useEffect(() => { setDispLang(lang); }, [lang]);
   const t = (es: string, en: string) => (dispLang === 'en' ? en : es);
@@ -471,29 +473,32 @@ export function ReferencePlaceBuilder() {
                 <div className="glass-panel p-4">
                   <div className="flex items-center gap-2">
                     <Target className="h-4 w-4 text-teal-600" />
-                    <h2 className="text-sm font-semibold text-foreground">{t('Aplicar a una referencia', 'Apply to a referral')}</h2>
+                    <h2 className="text-sm font-semibold text-foreground">{t('Solicita una referencia', 'Request a referral')}</h2>
                   </div>
                   <p className="mt-1 text-xs text-slate-500 dark:text-slate-200">
-                    {t('Pide a la comunidad certificada (o a un Rep Sale) que te consiga una cita con una empresa, a cambio de una comisión al concretar.', 'Ask the certified community (or a Rep Sale) to get you a meeting with a company, for a success fee.')}
+                    {t(
+                      'Pide a la comunidad (o a un Rep Sale) que te consiga una cita con una empresa, a cambio de una comisión al concretar. Recuerda que si no compartes la comisión acordada representa baja de la comunidad.',
+                      'Ask the community (or a Rep Sale) to get you a meeting with a company, in exchange for a success fee. Remember that not sharing the agreed fee means removal from the community.'
+                    )}
                   </p>
                 </div>
 
                 {yo.puedeReferencias ? (
                   <div className="glass-panel space-y-3 p-4">
                     <input
-                      className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                      className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground placeholder:text-slate-500 dark:placeholder:text-slate-200"
                       value={solEmpresa}
                       onChange={(e) => setSolEmpresa(e.target.value)}
                       placeholder={t('Empresa objetivo', 'Target company')}
                     />
                     <input
-                      className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                      className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground placeholder:text-slate-500 dark:placeholder:text-slate-200"
                       value={solRubro}
                       onChange={(e) => setSolRubro(e.target.value)}
                       placeholder={t('Rubro / giro', 'Industry')}
                     />
                     <textarea
-                      className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                      className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground placeholder:text-slate-500 dark:placeholder:text-slate-200"
                       rows={2}
                       value={solDesc}
                       onChange={(e) => setSolDesc(e.target.value)}
@@ -504,14 +509,14 @@ export function ReferencePlaceBuilder() {
                         <p className="mb-1 text-xs font-medium text-muted-foreground">{t('% de Comisión Ofrecida', 'Offered fee %')}</p>
                         <input
                           type="number"
-                          className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                          className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground placeholder:text-slate-500 dark:placeholder:text-slate-200"
                           value={solComision}
                           onChange={(e) => setSolComision(e.target.value)}
                           placeholder="% comisión"
                         />
                       </div>
                       <select
-                        className="rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                        className="rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground placeholder:text-slate-500 dark:placeholder:text-slate-200"
                         value={solRepUid}
                         onChange={(e) => setSolRepUid(e.target.value)}
                       >
@@ -600,7 +605,10 @@ export function ReferencePlaceBuilder() {
                     <h2 className="text-sm font-semibold text-foreground">{t('Rep Sales de la comunidad', 'Community Rep Sales')}</h2>
                   </div>
                   <p className="mt-1 text-xs text-slate-500 dark:text-slate-200">
-                    {t('Cada Rep Sale ofrece con qué empresas puede referirte. Solicita una reunión B2B para contactarlo.', 'Each Rep Sale lists companies they can refer you to. Request a B2B meeting to get in touch.')}
+                    {t(
+                      'Un Rep Sale es una persona que puede abrir las puertas a empresas de la comunidad con una empresa grande con la cual ya trabaja a cambio de una comisión. Ve a tu perfil para solicitar ser un Rep Sale.',
+                      'A Rep Sale is a person who can open doors for community companies into a large company they already work with, in exchange for a fee. Go to your profile to apply to become a Rep Sale.'
+                    )}
                   </p>
                   <p className="mt-2 rounded-lg bg-teal-600/10 px-3 py-2 text-xs text-teal-800 dark:text-teal-200">
                     {t('Solicitar una cita está abierto a toda la comunidad (cualquier nivel). Las empresas con Certificación MBE Corp muestran su insignia ✓ y tienen prioridad para agendar.', 'Requesting a meeting is open to the whole community (any level). Companies with MBE Corp Certification show their ✓ badge and get priority scheduling.')}
@@ -624,14 +632,14 @@ export function ReferencePlaceBuilder() {
                   <div className="glass-panel space-y-3 border-l-4 border-teal-600 p-4">
                     <p className="text-sm font-semibold text-foreground">{t('Publicar tu oferta de referencias', 'Publish your referral offer')}</p>
                     <input
-                      className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                      className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground placeholder:text-slate-500 dark:placeholder:text-slate-200"
                       value={ofEmpresa}
                       onChange={(e) => setOfEmpresa(e.target.value)}
                       placeholder={t('Empresa que puedes referir', 'Company you can refer')}
                     />
                     <div className="grid grid-cols-2 gap-3">
                       <input
-                        className="rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                        className="rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground placeholder:text-slate-500 dark:placeholder:text-slate-200"
                         value={ofRubro}
                         onChange={(e) => setOfRubro(e.target.value)}
                         placeholder={t('Rubro / giro', 'Industry')}
@@ -640,7 +648,7 @@ export function ReferencePlaceBuilder() {
                         <p className="mb-1 text-xs font-medium text-muted-foreground">{t('% de Comisión solicitada', 'Requested fee %')}</p>
                         <input
                           type="number"
-                          className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                          className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground placeholder:text-slate-500 dark:placeholder:text-slate-200"
                           value={ofComision}
                           onChange={(e) => setOfComision(e.target.value)}
                           placeholder="% comisión"
@@ -648,7 +656,7 @@ export function ReferencePlaceBuilder() {
                       </div>
                     </div>
                     <textarea
-                      className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                      className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground placeholder:text-slate-500 dark:placeholder:text-slate-200"
                       rows={2}
                       value={ofDesc}
                       onChange={(e) => setOfDesc(e.target.value)}
@@ -666,8 +674,10 @@ export function ReferencePlaceBuilder() {
                   </div>
                 )}
 
-                <div className="space-y-2">
-                  {ofertas.map((o) => (
+                <div>
+                  <h3 className="pb-2 text-sm font-semibold text-foreground">{t('Aplica a las ofertas', 'Apply to the offers')}</h3>
+                  <div className="space-y-2">
+                    {ofertas.map((o) => (
                     <div key={o.id} className="glass-panel p-4">
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div className="min-w-0">
@@ -680,13 +690,13 @@ export function ReferencePlaceBuilder() {
                           {o.descripcion && <p className="mt-1 text-sm text-muted-foreground">{o.descripcion}</p>}
                         </div>
                         <div className="flex shrink-0 flex-col items-end gap-2">
-                          {yo.puedeB2B && (
+                          {yo.puedeB2B && o.uid !== yo.uid && (
                             <button
                               type="button"
                               onClick={() => act('crear-reunion', {
-                                titulo: t('Solicito contacto: ' + o.empresa, 'Contact request: ' + o.empresa),
+                                titulo: dispLang === 'en' ? 'B2B meeting with ' + o.nombre : 'Reunión B2B con ' + o.nombre,
                                 tipo: 'referencia',
-                                descripcion: '',
+                                descripcion: o.empresa ? (dispLang === 'en' ? 'Offer: ' + o.empresa : 'Oferta: ' + o.empresa) : '',
                                 participantes: [o.uid],
                                 fechaPropuesta: new Date().toISOString(),
                               }, t('Se solicitó la reunión.', 'A meeting was requested.'))}
@@ -720,6 +730,7 @@ export function ReferencePlaceBuilder() {
                     </div>
                   ))}
                   {ofertas.length === 0 && <p className="text-sm text-muted-foreground">{t('No hay ofertas de Rep Sales aún.', 'No Rep Sale offers yet.')}</p>}
+                  </div>
                 </div>
               </div>
             </div>
@@ -742,20 +753,20 @@ export function ReferencePlaceBuilder() {
                 {yo.puedeB2B ? (
                   <div className="glass-panel space-y-3 p-4">
                     <input
-                      className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                      className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground placeholder:text-slate-500 dark:placeholder:text-slate-200"
                       value={reTitulo}
                       onChange={(e) => setReTitulo(e.target.value)}
                       placeholder={t('Título', 'Title')}
                     />
                     <select
-                      className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                      className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground placeholder:text-slate-500 dark:placeholder:text-slate-200"
                       value={reTipo}
                       onChange={(e) => setReTipo(e.target.value as TipoReunion)}
                     >
                       {TIPOS_REUNION.map((tp) => <option key={tp.id} value={tp.id}>{dispLang === 'en' ? tp.en : tp.es}</option>)}
                     </select>
                     <textarea
-                      className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                      className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground placeholder:text-slate-500 dark:placeholder:text-slate-200"
                       rows={2}
                       value={reDesc}
                       onChange={(e) => setReDesc(e.target.value)}
@@ -764,7 +775,7 @@ export function ReferencePlaceBuilder() {
                     <div>
                       <p className="mb-1 text-xs font-medium text-muted-foreground">{t('Participantes (además de ti)', 'Participants (besides you)')}</p>
                       <input
-                        className="mb-1.5 w-full rounded-lg border border-glass-border bg-glass px-2.5 py-1.5 text-xs text-foreground"
+                        className="mb-1.5 w-full rounded-lg border border-glass-border bg-glass px-2.5 py-1.5 text-xs text-foreground placeholder:text-slate-500 dark:placeholder:text-slate-200"
                         value={participantesBusqueda}
                         onChange={(e) => setParticipantesBusqueda(e.target.value)}
                         placeholder={t('Buscar por nombre...', 'Search by name...')}
@@ -797,7 +808,7 @@ export function ReferencePlaceBuilder() {
                       <p className="mb-1 text-xs font-medium text-muted-foreground">{t('Fecha propuesta', 'Proposed date')}</p>
                       <input
                         type="datetime-local"
-                        className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                        className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground placeholder:text-slate-500 dark:placeholder:text-slate-200"
                         value={reFechaLbl}
                         onChange={(e) => setReFechaLbl(e.target.value)}
                       />
@@ -886,6 +897,21 @@ export function ReferencePlaceBuilder() {
                               {t('Registrar resultado', 'Log result')}
                             </button>
                           )}
+                          {(r.uidCreador === yo.uid || esAdminRef) && (
+                            <button
+                              type="button"
+                              disabled={busy === 'borrar-reunion'}
+                              onClick={() => {
+                                if (window.confirm(t('¿Eliminar esta reunión? Esta acción no se puede deshacer.', 'Delete this meeting? This cannot be undone.'))) {
+                                  void act('borrar-reunion', { reunionId: r.id }, t('Reunión eliminada.', 'Meeting deleted.'));
+                                }
+                              }}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-50 disabled:opacity-60 dark:border-red-500/40 dark:text-red-300 dark:hover:bg-red-500/10"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                              {t('Eliminar', 'Delete')}
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -902,7 +928,7 @@ export function ReferencePlaceBuilder() {
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <input
-                  className="w-full max-w-sm rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                  className="w-full max-w-sm rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground placeholder:text-slate-500 dark:placeholder:text-slate-200"
                   placeholder={t('Buscar por nombre o empresa...', 'Search by name or company...')}
                   value={busqueda}
                   onChange={(e) => setBusqueda(e.target.value)}
@@ -911,9 +937,21 @@ export function ReferencePlaceBuilder() {
               </div>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {miembros
-                  .filter((m) => !busqueda || m.nombre.toLowerCase().includes(busqueda.toLowerCase()) || m.empresa.toLowerCase().includes(busqueda.toLowerCase()))
+                  .filter((m) => {
+                    const q = busqueda.trim().toLowerCase();
+                    if (!q) return true;
+                    return (
+                      (m.nombre || '').toLowerCase().includes(q) ||
+                      (m.email || '').toLowerCase().includes(q) ||
+                      (m.empresa || '').toLowerCase().includes(q)
+                    );
+                  })
                   .slice()
-                  .sort((a, b) => (b.puntosClub || 0) - (a.puntosClub || 0))
+                  .sort(
+                    (a, b) =>
+                      (b.puntosClub || 0) - (a.puntosClub || 0) ||
+                      (a.nombre || a.email || '').localeCompare(b.nombre || b.email || '')
+                  )
                   .map((m) => (
                     <button
                       key={m.uid}
@@ -1017,18 +1055,18 @@ export function ReferencePlaceBuilder() {
                 </div>
 
                 {perfilData.telefono && (
-                  <div className="flex items-center gap-2 rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground">
+                  <div className="flex items-center gap-2 rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground placeholder:text-slate-500 dark:placeholder:text-slate-200">
                     <Phone className="h-4 w-4 shrink-0 text-teal-600" />
                     <a href={`tel:${perfilData.telefono}`} className="truncate hover:underline">{perfilData.telefono}</a>
                   </div>
                 )}
                 {perfilData.website && (
-                  <div className="flex items-center gap-2 rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground">
+                  <div className="flex items-center gap-2 rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground placeholder:text-slate-500 dark:placeholder:text-slate-200">
                     <Globe className="h-4 w-4 shrink-0 text-teal-600" />
                     <a href={perfilData.website} target="_blank" rel="noopener noreferrer" className="truncate hover:underline">{perfilData.website}</a>
                   </div>
                 )}
-                <div className="flex items-center gap-2 rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground">
+                <div className="flex items-center gap-2 rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground placeholder:text-slate-500 dark:placeholder:text-slate-200">
                   <LogIn className="h-4 w-4 shrink-0 text-teal-600" />
                   <a href={`mailto:${perfilData.email}`} className="truncate hover:underline">{perfilData.email}</a>
                 </div>
@@ -1055,9 +1093,6 @@ export function ReferencePlaceBuilder() {
                         <span className="text-slate-600 dark:text-slate-200">{t('Nivel global', 'Global level')}</span>
                         <span className="font-bold text-foreground">{nivelGlobalLabel(perfilData.madurez.nivelGlobal, dispLang)}</span>
                       </div>
-                    )}
-                    {perfilData.madurez.fecha && (
-                      <p className="mt-2 text-xs text-slate-600 dark:text-slate-200">{t('Evaluación del', 'Assessed on')} {new Date(perfilData.madurez.fecha).toLocaleDateString()}</p>
                     )}
                   </div>
                 )}
@@ -1098,7 +1133,7 @@ export function ReferencePlaceBuilder() {
               <div>
                 <p className="mb-1 text-xs font-medium text-muted-foreground">{t('Tipo de resultado', 'Result type')}</p>
                 <select
-                  className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                  className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground placeholder:text-slate-500 dark:placeholder:text-slate-200"
                   value={resTipo}
                   onChange={(e) => setResTipo(e.target.value as TipoResultado)}
                 >
@@ -1112,7 +1147,7 @@ export function ReferencePlaceBuilder() {
                 </p>
                 <input
                   type="number"
-                  className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                  className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground placeholder:text-slate-500 dark:placeholder:text-slate-200"
                   value={resMonto}
                   onChange={(e) => setResMonto(e.target.value)}
                   placeholder="0.00"
@@ -1126,7 +1161,7 @@ export function ReferencePlaceBuilder() {
               <div>
                 <p className="mb-1 text-xs font-medium text-muted-foreground">{t('Descripción', 'Description')}</p>
                 <textarea
-                  className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                  className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground placeholder:text-slate-500 dark:placeholder:text-slate-200"
                   rows={2}
                   value={resDesc}
                   onChange={(e) => setResDesc(e.target.value)}
@@ -1155,19 +1190,19 @@ export function ReferencePlaceBuilder() {
             <h2 className="text-base font-semibold text-foreground">{t('Editar solicitud', 'Edit request')}</h2>
             <div className="mt-4 space-y-3">
               <input
-                className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground placeholder:text-slate-500 dark:placeholder:text-slate-200"
                 value={editSolEmpresa}
                 onChange={(e) => setEditSolEmpresa(e.target.value)}
                 placeholder={t('Empresa objetivo', 'Target company')}
               />
               <input
-                className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground placeholder:text-slate-500 dark:placeholder:text-slate-200"
                 value={editSolRubro}
                 onChange={(e) => setEditSolRubro(e.target.value)}
                 placeholder={t('Rubro / giro', 'Industry')}
               />
               <textarea
-                className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground placeholder:text-slate-500 dark:placeholder:text-slate-200"
                 rows={2}
                 value={editSolDesc}
                 onChange={(e) => setEditSolDesc(e.target.value)}
@@ -1177,7 +1212,7 @@ export function ReferencePlaceBuilder() {
                 <p className="mb-1 text-xs font-medium text-muted-foreground">{t('% de Comisión Ofrecida', 'Offered fee %')}</p>
                 <input
                   type="number"
-                  className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                  className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground placeholder:text-slate-500 dark:placeholder:text-slate-200"
                   value={editSolComision}
                   onChange={(e) => setEditSolComision(e.target.value)}
                 />
@@ -1216,19 +1251,19 @@ export function ReferencePlaceBuilder() {
             <h2 className="text-base font-semibold text-foreground">{t('Editar oferta', 'Edit offer')}</h2>
             <div className="mt-4 space-y-3">
               <input
-                className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground placeholder:text-slate-500 dark:placeholder:text-slate-200"
                 value={editOfEmpresa}
                 onChange={(e) => setEditOfEmpresa(e.target.value)}
                 placeholder={t('Empresa que puedes referir', 'Company you can refer')}
               />
               <input
-                className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground placeholder:text-slate-500 dark:placeholder:text-slate-200"
                 value={editOfRubro}
                 onChange={(e) => setEditOfRubro(e.target.value)}
                 placeholder={t('Rubro / giro', 'Industry')}
               />
               <textarea
-                className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground placeholder:text-slate-500 dark:placeholder:text-slate-200"
                 rows={2}
                 value={editOfDesc}
                 onChange={(e) => setEditOfDesc(e.target.value)}
@@ -1238,7 +1273,7 @@ export function ReferencePlaceBuilder() {
                 <p className="mb-1 text-xs font-medium text-muted-foreground">{t('% de Comisión solicitada', 'Requested fee %')}</p>
                 <input
                   type="number"
-                  className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground"
+                  className="w-full rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm text-foreground placeholder:text-slate-500 dark:placeholder:text-slate-200"
                   value={editOfComision}
                   onChange={(e) => setEditOfComision(e.target.value)}
                 />

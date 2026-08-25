@@ -64,42 +64,48 @@ export async function GET(req: NextRequest) {
     }
 
     const miembros: MiembroComunidad[] = [];
-    for (const doc of usersSnap.docs) {
+    // Madurez por usuario en paralelo (una consulta por usuario).
+    const madurezList = await Promise.all(
+      usersSnap.docs.map(async (doc) => {
+        try {
+          const assSnap = await db
+            .collection('assessments').doc(doc.id).collection('entries')
+            .orderBy('timestamp', 'desc').limit(1).get();
+          if (!assSnap.empty) {
+            const t = assSnap.docs[0].data()?.totalScore;
+            if (typeof t === 'number') return t;
+          }
+        } catch {
+          // Sin evaluacion: madurez null.
+        }
+        return null;
+      })
+    );
+
+    for (const [i, doc] of usersSnap.docs.entries()) {
       const data = doc.data() as Record<string, unknown>;
       const roles = Array.isArray(data.roles) ? (data.roles as unknown[]).map(String) : [];
       const nivelRaw = typeof data.nivelComunidad === 'string' ? data.nivelComunidad : '';
       const esRep = roles.includes('rep_sale');
-      const esAdmin = roles.includes('admin');
       const puntosClub = parseNum(data.puntosClub, 0);
       const nivelAuto = puntosClub > 0 ? nivelPorPuntos(puntosClub) : '';
       const nivelManual = NIVELES_COMUNIDAD.some((n) => n.id === nivelRaw) ? nivelRaw : '';
       const nivelFinal = nivelAuto || nivelManual;
-      // Solo usuarios con nivel (automático por puntos acumulados o asignado) o Rep Sales.
-      if (!nivelFinal && !esRep) continue;
 
       const company = companiesById.get(doc.id) as Record<string, unknown> | undefined;
       const stats = statsReunion.get(doc.id) || { completadas: 0, monto: 0 };
 
-      let madurez: number | null = null;
-      const assSnap = await db
-        .collection('assessments').doc(doc.id).collection('entries')
-        .orderBy('timestamp', 'desc').limit(1).get();
-      if (!assSnap.empty) {
-        const t = assSnap.docs[0].data()?.totalScore;
-        if (typeof t === 'number') madurez = t;
-      }
-
       miembros.push({
         uid: doc.id,
-        nombre: (data.name as string) || '',
+        nombre: (data.name as string) || (data.email as string) || '',
         email: (data.email as string) || '',
         telefono: (data.telefono as string) || '',
         empresa: (company?.name as string) || '',
         giro: GIRO_LABELS[String(company?.industry ?? '')] ?? '',
         pais: (data.country as string) || ((company?.country as string) || ''),
-        nivel: nivelFinal as MiembroComunidad['nivel'],
+        nivel: (nivelFinal || 'godin_wannabe') as MiembroComunidad['nivel'],
         certificado: data.certificado === true,
-        madurez,
+        madurez: madurezList[i],
         rolRepSale: esRep,
         reunionesCompletadas: stats.completadas,
         montoResultados: stats.monto,
@@ -208,6 +214,7 @@ export async function GET(req: NextRequest) {
 //   'crear-oferta'      {empresa, rubro, descripcion, comisionPct}                (solo rep_sale)
 //   'crear-reunion'     {titulo, tipo, descripcion, participantes[], fechaPropuesta} (nivel >= Freelancero)
 //   'aceptar-reunion'   {reunionId}      (cualquier participante)
+//   'borrar-reunion'    {reunionId}      (quien la creo o un admin)
 //   'registrar-resultado' {reunionId, tipo, monto, descripcion} (cualquier participante)
 //   'cerrar-solicitud'  {solicitudId}    (el autor o un rep_sale)
 //   'editar-solicitud'  {solicitudId, empresaObjetivo, descripcion, comisionPct, rubro?, repSaleUid?} (solo el autor)
@@ -365,6 +372,21 @@ export async function POST(req: NextRequest) {
           { uid, nombre, tipo, monto, descripcion, createdAt: now },
         ],
       });
+      return NextResponse.json({ ok: true });
+    }
+
+    if (accion === 'borrar-reunion') {
+      const reunionId = String(body?.reunionId ?? '');
+      if (!reunionId) return NextResponse.json({ error: 'Falta la reunión.' }, { status: 400 });
+      const ref = db.collection('reuniones_b2b').doc(reunionId);
+      const rSnap = await ref.get();
+      if (!rSnap.exists) return NextResponse.json({ error: 'Reunión no encontrada.' }, { status: 404 });
+      const r = rSnap.data() as Record<string, unknown>;
+      // Puede borrarla quien la creo o un administrador.
+      if (r.uidCreador !== uid && !roles.includes('admin')) {
+        return NextResponse.json({ error: 'Solo quien creó la reunión o un admin puede eliminarla.' }, { status: 403 });
+      }
+      await ref.delete();
       return NextResponse.json({ ok: true });
     }
 
