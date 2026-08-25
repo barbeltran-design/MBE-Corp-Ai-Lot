@@ -14,7 +14,10 @@ import {
   ArrowUp,
   CalendarClock,
   Check,
+  ChevronLeft,
+  ChevronRight,
   Crown,
+  Download,
   Eye,
   EyeOff,
   Link2,
@@ -31,7 +34,15 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import { AGENDA_JUNTA, AGENDA_JUNTA_TOTAL, ROLES_JUNTA, rolLabel, nivelDesdePuntos } from '@/lib/club';
+import { jsPDF } from 'jspdf';
+import {
+  AGENDA_JUNTA,
+  AGENDA_JUNTA_TOTAL,
+  ROLES_JUNTA,
+  rolLabel,
+  nivelDesdePuntos,
+  accesoLabel,
+} from '@/lib/club';
 import { nivelLabel } from '@/lib/refplace';
 import { nivelMinimoNoticiasLabel } from '@/lib/premium';
 
@@ -105,6 +116,7 @@ interface JuntaView {
   precio: number;
   semanaMes: number;
   temaDefinido: string;
+  temaDinamica: string;
   agenda?: AgendaItemView[];
   roles: Record<string, { uid: string; nombre: string } | null>;
   asistentes: Record<string, { confirmado: boolean }>;
@@ -145,9 +157,9 @@ interface ResumenDatos {
   juntaActual: JuntaView | null;
   juntas: JuntaView[];
   misRolesJunta: string[];
-  rankings: { trimestre: RankRow[]; historico: RankRow[] };
+  rankings: { trimestre: RankRow[]; mes: RankRow[]; historico: RankRow[] };
   puntosSemana: { id: string; userId: string; categoria: string; valor: number; fecha: string; nota: string }[];
-  niveles: { id: string; umbral: number; es: string; en: string }[];
+  niveles: { id: string; umbral: number; es: string; en: string; accesos?: string[] }[];
   catalogo: { id: string; es: string; en: string; valor: number }[];
   agendaEjemplo: AgendaItemView[];
   totalMinutosAgenda: number;
@@ -175,6 +187,26 @@ function fmtFecha(fecha: string): string {
   return d.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
+// Dias de la semana para el selector de creacion de juntas (getDay(): 0=domingo).
+const DIAS_SEMANA = [
+  { v: 1, es: 'Lunes', en: 'Monday' },
+  { v: 2, es: 'Martes', en: 'Tuesday' },
+  { v: 3, es: 'Miércoles', en: 'Wednesday' },
+  { v: 4, es: 'Jueves', en: 'Thursday' },
+  { v: 5, es: 'Viernes', en: 'Friday' },
+  { v: 6, es: 'Sábado', en: 'Saturday' },
+  { v: 0, es: 'Domingo', en: 'Sunday' },
+];
+
+// Proxima fecha (YYYY-MM-DD) que cae en el dia de la semana indicado,
+// contando desde hoy (si hoy es ese dia, devuelve hoy).
+function proximaFechaDiaSemana(dia: number): string {
+  const d = new Date();
+  const delta = (dia - d.getDay() + 7) % 7;
+  d.setDate(d.getDate() + delta);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export function ClubBuilder() {
   const params = useParams();
   const routeLocale = typeof params.locale === 'string' ? params.locale : 'es';
@@ -195,7 +227,13 @@ export function ClubBuilder() {
   const [tab, setTab] = React.useState<TabId>('semana');
   const [agendaSel, setAgendaSel] = React.useState<AgendaItemView[] | null>(null);
   const [temaSel, setTemaSel] = React.useState('');
+  const [temaDinSel, setTemaDinSel] = React.useState('');
   const [confirmado, setConfirmado] = React.useState(false);
+  // Junta que se esta viendo (para navegar entre juntas pasadas y futuras).
+  // null = la junta actual que calcula el backend (la proxima por venir).
+  const [juntaVistaId, setJuntaVistaId] = React.useState<string | null>(null);
+  const [verConfirmados, setVerConfirmados] = React.useState(false);
+  const [busquedaMiembro, setBusquedaMiembro] = React.useState('');
 
   // Perfil publico de quien ocupa un rol
   const [perfilUid, setPerfilUid] = React.useState<string | null>(null);
@@ -209,6 +247,7 @@ export function ClubBuilder() {
   } | null>(null);
 
   // Formularios de organizacion
+  const [njDia, setNjDia] = React.useState(5); // viernes por defecto
   const [njFecha, setNjFecha] = React.useState('');
   const [njHora, setNjHora] = React.useState('19:00');
   const [njLiga, setNjLiga] = React.useState('');
@@ -222,7 +261,6 @@ export function ClubBuilder() {
   const [asignarOpen, setAsignarOpen] = React.useState(false);
   const [ptsMiembros, setPtsMiembros] = React.useState<Record<string, boolean>>({});
   const [ptsCats, setPtsCats] = React.useState<Record<string, boolean>>({});
-  const [ptsNota, setPtsNota] = React.useState('');
   const [ajUser, setAjUser] = React.useState('');
   const [ajValor, setAjValor] = React.useState('');
   const [ntTitulo, setNtTitulo] = React.useState('');
@@ -238,12 +276,16 @@ export function ClubBuilder() {
 
   function aplicar(d: ResumenDatos) {
     setData(d);
-    if (d.juntaActual && d.juntaActual.agenda) {
-      setAgendaSel(d.juntaActual.agenda.map((i) => ({ ...i })));
-      setTemaSel(d.juntaActual.temaDefinido);
-      setConfirmado(d.juntaActual.asistentes[d.yo.uid]?.confirmado === true);
+    // Se hidrata la junta que el usuario esta viendo; si no eligio ninguna,
+    // la junta actual (proxima por venir) que calcula el backend.
+    const vista = (juntaVistaId ? d.juntas.find((j) => j.id === juntaVistaId) : null) ?? d.juntaActual;
+    if (vista) {
+      setAgendaSel((vista.agenda ?? d.agendaEjemplo).map((i) => ({ ...i })));
+      setTemaSel(vista.temaDefinido);
+      setTemaDinSel(vista.temaDinamica);
+      setConfirmado(vista.asistentes[d.yo.uid]?.confirmado === true);
       const sel: Record<string, string> = {};
-      for (const r of ROLES_JUNTA) sel[r.id] = d.juntaActual.roles[r.id]?.uid ?? '';
+      for (const r of ROLES_JUNTA) sel[r.id] = vista.roles[r.id]?.uid ?? '';
       setRolSel(sel);
     }
   }
@@ -333,19 +375,62 @@ export function ClubBuilder() {
     }
   }
 
-  const ja = data?.juntaActual ?? null;
+  // Junta en pantalla: la que el usuario eligio navegar o la actual.
+  const juntasNav = React.useMemo(() => (data?.juntas ?? []).filter((j) => j.tipo === 'junta'), [data]);
+  const ja = React.useMemo(() => {
+    if (juntaVistaId) {
+      const v = data?.juntas.find((j) => j.id === juntaVistaId);
+      if (v) return v;
+    }
+    return data?.juntaActual ?? null;
+  }, [data, juntaVistaId]);
   const rolesJa = ja ? (data?.juntas.find((j) => j.id === ja.id)?.roles ?? ja.roles) : null;
   const miUid = user?.uid ?? '';
   const soyCoord = ja ? rolesJa?.coordinador?.uid === miUid : false;
   const soyCalidad = ja ? rolesJa?.mentor_calidad?.uid === miUid : false;
   const soyCrecimiento = ja ? rolesJa?.mentor_crecimiento?.uid === miUid : false;
+  const soyDinamica = ja ? rolesJa?.mentor_dinamica?.uid === miUid : false;
   const esAdmin = administracion;
+  // Temas de la junta: tutorial (coordinador, Mentor de Crecimiento o admin)
+  // y dinamica empresarial (coordinador, Mentor de Dinamica Empresarial o admin).
+  const puedeTemaTutorial = esAdmin || soyCoord || soyCrecimiento;
+  const puedeTemaDinamica = esAdmin || soyCoord || soyDinamica;
+
+  const irJunta = (dir: -1 | 1) => {
+    if (!ja) return;
+    const idx = juntasNav.findIndex((j) => j.id === ja.id);
+    const destino = juntasNav[idx + dir];
+    if (!destino) return;
+    setJuntaVistaId(destino.id);
+    setAgendaSel((destino.agenda ?? data?.agendaEjemplo ?? []).map((i) => ({ ...i })));
+    setTemaSel(destino.temaDefinido);
+    setTemaDinSel(destino.temaDinamica);
+    setConfirmado(destino.asistentes[miUid]?.confirmado === true);
+    const sel: Record<string, string> = {};
+    for (const r of ROLES_JUNTA) sel[r.id] = destino.roles[r.id]?.uid ?? '';
+    setRolSel(sel);
+  };
 
   const yo = data?.yo ?? null;
   const agenda = agendaSel ?? ja?.agenda ?? data?.agendaEjemplo ?? [];
   const sumaAgenda = agenda.filter((x) => !x.oculto).reduce((a, x) => a + x.duracionMin, 0);
   const eventos = (data?.juntas ?? []).filter((j) => j.tipo === 'evento' && j.estatus === 'programada');
   const miembrosSel = data?.miembros ?? [];
+  // Buscador de personas para asignar roles (filtra por nombre o correo).
+  const miembrosParaRoles = React.useMemo(() => {
+    const q = busquedaMiembro.trim().toLowerCase();
+    if (!q) return miembrosSel;
+    return miembrosSel.filter(
+      (m) => (m.nombre || '').toLowerCase().includes(q) || (m.email || '').toLowerCase().includes(q)
+    );
+  }, [miembrosSel, busquedaMiembro]);
+  // Si un tema de la agenda esta oculto, su rol tambien desaparece de la
+  // asignacion (la junta ya no lo incluye).
+  const rolesOcultos = React.useMemo(
+    () => new Set(agenda.filter((i) => i.oculto).map((i) => String(i.responsable))),
+    [agenda]
+  );
+  const rolesVisibles = ROLES_JUNTA.filter((r) => !rolesOcultos.has(r.id));
 
   function moveAgenda(idx: number, dir: -1 | 1) {
     setAgendaSel((prev) => {
@@ -365,6 +450,59 @@ export function ClubBuilder() {
       const cur = prev ?? agenda;
       return cur.map((it, i2) => (i2 === idx ? { ...it, duracionMin: Math.max(1, Math.min(90, it.duracionMin + delta)) } : it));
     });
+  }
+
+  function fijarDuracion(idx: number, valor: number) {
+    if (!Number.isFinite(valor)) return;
+    setAgendaSel((prev) => {
+      const cur = prev ?? agenda;
+      return cur.map((it, i2) => (i2 === idx ? { ...it, duracionMin: Math.max(1, Math.min(90, Math.round(valor))) } : it));
+    });
+  }
+
+  // Descarga la agenda (solo temas visibles) en PDF.
+  function descargarAgendaPdf() {
+    if (!ja) return;
+    const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+    const ancho = doc.internal.pageSize.getWidth() - 2 * 48;
+    let y = 56;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(15);
+    doc.text(ja.nombre || 'Agenda de la junta', 48, y);
+    y += 18;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    const meta = `${fmtFecha(ja.fecha)} · ${ja.hora} hs${ja.liga ? ' · ' + ja.liga : ''}`;
+    doc.splitTextToSize(meta, ancho).forEach((linea: string) => {
+      doc.text(linea, 48, y);
+      y += 13;
+    });
+    y += 8;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text('Agenda', 48, y);
+    y += 14;
+    doc.setFontSize(10);
+    for (const item of agenda.filter((x) => !x.oculto)) {
+      if (y > 720) {
+        doc.addPage();
+        y = 56;
+      }
+      doc.setFont('helvetica', 'bold');
+      doc.splitTextToSize(`${item.titulo} — ${rolLabel(item.responsable, dispLang)} (${item.duracionMin} min)`, ancho).forEach((linea: string) => {
+        doc.text(linea, 48, y);
+        y += 13;
+      });
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(90);
+      doc.splitTextToSize(item.descripcion || '', ancho).forEach((linea: string) => {
+        doc.text(linea, 48, y);
+        y += 12;
+      });
+      doc.setTextColor(0);
+      y += 6;
+    }
+    doc.save(`agenda-${ja.fecha}.pdf`);
   }
 
   function editarCampoAgenda(idx: number, campo: 'titulo' | 'descripcion', valor: string) {
@@ -403,7 +541,33 @@ export function ClubBuilder() {
   const catalogo = data?.catalogo ?? [];
   const niveles = data?.niveles ?? [];
   const rankingTrimBase = data?.rankings.trimestre ?? [];
+  const rankingMesBase = data?.rankings.mes ?? [];
   const rankingHistBase = data?.rankings.historico ?? [];
+
+  const tablaRanking = (filas: RankRow[], conNivel = false) => (
+    <div className="mt-3 overflow-x-auto">
+      <table className="w-full text-left text-sm">
+        <thead>
+          <tr className="border-b border-glass-border text-xs uppercase tracking-wide text-muted-foreground">
+            <th className="py-2 pr-3">#</th>
+            <th className="py-2 pr-3">{t('Miembro', 'Member')}</th>
+            {conNivel && <th className="py-2 pr-3">{t('Nivel', 'Level')}</th>}
+            <th className="py-2">{t('Puntos', 'Points')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filas.map((r) => (
+            <tr key={r.uid} className={'border-b border-glass-border/50 ' + (r.uid === miUid ? 'bg-teal-50 dark:bg-teal-950/40' : '')}>
+              <td className="py-2 pr-3 font-bold text-muted-foreground">{r.posicion}</td>
+              <td className="py-2 pr-3 font-medium text-foreground">{r.nombre}{r.uid === miUid && <span className="ml-1 text-xs text-teal-600">(yo)</span>}</td>
+              {conNivel && <td className="py-2 pr-3 text-muted-foreground">{nivelLabel(r.nivel ?? 'godin_wannabe', dispLang)}</td>}
+              <td className="py-2 font-semibold text-teal-700 dark:text-teal-300">{r.puntos}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 
   // ---------- Tab: semana ----------
   const renderSemana = () => (
@@ -435,16 +599,64 @@ export function ClubBuilder() {
                 {ja.ubicacion && <p className="mt-0.5 text-xs text-muted-foreground">{ja.ubicacion}</p>}
                 {ja.objetivo && <p className="mt-0.5 text-xs text-muted-foreground">{ja.objetivo}</p>}
               </div>
-              <span className="rounded-full bg-glass px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                {t('Semana', 'Week')} {ja.semanaMes}
-              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Navegacion entre juntas (anteriores / siguientes) */}
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => irJunta(-1)}
+                    disabled={juntasNav.findIndex((j) => j.id === ja.id) <= 0}
+                    className="rounded-lg border border-glass-border p-1.5 text-muted-foreground hover:text-foreground disabled:opacity-40"
+                    aria-label={t('Junta anterior', 'Previous meeting')}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <span className="rounded-full bg-glass px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                    {t('Semana', 'Week')} {ja.semanaMes}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => irJunta(1)}
+                    disabled={juntasNav.findIndex((j) => j.id === ja.id) >= juntasNav.length - 1}
+                    className="rounded-lg border border-glass-border p-1.5 text-muted-foreground hover:text-foreground disabled:opacity-40"
+                    aria-label={t('Junta siguiente', 'Next meeting')}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+                {ja.estatus === 'cancelada' && (
+                  <span className="rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700 dark:bg-red-500/20 dark:text-red-300">
+                    {t('Cancelada', 'Cancelled')}
+                  </span>
+                )}
+                {ja.estatus === 'realizada' && (
+                  <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
+                    {t('Realizada', 'Held')}
+                  </span>
+                )}
+                {esAdmin && ja.estatus === 'programada' && (
+                  <button
+                    type="button"
+                    disabled={busy === 'cancelar-junta'}
+                    onClick={() => {
+                      if (window.confirm(t('¿Cancelar esta junta? Los miembros dejarán de verla como próxima.', 'Cancel this meeting? Members will stop seeing it as the upcoming one.'))) {
+                        void act('cancelar-junta', { juntaId: ja.id }, 'Junta cancelada.', 'Meeting cancelled.');
+                      }
+                    }}
+                    className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-300"
+                  >
+                    {busy === 'cancelar-junta' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+                    {t('Cancelar junta', 'Cancel meeting')}
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Tema del tutorial */}
             <div className="mt-3 rounded-lg border border-glass-border bg-glass p-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('Tema del Tutorial de esta semana', 'This week Tutorial topic')}</p>
               <p className="mt-1 text-sm font-medium text-foreground">{ja.temaDefinido || (dispLang === 'en' ? data?.tematicaSemana.en : data?.tematicaSemana.es)}</p>
-              {(soyCrecimiento || esAdmin) && (
+              {puedeTemaTutorial && (
                 <div className="mt-2 flex flex-wrap gap-2">
                   <input
                     value={temaSel}
@@ -455,7 +667,32 @@ export function ClubBuilder() {
                   <button
                     type="button"
                     disabled={busy === 'definir-tema'}
-                    onClick={() => void act('definir-tema', { juntaId: ja.id, tema: temaSel }, 'Tema definido.', 'Topic set.')}
+                    onClick={() => void act('definir-tema', { juntaId: ja.id, tema: temaSel, tipo: 'tutorial' }, 'Tema definido.', 'Topic set.')}
+                    className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:opacity-60"
+                  >
+                    {busy === 'definir-tema' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    {t('Definir tema', 'Set topic')}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Tema de la dinámica empresarial */}
+            <div className="mt-2 rounded-lg border border-glass-border bg-glass p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('Tema de la Dinámica Empresarial de esta semana', 'This week Business Dynamics topic')}</p>
+              <p className="mt-1 text-sm font-medium text-foreground">{ja.temaDinamica || t('Sin definir todavia', 'Not set yet')}</p>
+              {puedeTemaDinamica && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <input
+                    value={temaDinSel}
+                    onChange={(e) => setTemaDinSel(e.target.value)}
+                    placeholder={t('Escribe el tema de la Dinámica Empresarial...', "Write the Business Dynamics topic...")}
+                    className="min-w-0 flex-1 rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-teal-500 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    disabled={busy === 'definir-tema'}
+                    onClick={() => void act('definir-tema', { juntaId: ja.id, tema: temaDinSel, tipo: 'dinamica' }, 'Tema de la dinámica definido.', 'Dynamics topic set.')}
                     className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:opacity-60"
                   >
                     {busy === 'definir-tema' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
@@ -469,20 +706,45 @@ export function ClubBuilder() {
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <button
                 type="button"
-                disabled={busy === 'confirmar'}
-                onClick={() => void act('confirmar', { juntaId: ja.id, confirmado: !confirmado }, 'Asistencia confirmada.', 'Attendance confirmed.')}
+                disabled={busy === 'confirmar-asistencia'}
+                onClick={() => void act('confirmar-asistencia', { juntaId: ja.id, confirmado: !confirmado }, 'Asistencia confirmada.', 'Attendance confirmed.')}
                 className={
                   'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-60 ' +
                   (confirmado ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-glass text-foreground hover:bg-teal-600 hover:text-white')
                 }
               >
-                {busy === 'confirmar' ? <Loader2 className="h-4 w-4 animate-spin" /> : confirmado ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                {busy === 'confirmar-asistencia' ? <Loader2 className="h-4 w-4 animate-spin" /> : confirmado ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
                 {confirmado ? t('Confirme mi asistencia', 'I confirmed my attendance') : t('Confirmar mi asistencia', 'Confirm my attendance')}
               </button>
               <span className="text-xs text-muted-foreground">
                 {Object.values(ja.asistentes).filter((a) => a.confirmado).length} {t('asistentes confirmados', 'attendees confirmed')}
               </span>
+              <button
+                type="button"
+                onClick={() => setVerConfirmados((v) => !v)}
+                className="text-xs font-medium text-teal-700 hover:underline dark:text-teal-300"
+              >
+                {verConfirmados ? t('Ocultar lista', 'Hide list') : t('Ver lista', 'View list')}
+              </button>
             </div>
+            {verConfirmados && (
+              <ul className="mt-2 grid gap-1 sm:grid-cols-2">
+                {Object.entries(ja.asistentes)
+                  .filter(([, v]) => v.confirmado)
+                  .map(([uid]) => {
+                    const m = miembrosSel.find((x) => x.uid === uid);
+                    return (
+                      <li key={uid} className="flex items-center gap-1.5 text-xs text-foreground">
+                        <Check className="h-3 w-3 shrink-0 text-emerald-600" />
+                        {m?.nombre || m?.email || uid}
+                      </li>
+                    );
+                  })}
+                {Object.values(ja.asistentes).filter((a) => a.confirmado).length === 0 && (
+                  <li className="text-xs text-muted-foreground">{t('Nadie ha confirmado todavia.', 'No one has confirmed yet.')}</li>
+                )}
+              </ul>
+            )}
           </div>
 
           {/* Roles de la junta */}
@@ -501,7 +763,7 @@ export function ClubBuilder() {
               )}
             </div>
             <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-              {ROLES_JUNTA.map((r) => {
+              {rolesVisibles.map((r) => {
                 const asignado = rolesJa ? rolesJa[r.id] ?? null : null;
                 const miRol = asignado?.uid === miUid;
                 return (
@@ -526,11 +788,19 @@ export function ClubBuilder() {
 
             {asignarOpen && (esAdmin || soyCoord) && (
               <div className="mt-4 rounded-lg border border-glass-border bg-glass p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {t('Asignar roles de la junta actual', 'Assign roles for the current meeting')}
-                </p>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {t('Asignar roles de la junta actual', 'Assign roles for the current meeting')}
+                  </p>
+                  <input
+                    value={busquedaMiembro}
+                    onChange={(e) => setBusquedaMiembro(e.target.value)}
+                    placeholder={t('Buscar persona por nombre o correo...', 'Search person by name or email...')}
+                    className="w-64 rounded-lg border border-glass-border bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-teal-500 focus:outline-none"
+                  />
+                </div>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-                  {ROLES_JUNTA.map((r) => (
+                  {rolesVisibles.map((r) => (
                     <div key={r.id} className="space-y-1">
                       <label className="text-xs font-medium text-muted-foreground">{rolLabel(r.id, dispLang)}</label>
                       <select
@@ -539,7 +809,7 @@ export function ClubBuilder() {
                         className="w-full rounded-lg border border-glass-border bg-background px-2 py-1.5 text-sm text-foreground focus:border-teal-500 focus:outline-none"
                       >
                         <option value="">{t('Sin asignar', 'Unassigned')}</option>
-                        {miembrosSel.map((m) => (
+                        {miembrosParaRoles.map((m) => (
                           <option key={m.uid} value={m.uid}>{m.nombre || m.email}</option>
                         ))}
                       </select>
@@ -568,17 +838,27 @@ export function ClubBuilder() {
                   {sumaAgenda}/{AGENDA_JUNTA_TOTAL} {t('min', 'min')}
                 </span>
               </p>
-              {(soyCoord || esAdmin) && (
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  disabled={busy === 'reordenar-agenda' || sumaAgenda !== AGENDA_JUNTA_TOTAL}
-                  onClick={() => void guardarAgenda()}
-                  className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:opacity-50"
+                  onClick={descargarAgendaPdf}
+                  className="inline-flex items-center gap-2 rounded-lg border border-glass-border bg-glass px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:text-teal-700 dark:hover:text-teal-300"
                 >
-                  {busy === 'reordenar-agenda' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                  {t('Guardar agenda', 'Save agenda')}
+                  <Download className="h-4 w-4" />
+                  {t('Descargar PDF', 'Download PDF')}
                 </button>
-              )}
+                {(soyCoord || esAdmin) && (
+                  <button
+                    type="button"
+                    disabled={busy === 'reordenar-agenda' || sumaAgenda !== AGENDA_JUNTA_TOTAL}
+                    onClick={() => void guardarAgenda()}
+                    className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:opacity-50"
+                  >
+                    {busy === 'reordenar-agenda' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    {t('Guardar agenda', 'Save agenda')}
+                  </button>
+                )}
+              </div>
             </div>
             {(soyCoord || esAdmin) && (
               <p className="mt-1 text-xs text-muted-foreground">
@@ -634,11 +914,19 @@ export function ClubBuilder() {
                         )}
                         {(soyCoord || esAdmin) ? (
                           <span className="ml-auto flex items-center gap-1">
-                            <button type="button" onClick={() => cambiaDuracion(idx, -5)} className="rounded border border-glass-border p-1 text-muted-foreground hover:text-foreground">
+                            <button type="button" onClick={() => cambiaDuracion(idx, -1)} className="rounded border border-glass-border p-1 text-muted-foreground hover:text-foreground">
                               <Minus className="h-3 w-3" />
                             </button>
-                            <span className="w-12 text-center text-sm font-semibold">{item.duracionMin} min</span>
-                            <button type="button" onClick={() => cambiaDuracion(idx, 5)} className="rounded border border-glass-border p-1 text-muted-foreground hover:text-foreground">
+                            <input
+                              type="number"
+                              min={1}
+                              max={90}
+                              value={item.duracionMin}
+                              onChange={(e) => fijarDuracion(idx, Number(e.target.value))}
+                              className="w-14 rounded border border-glass-border bg-background px-1 py-0.5 text-center text-sm font-semibold text-foreground focus:border-teal-500 focus:outline-none"
+                            />
+                            <span className="text-xs text-muted-foreground">min</span>
+                            <button type="button" onClick={() => cambiaDuracion(idx, 1)} className="rounded border border-glass-border p-1 text-muted-foreground hover:text-foreground">
                               <Plus className="h-3 w-3" />
                             </button>
                           </span>
@@ -661,246 +949,8 @@ export function ClubBuilder() {
                 })}
             </div>
           </div>
-        </>
-      )}
-
-      {/* Proximos eventos */}
-      {eventos.length > 0 && (
-        <div className="glass-panel p-4">
-          <p className="text-sm font-semibold text-foreground">{t('Eventos de la comunidad', 'Community events')}</p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            {eventos.map((ev) => (
-              <div key={ev.id} className="rounded-lg border border-glass-border bg-glass p-3">
-                <p className="font-semibold text-foreground">{ev.nombre}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {fmtFecha(ev.fecha)} · {ev.hora}
-                  {ev.ubicacion && <> · {ev.ubicacion}</>}
-                </p>
-                {ev.objetivo && <p className="mt-1 text-xs text-muted-foreground">{ev.objetivo}</p>}
-                {ev.precio > 0 && <p className="mt-1 text-xs font-semibold text-teal-700 dark:text-teal-300">${ev.precio.toLocaleString('en-US')}</p>}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
-  // ---------- Tab: puntos y niveles ----------
-  const renderPuntos = () => (
-    <div className="space-y-6">
-      {/* Ranking trimestral */}
-      <div className="glass-panel p-4">
-        <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
-          <Star className="h-4 w-4 text-teal-600" /> {t('Ranking del trimestre', 'Quarterly ranking')}
-          <span className="text-xs text-muted-foreground">({data?.trimestre})</span>
-        </p>
-        {rankingTrimBase.length === 0 ? (
-          <p className="mt-3 text-sm text-muted-foreground">{t('Todavia no hay movimientos este trimestre.', 'No movements this quarter yet.')}</p>
-        ) : (
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-glass-border text-xs uppercase tracking-wide text-muted-foreground">
-                  <th className="py-2 pr-3">#</th>
-                  <th className="py-2 pr-3">{t('Miembro', 'Member')}</th>
-                  <th className="py-2">{t('Puntos', 'Points')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rankingTrimBase.map((r) => (
-                  <tr key={r.uid} className={'border-b border-glass-border/50 ' + (r.uid === miUid ? 'bg-teal-50 dark:bg-teal-950/40' : '')}>
-                    <td className="py-2 pr-3 font-bold text-muted-foreground">{r.posicion}</td>
-                    <td className="py-2 pr-3 font-medium text-foreground">{r.nombre}{r.uid === miUid && <span className="ml-1 text-xs text-teal-600">(yo)</span>}</td>
-                    <td className="py-2 font-semibold text-teal-700 dark:text-teal-300">{r.puntos}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* Ranking historico */}
-      <div className="glass-panel p-4">
-        <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
-          <Medal className="h-4 w-4 text-teal-600" /> {t('Ranking historico', 'All-time ranking')}
-        </p>
-        {rankingHistBase.length === 0 ? (
-          <p className="mt-3 text-sm text-muted-foreground">{t('Todavia no hay participantes con puntos.', 'No participants with points yet.')}</p>
-        ) : (
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-glass-border text-xs uppercase tracking-wide text-muted-foreground">
-                  <th className="py-2 pr-3">#</th>
-                  <th className="py-2 pr-3">{t('Miembro', 'Member')}</th>
-                  <th className="py-2 pr-3">{t('Nivel', 'Level')}</th>
-                  <th className="py-2">{t('Puntos', 'Points')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rankingHistBase.map((r) => (
-                  <tr key={r.uid} className={'border-b border-glass-border/50 ' + (r.uid === miUid ? 'bg-teal-50 dark:bg-teal-950/40' : '')}>
-                    <td className="py-2 pr-3 font-bold text-muted-foreground">{r.posicion}</td>
-                    <td className="py-2 pr-3 font-medium text-foreground">{r.nombre}{r.uid === miUid && <span className="ml-1 text-xs text-teal-600">(yo)</span>}</td>
-                    <td className="py-2 pr-3 text-muted-foreground">{nivelLabel(r.nivel ?? 'godin_wannabe', dispLang)}</td>
-                    <td className="py-2 font-semibold text-teal-700 dark:text-teal-300">{r.puntos}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* Catalogo de puntos */}
-      <div className="glass-panel p-4">
-        <p className="text-sm font-semibold text-foreground">{t('Catalogo de puntos', 'Points catalogue')}</p>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {catalogo.map((c) => (
-            <div key={c.id} className="flex items-center justify-between rounded-lg border border-glass-border bg-glass px-3 py-2">
-              <span className="text-sm text-foreground">{dispLang === 'en' ? c.en : c.es}</span>
-              {NEGATIVOS.has(c.id) ? (
-                <span className="text-sm font-bold text-red-600 dark:text-red-400">{c.valor}</span>
-              ) : (
-                <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">+{c.valor}</span>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Tabla de niveles */}
-      <div className="glass-panel p-4">
-        <p className="text-sm font-semibold text-foreground">{t('Niveles de la comunidad', 'Community levels')}</p>
-        <div className="mt-3 overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-glass-border text-xs uppercase tracking-wide text-muted-foreground">
-                <th className="py-2 pr-3">{t('Nivel', 'Level')}</th>
-                <th className="py-2 pr-3">{t('Puntos', 'Points')}</th>
-                <th className="py-2">{t('Acceso', 'Access')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {niveles.map((n) => (
-                <tr key={n.id} className={'border-b border-glass-border/50 ' + (n.id === yo?.nivel ? 'bg-teal-50 dark:bg-teal-950/40' : '')}>
-                  <td className="py-2 pr-3 font-medium text-foreground">{dispLang === 'en' ? n.en : n.es}</td>
-                  <td className="py-2 pr-3 text-muted-foreground">{n.umbral}</td>
-                  <td className="py-2 text-xs text-muted-foreground">
-                    {n.id === 'godin_wannabe' || n.id === 'freelancero' || n.id === 'emprendedor'
-                      ? t('Reuniones B2B', 'B2B meetings')
-                      : n.id === 'empresario_orquesta'
-                        ? t('B2B + Referencias + Reference Place', 'B2B + Referrals + Reference Place')
-                        : t('B2B + Referencias + Inversiones', 'B2B + Referrals + Investments')}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-
-  // ---------- Tab: organizar ----------
-  const puedeOrganizar = esAdmin || soyCoord || soyCalidad;
-  const renderOrganizar = () => (
-    <div className="space-y-4">
-      {!puedeOrganizar ? (
-        <div className="glass-panel p-6 text-center text-sm text-muted-foreground">
-          {t('La organizacion de las juntas la lleva el coordinador, el Mentor de Calidad y los administradores.', 'Meeting management is handled by the coordinator, the Quality Mentor and administrators.')}
-        </div>
-      ) : (
-        <>
-          {/* Crear junta */}
-          {esAdmin && (
-            <div className="glass-panel p-4">
-              <p className="text-sm font-semibold text-foreground">{t('Crear junta semanal', 'Create weekly meeting')}</p>
-              <div className="mt-3 grid gap-2 sm:grid-cols-4">
-                <input type="date" value={njFecha} onChange={(e) => setNjFecha(e.target.value)} className="rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground focus:border-teal-500 focus:outline-none" />
-                <input type="time" value={njHora} onChange={(e) => setNjHora(e.target.value)} className="rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground focus:border-teal-500 focus:outline-none" />
-                <input
-                  value={njLiga}
-                  onChange={(e) => setNjLiga(e.target.value)}
-                  placeholder={t('Liga (opcional)', 'Link (optional)')}
-                  className="rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-teal-500 focus:outline-none sm:col-span-2"
-                />
-              </div>
-              <button
-                type="button"
-                disabled={busy === 'crear-junta' || !njFecha || !njHora}
-                onClick={() => void act('crear-junta', { fecha: njFecha, hora: njHora, liga: njLiga }, 'Junta creada.', 'Meeting created.')}
-                className="mt-3 inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:opacity-50"
-              >
-                {busy === 'crear-junta' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                {t('Crear junta', 'Create meeting')}
-              </button>
-            </div>
-          )}
-
-          {/* Crear evento */}
-          {esAdmin && (
-            <div className="glass-panel p-4">
-              <p className="text-sm font-semibold text-foreground">{t('Crear evento', 'Create event')}</p>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                <input value={evNombre} onChange={(e) => setEvNombre(e.target.value)} placeholder={t('Nombre del evento', 'Event name')} className="rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-teal-500 focus:outline-none" />
-                <input type="date" value={evFecha} onChange={(e) => setEvFecha(e.target.value)} className="rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground focus:border-teal-500 focus:outline-none" />
-                <input type="time" value={evHora} onChange={(e) => setEvHora(e.target.value)} className="rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground focus:border-teal-500 focus:outline-none" />
-                <input value={evPrecio} onChange={(e) => setEvPrecio(e.target.value)} placeholder={t('Precio (MXN)', 'Price (MXN)')} type="number" className="rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-teal-500 focus:outline-none" />
-                <input value={evUbicacion} onChange={(e) => setEvUbicacion(e.target.value)} placeholder={t('Ubicacion', 'Location')} className="rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-teal-500 focus:outline-none" />
-                <input value={evObjetivo} onChange={(e) => setEvObjetivo(e.target.value)} placeholder={t('Objetivo del evento', 'Event objective')} className="rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-teal-500 focus:outline-none sm:col-span-2" />
-              </div>
-              <button
-                type="button"
-                disabled={busy === 'crear-evento' || !evNombre || !evFecha || !evHora}
-                onClick={() => void act('crear-evento', { nombre: evNombre, fecha: evFecha, hora: evHora, ubicacion: evUbicacion, objetivo: evObjetivo, precio: evPrecio === '' ? undefined : Number(evPrecio) }, 'Evento creado.', 'Event created.')}
-                className="mt-3 inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:opacity-50"
-              >
-                {busy === 'crear-evento' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                {t('Crear evento', 'Create event')}
-              </button>
-            </div>
-          )}
-
-          {/* Asignar roles */}
-          {(esAdmin || soyCoord) && ja && (
-            <div className="glass-panel p-4">
-              <p className="text-sm font-semibold text-foreground">
-                {t('Roles de la proxima junta', 'Roles for the next meeting')} <span className="text-xs text-muted-foreground">({ja.nombre})</span>
-              </p>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-                {ROLES_JUNTA.map((r) => (
-                  <div key={r.id} className="space-y-1">
-                    <label className="text-xs font-medium text-muted-foreground">{rolLabel(r.id, dispLang)}</label>
-                    <select
-                      value={rolSel[r.id] ?? ''}
-                      onChange={(e) => setRolSel((prev) => ({ ...prev, [r.id]: e.target.value }))}
-                      className="w-full rounded-lg border border-glass-border bg-background px-2 py-1.5 text-sm text-foreground focus:border-teal-500 focus:outline-none"
-                    >
-                      <option value="">{t('Sin asignar', 'Unassigned')}</option>
-                      {miembrosSel.map((m) => (
-                        <option key={m.uid} value={m.uid}>{m.nombre}</option>
-                      ))}
-                    </select>
-                  </div>
-                ))}
-              </div>
-              <button
-                type="button"
-                disabled={busy === 'asignar-roles'}
-                onClick={() => void act('asignar-roles', { juntaId: ja.id, roles: rolSel }, 'Roles asignados.', 'Roles assigned.')}
-                className="mt-3 inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:opacity-50"
-              >
-                {busy === 'asignar-roles' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                {t('Guardar roles', 'Save roles')}
-              </button>
-            </div>
-          )}
-
-          {/* Otorgar puntos */}
-          {(esAdmin || soyCalidad) && ja && (
+          {/* Otorgar puntos de la junta (admin o Mentor de Calidad) */}
+          {(esAdmin || soyCalidad) && ja.estatus === 'programada' && (
             <div className="glass-panel p-4">
               <p className="text-sm font-semibold text-foreground">{t('Otorgar puntos de la junta', 'Award meeting points')}</p>
               <p className="mt-1 text-xs text-muted-foreground">{t('Selecciona a los participantes y las categorias del catalogo.', 'Select participants and catalogue categories.')}</p>
@@ -940,33 +990,25 @@ export function ClubBuilder() {
                   </div>
                 </div>
               </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <input
-                  value={ptsNota}
-                  onChange={(e) => setPtsNota(e.target.value)}
-                  placeholder={t('Nota (opcional)', 'Note (optional)')}
-                  className="min-w-0 flex-1 rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-teal-500 focus:outline-none"
-                />
-                <button
-                  type="button"
-                  disabled={busy === 'otorgar-puntos' || Object.values(ptsMiembros).filter(Boolean).length === 0 || Object.values(ptsCats).filter(Boolean).length === 0}
-                  onClick={() => {
-                    const cats = Object.entries(ptsCats).filter(([, v]) => v).map(([k]) => k);
-                    const items = Object.entries(ptsMiembros)
-                      .filter(([, v]) => v)
-                      .map(([k]) => ({ userId: k, categorias: cats, nota: ptsNota }));
-                    void act('otorgar-puntos', { juntaId: ja.id, items }, 'Puntos otorgados.', 'Points awarded.');
-                  }}
-                  className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:opacity-50"
-                >
-                  {busy === 'otorgar-puntos' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trophy className="h-4 w-4" />}
-                  {t('Otorgar puntos', 'Award points')}
-                </button>
-              </div>
+              <button
+                type="button"
+                disabled={busy === 'otorgar-puntos' || Object.values(ptsMiembros).filter(Boolean).length === 0 || Object.values(ptsCats).filter(Boolean).length === 0}
+                onClick={() => {
+                  const cats = Object.entries(ptsCats).filter(([, v]) => v).map(([k]) => k);
+                  const items = Object.entries(ptsMiembros)
+                    .filter(([, v]) => v)
+                    .map(([k]) => ({ userId: k, categorias: cats }));
+                  void act('otorgar-puntos', { juntaId: ja.id, items }, 'Puntos otorgados.', 'Points awarded.');
+                }}
+                className="mt-3 inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:opacity-50"
+              >
+                {busy === 'otorgar-puntos' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trophy className="h-4 w-4" />}
+                {t('Otorgar puntos', 'Award points')}
+              </button>
             </div>
           )}
 
-          {/* Ajustar puntos (admin) */}
+          {/* Ajustar puntos (solo admin) */}
           {esAdmin && (
             <div className="glass-panel p-4">
               <p className="text-sm font-semibold text-foreground">{t('Ajustar puntos', 'Adjust points')}</p>
@@ -1001,8 +1043,8 @@ export function ClubBuilder() {
             </div>
           )}
 
-          {/* Cerrar junta */}
-          {ja && (esAdmin || soyCoord) && (
+          {/* Cerrar junta (admin o coordinador) */}
+          {ja.estatus === 'programada' && (esAdmin || soyCoord) && (
             <div className="glass-panel p-4">
               <p className="text-sm font-semibold text-foreground">{t('Cerrar junta', 'Close meeting')}</p>
               <p className="mt-1 text-xs text-muted-foreground">{t('Al cerrarla, los asistentes confirmados ganan su punto de asistencia automaticamente.', 'Closing awards each confirmed attendee their attendance point automatically.')}</p>
@@ -1017,6 +1059,199 @@ export function ClubBuilder() {
               </button>
             </div>
           )}
+        </>
+      )}
+
+      {/* Proximos eventos */}
+      {eventos.length > 0 && (
+        <div className="glass-panel p-4">
+          <p className="text-sm font-semibold text-foreground">{t('Eventos de la comunidad', 'Community events')}</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {eventos.map((ev) => (
+              <div key={ev.id} className="rounded-lg border border-glass-border bg-glass p-3">
+                <p className="font-semibold text-foreground">{ev.nombre}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {fmtFecha(ev.fecha)} · {ev.hora}
+                  {ev.ubicacion && <> · {ev.ubicacion}</>}
+                </p>
+                {ev.objetivo && <p className="mt-1 text-xs text-muted-foreground">{ev.objetivo}</p>}
+                {ev.precio > 0 && <p className="mt-1 text-xs font-semibold text-teal-700 dark:text-teal-300">${ev.precio.toLocaleString('en-US')}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // ---------- Tab: puntos y niveles ----------
+  const renderPuntos = () => (
+    <div className="space-y-6">
+      {/* Ranking del mes */}
+      <div className="glass-panel p-4">
+        <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <Star className="h-4 w-4 text-teal-600" /> {t('Ranking del mes', 'Monthly ranking')}
+          <span className="text-xs text-muted-foreground">({new Date().toLocaleDateString(dispLang === 'en' ? 'en-US' : 'es-MX', { month: 'long', year: 'numeric' })})</span>
+        </p>
+        {rankingMesBase.length === 0 ? (
+          <p className="mt-3 text-sm text-muted-foreground">{t('Todavia no hay movimientos este mes.', 'No movements this month yet.')}</p>
+        ) : (
+          tablaRanking(rankingMesBase)
+        )}
+      </div>
+
+      {/* Ranking trimestral */}
+      <div className="glass-panel p-4">
+        <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <Star className="h-4 w-4 text-teal-600" /> {t('Ranking del trimestre', 'Quarterly ranking')}
+          <span className="text-xs text-muted-foreground">({data?.trimestre})</span>
+        </p>
+        {rankingTrimBase.length === 0 ? (
+          <p className="mt-3 text-sm text-muted-foreground">{t('Todavia no hay movimientos este trimestre.', 'No movements this quarter yet.')}</p>
+        ) : (
+          tablaRanking(rankingTrimBase)
+        )}
+      </div>
+
+      {/* Ranking historico */}
+      <div className="glass-panel p-4">
+        <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <Medal className="h-4 w-4 text-teal-600" /> {t('Ranking historico', 'All-time ranking')}
+        </p>
+        {rankingHistBase.length === 0 ? (
+          <p className="mt-3 text-sm text-muted-foreground">{t('Todavia no hay participantes con puntos.', 'No participants with points yet.')}</p>
+        ) : (
+          tablaRanking(rankingHistBase, true)
+        )}
+      </div>
+
+      {/* Catalogo de puntos */}
+      <div className="glass-panel p-4">
+        <p className="text-sm font-semibold text-foreground">{t('Catalogo de puntos', 'Points catalogue')}</p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {catalogo.map((c) => (
+            <div key={c.id} className="flex items-center justify-between rounded-lg border border-glass-border bg-glass px-3 py-2">
+              <span className="text-sm text-foreground">{dispLang === 'en' ? c.en : c.es}</span>
+              {NEGATIVOS.has(c.id) ? (
+                <span className="text-sm font-bold text-red-600 dark:text-red-400">{c.valor}</span>
+              ) : (
+                <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">+{c.valor}</span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Tabla de niveles */}
+      <div className="glass-panel p-4">
+        <p className="text-sm font-semibold text-foreground">{t('Niveles de la comunidad', 'Community levels')}</p>
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-glass-border text-xs uppercase tracking-wide text-muted-foreground">
+                <th className="py-2 pr-3">{t('Nivel', 'Level')}</th>
+                <th className="py-2 pr-3">{t('Puntos', 'Points')}</th>
+                <th className="py-2">{t('Acceso', 'Access')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {niveles.map((n) => (
+                <tr key={n.id} className={'border-b border-glass-border/50 ' + (n.id === yo?.nivel ? 'bg-teal-50 dark:bg-teal-950/40' : '')}>
+                  <td className="py-2 pr-3 font-medium text-foreground">{dispLang === 'en' ? n.en : n.es}</td>
+                  <td className="py-2 pr-3 text-muted-foreground">{n.umbral}</td>
+                  <td className="py-2 text-xs text-muted-foreground">
+                    {n.accesos && n.accesos.length
+                      ? n.accesos.map((a) => accesoLabel(a, dispLang)).join(' + ')
+                      : n.id === 'godin_wannabe' || n.id === 'freelancero' || n.id === 'emprendedor'
+                        ? t('Reuniones B2B', 'B2B meetings')
+                        : n.id === 'empresario_orquesta'
+                          ? t('B2B + Referencias + Reference Place', 'B2B + Referrals + Reference Place')
+                          : t('B2B + Referencias + Inversiones', 'B2B + Referrals + Investments')}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ---------- Tab: organizar ----------
+  // La asignacion de roles, otorgar/ajustar puntos y cerrar junta viven ahora
+  // en la pestaña "Junta semanal"; aqui queda solo la creacion de juntas y
+  // eventos (administrador).
+  const renderOrganizar = () => (
+    <div className="space-y-4">
+      {!esAdmin ? (
+        <div className="glass-panel p-6 text-center text-sm text-muted-foreground">
+          {t('Solo los administradores pueden crear juntas y eventos. Los roles, puntos y el cierre de la junta se manejan desde la pestaña Junta semanal.', 'Only administrators can create meetings and events. Roles, points and closing the meeting are handled in the Weekly meeting tab.')}
+        </div>
+      ) : (
+        <>
+          {/* Crear junta */}
+          <div className="glass-panel p-4">
+            <p className="text-sm font-semibold text-foreground">{t('Crear junta semanal', 'Create weekly meeting')}</p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+              <select
+                value={njDia}
+                onChange={(e) => {
+                  const dia = Number(e.target.value);
+                  setNjDia(dia);
+                  setNjFecha(proximaFechaDiaSemana(dia));
+                }}
+                className="rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground focus:border-teal-500 focus:outline-none"
+              >
+                {DIAS_SEMANA.map((d) => (
+                  <option key={d.v} value={d.v}>
+                    {t(d.es, d.en)}
+                  </option>
+                ))}
+              </select>
+              <input type="date" value={njFecha} onChange={(e) => setNjFecha(e.target.value)} className="rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground focus:border-teal-500 focus:outline-none" />
+              <input type="time" value={njHora} onChange={(e) => setNjHora(e.target.value)} className="rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground focus:border-teal-500 focus:outline-none" />
+              <input
+                value={njLiga}
+                onChange={(e) => setNjLiga(e.target.value)}
+                placeholder={t('Liga (opcional)', 'Link (optional)')}
+                className="rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-teal-500 focus:outline-none lg:col-span-2"
+              />
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t('Elige el día de la semana y la fecha se calcula sola (puedes ajustarla después).', 'Pick the day of the week and the date is calculated for you (you can adjust it afterwards).')}
+            </p>
+            <button
+              type="button"
+              disabled={busy === 'crear-junta' || !njFecha || !njHora}
+              onClick={() => void act('crear-junta', { fecha: njFecha, hora: njHora, liga: njLiga }, 'Junta creada.', 'Meeting created.')}
+              className="mt-3 inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:opacity-50"
+            >
+              {busy === 'crear-junta' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              {t('Crear junta', 'Create meeting')}
+            </button>
+          </div>
+
+          {/* Crear evento */}
+          <div className="glass-panel p-4">
+            <p className="text-sm font-semibold text-foreground">{t('Crear evento', 'Create event')}</p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              <input value={evNombre} onChange={(e) => setEvNombre(e.target.value)} placeholder={t('Nombre del evento', 'Event name')} className="rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-teal-500 focus:outline-none" />
+              <input type="date" value={evFecha} onChange={(e) => setEvFecha(e.target.value)} className="rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground focus:border-teal-500 focus:outline-none" />
+              <input type="time" value={evHora} onChange={(e) => setEvHora(e.target.value)} className="rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground focus:border-teal-500 focus:outline-none" />
+              <input value={evPrecio} onChange={(e) => setEvPrecio(e.target.value)} placeholder={t('Precio (MXN)', 'Price (MXN)')} type="number" className="rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-teal-500 focus:outline-none" />
+              <input value={evUbicacion} onChange={(e) => setEvUbicacion(e.target.value)} placeholder={t('Ubicacion', 'Location')} className="rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-teal-500 focus:outline-none" />
+              <input value={evObjetivo} onChange={(e) => setEvObjetivo(e.target.value)} placeholder={t('Objetivo del evento', 'Event objective')} className="rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-teal-500 focus:outline-none sm:col-span-2" />
+            </div>
+            <button
+              type="button"
+              disabled={busy === 'crear-evento' || !evNombre || !evFecha || !evHora}
+              onClick={() => void act('crear-evento', { nombre: evNombre, fecha: evFecha, hora: evHora, ubicacion: evUbicacion, objetivo: evObjetivo, precio: evPrecio === '' ? undefined : Number(evPrecio) }, 'Evento creado.', 'Event created.')}
+              className="mt-3 inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:opacity-50"
+            >
+              {busy === 'crear-evento' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              {t('Crear evento', 'Create event')}
+            </button>
+          </div>
         </>
       )}
     </div>

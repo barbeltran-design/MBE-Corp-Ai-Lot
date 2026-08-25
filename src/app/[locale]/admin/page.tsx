@@ -31,7 +31,7 @@ import {
   type Convocatoria,
 } from '@/lib/convocatorias-data';
 
-type TabKey = 'catalog' | 'users' | 'pagos' | 'pagosEsp' | 'solicitudes' | 'refplace' | 'convocatorias';
+type TabKey = 'catalog' | 'users' | 'pagos' | 'pagosEsp' | 'solicitudes' | 'refplace' | 'convocatorias' | 'club';
 
 const PASOS_TOUR_ADMIN: Record<'es' | 'en', TourStep[]> = {
   es: [
@@ -68,6 +68,7 @@ const TAB_DEFS: { key: TabKey; es: string; en: string }[] = [
   { key: 'solicitudes', es: 'Solicitudes de rol', en: 'Role requests' },
   { key: 'refplace', es: 'Referencias (Reference Place)', en: 'Referrals (Reference Place)' },
   { key: 'convocatorias', es: 'Convocatorias', en: 'Funding calls' },
+  { key: 'club', es: 'Club: puntos y niveles', en: 'Club: points & levels' },
 ];
 
 const fmtMoney = (n: number | null | undefined) =>
@@ -244,6 +245,12 @@ export default function AdminPage() {
   const [convoMsg, setConvoMsg] = React.useState('');
   const [convoBuscar, setConvoBuscar] = React.useState('');
 
+  // Club: catalogo de puntos y niveles de la comunidad (config editable).
+  const [clubCatalogo, setClubCatalogo] = React.useState<{ id: string; es: string; en: string; valor: number }[]>([]);
+  const [clubNiveles, setClubNiveles] = React.useState<{ id: string; umbral: number; es: string; en: string; accesos: string[] }[]>([]);
+  const [clubAccesos, setClubAccesos] = React.useState<{ id: string; es: string; en: string }[]>([]);
+  const [clubMsg, setClubMsg] = React.useState('');
+
   React.useEffect(() => {
     const auth = getFirebaseAuth();
     const unsub = onAuthStateChanged(auth, (u) => setUser(u));
@@ -337,6 +344,29 @@ export default function AdminPage() {
     if (Array.isArray(data.sugeridas)) setConvoSugeridas(data.sugeridas);
   }, [tokenHeaders]);
 
+  const loadClub = React.useCallback(async () => {
+    const headers = await tokenHeaders();
+    const res = await fetch('/api/admin/club', { headers });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (Array.isArray(data.catalogo)) setClubCatalogo(data.catalogo);
+    if (Array.isArray(data.niveles)) setClubNiveles(data.niveles);
+    if (Array.isArray(data.accesosPosibles)) setClubAccesos(data.accesosPosibles);
+  }, [tokenHeaders]);
+
+  async function guardarClub(tipo: 'catalogo' | 'niveles') {
+    const headers = await tokenHeaders();
+    const items = tipo === 'catalogo' ? clubCatalogo : clubNiveles;
+    const res = await fetch('/api/admin/club', {
+      method: 'PUT',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tipo, items }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setClubMsg(res.ok ? t('Guardado. El Club ya usa estos valores.', 'Saved. The Club now uses these values.') : data?.error || t('No se pudo guardar.', 'Could not save.'));
+    if (res.ok) await loadClub();
+  }
+
   React.useEffect(() => {
     if (!administracion || !user) return;
     const loaders: Record<TabKey, () => Promise<void>> = {
@@ -347,9 +377,10 @@ export default function AdminPage() {
       solicitudes: loadSolicitudes,
       refplace: loadRefplace,
       convocatorias: loadConvocatorias,
+      club: loadClub,
     };
     loaders[tab]().catch(() => {});
-  }, [administracion, user, tab, loadCatalog, loadUsers, loadPagos, loadSolicitudes, loadRefplace, loadConvocatorias]);
+  }, [administracion, user, tab, loadCatalog, loadUsers, loadPagos, loadSolicitudes, loadRefplace, loadConvocatorias, loadClub]);
 
   function abrirEditarRefplace(tipo: 'solicitud' | 'oferta', item: any) {
     setEditRefplace({
@@ -2020,6 +2051,180 @@ export default function AdminPage() {
                   })}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {tab === 'club' && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">
+                {t('Club: catálogo de puntos y niveles de la comunidad', 'Club: points catalogue and community levels')}
+              </h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {t(
+                  'Estos valores alimentan el ranking, el otorgamiento de puntos y la tabla de niveles del Club. Guardar aplica de inmediato; para volver al catálogo original borra todas las filas y guarda, o restaura manualmente.',
+                  'These values feed the Club ranking, point awarding and levels table. Saving applies immediately; to restore the original catalogue, delete all rows and save, or restore them manually.'
+                )}
+              </p>
+            </div>
+            {clubMsg && <p className="text-sm text-emerald-700">{clubMsg}</p>}
+
+            {/* Catalogo de puntos */}
+            <div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold text-foreground">{t('Catálogo de puntos', 'Points catalogue')}</h3>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setClubCatalogo((prev) => [...prev, { id: '', es: '', en: '', valor: 1 }])}
+                  >
+                    {t('Agregar categoría', 'Add category')}
+                  </Button>
+                  <Button type="button" size="sm" onClick={() => void guardarClub('catalogo')}>
+                    {t('Guardar catálogo', 'Save catalogue')}
+                  </Button>
+                </div>
+              </div>
+              <div className="mt-2 space-y-2">
+                {clubCatalogo.map((c, i) => (
+                  <div key={i} className="flex flex-wrap items-center gap-2">
+                    <Input
+                      value={c.id}
+                      onChange={(e) => setClubCatalogo((prev) => prev.map((x, j) => (j === i ? { ...x, id: e.target.value } : x)))}
+                      placeholder="id (ej. asistencia)"
+                      className="w-44"
+                    />
+                    <Input
+                      value={c.es}
+                      onChange={(e) => setClubCatalogo((prev) => prev.map((x, j) => (j === i ? { ...x, es: e.target.value } : x)))}
+                      placeholder="Nombre (ES)"
+                      className="flex-1"
+                    />
+                    <Input
+                      value={c.en}
+                      onChange={(e) => setClubCatalogo((prev) => prev.map((x, j) => (j === i ? { ...x, en: e.target.value } : x)))}
+                      placeholder="Name (EN)"
+                      className="flex-1"
+                    />
+                    <Input
+                      type="number"
+                      value={c.valor}
+                      onChange={(e) => setClubCatalogo((prev) => prev.map((x, j) => (j === i ? { ...x, valor: Number(e.target.value) } : x)))}
+                      placeholder="+/-"
+                      className="w-20"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="text-red-700 hover:bg-red-50 dark:text-red-300"
+                      onClick={() => setClubCatalogo((prev) => prev.filter((_, j) => j !== i))}
+                    >
+                      {t('Quitar', 'Remove')}
+                    </Button>
+                  </div>
+                ))}
+                {clubCatalogo.length === 0 && (
+                  <p className="text-sm text-muted-foreground">{t('Sin categorías.', 'No categories.')}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Niveles de la comunidad */}
+            <div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold text-foreground">{t('Niveles de la comunidad y sus accesos', 'Community levels and their access')}</h3>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setClubNiveles((prev) => [...prev, { id: '', umbral: 0, es: '', en: '', accesos: [] }])}
+                  >
+                    {t('Agregar nivel', 'Add level')}
+                  </Button>
+                  <Button type="button" size="sm" onClick={() => void guardarClub('niveles')}>
+                    {t('Guardar niveles', 'Save levels')}
+                  </Button>
+                </div>
+              </div>
+              <div className="mt-2 space-y-3">
+                {clubNiveles.map((n, i) => (
+                  <div key={i} className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Input
+                        value={n.id}
+                        onChange={(e) => setClubNiveles((prev) => prev.map((x, j) => (j === i ? { ...x, id: e.target.value } : x)))}
+                        placeholder="id (ej. freelancero)"
+                        className="w-44"
+                      />
+                      <Input
+                        value={n.es}
+                        onChange={(e) => setClubNiveles((prev) => prev.map((x, j) => (j === i ? { ...x, es: e.target.value } : x)))}
+                        placeholder="Nombre (ES)"
+                        className="flex-1"
+                      />
+                      <Input
+                        value={n.en}
+                        onChange={(e) => setClubNiveles((prev) => prev.map((x, j) => (j === i ? { ...x, en: e.target.value } : x)))}
+                        placeholder="Name (EN)"
+                        className="flex-1"
+                      />
+                      <Input
+                        type="number"
+                        value={n.umbral}
+                        onChange={(e) => setClubNiveles((prev) => prev.map((x, j) => (j === i ? { ...x, umbral: Number(e.target.value) } : x)))}
+                        placeholder="Puntos"
+                        className="w-24"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="text-red-700 hover:bg-red-50 dark:text-red-300"
+                        onClick={() => setClubNiveles((prev) => prev.filter((_, j) => j !== i))}
+                      >
+                        {t('Quitar', 'Remove')}
+                      </Button>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {clubAccesos.map((a) => {
+                        const on = n.accesos.includes(a.id);
+                        return (
+                          <button
+                            key={a.id}
+                            type="button"
+                            onClick={() =>
+                              setClubNiveles((prev) =>
+                                prev.map((x, j) =>
+                                  j === i
+                                    ? { ...x, accesos: on ? x.accesos.filter((y) => y !== a.id) : [...x.accesos, a.id] }
+                                    : x
+                                )
+                              )
+                            }
+                            className={
+                              'rounded-full border px-3 py-1 text-xs transition-colors ' +
+                              (on
+                                ? 'border-teal-500 bg-teal-500/10 text-teal-700 dark:text-teal-300'
+                                : 'border-slate-300 text-muted-foreground hover:border-teal-400 dark:border-slate-600')
+                            }
+                          >
+                            {on ? '✓ ' : ''}
+                            {dispLang === 'en' ? a.en : a.es}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+                {clubNiveles.length === 0 && (
+                  <p className="text-sm text-muted-foreground">{t('Sin niveles.', 'No levels.')}</p>
+                )}
+              </div>
             </div>
           </div>
         )}

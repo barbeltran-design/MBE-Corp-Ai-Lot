@@ -11,10 +11,13 @@ import {
   nivelDesdePuntos,
   siguienteNivel,
   trimestreActual,
+  mesActual,
   tematicaDeSemana,
   aplicarAgendaMaestra,
   type JuntaClubDoc,
   type AgendaOverrideItem,
+  type PuntoCatalogoItem,
+  type NivelClubItem,
 } from '@/lib/club';
 import { nivelPorPuntos } from '@/lib/refplace';
 import { puedeCrearNoticias, nivelMinimoNoticiasInfo } from '@/lib/premium';
@@ -84,6 +87,55 @@ async function leerAgendaMaestra(db: FirebaseFirestore.Firestore): Promise<Recor
   }
 }
 
+// Catalogo de puntos editable por administradores (doc config/catalogo_puntos).
+// Si no existe o esta vacio, se usa la constante CATALOGO_PUNTOS.
+const CATALOGO_PUNTOS_DOC = 'config/catalogo_puntos';
+const NIVELES_CLUB_DOC = 'config/niveles_club';
+
+async function leerCatalogoPuntos(db: FirebaseFirestore.Firestore): Promise<PuntoCatalogoItem[]> {
+  try {
+    const snap = await db.doc(CATALOGO_PUNTOS_DOC).get();
+    const items = snap.exists ? (snap.data() as { items?: unknown }).items : null;
+    if (Array.isArray(items) && items.length) {
+      const out = items
+        .map((raw) => {
+          const c = raw as Record<string, unknown>;
+          return { id: String(c.id ?? ''), es: String(c.es ?? ''), en: String(c.en ?? ''), valor: parseNum(c.valor, 0) };
+        })
+        .filter((c) => c.id);
+      if (out.length) return out;
+    }
+  } catch (err) {
+    console.error('[club] leerCatalogoPuntos error', err);
+  }
+  return CATALOGO_PUNTOS.map((c) => ({ ...c }));
+}
+
+async function leerNivelesClub(db: FirebaseFirestore.Firestore): Promise<NivelClubItem[]> {
+  try {
+    const snap = await db.doc(NIVELES_CLUB_DOC).get();
+    const items = snap.exists ? (snap.data() as { items?: unknown }).items : null;
+    if (Array.isArray(items) && items.length) {
+      const out = items
+        .map((raw) => {
+          const n = raw as Record<string, unknown>;
+          return {
+            id: String(n.id ?? ''),
+            umbral: parseNum(n.umbral, 0),
+            es: String(n.es ?? ''),
+            en: String(n.en ?? ''),
+            accesos: Array.isArray(n.accesos) ? n.accesos.map(String) : [],
+          };
+        })
+        .filter((n) => n.id);
+      if (out.length) return out;
+    }
+  } catch (err) {
+    console.error('[club] leerNivelesClub error', err);
+  }
+  return NIVEL_PUNTOS.map((n) => ({ ...n, accesos: [] as string[] }));
+}
+
 // GET /api/club — vista del Club (autenticado): juntas y eventos, roles con
 // nombres de quienes los ocupan, mis datos/puntos, rankings y catálogo.
 export async function GET(req: NextRequest) {
@@ -127,6 +179,7 @@ export async function GET(req: NextRequest) {
           precio: parseNum(data.precio, 0),
           semanaMes: parseNum(data.semanaMes, semanaDeMes(data.fecha)),
           temaDefinido: String(data.temaDefinido ?? ''),
+          temaDinamica: String(data.temaDinamica ?? ''),
           agenda: Array.isArray(data.agenda) ? data.agenda : undefined,
           roles: Object.fromEntries(
             Object.entries(rolesRaw).map(([k, v]) => {
@@ -143,7 +196,13 @@ export async function GET(req: NextRequest) {
       .sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
 
     const juntasProgramadas = juntas.filter((j) => j.tipo === 'junta' && j.estatus === 'programada');
-    const juntaActual = juntasProgramadas[0] ?? null;
+    // La junta "actual" es la PROXIMA por venir (fecha+hora >= ahora). Si ya
+    // no queda ninguna futura, se muestra la ultima programada (pasada) para
+    // que la seccion no quede vacia; el cliente permite navegar entre juntas.
+    const ahoraD = new Date();
+    const ahoraKey = `${hoyLocal()}T${String(ahoraD.getHours()).padStart(2, '0')}:${String(ahoraD.getMinutes()).padStart(2, '0')}`;
+    const juntasFuturas = juntasProgramadas.filter((j) => sortKey(j) >= ahoraKey);
+    const juntaActual = juntasFuturas[0] ?? juntasProgramadas[juntasProgramadas.length - 1] ?? null;
 
     const yoRaw = (users.get(uid) as Record<string, unknown> | undefined) ?? {};
     const yoPuntos = parseNum(yoRaw.puntosClub, 0);
@@ -207,20 +266,41 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    // --- Ranking histórico (puntos acumulados) y trimestral ---
+    // --- Ranking histórico (puntos acumulados), trimestral y mensual ---
     const trim = trimestreActual();
+    const mes = mesActual();
     const ptrTrimSnap = await db.collection('puntos_club').where('trimestre', '==', trim).get();
     const porUsuarioTrim = new Map<string, number>();
+    const porUsuarioMes = new Map<string, number>();
     ptrTrimSnap.forEach((d) => {
       const data = d.data() as Record<string, unknown>;
       const pid = String(data.userId ?? '');
-      porUsuarioTrim.set(pid, (porUsuarioTrim.get(pid) ?? 0) + parseNum(data.valor, 0));
+      const val = parseNum(data.valor, 0);
+      porUsuarioTrim.set(pid, (porUsuarioTrim.get(pid) ?? 0) + val);
+      // El ranking del mes se deriva del trimestre filtrando por mes de `fecha`.
+      if (String(data.fecha ?? '').slice(0, 7) === mes) {
+        porUsuarioMes.set(pid, (porUsuarioMes.get(pid) ?? 0) + val);
+      }
     });
+
+    // Los rankings del periodo incluyen a TODOS los usuarios (con 0 puntos si
+    // no tienen movimientos). El nombre cae al correo electronico cuando el
+    // usuario no tiene `name`, para no mostrar filas en blanco.
+    function rankingDePeriodo(mapa: Map<string, number>) {
+      return Array.from(users.entries())
+        .map(([id, u]) => ({
+          uid: id,
+          nombre: String(u.name ?? '') || String(u.email ?? ''),
+          puntos: mapa.get(id) ?? 0,
+        }))
+        .sort((a, b) => b.puntos - a.puntos || a.nombre.localeCompare(b.nombre))
+        .map((m, i) => ({ ...m, posicion: i + 1 }));
+    }
 
     const miembrosHistorico = Array.from(users.entries())
       .map(([id, u]) => ({
         uid: id,
-        nombre: String(u.name ?? ''),
+        nombre: String(u.name ?? '') || String(u.email ?? ''),
         puntos: parseNum(u.puntosClub, 0),
         nivel: nivelDesdePuntos(parseNum(u.puntosClub, 0)),
       }))
@@ -229,16 +309,10 @@ export async function GET(req: NextRequest) {
       .slice(0, 100)
       .map((m, i) => ({ ...m, posicion: i + 1 }));
 
-    const rankingTrimestre = Array.from(porUsuarioTrim.entries())
-      .map(([id, pts]) => ({
-        uid: id,
-        nombre: String(users.get(id)?.name ?? ''),
-        puntos: pts,
-      }))
-      .filter((m) => m.puntos > 0)
-      .sort((a, b) => b.puntos - a.puntos)
-      .slice(0, 100)
-      .map((m, i) => ({ ...m, posicion: i + 1 }));
+    const rankingTrimestre = rankingDePeriodo(porUsuarioTrim);
+    const rankingMes = rankingDePeriodo(porUsuarioMes);
+
+    const [catalogoCfg, nivelesCfg] = await Promise.all([leerCatalogoPuntos(db), leerNivelesClub(db)]);
 
     const siguiente = siguienteNivel(yoPuntos);
     return NextResponse.json({
@@ -258,7 +332,7 @@ export async function GET(req: NextRequest) {
       miembros: Array.from(users.entries())
         .map(([id, u]) => ({
           uid: id,
-          nombre: String(u.name ?? ''),
+          nombre: String(u.name ?? '') || String(u.email ?? ''),
           email: String(u.email ?? ''),
           puntos: parseNum(u.puntosClub, 0),
           nivel: nivelDesdePuntos(parseNum(u.puntosClub, 0)),
@@ -272,11 +346,12 @@ export async function GET(req: NextRequest) {
       misRolesJunta,
       rankings: {
         trimestre: rankingTrimestre,
+        mes: rankingMes,
         historico: miembrosHistorico,
       },
       puntosSemana,
-      niveles: NIVEL_PUNTOS.map((n) => ({ id: n.id, umbral: n.umbral, es: n.es, en: n.en })),
-      catalogo: CATALOGO_PUNTOS.map((c) => ({ id: c.id, es: c.es, en: c.en, valor: c.valor })),
+      niveles: nivelesCfg,
+      catalogo: catalogoCfg,
       agendaEjemplo: agendaBase,
       totalMinutosAgenda: AGENDA_JUNTA_TOTAL,
       noticiasAprobadas,
@@ -294,7 +369,8 @@ export async function GET(req: NextRequest) {
 //   crear-junta      {fecha, hora, liga?}                        (admin)
 //   crear-evento     {nombre, fecha, hora, ubicacion, objetivo, precio?} (admin)
 //   asignar-roles    {juntaId, roles: {rolId: uid|null}}         (admin o coord. de esa junta)
-//   definir-tema     {juntaId, tema}                             (admin o mentor_crecimiento)
+//   definir-tema     {juntaId, tema, tipo?: 'tutorial'|'dinamica'} (tutorial: admin/coord/mentor_crecimiento; dinamica: admin/coord/mentor_dinamica)
+//   cancelar-junta   {juntaId}                                   (solo admin)
 //   reordenar-agenda {juntaId, agenda: [{id, duracionMin}]}      (admin o coord.; suma 90)
 //   confirmar        {juntaId, confirmado}                       (cualquiera)
 //   otorgar-puntos   {juntaId, items: [{userId, categorias[]}]}  (admin o mentor_calidad)
@@ -400,15 +476,43 @@ export async function POST(req: NextRequest) {
     if (accion === 'definir-tema') {
       const juntaId = String(body?.juntaId ?? '');
       const tema = String(body?.tema ?? '').trim();
+      const tipo = String(body?.tipo ?? 'tutorial') === 'dinamica' ? 'dinamica' : 'tutorial';
       const snapDoc = await db.collection('juntas_club').doc(juntaId).get();
       if (!snapDoc.exists) return NextResponse.json({ error: 'Junta no encontrada.' }, { status: 404 });
       const jData = snapDoc.data() as Partial<JuntaClubDoc>;
+      const esCoord = jData.roles?.coordinador === uid;
       const esMentorCrecimiento = jData.roles?.mentor_crecimiento === uid;
-      if (!esAdminFlag && !esMentorCrecimiento) {
-        return NextResponse.json({ error: 'Solo el Mentor de Crecimiento o un admin puede definir el tema.' }, { status: 403 });
+      const esMentorDinamica = jData.roles?.mentor_dinamica === uid;
+      // Tutorial: coordinador, Mentor de Crecimiento o admin.
+      // Dinamica empresarial: coordinador, Mentor de Dinamica Empresarial o admin.
+      const autorizado =
+        tipo === 'dinamica'
+          ? esAdminFlag || esCoord || esMentorDinamica
+          : esAdminFlag || esCoord || esMentorCrecimiento;
+      if (!autorizado) {
+        return NextResponse.json(
+          {
+            error:
+              tipo === 'dinamica'
+                ? 'Solo el coordinador, el Mentor de Dinámica Empresarial o un admin puede definir el tema de la dinámica.'
+                : 'Solo el coordinador, el Mentor de Crecimiento o un admin puede definir el tema del tutorial.',
+          },
+          { status: 403 }
+        );
       }
       if (!tema) return NextResponse.json({ error: 'Falta el tema.' }, { status: 400 });
-      await db.collection('juntas_club').doc(juntaId).update({ temaDefinido: tema });
+      await db
+        .collection('juntas_club')
+        .doc(juntaId)
+        .update(tipo === 'dinamica' ? { temaDinamica: tema } : { temaDefinido: tema });
+      return NextResponse.json({ ok: true });
+    }
+
+    if (accion === 'cancelar-junta') {
+      if (!esAdminFlag) return NextResponse.json({ error: 'Solo un administrador puede cancelar la junta.' }, { status: 403 });
+      const juntaId = String(body?.juntaId ?? '');
+      if (!juntaId) return NextResponse.json({ error: 'Falta la junta.' }, { status: 400 });
+      await db.collection('juntas_club').doc(juntaId).update({ estatus: 'cancelada' });
       return NextResponse.json({ ok: true });
     }
 
@@ -511,6 +615,10 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Solo el Mentor de Calidad o un admin puede otorgar puntos.' }, { status: 403 });
       }
       const trim = trimestreActual();
+      // Los valores se leen del catalogo configurable (config/catalogo_puntos);
+      // si el admin no lo ha personalizado, equivale a las constantes.
+      const catalogoCfg = await leerCatalogoPuntos(db);
+      const valorDe = (id: string) => catalogoCfg.find((c) => c.id === id)?.valor ?? puntoValor(id);
       const batch = db.batch();
       let valorTotal = 0;
       for (const item of itemsRaw) {
@@ -518,7 +626,7 @@ export async function POST(req: NextRequest) {
         const targetUid = String(it?.userId ?? '');
         const categorias = Array.isArray(it?.categorias) ? it.categorias.map(String) : [];
         if (!targetUid || categorias.length === 0) continue;
-        const suma = categorias.reduce((a, c) => a + puntoValor(c), 0);
+        const suma = categorias.reduce((a, c) => a + valorDe(c), 0);
         const docRef = db.collection('puntos_club').doc();
         batch.set(docRef, {
           userId: targetUid,

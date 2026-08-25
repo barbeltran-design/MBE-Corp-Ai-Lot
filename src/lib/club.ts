@@ -200,6 +200,15 @@ export const CATALOGO_PUNTOS = [
 
 export type PuntoCatalogoId = (typeof CATALOGO_PUNTOS)[number]['id'];
 
+// Item del catalogo de puntos en su version editable (config/catalogo_puntos
+// en Firestore, CRUD desde /admin). Coincide con las constantes de arriba.
+export interface PuntoCatalogoItem {
+  id: string;
+  es: string;
+  en: string;
+  valor: number;
+}
+
 export function puntoLabel(id: string, lang: 'es' | 'en'): string {
   const p = CATALOGO_PUNTOS.find((x) => x.id === id);
   return p ? (lang === 'en' ? p.en : p.es) : id;
@@ -222,6 +231,37 @@ export const NIVEL_PUNTOS = [
   { id: 'inversionista', umbral: 2500, es: 'Inversionista', en: 'Investor' },
   { id: 'mentor', umbral: 4000, es: 'Mentor', en: 'Mentor' },
 ] as const;
+
+// Funcionalidades que un nivel de la comunidad puede desbloquear. El admin
+// edita que accesos tiene cada nivel (config/niveles_club en Firestore).
+export const ACCESOS_COMUNIDAD = [
+  { id: 'reuniones_b2b', es: 'Reuniones B2B', en: 'B2B meetings' },
+  { id: 'referencias', es: 'Referencias', en: 'Referrals' },
+  { id: 'reference_place', es: 'Reference Place', en: 'Reference Place' },
+  { id: 'inversiones', es: 'Inversiones', en: 'Investments' },
+  { id: 'certificacion', es: 'Certificación MBE', en: 'MBE Certification' },
+  { id: 'convocatorias', es: 'Convocatorias y fondos', en: 'Grants & funding' },
+] as const;
+
+export function accesoLabel(id: string, lang: 'es' | 'en'): string {
+  const a = ACCESOS_COMUNIDAD.find((x) => x.id === id);
+  return a ? (lang === 'en' ? a.en : a.es) : id;
+}
+
+// Nivel de la comunidad en su version editable (config/niveles_club).
+export interface NivelClubItem {
+  id: string;
+  umbral: number;
+  es: string;
+  en: string;
+  accesos: string[];
+}
+
+// Mes actual como YYYY-MM (para el ranking del mes).
+export function mesActual(fecha?: Date): string {
+  const d = fecha ?? new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
 
 // Devuelve el nivel alcanzado según los puntos totales del usuario.
 export function nivelDesdePuntos(puntos: number): string {
@@ -267,6 +307,7 @@ export interface JuntaClubDoc {
   agenda?: { id: string; titulo: string; descripcion: string; responsable: string; duracionMin: number; oculto?: boolean }[];
   roles?: Record<string, string | null>; // RolJuntaId -> uid
   temaDefinido?: string; // tema del tutorial definido por el mentor de crecimiento
+  temaDinamica?: string; // tema de la dinámica empresarial (coordinador/mentor de dinámica)
   asistentes?: Record<string, boolean>; // uid -> confirmado
   creadoPor: string;
   creadoEn: string;
