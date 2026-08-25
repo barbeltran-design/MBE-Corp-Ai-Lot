@@ -111,6 +111,22 @@ async function main() {
   if (data.length === 0) throw new Error('La hoja no trae registros (verifica encabezados/permisos).');
 
   const OLD = JSON.parse(fs.readFileSync(OUT_PATH, 'utf8'));
+
+  // Guarda de seguridad: si la hoja trae muchos menos registros que el JSON
+  // actual, lo mas probable es un problema temporal de la hoja (permisos,
+  // pestana equivocada, borrado accidental) y NO una actualizacion legitima.
+  // Abortamos sin tocar el JSON en vez de sobrescribir con datos truncados.
+  // Umbral: se permite una caida de hasta 20% respecto al conteo anterior.
+  const UMBRAL_CAIDA = 0.20;
+  if (OLD.length > 0 && data.length < OLD.length * (1 - UMBRAL_CAIDA)) {
+    throw new Error(
+      `Caida sospechosa de registros: la hoja trae ${data.length} filas pero el JSON actual tiene ${OLD.length} ` +
+      `(caida de ${Math.round((1 - data.length / OLD.length) * 100)}%, umbral permitido ${UMBRAL_CAIDA * 100}%). ` +
+      `Se aborta el sync sin sobrescribir convocatorias-data.json. Verifica manualmente la hoja de Google ` +
+      '(permisos, pestana correcta, filas borradas por error) antes de reintentar.'
+    );
+  }
+
   const oldMap = new Map(OLD.map((c) => [norm(c.convocatoria), c]));
 
   const salida = data.map((r) => {

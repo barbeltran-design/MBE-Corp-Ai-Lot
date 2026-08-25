@@ -1,15 +1,752 @@
 [
   {
-    "convocatoria": "Fondo Seed IVPSM",
-    "tipo": "emprendimiento_operacion",
+    "convocatoria": "Fondo Ayni 2026 (FIMI)",
+    "tipo": "Fondo / Subvención",
     "ambito": "Internacional",
-    "ods": "",
-    "descripcion": "Fondo de inversión que apoya a startups de impacto social en etapas tempranas (pre‑seed y seed) en Latinoamérica, ofreciendo recursos, acompañamiento y conexiones para generar cambio sostenible.",
-    "requisitos": "Etapa pre‑seed o seed; Validación de mercado; Fundadores 100 % comprometidos a tiempo completo; Operar en Latinoamérica (excluyendo Brasil)",
-    "monto": "Tickets de US$100,000 a US$300,000 (valuaciones de hasta US$10M)",
-    "fecha_limite": "",
+    "ods": "ODS 5 Igualdad de género; ODS 10 Reducción de desigualdades",
+    "descripcion": "Subvenciones del Foro Internacional de Mujeres Indígenas (FIMI) para fortalecer proyectos que contribuyan al ejercicio de los derechos individuales y colectivos de las Mujeres Indígenas y al fortalecimiento de sus organizaciones y liderazgo.",
+    "requisitos": "Organizaciones de Mujeres Indígenas; comunidades o pueblos indígenas liderados por mujeres; asociaciones, grupos y redes; organizaciones mixtas con al menos 50% de la junta directiva y puestos clave ocupados por Mujeres Indígenas. Ser nuevas para el Fondo Ayni.",
+    "monto": "Hasta 50,000 USD",
+    "fecha_limite": "2026-06-30",
+    "estatus": "Abierta",
+    "liga": "https://www.lfs-ayni-fimi.com/",
+    "criterios": {
+      "alcance_geo": "internacional",
+      "estado": null,
+      "tipos_elegibles": [
+        "osc",
+        "comunidad_indigena"
+      ],
+      "ods_num": [
+        5,
+        10
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": "mujeres_indigenas"
+    }
+  },
+  {
+    "convocatoria": "WeXchange 2026 - Women STEMpreneurs Competition (BID Lab)",
+    "tipo": "Premio",
+    "ambito": "América Latina y el Caribe",
+    "ods": "ODS 5 Igualdad de género; ODS 8 Trabajo decente; ODS 9 Industria, innovación e infraestructura",
+    "descripcion": "Competencia regional del BID Lab (IDB Lab) que impulsa el acceso a capital de startups lideradas por mujeres en sectores STEM. Cinco finalistas presentan su pitch en el GET Forum (Quito, Ecuador, 5-7 de octubre de 2026) ante inversionistas del ecosistema regional.",
+    "requisitos": "Startups en etapa pre-semilla hasta Serie B que estén levantando capital, con al menos una mujer como fundadora o líder, en América Latina y el Caribe. Postulación en formulario en línea.",
+    "monto": "Por confirmar (acceso a inversión, visibilidad y mentoría; no es premio en efectivo fijo)",
+    "fecha_limite": "2026-06-30",
+    "estatus": "Abierta",
+    "liga": "https://bidlab.org/en/news/applications-open-2026-wexchange-women-stempreneurs-competition",
+    "criterios": {
+      "alcance_geo": "internacional",
+      "estado": null,
+      "tipos_elegibles": [
+        "empresa",
+        "emprendimiento_operacion"
+      ],
+      "ods_num": [
+        5,
+        8,
+        9
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": "mujeres"
+    }
+  },
+  {
+    "convocatoria": "LEGO Foundation Fellowship (SSRC)",
+    "tipo": "Beca / Fellowship",
+    "ambito": "Internacional",
+    "ods": "ODS 3 Salud y bienestar; ODS 4 Educación de calidad",
+    "descripcion": "Beca global de investigación de la Fundación LEGO, administrada por el Social Science Research Council (SSRC), para estudios sobre el desarrollo, aprendizaje y bienestar de la niñez. Hasta 10 becas.",
+    "requisitos": "Doctorado (PhD) obtenido entre 2016 y el 31/07/2026; estar empleado por una universidad o instituto de investigación que administre los fondos; propuesta alineada a los temas de la beca. Abierta a cualquier país (salvo sancionados por UE/EE.UU.).",
+    "monto": "Hasta 300,000 USD por 3 años",
+    "fecha_limite": "2026-07-31",
+    "estatus": "Abierta",
+    "liga": "https://www.ssrc.org/programs/the-lego-foundation-fellowship/application-details/",
+    "criterios": {
+      "alcance_geo": "internacional",
+      "estado": null,
+      "tipos_elegibles": [
+        "academia"
+      ],
+      "ods_num": [
+        3,
+        4
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "UVM Premio por el Desarrollo Social 2026",
+    "tipo": "Premio",
+    "ambito": "México (nacional)",
+    "ods": "ODS 1 Fin de la pobreza; ODS 4 Educación de calidad; ODS 10 Reducción de desigualdades; ODS 11 Comunidades sostenibles",
+    "descripcion": "Premio de la Universidad del Valle de México (UVM) que reconoce y otorga recursos a proyectos liderados por jóvenes mexicanos menores de 30 años que generan impacto social medible en sus comunidades. La categoría Liderazgo Sostenible apoya operaciones de programas con al menos un año de implementación.",
+    "requisitos": "Personas mexicanas menores de 30 años, fundadoras de proyectos con impacto social comprobable; para la categoría Liderazgo Sostenible se requiere al menos un año de implementación. Registro de la candidatura en el portal de la UVM.",
+    "monto": "Hasta 50,000 MXN (categoría Liderazgo Sostenible)",
+    "fecha_limite": "2026-08-02",
+    "estatus": "Abierta",
+    "liga": "https://responsabilidadsocial.net/uvm-premio-de-desarrollo-social-2026/",
+    "criterios": {
+      "alcance_geo": "mexico",
+      "estado": null,
+      "tipos_elegibles": [
+        "emprendimiento_operacion",
+        "emprendimiento_idea",
+        "persona_fisica",
+        "osc"
+      ],
+      "ods_num": [
+        1,
+        4,
+        10,
+        11
+      ],
+      "edad_min": null,
+      "edad_max": 30,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Premio Chihuahua Emprende 2026",
+    "tipo": "Premio",
+    "ambito": "México (Chihuahua)",
+    "ods": "ODS 8 Trabajo decente; ODS 12 Producción responsable; ODS 13 Acción por el clima",
+    "descripcion": "Premio estatal al emprendimiento con cinco categorías: Visionario, Tradicional, Mujer Emprendedora, Emprendimiento Sostenible y Emprendimiento de Impacto Social.",
+    "requisitos": "Originarios del estado de Chihuahua o con al menos un año de residencia comprobable; ser fundadores o socios mayoritarios; negocio con máximo cinco años de operación. Registro electrónico vía formulario.",
+    "monto": "Bolsa total 750,000 MXN (100,000 1er lugar y 50,000 2do lugar por categoría)",
+    "fecha_limite": "2026-08-31",
+    "estatus": "Abierta",
+    "liga": "https://www.chihuahua.com.mx/emprende/",
+    "criterios": {
+      "alcance_geo": "estatal",
+      "estado": "Chihuahua",
+      "tipos_elegibles": [
+        "empresa",
+        "emprendimiento_operacion",
+        "persona_fisica"
+      ],
+      "ods_num": [
+        8,
+        12,
+        13
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": 5,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Fundación FUNO - Donativos OSC",
+    "tipo": "Apoyo",
+    "ambito": "Nacional (México)",
+    "ods": "ODS 3, 4, 8, 11, 13 (salud, educación, empleo, medio ambiente, infraestructura sostenible)",
+    "descripcion": "Donativos a OSC donatarias autorizadas con proyectos en salud, educación, empleo, medio ambiente e infraestructura sostenible.",
+    "requisitos": "OSC donataria autorizada; proyecto alineado a los ejes; documentación solicitada.",
+    "monto": "Por confirmar",
+    "fecha_limite": "2026-09-30",
+    "estatus": "Abierta",
+    "liga": "https://www.cecani.org/home/announcement/convocatorias-permanentes-de-apoyo-economico-para-osc",
+    "criterios": {
+      "alcance_geo": "mexico",
+      "estado": null,
+      "tipos_elegibles": [],
+      "ods_num": [
+        3,
+        4,
+        8,
+        11,
+        13
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Echoing Green Fellowship 2026",
+    "tipo": "Beca / Fellowship",
+    "ambito": "Internacional",
+    "ods": "Varios (impacto social)",
+    "descripcion": "Beca para emprendedores sociales en etapa temprana: estipendio de 100,000 USD por 18 meses, formación de liderazgo, recursos de bienestar, servicios pro-bono y acceso a una red global.",
+    "requisitos": "Mayores de 18 años (al 1 de junio de 2026); emprendimiento en etapa temprana (idea u operación, típicamente menos de 5 años) que necesite financiamiento y desarrollo organizacional.",
+    "monto": "100,000 USD por 18 meses",
+    "fecha_limite": "2026-10-08",
+    "estatus": "Abierta",
+    "liga": "https://echoinggreen.org/fellowship/",
+    "criterios": {
+      "alcance_geo": "internacional",
+      "estado": null,
+      "tipos_elegibles": [
+        "emprendimiento_operacion",
+        "emprendimiento_idea",
+        "empresa",
+        "osc"
+      ],
+      "ods_num": [],
+      "edad_min": 18,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": 5,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Emprende Tradicional 2026 (RETYS, Baja California)",
+    "tipo": "Apoyo",
+    "ambito": "México (estatal: Baja California)",
+    "ods": "ODS 8 Trabajo decente y crecimiento económico",
+    "descripcion": "Programa de la Red Estatal de Tianguis y Sociedad (RETYS) del Gobierno de Baja California que otorga financiamiento a micronegocios y emprendimientos tradicionales del estado para fortalecer su operación y crecimiento.",
+    "requisitos": "Emprendedores y micronegocios con residencia y operación en Baja California. Requisitos y registro en el portal estatal RETYS.",
+    "monto": "Hasta 200,000 MXN",
+    "fecha_limite": "2026-11-12",
+    "estatus": "Abierta",
+    "liga": "https://retys.bajacalifornia.gob.mx/Portal/TyS/252?enLinea=True",
+    "criterios": {
+      "alcance_geo": "estatal",
+      "estado": "Baja California",
+      "tipos_elegibles": [
+        "emprendimiento_operacion",
+        "empresa",
+        "persona_fisica"
+      ],
+      "ods_num": [
+        8
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "BID Lab (IDB Lab) - Convocatoria abierta",
+    "tipo": "Fondo / Capital",
+    "ambito": "Internacional (América Latina y el Caribe)",
+    "ods": "Varios (inclusión social, acción ambiental, productividad)",
+    "descripcion": "Laboratorio de innovación y emprendimiento del Grupo BID. Busca startups con soluciones innovadoras de impacto social y ambiental, con tracción demostrable y equipos sólidos; también fondos de capital enfocados en la región.",
+    "requisitos": "Startups con tracción demostrable y equipos sólidos. Revisar formulario, criterios de selección y bases en el sitio oficial del BID.",
+    "monto": "Variable (capital / financiamiento)",
+    "fecha_limite": "Permanente / Abierta",
     "estatus": "Abierta (permanente)",
-    "liga": "https://ivpsm.org.mx/seed/",
+    "liga": "https://www.iadb.org/en/how-we-can-work-together/calls-proposals",
+    "criterios": {
+      "alcance_geo": "internacional",
+      "estado": null,
+      "tipos_elegibles": [
+        "empresa",
+        "emprendimiento_operacion"
+      ],
+      "ods_num": [],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Corporativa de Fundaciones (CF México)",
+    "tipo": "Fondo",
+    "ambito": "México",
+    "ods": "Varios (transformación social, calidad de vida)",
+    "descripcion": "Desarrolla alianzas para crear fondos de inversión social en apoyo a Organizaciones de la Sociedad Civil, financiando proyectos de transformación social y mejora de la calidad de vida de personas vulnerables.",
+    "requisitos": "Organizaciones de la Sociedad Civil. Requisitos específicos según cada convocatoria publicada en el sitio.",
+    "monto": "Variable según convocatoria",
+    "fecha_limite": "Variable (revisar sitio)",
+    "estatus": "Variable",
+    "liga": "https://www.cf.org.mx/convocatorias",
+    "criterios": {
+      "alcance_geo": "mexico",
+      "estado": null,
+      "tipos_elegibles": [
+        "osc"
+      ],
+      "ods_num": [],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Equator Prize (PNUD / Equator Initiative)",
+    "tipo": "Premio",
+    "ambito": "Internacional",
+    "ods": "ODS 13 Acción por el clima; ODS 14 Vida submarina; ODS 15 Vida de ecosistemas terrestres",
+    "descripcion": "Premio del PNUD a soluciones basadas en la naturaleza lideradas por pueblos indígenas y comunidades locales que promueven el desarrollo sostenible y la resiliencia ecológica. 10 ganadores anuales.",
+    "requisitos": "Grupo comunitario en zona rural en país apoyado por el PNUD, o comunidad de Pueblos Indígenas en cualquier país operando en zona rural. Convocatoria anual (suele abrir a inicios de año).",
+    "monto": "10,000 USD por ganador",
+    "fecha_limite": "Anual (verificar ciclo 2026 en el sitio)",
+    "estatus": "Anual (por confirmar)",
+    "liga": "https://www.equatorinitiative.org/equator-prize/",
+    "criterios": {
+      "alcance_geo": "internacional",
+      "estado": null,
+      "tipos_elegibles": [
+        "comunidad_indigena",
+        "osc"
+      ],
+      "ods_num": [
+        13,
+        14,
+        15
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Premio Nacional de Calidad (IFC) 2025-2026",
+    "tipo": "Premio / Reconocimiento",
+    "ambito": "México",
+    "ods": "ODS 8 Trabajo decente; ODS 9 Industria e innovación; ODS 12 Producción responsable",
+    "descripcion": "Máxima distinción al alto desempeño y la cultura empresarial en México, impulsada por el Consejo Coordinador Empresarial, el Consejo de la Comunicación y el Instituto para el Fomento a la Calidad. Seis categorías (empresas grandes, medianas y pequeñas, instituciones educativas, de salud y organizaciones no lucrativas).",
+    "requisitos": "Empresas e instituciones mexicanas. Proceso de evaluación basado en el Modelo Nacional para la Competitividad.",
+    "monto": "Reconocimiento (no monetario)",
+    "fecha_limite": "Anual (edición 2025-2026 cerrada; verificar próxima)",
+    "estatus": "Anual (por confirmar)",
+    "liga": "https://ifc.org.mx/premio-nacional-de-calidad/",
+    "criterios": {
+      "alcance_geo": "mexico",
+      "estado": null,
+      "tipos_elegibles": [
+        "empresa",
+        "osc",
+        "academia"
+      ],
+      "ods_num": [
+        8,
+        9,
+        12
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Laboratorios Sophia - Inversión Social (vía CF México)",
+    "tipo": "Fondo",
+    "ambito": "México",
+    "ods": "ODS 3 Salud y bienestar; impacto social comunitario",
+    "descripcion": "Convocatoria de Inversión Social de Laboratorios Sophia, operada por Corporativa de Fundaciones (CF México), dirigida a OSC con proyectos de impacto. Bolsa anual de 10 MDP (3 MDP para Jalisco y 7 MDP para el resto del país).",
+    "requisitos": "Organizaciones de la Sociedad Civil legalmente constituidas con proyectos de impacto social. Revisar bases y fechas vigentes en CF México / Difusión con Causa.",
+    "monto": "Bolsa total 10,000,000 MXN (3 MDP Jalisco + 7 MDP resto del país)",
+    "fecha_limite": "Por confirmar (anual)",
+    "estatus": "Anual (por confirmar)",
+    "liga": "https://www.cf.org.mx/convocatorias",
+    "criterios": {
+      "alcance_geo": "mexico",
+      "estado": null,
+      "tipos_elegibles": [
+        "osc"
+      ],
+      "ods_num": [
+        3
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Alaya Capital (Fondo de Venture Capital de impacto)",
+    "tipo": "Inversión / Capital (VC)",
+    "ambito": "Internacional (América Latina)",
+    "ods": "Varios (criterios ESG / ODS)",
+    "descripcion": "Fondo de venture capital early-stage para startups tecnológicas latinoamericanas con impacto en los ODS (criterios ESG). Foco en fintech B2B/SaaS, futuro del trabajo y climatech. No es una convocatoria con fecha: la postulación está siempre abierta en su sitio.",
+    "requisitos": "Startup tecnológica con equipo sólido y, preferentemente, MVP probado (no exige ingresos previos). Postulación en línea, revisión inicial, due diligence y term sheet. Rondas Seed a Serie A.",
+    "monto": "Tickets de 1 a 5 millones USD (inversión, no donativo)",
+    "fecha_limite": "Permanente / Postulación abierta",
+    "estatus": "Abierta (permanente)",
+    "liga": "https://alaya-capital.com/apply/",
+    "criterios": {
+      "alcance_geo": "internacional",
+      "estado": null,
+      "tipos_elegibles": [
+        "empresa",
+        "emprendimiento_operacion"
+      ],
+      "ods_num": [],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Programa de Pequeñas Donaciones (PPD/GEF-PNUD) México",
+    "tipo": "Fondo / Subvención",
+    "ambito": "México (sur-sureste)",
+    "ods": "ODS 13, 14, 15 (medio ambiente y comunidades)",
+    "descripcion": "Apoyo financiero y técnico del Fondo para el Medio Ambiente Mundial (GEF), implementado por el PNUD, a proyectos de conservación ambiental y mejora de vida de comunidades. Convocatorias temáticas (ICCA, CoFSA, etc.).",
+    "requisitos": "Comunidades y OSC en los estados de Campeche, Chiapas, Oaxaca, Puebla, Quintana Roo, Tabasco y Yucatán. Proyectos de hasta 24 meses.",
+    "monto": "Hasta 50,000 USD por proyecto",
+    "fecha_limite": "Por confirmar (varias convocatorias al año)",
+    "estatus": "Variable",
+    "liga": "https://www.ppdmexico.org/convocatorias",
+    "criterios": {
+      "alcance_geo": "mexico",
+      "estado": null,
+      "tipos_elegibles": [
+        "osc",
+        "comunidad_indigena"
+      ],
+      "ods_num": [
+        13,
+        14,
+        15
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Fondo Mexicano para la Conservación de la Naturaleza (FMCN)",
+    "tipo": "Fondo",
+    "ambito": "México",
+    "ods": "ODS 6, 14, 15 (conservación)",
+    "descripcion": "Institución privada que financia y fortalece acciones estratégicas de conservación del capital natural de México mediante convocatorias de apoyo a proyectos y programas operativos anuales.",
+    "requisitos": "OSC, academia e instituciones con proyectos de conservación. Revisar convocatorias abiertas en el portal de postulaciones.",
+    "monto": "Variable según convocatoria",
+    "fecha_limite": "Variable (revisar portal)",
+    "estatus": "Variable",
+    "liga": "https://fmcn-convocatorias.vform.io/",
+    "criterios": {
+      "alcance_geo": "mexico",
+      "estado": null,
+      "tipos_elegibles": [
+        "osc",
+        "academia"
+      ],
+      "ods_num": [
+        6,
+        14,
+        15
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Ashoka Fellowship",
+    "tipo": "Beca / Fellowship",
+    "ambito": "Internacional (México, Centroamérica y el Caribe)",
+    "ods": "Varios (emprendimiento social)",
+    "descripcion": "Red global de emprendedores sociales. Otorga un estipendio de manutención por hasta 3 años, asesoría, y acceso de por vida a una red mundial, para que la persona se dedique de tiempo completo a su innovación social.",
+    "requisitos": "Persona fundadora o líder de una innovación social con integridad ética, solución con avances significativos y lista para escalar. Trabajo de tiempo completo en la iniciativa. Selección de 8-10 por año en la región.",
+    "monto": "Estipendio de manutención por hasta 3 años",
+    "fecha_limite": "Permanente / Postulación y nominación abiertas",
+    "estatus": "Abierta (permanente)",
+    "liga": "https://www.ashoka.org/es-mx/programa/venture-y-fellowship",
+    "criterios": {
+      "alcance_geo": "internacional",
+      "estado": null,
+      "tipos_elegibles": [
+        "persona_fisica",
+        "emprendimiento_operacion"
+      ],
+      "ods_num": [],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Inter-American Foundation (IAF) - Donativos comunitarios",
+    "tipo": "Fondo",
+    "ambito": "Internacional (América Latina y el Caribe)",
+    "ods": "Varios (desarrollo comunitario)",
+    "descripcion": "Agencia del gobierno de EE.UU. que financia proyectos de desarrollo liderados por la comunidad: inclusión económica, seguridad alimentaria, gobernanza democrática y conservación comunitaria. Recepción de propuestas todo el año.",
+    "requisitos": "Grupos de base y OSC sin fines de lucro basadas en países de ALC (incluye México). Se requiere aporte propio en efectivo o en especie. Propuestas en español, portugués, inglés, francés o creole.",
+    "monto": "De 25,000 a 400,000 USD (proyectos de 1 a 4 años)",
+    "fecha_limite": "Todo el año (revisión continua)",
+    "estatus": "Abierta (permanente)",
+    "liga": "https://iaf.gov/apply-for-grant/",
+    "criterios": {
+      "alcance_geo": "internacional",
+      "estado": null,
+      "tipos_elegibles": [
+        "osc",
+        "comunidad_indigena"
+      ],
+      "ods_num": [],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Roddenberry Catalyst Fund",
+    "tipo": "Fondo",
+    "ambito": "Internacional",
+    "ods": "Varios (justicia climática, equidad, impacto social)",
+    "descripcion": "Financiamiento no restringido a emprendedores sociales en etapa temprana con soluciones audaces y transformadoras. Aplicación continua (actualmente en pausa temporal; conviene monitorear su reapertura).",
+    "requisitos": "Personas, equipos, OSC, empresas sociales o con fines de lucro con proyectos innovadores en etapa temprana.",
+    "monto": "De 2,500 a 15,000 USD",
+    "fecha_limite": "Rolling (por confirmar reapertura)",
+    "estatus": "Por confirmar",
+    "liga": "https://roddenberryfoundation.org/our-work/catalyst-fund/",
+    "criterios": {
+      "alcance_geo": "internacional",
+      "estado": null,
+      "tipos_elegibles": [
+        "osc",
+        "empresa",
+        "emprendimiento_operacion",
+        "persona_fisica"
+      ],
+      "ods_num": [
+        13
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "EUROCLIMA+ (Unión Europea - América Latina)",
+    "tipo": "Fondo / Programa",
+    "ambito": "Internacional (América Latina)",
+    "ods": "ODS 7, 12, 13 (clima y transición verde)",
+    "descripcion": "Programa de la Unión Europea para el desarrollo sostenible y resiliente al clima en 18 países de América Latina. Prioridades: economía circular y transición energética. Financia proyectos vía convocatorias temáticas.",
+    "requisitos": "Gobiernos, OSC, academia y entidades con proyectos climáticos en países elegibles de ALC. Revisar convocatorias vigentes.",
+    "monto": "Variable según convocatoria",
+    "fecha_limite": "Variable / por convocatoria",
+    "estatus": "Variable",
+    "liga": "https://www.euroclima.org/",
+    "criterios": {
+      "alcance_geo": "internacional",
+      "estado": null,
+      "tipos_elegibles": [
+        "osc",
+        "academia",
+        "empresa"
+      ],
+      "ods_num": [
+        7,
+        12,
+        13
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Global Innovation Fund (GIF)",
+    "tipo": "Fondo / Inversión",
+    "ambito": "Internacional",
+    "ods": "Varios (innovación para el desarrollo)",
+    "descripcion": "Fondo que invierte en innovaciones con potencial de mejorar la vida de personas en situación de pobreza en países en desarrollo. Combina donativos e inversión por etapas (piloto, prueba, escalamiento). Aplicación continua.",
+    "requisitos": "Organizaciones, empresas o emprendimientos con una innovación y evidencia de impacto, dispuestos a medir resultados. Postulación en línea durante todo el año.",
+    "monto": "Desde 50,000 USD (piloto) hasta varios millones (escalamiento)",
+    "fecha_limite": "Permanente / Abierta",
+    "estatus": "Abierta (permanente)",
+    "liga": "https://www.globalinnovation.fund/",
+    "criterios": {
+      "alcance_geo": "internacional",
+      "estado": null,
+      "tipos_elegibles": [
+        "empresa",
+        "emprendimiento_operacion",
+        "osc"
+      ],
+      "ods_num": [],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "New Ventures - Adobe Capital",
+    "tipo": "Inversión / Capital (VC)",
+    "ambito": "Internacional (América Latina, sede en México)",
+    "ods": "Varios (impacto medible)",
+    "descripcion": "Firma de impacto que combina aceleración y financiamiento (capital y deuda vía Viwala) para empresas sociales y ambientales en etapa temprana en sectores como AgTech, agua y saneamiento, energía limpia, reciclaje, salud y educación.",
+    "requisitos": "Empresas de impacto en etapa temprana o temprana-avanzada en América Latina, con impacto social/ambiental medible. (Es inversión, no donativo.)",
+    "monto": "Tickets aprox. 300,000 a 500,000 USD (capital/deuda)",
+    "fecha_limite": "Permanente / Postulación abierta",
+    "estatus": "Abierta (permanente)",
+    "liga": "http://adobecapital.nvgroup.org/",
+    "criterios": {
+      "alcance_geo": "internacional",
+      "estado": null,
+      "tipos_elegibles": [
+        "empresa",
+        "emprendimiento_operacion"
+      ],
+      "ods_num": [],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Avery Dennison Foundation - InvEnt / Community Grants",
+    "tipo": "Fondo",
+    "ambito": "Internacional",
+    "ods": "ODS 4 Educación de calidad; ODS 8 Trabajo decente; ODS 13 Acción por el clima",
+    "descripcion": "Fondo de la Fundación Avery Dennison que apoya a organizaciones sin fines de lucro y ONG que trabajan en acceso a la educación, sostenibilidad ambiental y medios de vida seguros en comunidades con disparidades significativas fuera de Estados Unidos. Donativos otorgados de forma trimestral (deadline continuo/rolling).",
+    "requisitos": "Organizaciones sin fines de lucro / ONG fuera de EE. UU. en comunidades con disparidades significativas, con proyectos en educación, sostenibilidad ambiental o medios de vida. Revisión continua trimestral.",
+    "monto": "USD 50,000 a 100,000 (típico)",
+    "fecha_limite": "Permanente / Revisión trimestral (rolling)",
+    "estatus": "Abierta (permanente)",
+    "liga": "https://www.averydennison.com/en/home/about-us/foundation.html",
+    "criterios": {
+      "alcance_geo": "internacional",
+      "estado": null,
+      "tipos_elegibles": [
+        "osc"
+      ],
+      "ods_num": [
+        4,
+        8,
+        13
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "FEMSA Donativos (OSC)",
+    "tipo": "Apoyo",
+    "ambito": "Nacional (México)",
+    "ods": "ODS 3 (Salud), ODS 4 (Educación), ODS 13/15 (Medio ambiente)",
+    "descripcion": "Donativos a OSC e instituciones que generan impacto positivo en asistencia social, salud y deporte, educación y medio ambiente.",
+    "requisitos": "Ser OSC/institución (donataria autorizada); presentar proyecto y documentación vía portal.",
+    "monto": "Por confirmar (variable)",
+    "fecha_limite": "Todo el año (vigencia permanente)",
+    "estatus": "Abierta (permanente)",
+    "liga": "https://donativos.femsa.com/",
+    "criterios": {
+      "alcance_geo": "mexico",
+      "estado": null,
+      "tipos_elegibles": [],
+      "ods_num": [
+        3,
+        4,
+        13
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "National Geographic Society - Grants Program",
+    "tipo": "Fondo",
+    "ambito": "Internacional",
+    "ods": "ODS 13, 14, 15 (clima y conservación); educación y ciencia",
+    "descripcion": "Financiamiento a exploradores y proyectos en conservación, educación, tecnología, ciencia y narrativa. Nivel I (nuevos exploradores) y Nivel II (establecidos).",
+    "requisitos": "Propuesta de proyecto (1 año para Nivel I); líder de proyecto; alineación a focos de la sociedad. Aplica en inglés.",
+    "monto": "Hasta USD 20,000 (Nivel I) / hasta USD 100,000 (Nivel II)",
+    "fecha_limite": "Por confirmar (varias rondas al año)",
+    "estatus": "Abierta (rondas periódicas)",
+    "liga": "https://www.nationalgeographic.org/society/grants-and-investments/",
+    "criterios": {
+      "alcance_geo": "internacional",
+      "estado": null,
+      "tipos_elegibles": [],
+      "ods_num": [
+        13,
+        14,
+        15
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Global Greengrants Fund",
+    "tipo": "Fondo",
+    "ambito": "Internacional",
+    "ods": "ODS 13, 15 (justicia ambiental y sostenibilidad)",
+    "descripcion": "Pequeñas donaciones a grupos de base que trabajan en justicia ambiental y sostenibilidad a nivel comunitario.",
+    "requisitos": "Grupos comunitarios de base; proyecto ambiental. Postulación con apoyo de la red de asesores regionales.",
+    "monto": "USD 500 a USD 5,000 (aprox.)",
+    "fecha_limite": "Rolling (ventanas periódicas)",
+    "estatus": "Abierta (permanente)",
+    "liga": "https://www.greengrants.org/",
+    "criterios": {
+      "alcance_geo": "internacional",
+      "estado": null,
+      "tipos_elegibles": [],
+      "ods_num": [
+        13,
+        15
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "NESsT (capital de deuda para PyMEs de impacto)",
+    "tipo": "Inversión-Capital",
+    "ambito": "Internacional (LatAm)",
+    "ods": "Multiple (empleo digno, ingresos dignos, sostenibilidad)",
+    "descripcion": "Capital de deuda y acompañamiento para PyMEs de impacto que crean empleo de calidad para poblaciones de bajos ingresos.",
+    "requisitos": "Empresa/empresa social con modelo de impacto y operación; medición de impacto. Postulación continua.",
+    "monto": "Préstamos de USD 50,000 a USD 500,000 (aprox.)",
+    "fecha_limite": "Rolling (postulación abierta)",
+    "estatus": "Abierta (permanente)",
+    "liga": "https://www.nesst.org/",
     "criterios": {
       "alcance_geo": "internacional",
       "estado": null,
@@ -23,21 +760,676 @@
     }
   },
   {
-    "convocatoria": "Tesis de inversión",
-    "tipo": "empresa",
-    "ambito": "Latam",
-    "ods": "",
-    "descripcion": "Programa de inversión del IVPSM que apoya a emprendedores con modelos disruptivos, escalables y sustentables que impacten positivamente a poblaciones vulnerables en México y Latinoamérica. Ofrece capital o cuasicapital en rondas Serie A, junto con asesoría estratégica y apoyo en medición de impacto.",
-    "requisitos": "Empresa con fines de lucro; Modelo de negocio innovador, escalable y replicable; Modelo financieramente autosustentable; Tracción y demanda probada del producto o servicio; Equipo con alto sentido de ética, experiencia relevante y compromiso social; Etapa de crecimiento con product‑market fit y ventas probadas (Serie A); Ticket entre USD 1M y 3M; Ubicación en México o Latinoamérica con estrategia de expansión a México",
-    "monto": "USD $1,000,000 - $3,000,000 en capital o cuasicapital",
-    "fecha_limite": "",
+    "convocatoria": "Impacta VC / Impact Ventures PSM (capital semilla de impacto)",
+    "tipo": "Inversión-Capital",
+    "ambito": "Internacional (LatAm)",
+    "ods": "Multiple (100% de inversiones alineadas a ODS)",
+    "descripcion": "Fondo de venture capital que invierte en startups de impacto en etapa temprana en América Latina, con medición de impacto rigurosa.",
+    "requisitos": "Startup de impacto en etapa temprana (early-revenue, prototipo o escalamiento); equipo; alineación y medición de impacto ODS.",
+    "monto": "Inversión de capital (ticket variable)",
+    "fecha_limite": "Rolling (postulación abierta)",
     "estatus": "Abierta (permanente)",
-    "liga": "https://ivpsm.org.mx/tesis-de-inversion/",
+    "liga": "https://www.impacta.vc/",
     "criterios": {
-      "alcance_geo": null,
+      "alcance_geo": "internacional",
       "estado": null,
       "tipos_elegibles": [],
       "ods_num": [],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "IMPAQTO Capital (capital flexible de impacto)",
+    "tipo": "Inversión-Capital",
+    "ambito": "Internacional (LatAm)",
+    "ods": "Multiple (retos sociales y ambientales)",
+    "descripcion": "Fondo que usa capital flexible para apoyar el crecimiento de empresas innovadoras de etapa temprana que atienden desafíos sociales y ambientales.",
+    "requisitos": "Empresa de etapa temprana con modelo de impacto social/ambiental; medición de impacto.",
+    "monto": "Capital flexible (ticket variable)",
+    "fecha_limite": "Rolling (postulación abierta)",
+    "estatus": "Abierta (permanente)",
+    "liga": "https://impaqtocapital.com/",
+    "criterios": {
+      "alcance_geo": "internacional",
+      "estado": null,
+      "tipos_elegibles": [],
+      "ods_num": [],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Fundación BBVA México - Donativos",
+    "tipo": "Apoyo",
+    "ambito": "Nacional (México)",
+    "ods": "ODS 4 (Educación) y otros ejes sociales",
+    "descripcion": "Donativos a OSC con vigencia todo el año; envío de documentación al correo de la fundación.",
+    "requisitos": "OSC donataria autorizada; documentación solicitada a donativos.fundacion@bbva.com.",
+    "monto": "Por confirmar",
+    "fecha_limite": "Todo el año (vigencia permanente)",
+    "estatus": "Abierta (permanente)",
+    "liga": "https://www.fundacionbbva.mx/",
+    "criterios": {
+      "alcance_geo": "mexico",
+      "estado": null,
+      "tipos_elegibles": [],
+      "ods_num": [
+        4
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Fondo DemocráTICa 2026",
+    "tipo": "Fondo / Subvención",
+    "ambito": "Internacional (incluye México)",
+    "ods": "ODS 16 Paz, justicia e instituciones; ODS 10 Reducción de desigualdades",
+    "descripcion": "Subvenciones para proyectos de democracia digital inclusiva en América Latina.",
+    "requisitos": "Organizaciones en Argentina, Colombia y México, y entidades sin fines de lucro en Brasil, Bolivia, Colombia, Costa Rica, Ecuador, El Salvador, Guatemala, Honduras, México, Panamá, Paraguay y Perú.",
+    "monto": "Hasta 3,000 USD por proyecto",
+    "fecha_limite": "Por confirmar (revisar fuente)",
+    "estatus": "Por confirmar",
+    "liga": "https://www.gestionandote.org/fondo-democratica-2026-subvenciones-hasta-usd-3000/",
+    "criterios": {
+      "alcance_geo": "internacional",
+      "estado": null,
+      "tipos_elegibles": [],
+      "ods_num": [
+        10,
+        16
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Unión Europea - Convocatorias para la sociedad civil en México (EEAS)",
+    "tipo": "Fondo / Subvención",
+    "ambito": "México",
+    "ods": "ODS 16 Paz, justicia e instituciones; derechos humanos",
+    "descripcion": "Convocatorias de propuestas de la Delegación de la Unión Europea en México para organizaciones de la sociedad civil (programas temáticos de Derechos Humanos y Democracia, incidencia en políticas públicas, ODS).",
+    "requisitos": "Organizaciones de la sociedad civil en México. Requisitos y montos según cada convocatoria temática vigente.",
+    "monto": "Variable según convocatoria",
+    "fecha_limite": "Variable (revisar convocatorias vigentes)",
+    "estatus": "Variable",
+    "liga": "https://www.eeas.europa.eu/eeas/subvenciones_es",
+    "criterios": {
+      "alcance_geo": "mexico",
+      "estado": null,
+      "tipos_elegibles": [],
+      "ods_num": [
+        16
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "EMERGENTE 2026 (Impact Hub CDMX + Fomento Social Banamex)",
+    "tipo": "Apoyo",
+    "ambito": "México (nacional)",
+    "ods": "ODS 8 Trabajo decente; ODS 9 Industria, innovación e infraestructura; ODS 11 Comunidades sostenibles",
+    "descripcion": "Programa de Impact Hub Ciudad de México y Fomento Social Banamex que identifica, fortalece y escala emprendimientos sociales de las industrias creativas (diseño, servicios creativos, innovación y tecnologías). Selecciona hasta 90 proyectos con bootcamps regionales; 10 acceden a fortalecimiento en CDMX y los 2 más sobresalientes a apoyo económico.",
+    "requisitos": "Personas mayores de edad con residencia en México que hayan fundado, cofundado o dirijan emprendimientos de industrias creativas con impacto social a través de su modelo, procesos o productos.",
+    "monto": "150,000 MXN (a los 2 proyectos más destacados) + mentoría y vinculación",
+    "fecha_limite": "2026-01-31",
+    "estatus": "Cerrada (revisar próxima edición)",
+    "liga": "https://mexicocity.impacthub.net/emergente/",
+    "criterios": {
+      "alcance_geo": "mexico",
+      "estado": null,
+      "tipos_elegibles": [
+        "emprendimiento_operacion",
+        "emprendimiento_idea",
+        "empresa",
+        "persona_fisica"
+      ],
+      "ods_num": [
+        8,
+        9,
+        11
+      ],
+      "edad_min": 18,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Fondo Semillas - Convocatoria de Financiamiento 2026-2027",
+    "tipo": "Fondo",
+    "ambito": "Nacional (México)",
+    "ods": "ODS 5 (Igualdad de género); justicia social y derechos",
+    "descripcion": "Donativos a grupos y organizaciones de mujeres, personas trans y/o intersex que trabajan por la autonomía, la justicia social y la igualdad de derechos.",
+    "requisitos": "Ser grupo/organización de mujeres, personas trans o intersex; propuesta de proyecto (18 meses); documentación de la organización.",
+    "monto": "$600,000 a $1,200,000 MXN (por 18 meses)",
+    "fecha_limite": "2026-02-27",
+    "estatus": "Cerrada (revisar próxima edición)",
+    "liga": "https://semillas.org.mx/",
+    "criterios": {
+      "alcance_geo": "mexico",
+      "estado": null,
+      "tipos_elegibles": [],
+      "ods_num": [
+        5
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Social Skin 2026 (8a edición)",
+    "tipo": "Premio",
+    "ambito": "Internacional (Colombia, Centroamérica y México)",
+    "ods": "Varios (innovación social y ambiental)",
+    "descripcion": "Premio multilatino de innovación social de Davivienda y Seguros Bolívar. Incluye apoyo económico, mentorías estratégicas y formación gratuita en Social Skin Academy.",
+    "requisitos": "Proyecto de innovación social o ambiental en operación en Colombia, Centroamérica o México; máximo 32 años de edad; proyectos con mínimo dos integrantes. Inscripción gratuita.",
+    "monto": "Hasta 12,000 USD + mentorías",
+    "fecha_limite": "2026-03-23",
+    "estatus": "Cerrada (revisar próxima edición)",
+    "liga": "https://www.socialskin.com/",
+    "criterios": {
+      "alcance_geo": "internacional",
+      "estado": null,
+      "tipos_elegibles": [
+        "emprendimiento_operacion",
+        "empresa"
+      ],
+      "ods_num": [],
+      "edad_min": null,
+      "edad_max": 32,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Acelera el Empleo (Fundación MetLife México + Irrazonables)",
+    "tipo": "Apoyo",
+    "ambito": "Regional (sureste de México)",
+    "ods": "ODS 8 (Trabajo decente y crecimiento económico); ODS 10 (Reducción de desigualdades)",
+    "descripcion": "Programa de aceleración para empresas en crecimiento que generan empleo digno, con foco en Chiapas, Oaxaca, Veracruz, Campeche, Tabasco, Yucatán y Quintana Roo.",
+    "requisitos": "Empresa con más de un año de operación, modelo validado y generación activa de empleo (mujeres, personas indígenas, afrodescendientes, campo, discapacidad, juventudes, adultos mayores).",
+    "monto": "Paquete de aceleración valuado en más de $500,000 MXN (sin costo)",
+    "fecha_limite": "2026-03-29",
+    "estatus": "Cerrada (revisar próxima edición)",
+    "liga": "https://aceleraelempleo.com/",
+    "criterios": {
+      "alcance_geo": "mexico",
+      "estado": null,
+      "tipos_elegibles": [],
+      "ods_num": [
+        8,
+        10
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "EU-LAC Social Accelerator - Subvenciones para innovación social",
+    "tipo": "Fondo / Subvención",
+    "ambito": "Internacional (América Latina)",
+    "ods": "ODS 1 Fin de la pobreza; ODS 10 Reducción de desigualdades",
+    "descripcion": "Convocatoria de financiamiento para iniciativas de innovación social que ayuden a reducir la pobreza, la exclusión social y las desigualdades estructurales en América Latina.",
+    "requisitos": "Organizaciones y emprendimientos sociales en América Latina con proyectos de innovación social. Revisar bases en la fuente.",
+    "monto": "Por confirmar (financiamiento + aceleración)",
+    "fecha_limite": "2026-04-08",
+    "estatus": "Cerrada (revisar próxima edición)",
+    "liga": "https://www.gestionandote.org/subvenciones-para-innovacion-social-eu-lac-social-accelerator/",
+    "criterios": {
+      "alcance_geo": "internacional",
+      "estado": null,
+      "tipos_elegibles": [],
+      "ods_num": [
+        1,
+        10
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "FECHAC - Emprende por un Cambio Social (9a edición)",
+    "tipo": "Premio / Apoyo",
+    "ambito": "México (Chihuahua)",
+    "ods": "ODS 8 Trabajo decente; ODS 9 Industria e innovación; ODS 10 Reducción de desigualdades",
+    "descripcion": "Programa de FECHAC para impulsar proyectos de emprendimiento social. Cuatro categorías: Visionarios (idea), Activos (en operación), Zona Serrana (Sierra Tarahumara) y Startups en Tecnología.",
+    "requisitos": "Personas residentes en el estado de Chihuahua interesadas en desarrollar proyectos con impacto social. Registro en el sitio del programa.",
+    "monto": "Apoyos en especie: 100,000 / 70,000 / 50,000 MXN; 12 proyectos premiados",
+    "fecha_limite": "2026-04-12",
+    "estatus": "Cerrada (revisar próxima edición)",
+    "liga": "https://fechac.org.mx/recurso-convocatorias",
+    "criterios": {
+      "alcance_geo": "estatal",
+      "estado": "Chihuahua",
+      "tipos_elegibles": [
+        "emprendimiento_idea",
+        "emprendimiento_operacion",
+        "persona_fisica"
+      ],
+      "ods_num": [
+        8,
+        9,
+        10
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Premio Eugenio Garza Sada 2026 (FEMSA - Tec de Monterrey)",
+    "tipo": "Premio",
+    "ambito": "México",
+    "ods": "Varios (impacto social)",
+    "descripcion": "Reconocimiento a iniciativas de impacto social en México en las categorías Liderazgo empresarial humanista, Emprendimiento social e Innovación social estudiantil.",
+    "requisitos": "Líderes sociales y empresariales, emprendimientos sociales y estudiantes con proyectos de impacto en México. Postulación en línea.",
+    "monto": "Reconocimiento y estímulo (ver bases)",
+    "fecha_limite": "2026-04-16",
+    "estatus": "Cerrada (revisar próxima edición)",
+    "liga": "https://premioeugeniogarzasada.tec.mx/es",
+    "criterios": {
+      "alcance_geo": "mexico",
+      "estado": null,
+      "tipos_elegibles": [
+        "emprendimiento_operacion",
+        "persona_fisica",
+        "osc"
+      ],
+      "ods_num": [],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "ScotiaRISE México 2026",
+    "tipo": "Fondo",
+    "ambito": "México",
+    "ods": "ODS 4 Educación; ODS 8 Trabajo decente; ODS 10 Reducción de desigualdades",
+    "descripcion": "Fondo de impacto social de Scotiabank para fortalecer la resiliencia económica de personas en situación de vulnerabilidad. Ejes: educación, empleabilidad y cohesión social. Ejecución de hasta 12 meses.",
+    "requisitos": "Organizaciones de la Sociedad Civil legalmente constituidas en México, con al menos cinco años de experiencia implementando proyectos sociales.",
+    "monto": "Hasta 2,000,000 MXN por proyecto",
+    "fecha_limite": "2026-04-18",
+    "estatus": "Cerrada (revisar próxima edición)",
+    "liga": "https://www.scotiabank.com.mx/acerca-de/quienes-somos/impacto-social/convocatoria.aspx",
+    "criterios": {
+      "alcance_geo": "mexico",
+      "estado": null,
+      "tipos_elegibles": [
+        "osc"
+      ],
+      "ods_num": [
+        4,
+        8,
+        10
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": 5,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Empresas Excepcionales 2026 (Consejo de la Comunicación)",
+    "tipo": "Premio",
+    "ambito": "Nacional (México)",
+    "ods": "Multiple (impacto social, ambiental y de gobernanza / ESG)",
+    "descripcion": "Reconocimiento a empresas e instituciones que generan valor social, ambiental y económico mediante prácticas destacadas alineadas a los ODS.",
+    "requisitos": "Registro de la empresa, documentación de prácticas con impacto ESG; cuota según tamaño (ej. empresa pequeña hasta 50 empleados y hasta 100 mdp ingresos: $8,500).",
+    "monto": "Reconocimiento (sin monto económico directo)",
+    "fecha_limite": "2026-04-23",
+    "estatus": "Cerrada (revisar próxima edición)",
+    "liga": "https://cc.org.mx/empresas-excepcionales-2026/",
+    "criterios": {
+      "alcance_geo": "mexico",
+      "estado": null,
+      "tipos_elegibles": [],
+      "ods_num": [],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Premios Verdes (Latinoamérica Verde) 2026",
+    "tipo": "Premio",
+    "ambito": "Internacional (América Latina y el Caribe)",
+    "ods": "ODS 6, 7, 11, 12, 13, 14, 15 (ambientales y sociales)",
+    "descripcion": "Plataforma de sostenibilidad para proyectos sociales y ambientales en ejecución en ALC. Diez categorías: agua dulce, ciudades resilientes, desarrollo humano, economía circular, ecosistemas terrestres y marinos, energía, finanzas sostenibles, tecnología verde y agricultura.",
+    "requisitos": "Proyectos en ejecución con resultados medibles que busquen fortalecerse, acceder a financiamiento y ampliar su impacto. Inscripción gratuita.",
+    "monto": "Visibilidad, plataforma y acceso a financiamiento",
+    "fecha_limite": "2026-04-30",
+    "estatus": "Cerrada (revisar próxima edición)",
+    "liga": "https://www.premiosverdes.org/",
+    "criterios": {
+      "alcance_geo": "internacional",
+      "estado": null,
+      "tipos_elegibles": [
+        "osc",
+        "empresa",
+        "emprendimiento_operacion"
+      ],
+      "ods_num": [
+        6,
+        7,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "POSiBLE 2026",
+    "tipo": "Apoyo",
+    "ambito": "México (nacional)",
+    "ods": "ODS 8 Trabajo decente; ODS 9 Industria, innovación e infraestructura",
+    "descripcion": "Convocatoria nacional de POSiBLE que acompaña ideas que quieren empezar y negocios que buscan crecer mediante un modelo probado de alto impacto, con capacitación, mentoría y vinculación con el ecosistema emprendedor.",
+    "requisitos": "Emprendedores y emprendimientos en México con una idea o negocio en marcha. Registro en el portal de POSiBLE.",
+    "monto": "Por confirmar (acompañamiento, capacitación y vinculación)",
+    "fecha_limite": "2026-05-03",
+    "estatus": "Cerrada (revisar próxima edición)",
+    "liga": "https://posible.org.mx/",
+    "criterios": {
+      "alcance_geo": "mexico",
+      "estado": null,
+      "tipos_elegibles": [
+        "emprendimiento_operacion",
+        "emprendimiento_idea",
+        "persona_fisica"
+      ],
+      "ods_num": [
+        8,
+        9
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Cultivadoras de Agua y Clima 2026 (GIZ, HEINEKEN México y Fundación Azteca)",
+    "tipo": "Fondo / Apoyo",
+    "ambito": "México",
+    "ods": "ODS 5 Igualdad de género; ODS 6 Agua limpia; ODS 13 Acción por el clima",
+    "descripcion": "Convocatoria de la Cooperación Alemana (GIZ) junto con HEINEKEN México y Fundación Azteca para impulsar 15 proyectos ambientales liderados por mujeres, con enfoque comunitario, para cerrar la brecha de género en la gestión del agua.",
+    "requisitos": "Mujeres mexicanas con proyectos ambientales de enfoque comunitario y beneficios tangibles en su entorno. Evaluación por panel de las instituciones convocantes.",
+    "monto": "Apoyo a 15 proyectos seleccionados (ver bases)",
+    "fecha_limite": "2026-05-10",
+    "estatus": "Cerrada (revisar próxima edición)",
+    "liga": "https://www.giz.de/en/worldwide/39328.html",
+    "criterios": {
+      "alcance_geo": "mexico",
+      "estado": null,
+      "tipos_elegibles": [],
+      "ods_num": [
+        5,
+        6,
+        13
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Fundación Gonzalo Río Arronte - Salud 2026",
+    "tipo": "Fondo",
+    "ambito": "México",
+    "ods": "ODS 3 Salud y bienestar",
+    "descripcion": "Convocatoria del área de Salud de la FGRA para proyectos que promuevan la adopción de buenos hábitos de salud en la población y mejores niveles de atención médica a grupos vulnerables. (También trabaja Adicciones y Agua.)",
+    "requisitos": "Instituciones/organizaciones mexicanas legalmente constituidas y autorizadas para recibir donativos.",
+    "monto": "Por confirmar (según proyecto)",
+    "fecha_limite": "2026-05-31",
+    "estatus": "Cerrada (revisar próxima edición)",
+    "liga": "https://fundaciongonzalorioarronte.org/convocatorias",
+    "criterios": {
+      "alcance_geo": "mexico",
+      "estado": null,
+      "tipos_elegibles": [
+        "osc"
+      ],
+      "ods_num": [
+        3
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Lindblad Expeditions-National Geographic Fund (Coastal & Riverine Stewardship)",
+    "tipo": "Fondo",
+    "ambito": "Internacional",
+    "ods": "ODS 14 (Vida submarina), ODS 15 (Vida de ecosistemas terrestres)",
+    "descripcion": "Apoya proyectos liderados por comunidades para la conservacion de ecosistemas costeros y riberenos.",
+    "requisitos": "OSC, instituciones educativas, gobiernos locales o comunidades; proyecto de conservacion costera/riberena. Aplica en ingles.",
+    "monto": "Hasta USD 75,000",
+    "fecha_limite": "2026-05-31",
+    "estatus": "Cerrada (revisar próxima edición)",
+    "liga": "https://www.nationalgeographic.org/society/grants-and-investments/lindblad-expeditions/",
+    "criterios": {
+      "alcance_geo": "internacional",
+      "estado": null,
+      "tipos_elegibles": [],
+      "ods_num": [
+        14,
+        15
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Waislitz Global Citizen Award 2026",
+    "tipo": "Premio",
+    "ambito": "Internacional",
+    "ods": "ODS 1 Fin de la pobreza",
+    "descripcion": "Premio de Global Citizen a personas que generan cambios para terminar con la pobreza extrema. Tres galardones: Grand Prize, Disruptor Award y Choice Award (voto público).",
+    "requisitos": "Mayores de 18 años de cualquier país que representen una entidad legalmente registrada (ONG, empresa social o negocio con fines de lucro). Evaluación por ciudadanía global, prueba de concepto, disrupción y escalabilidad.",
+    "monto": "3 premios de 100,000 USD c/u (300,000 USD total)",
+    "fecha_limite": "2026-06-14",
+    "estatus": "Cerrada (revisar próxima edición)",
+    "liga": "https://www.globalcitizen.org/en/programs/waislitz-award/",
+    "criterios": {
+      "alcance_geo": "internacional",
+      "estado": null,
+      "tipos_elegibles": [
+        "osc",
+        "empresa",
+        "emprendimiento_operacion"
+      ],
+      "ods_num": [
+        1
+      ],
+      "edad_min": 18,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Cartier Women's Initiative 2026",
+    "tipo": "Premio",
+    "ambito": "Internacional",
+    "ods": "Varios (al menos un ODS)",
+    "descripcion": "Premio internacional a empresas de impacto lideradas y propiedad de mujeres, con acompañamiento de un año (formación, coaching y visibilidad). Premios regionales (incluye América Latina) y premio temático de ciencia y tecnología.",
+    "requisitos": "Empresa de impacto liderada y mayoritariamente propiedad de mujeres; debe contribuir a al menos un ODS y demostrar impacto positivo. Cualquier sector y geografía.",
+    "monto": "100,000 / 60,000 / 30,000 USD por categoría",
+    "fecha_limite": "2026-06-16",
+    "estatus": "Cerrada (revisar próxima edición)",
+    "liga": "https://www.cartierwomensinitiative.com/",
+    "criterios": {
+      "alcance_geo": "internacional",
+      "estado": null,
+      "tipos_elegibles": [
+        "empresa",
+        "emprendimiento_operacion"
+      ],
+      "ods_num": [],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": "mujeres"
+    }
+  },
+  {
+    "convocatoria": "Global Development Awards Competition (GDAC) 2026 - GDN",
+    "tipo": "Premio / Investigación",
+    "ambito": "Internacional",
+    "ods": "Varios (investigación para el desarrollo; ciencia, tecnología e innovación)",
+    "descripcion": "Competencia anual de la Global Development Network. Incluye el Premio Japonés a la Investigación Sobresaliente en Desarrollo (ORD) y el Premio Japonés al Proyecto de Desarrollo más Innovador (MIDP).",
+    "requisitos": "Investigadores de países de ingresos bajos o medios (ORD) y organizaciones con proyectos de desarrollo innovadores (MIDP). Convocatoria anual.",
+    "monto": "ORD: 3 ganadores de 60,000 USD; MIDP: hasta 125,000 USD (2 primeros lugares de 50,000 USD)",
+    "fecha_limite": "2026-06-17",
+    "estatus": "Cerrada (revisar próxima edición)",
+    "liga": "https://www.gdn.int/gdac/2026",
+    "criterios": {
+      "alcance_geo": "internacional",
+      "estado": null,
+      "tipos_elegibles": [],
+      "ods_num": [],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Premio Alsea (V edición)",
+    "tipo": "Premio",
+    "ambito": "Iberoamérica",
+    "ods": "ODS 2 Hambre cero; ODS 3 Salud y bienestar",
+    "descripcion": "Premio internacional de la Fundación Alsea y World Vision para impulsar proyectos de investigación que transformen la seguridad alimentaria y la nutrición en Iberoamérica. El proyecto se ejecuta en hasta 24 meses.",
+    "requisitos": "Académicos o equipos de investigación de Argentina, Colombia, Chile, España, México, Paraguay y Uruguay, con respaldo de universidades, centros de investigación, instituciones de salud u organizaciones de la sociedad civil.",
+    "monto": "150,000 USD",
+    "fecha_limite": "2026-06-24",
+    "estatus": "Cerrada (revisar próxima edición)",
+    "liga": "https://premioalsea.com/",
+    "criterios": {
+      "alcance_geo": "internacional",
+      "estado": null,
+      "tipos_elegibles": [
+        "academia",
+        "osc"
+      ],
+      "ods_num": [
+        2,
+        3
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "Actinver Apoya 2026",
+    "tipo": "Fondo",
+    "ambito": "México",
+    "ods": "ODS 3 Salud; ODS 4 Educación; medio ambiente",
+    "descripcion": "Programa de responsabilidad social de Actinver (más de 14 años) que asigna recursos económicos a organizaciones de la sociedad civil para proyectos que mejoren la calidad de vida y fomenten el desarrollo sostenible, en los ejes de Educación, Salud y Medio Ambiente.",
+    "requisitos": "OSC sin fines de lucro, donatarias autorizadas y legalmente constituidas (Asociaciones Civiles). NO se aceptan Instituciones de Asistencia Privada (IAP). Proyectos en educación, salud o medio ambiente.",
+    "monto": "Hasta 500,000 MXN",
+    "fecha_limite": "2026-06-26",
+    "estatus": "Cerrada (revisar próxima edición)",
+    "liga": "https://actinver.com/actinver-apoya",
+    "criterios": {
+      "alcance_geo": "mexico",
+      "estado": null,
+      "tipos_elegibles": [
+        "osc"
+      ],
+      "ods_num": [
+        3,
+        4,
+        13
+      ],
+      "edad_min": null,
+      "edad_max": null,
+      "anios_min_operacion": null,
+      "anios_max_operacion": null,
+      "liderazgo": null
+    }
+  },
+  {
+    "convocatoria": "WISE Prize for Education 2026-2027",
+    "tipo": "Premio",
+    "ambito": "Internacional",
+    "ods": "ODS 4 Educación de calidad",
+    "descripcion": "Premio global de WISE (Qatar Foundation) a soluciones educativas innovadoras. Cada finalista recibe fondos para desarrollar un producto mínimo viable (MVP) en 12 meses, con mentoría y coaching; una bolsa de 1,000,000 USD se reparte entre los tres ganadores en WISE 13.",
+    "requisitos": "Cualquier organización (ONG, empresa social, startup, universidad u organismo gubernamental) con una solución educativa que ya muestre evidencia temprana de impacto; al menos un miembro de tiempo completo; en etapa de prototipo o piloto (no de idea). Los individuos no son elegibles.",
+    "monto": "100,000–125,000 USD por finalista + bolsa de 1,000,000 USD (top 3)",
+    "fecha_limite": "2026-06-27",
+    "estatus": "Cerrada (revisar próxima edición)",
+    "liga": "https://www.wise-qatar.org/innovation/wise-prize-for-education",
+    "criterios": {
+      "alcance_geo": "internacional",
+      "estado": null,
+      "tipos_elegibles": [
+        "osc",
+        "empresa",
+        "emprendimiento_operacion",
+        "academia"
+      ],
+      "ods_num": [
+        4
+      ],
       "edad_min": null,
       "edad_max": null,
       "anios_min_operacion": null,
