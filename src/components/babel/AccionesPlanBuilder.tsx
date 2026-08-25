@@ -1,7 +1,13 @@
 'use client';
 import React from 'react';
 import Link from 'next/link';
+import { onAuthStateChanged, type User } from 'firebase/auth';
+import { getFirebaseAuth } from '@/lib/firebase';
 import { AREAS_MENTOR, esMentorValido, MENTOR_IDS, type MentorId } from '@/lib/mentores';
+import { getLatestAssessmentAnswers } from '@/lib/assessment';
+import { getMaturityDimensions } from '@/lib/maturity-dimensions';
+import { computeResults, type DimensionAnswers } from '@/lib/maturity-scoring';
+import { PRACTICAS_POR_TEMA } from '@/lib/madurez-practicas';
 import {
   type PlanLang,
   type Objetivo,
@@ -27,7 +33,13 @@ import {
 
 type SortKey = 'accion' | 'prioridad' | 'objetivos' | 'mentor' | 'responsable' | 'fecha' | 'proyecto';
 
-export default function AccionesPlanBuilder({ lang }: { lang: PlanLang }) {
+export default function AccionesPlanBuilder({
+  lang,
+  mentorInicial,
+}: {
+  lang: PlanLang;
+  mentorInicial?: MentorId | null;
+}) {
   const t = LABELS[lang];
 
   const [objetivos, setObjetivos] = React.useState<Objetivo[]>([]);
@@ -39,6 +51,12 @@ export default function AccionesPlanBuilder({ lang }: { lang: PlanLang }) {
   const [org, setOrg] = React.useState<OrgData>({ assignments: {}, presidente: '', secretario: '', consejeros: [] });
   const [sortKey, setSortKey] = React.useState<SortKey | null>(null);
   const [sortDir, setSortDir] = React.useState<'asc' | 'desc'>('desc');
+  // Filtro por mentor de IA: llega precargado desde la Misión "Plan de Acción"
+  // de cada Mundo (?mentor=Fisnando), pero el usuario puede cambiarlo aquí.
+  const [mentorFiltro, setMentorFiltro] = React.useState<MentorId | ''>(mentorInicial ?? '');
+  React.useEffect(() => {
+    if (mentorInicial) setMentorFiltro(mentorInicial);
+  }, [mentorInicial]);
 
   React.useEffect(() => {
     const plan = loadPlanAccion();
@@ -57,6 +75,62 @@ export default function AccionesPlanBuilder({ lang }: { lang: PlanLang }) {
     if (!loaded) return;
     savePlanAccion({ objetivos, entornos, fds, proyectos, acciones });
   }, [objetivos, entornos, fds, proyectos, acciones, loaded]);
+
+  // Retos por mentor (mismo cálculo que en la Misión "Plan de Acción" de cada
+  // Mundo / WorldsBuilder.tsx): agrupa los temas pendientes del diagnóstico de
+  // madurez por el agente de IA dueño de cada tema, para mostrarlos aquí ya
+  // filtrados por mentor.
+  const [uid, setUid] = React.useState<string | null>(null);
+  const [respuestas, setRespuestas] = React.useState<Record<string, string[]> | null>(null);
+
+  React.useEffect(() => {
+    const auth = getFirebaseAuth();
+    const unsub = onAuthStateChanged(auth, (usr: User | null) => {
+      setUid(usr ? usr.uid : null);
+    });
+    return () => unsub();
+  }, []);
+
+  React.useEffect(() => {
+    if (!uid) return;
+    let vivo = true;
+    getLatestAssessmentAnswers(uid)
+      .then((answers) => {
+        if (!vivo || !answers) return;
+        const mapa: Record<string, string[]> = {};
+        for (const id of Object.keys(answers)) {
+          mapa[id] = (answers as unknown as Record<string, string[]>)[id];
+        }
+        setRespuestas(mapa);
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, [uid]);
+
+  const retosPorMentor = React.useMemo(() => {
+    if (!respuestas) return null;
+    try {
+      const dims = getMaturityDimensions(lang === 'en' ? 'en' : 'es');
+      const resultado = computeResults(dims, respuestas as unknown as DimensionAnswers);
+      const mapa: Record<
+        MentorId,
+        { tema: string; score: number; nextStep: { levelKey: string; description: string; deliverable: string } }[]
+      > = { Babel: [], Fisnando: [], Karmetin: [], Normau: [], Atech: [], Ecori: [] };
+      for (const d of resultado.dimensions) {
+        if (d.nextStep === null) continue;
+        const agenteDim = PRACTICAS_POR_TEMA[d.id][0].mentor as MentorId;
+        mapa[agenteDim].push({ tema: d.tema, score: d.score, nextStep: d.nextStep! });
+      }
+      (Object.keys(mapa) as MentorId[]).forEach((k) => mapa[k].sort((a, b) => a.score - b.score));
+      return mapa;
+    } catch {
+      return null;
+    }
+  }, [respuestas, lang]);
+
+  const retosMentorActual = mentorFiltro && retosPorMentor ? retosPorMentor[mentorFiltro] : null;
 
   const plan = { objetivos, entornos, fds, proyectos, acciones };
 
@@ -128,6 +202,8 @@ export default function AccionesPlanBuilder({ lang }: { lang: PlanLang }) {
     });
   }
 
+  const filasVisibles = mentorFiltro ? filas.filter((f) => f.a.mentor === mentorFiltro) : filas;
+
   const headerBtn = (key: SortKey, label: string) => (
     <th
       className="cursor-pointer select-none whitespace-nowrap px-3 py-2 text-left font-semibold text-slate-600 transition-colors hover:bg-white/30 hover:text-slate-900"
@@ -151,16 +227,68 @@ export default function AccionesPlanBuilder({ lang }: { lang: PlanLang }) {
           <h3 className="text-xl font-bold text-slate-800">{t.vistaAccionesTitle}</h3>
           <p className="mt-1 text-sm text-slate-500">{t.vistaAccionesSubtitle}</p>
         </div>
-        <Link
-          href={'/' + lang + '/babel/plan-accion'}
-          className="rounded-lg border border-white/50 bg-white/40 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm backdrop-blur-md transition-colors hover:bg-white/60"
-        >
-          {'← ' + t.verPorObjetivos}
-        </Link>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-sm text-slate-600">
+            <span className="font-medium">{t.filtrarPorMentorLabel}</span>
+            <select
+              value={mentorFiltro}
+              onChange={(ev) => setMentorFiltro(ev.target.value as MentorId | '')}
+              className="rounded-lg border border-white/40 bg-white/50 px-2 py-1 text-sm text-slate-700 shadow-sm backdrop-blur-sm transition-colors focus:border-white/70 focus:bg-white/70 focus:outline-none"
+            >
+              <option value="">{t.todosLosMentores}</option>
+              {MENTOR_IDS.map((m) => (
+                <option key={m} value={m}>
+                  {m + ' — ' + AREAS_MENTOR[m][lang]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Link
+            href={'/' + lang + '/babel/plan-accion'}
+            className="rounded-lg border border-white/50 bg-white/40 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm backdrop-blur-md transition-colors hover:bg-white/60"
+          >
+            {'← ' + t.verPorObjetivos}
+          </Link>
+        </div>
       </div>
+
+      {mentorFiltro ? (
+        <div className="mt-4 glass-panel px-4 py-3">
+          <p className="text-xs font-extrabold text-slate-700">
+            {t.retosMentorTitulo} <b className="text-teal-700">{mentorFiltro}</b>
+          </p>
+          {retosMentorActual && retosMentorActual.length > 0 ? (
+            <div className="mt-2 space-y-2">
+              {retosMentorActual.map((r, i) => (
+                <div
+                  key={r.tema}
+                  className={
+                    'rounded-lg border p-2.5 text-xs ' +
+                    (i === 0 ? 'border-amber-300 bg-amber-50' : 'border-slate-300/50 bg-white/40')
+                  }
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold text-slate-700">{r.tema}</span>
+                    {i === 0 && (
+                      <span className="shrink-0 rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-extrabold text-amber-800">
+                        {t.retoDeLaSemanaLabel}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-slate-600">{r.nextStep.description}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-2 text-xs text-slate-500">{t.retosMentorSinPendientes}</p>
+          )}
+        </div>
+      ) : null}
 
       {acciones.length === 0 ? (
         <p className="mt-6 glass-panel px-4 py-3 text-sm text-slate-500">{t.sinAccionesPlan}</p>
+      ) : filasVisibles.length === 0 ? (
+        <p className="mt-6 glass-panel px-4 py-3 text-sm text-slate-500">{t.sinAccionesMentor}</p>
       ) : (
         <div className="mt-5 overflow-x-auto glass-panel">
           <table className="min-w-full divide-y divide-white/30 text-sm">
@@ -176,7 +304,7 @@ export default function AccionesPlanBuilder({ lang }: { lang: PlanLang }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/20 bg-transparent">
-              {filas.map(({ a, proyecto, objetivosRes, rank, tier }) => {
+              {filasVisibles.map(({ a, proyecto, objetivosRes, rank, tier }) => {
                 const disponibles = objetivos.filter((o) => !objetivosRes.some((x) => x.id === o.id));
                 return (
                   <tr key={a.id} className="align-top transition-colors hover:bg-white/20">

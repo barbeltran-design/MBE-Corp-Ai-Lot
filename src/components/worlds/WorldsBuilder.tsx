@@ -456,46 +456,6 @@ function MisionPlanAccion({
         </div>
       ) : (
         <>
-          <p className="mt-3 text-xs font-extrabold text-slate-700 dark:text-slate-200">
-            {en(I.panelTemas)}{' '}
-            <b className="text-teal-700 dark:text-teal-300">{agente}</b>
-          </p>
-          <div className="mt-2">
-            <PanelAccionesPorAgente agente={agente} lang={lang} planAccion={planAccion} soloIds={soloIds} />
-          </div>
-          {retos && retos.length > 0 && (
-            <div className="mt-4">
-              <p className="text-xs font-extrabold text-slate-700 dark:text-slate-200">
-                {en(I.retosAgenteTitulo)} <b className="text-teal-700 dark:text-teal-300">{agente}</b>
-              </p>
-              <div className="mt-2 space-y-2">
-                {retos.map((r, i) => (
-                  <div
-                    key={r.tema}
-                    className={
-                      'rounded-lg border p-2.5 text-xs ' +
-                      (i === 0
-                        ? 'border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/30'
-                        : 'border-slate-300/50 bg-white/40 dark:bg-white/5')
-                    }
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-bold text-slate-700 dark:text-slate-200">{r.tema}</span>
-                      {i === 0 && (
-                        <span className="shrink-0 rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-extrabold text-amber-800 dark:bg-amber-800 dark:text-amber-100">
-                          {en(I.retoDeLaSemana)}
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-1 text-slate-600 dark:text-slate-300">{r.nextStep.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          {retos && retos.length === 0 && (
-            <p className="mt-4 text-xs text-slate-500 dark:text-slate-400">{en(I.retosAgenteSinPendientes)}</p>
-          )}
           {onIrRetos && (
             <button
               type="button"
@@ -742,9 +702,13 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
     router.push(`/${lang === 'es' ? 'es' : 'en'}/agendar`);
   }, [router, lang]);
 
+  const mundoVista = MUNDOS_PREMIUM_LABELS.find((m) => m.id === vista);
+
   const irPlanAccion = React.useCallback(() => {
-    router.push(`/${lang === 'es' ? 'es' : 'en'}/babel/plan-accion`);
-  }, [router, lang]);
+    const base = `/${lang === 'es' ? 'es' : 'en'}/babel/plan-accion/acciones`;
+    const url = mundoVista?.agente ? `${base}?mentor=${encodeURIComponent(mundoVista.agente)}` : base;
+    router.push(url);
+  }, [router, lang, mundoVista]);
 
   // Lee el Plan de Acción Estratégico del usuario (Misión 6 con Babel —
   // babel_plan_accion_v2) para las misiones "Plan de Acción" de cada mundo
@@ -868,7 +832,6 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
   }, [cargando]);
 
   const hechas = yo?.partida ?? [];
-  const mundoVista = MUNDOS_PREMIUM_LABELS.find((m) => m.id === vista);
   const vistaPremium = mundoVista?.id;
   // Retos pendientes del agente que hospeda este mundo (ver retosPorAgente
   // arriba), para la Misión de Plan de Acción del mundo actual.
