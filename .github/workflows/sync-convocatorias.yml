@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   busqueda:
@@ -55,17 +56,26 @@ jobs:
           node-version: '20'
 
       - name: Ejecutar sync con la hoja de Google Sheets
+        # Si el script aborta (p.ej. la guarda anti-caida de registros), este
+        # paso falla con exit != 0 y GitHub Actions NO ejecuta los pasos
+        # siguientes (commit/PR) automaticamente: nada se toca en el repo.
         run: node scripts/sync-convocatorias.mjs
 
-      - name: Commit y push si hubo cambios
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet -- src/lib/convocatorias-data.json; then
-            git add src/lib/convocatorias-data.json
-            git commit -m "Convocatorias y fondos: sync semanal automatico con la hoja de Google (fuente canonica)"
-            git push
-            echo "Cambios sincronizados."
-          else
-            echo "Sin cambios; la hoja no se actualizo desde el ultimo sync."
-          fi
+      - name: Crear Pull Request si hubo cambios
+        # Ya no se hace push directo a main. Los cambios detectados por el
+        # sync se proponen como PR para que alguien los revise antes de
+        # que lleguen a main (segunda capa de seguridad ademas de la guarda
+        # del 20% en el script).
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "Convocatorias y fondos: sync semanal automatico con la hoja de Google (fuente canonica)"
+          title: "Sync semanal de convocatorias (revision requerida)"
+          body: |
+            Actualizacion automatica de `src/lib/convocatorias-data.json` generada por el
+            sync semanal con la hoja de Google Sheets (fuente canonica).
+
+            Revisa el diff antes de aprobar el merge a `main`: confirma que el numero de
+            registros tiene sentido y que no se perdieron convocatorias inesperadamente.
+          branch: sync/convocatorias-automatico
+          delete-branch: true
+          add-paths: src/lib/convocatorias-data.json
