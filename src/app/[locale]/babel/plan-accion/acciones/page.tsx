@@ -6,6 +6,20 @@ import { useDisplayLang } from '@/components/display-lang-provider';
 import { esMentorValido, type MentorId } from '@/lib/mentores';
 
 export default function AccionesPlanPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="px-4 py-8">
+          <div className="mx-auto max-w-7xl" />
+        </div>
+      }
+    >
+      <AccionesPlanPageInner />
+    </React.Suspense>
+  );
+}
+
+function AccionesPlanPageInner() {
   const params = useParams();
   const routeLocale = typeof params.locale === 'string' ? params.locale : 'es';
   const { lang } = useDisplayLang();
