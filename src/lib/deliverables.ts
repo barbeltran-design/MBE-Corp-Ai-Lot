@@ -710,35 +710,36 @@ class MaturityPdfRenderer {
 
   // ── Horizontal bar (chart element) ─────────────────────────────────
 
-  horizontalBar(label: string, value: number, maxValue: number, barWidth: number, barHeight: number, color: Rgb): void {
-    this.ensureSpace(barHeight + 20);
-    // Label
+  horizontalBar(label: string, value: number, maxValue: number, barHeight: number, color: Rgb): void {
+    this.ensureSpace(barHeight + 10);
+    const labelW = 150;
+    const gap = 8;
+    const valW = 50;
+    const barW = this.usableWidth - labelW - gap - valW;
+
+    // Label on the left
     this.doc.setFont('helvetica', 'normal');
-    this.doc.setFontSize(10);
+    this.doc.setFontSize(9);
     this.setColor(COLOR_DARK);
-    const labelLines = this.doc.splitTextToSize(label, this.usableWidth - barWidth - 12);
-    const labelArr = Array.isArray(labelLines) ? labelLines : [labelLines];
-    let ly = this.cursorY;
-    for (const line of labelArr) {
-      this.doc.text(line, this.marginX, ly);
-      ly += 12;
-    }
-    const barX = this.marginX;
+    const truncated = label.length > 24 ? label.slice(0, 22) + '…' : label;
+    this.doc.text(truncated, this.marginX, this.cursorY + barHeight * 0.75);
+
+    // Bar
+    const barX = this.marginX + labelW;
     const barY = this.cursorY;
-    // Background
     this.doc.setFillColor(COLOR_LINE[0], COLOR_LINE[1], COLOR_LINE[2]);
-    this.doc.roundedRect(barX, barY, barWidth, barHeight, 3, 3, 'F');
-    // Fill
-    const fillW = Math.max(0, Math.min((value / maxValue) * barWidth, barWidth));
+    this.doc.roundedRect(barX, barY, barW, barHeight, 3, 3, 'F');
+    const fillW = Math.max(0, Math.min((value / maxValue) * barW, barW));
     this.doc.setFillColor(color[0], color[1], color[2]);
     this.doc.roundedRect(barX, barY, fillW, barHeight, 3, 3, 'F');
-    // Value label
+
+    // Value on the right
     this.doc.setFont('helvetica', 'bold');
-    this.doc.setFontSize(10);
+    this.doc.setFontSize(9);
     this.setColor(COLOR_DARK);
-    const valText = Math.round(value) + (this.lang === 'en' ? ' pts' : ' pts');
-    this.doc.text(valText, barX + barWidth + 6, barY + barHeight * 0.75);
-    this.cursorY = barY + barHeight + 6;
+    this.doc.text(Math.round(value) + ' pts', barX + barW + gap, this.cursorY + barHeight * 0.75);
+
+    this.cursorY += barHeight + 5;
   }
 
   // ── Level color for bar ────────────────────────────────────────────
@@ -892,8 +893,8 @@ export function renderMaturityAssessmentPdf(params: MaturityAssessmentPdfParams)
   r.sectionHeading(isEn ? 'What is a Maturity Assessment?' : '¿Qué es una Evaluación de Madurez?');
 
   const introText = isEn
-    ? 'A maturity assessment is a strategic diagnostic tool used by leading consulting firms (McKinsey, EY, PwC, Deloitte) to measure how well an organization manages its key business areas. It evaluates your current operational state across 11 dimensions, assigns a maturity level to each, and provides a clear roadmap for improvement.'
-    : 'Una evaluación de madurez es una herramienta diagnóstica estratégica utilizada por las principales firmas de consultoría (McKinsey, EY, PwC, Deloitte) para medir qué tan bien una organización gestiona sus áreas de negocio clave. Evalúa tu estado operativo actual en 11 dimensiones, asigna un nivel de madurez a cada una y proporciona una hoja de ruta clara para la mejora.';
+    ? 'A maturity assessment is a strategic diagnostic tool that measures how well an organization manages its key business areas. It evaluates your current operational state across 11 dimensions, assigns a maturity level to each, and provides a clear roadmap for improvement.'
+    : 'Una evaluación de madurez es una herramienta diagnóstica estratégica que mide qué tan bien una organización gestiona sus áreas de negocio clave. Evalúa tu estado operativo actual en 11 dimensiones, asigna un nivel de madurez a cada una y proporciona una hoja de ruta clara para la mejora.';
   r.paragraph(introText);
 
   const whyText = isEn
@@ -1063,10 +1064,9 @@ export function renderMaturityAssessmentPdf(params: MaturityAssessmentPdfParams)
   const chartTitle1 = isEn ? 'Score by Dimension (max 120 pts)' : 'Puntaje por Dimensión (máx. 120 pts)';
   r.boldParagraph(chartTitle1, 11, COLOR_DARK);
 
-  const barW = r.usableWidth - 60;
   for (const dim of result.dimensions) {
     const col = r.levelColor(dim.level);
-    r.horizontalBar(dim.tema, dim.score, 120, barW, 14, col);
+    r.horizontalBar(dim.tema, dim.score, 120, 16, col);
   }
   r.cursorY += 8;
 
@@ -1084,7 +1084,7 @@ export function renderMaturityAssessmentPdf(params: MaturityAssessmentPdfParams)
     const label = L[lp.key];
     const isTargetLevel = lp.key === 'execution' || lp.key === 'standard' || lp.key === 'control';
     const col = isTargetLevel ? COLOR_PRIMARY : COLOR_GREEN;
-    r.horizontalBar(label, lp.percent, 100, barW, 14, col);
+    r.horizontalBar(label, lp.percent, 100, 16, col);
   }
   r.cursorY += 8;
 
@@ -1174,8 +1174,8 @@ export function renderMaturityAssessmentPdf(params: MaturityAssessmentPdfParams)
     COLOR_PRIMARY
   );
   const ctaText = isEn
-    ? 'Get personalized guidance from a certified MBE mentor. They will review your results, help you prioritize actions, and support your journey toward operational excellence.'
-    : 'Obtén orientación personalizada de un mentor certificado MBE. Revisarán tus resultados, te ayudarán a priorizar acciones y acompañarán tu camino hacia la excelencia operativa.';
+    ? 'Get personalized guidance from a certified MBE mentor. They will review your results with you, help you prioritize actions, and show you how to leverage the platform to achieve your goals. It\'s completely free.'
+    : 'Obtén orientación personalizada de un mentor certificado MBE. Revisará contigo tus resultados, te ayudará a priorizar acciones y te dirá cómo aprovechar la plataforma para lograr tus resultados. Es Totalmente Gratis.';
   r.paragraph(ctaText);
   r.paragraph(
     isEn
