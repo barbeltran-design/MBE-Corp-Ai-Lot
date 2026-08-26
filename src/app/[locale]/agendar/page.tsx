@@ -35,6 +35,15 @@ interface Area {
 
 const AREAS: Area[] = [
   {
+    id: 'nivel_madurez',
+    temaId: 'rumbo_estrategico',
+    titulo: { es: 'Nivel de Madurez', en: 'Maturity Level' },
+    explicacion: {
+      es: 'Revisa tu evaluación de madurez con un mentor, define prioridades y crea tu plan de acción para subir de nivel.',
+      en: 'Review your maturity assessment with a mentor, set priorities, and create your action plan to level up.',
+    },
+  },
+  {
     id: 'convocatorias',
     temaId: 'convocatorias_certificacion',
     titulo: { es: 'Convocatorias', en: 'Grants & Calls' },
