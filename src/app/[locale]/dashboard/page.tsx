@@ -58,6 +58,7 @@ import {
 } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { downloadMaturityAssessmentPdf } from '@/lib/deliverables';
 
 import { getFirebaseAuth } from '@/lib/firebase';
 import { getMaturityDimensions } from '@/lib/maturity-dimensions';
@@ -76,6 +77,7 @@ function DashboardPageInner() {
   const [loadError, setLoadError] = React.useState(false);
   const [comparison, setComparison] = React.useState<AssessmentComparison | null>(null);
   const [deleting, setDeleting] = React.useState(false);
+  const [downloadingPdf, setDownloadingPdf] = React.useState(false);
 
   const dimensions = React.useMemo(() => getMaturityDimensions(locale), [locale]);
 
@@ -128,6 +130,18 @@ function DashboardPageInner() {
     } catch (err) {
       console.error('[MBE Dashboard] failed to delete assessment', err);
       setDeleting(false);
+    }
+  }
+
+  async function handleDownloadPdf() {
+    if (!result) return;
+    setDownloadingPdf(true);
+    try {
+      await downloadMaturityAssessmentPdf({ language: locale, result, dimensions });
+    } catch (err) {
+      console.error('[MBE Dashboard] failed to generate maturity PDF', err);
+    } finally {
+      setDownloadingPdf(false);
     }
   }
 
@@ -227,6 +241,25 @@ function DashboardPageInner() {
             <p className="text-sm text-slate-500">{t('maturityLevelLabel')}</p>
             <p className="mt-1 text-2xl font-semibold text-slate-900">{tLevel(result.overallLevel)}</p>
           </Card>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-3">
+          <Button
+            type="button"
+            variant="default"
+            onClick={() => void handleDownloadPdf()}
+            disabled={downloadingPdf}
+          >
+            {downloadingPdf
+              ? (en ? 'Generating PDF…' : 'Generando PDF…')
+              : (en ? 'Download Maturity Assessment (PDF)' : 'Descargar Evaluación de Madurez (PDF)')}
+          </Button>
+          <a
+            href={`/${locale}/agendar`}
+            className="inline-flex items-center gap-1 rounded-lg border border-teal-400/60 bg-white/40 px-3 py-1.5 text-xs font-bold text-teal-700 backdrop-blur-md transition hover:bg-white/70 dark:bg-white/10 dark:text-teal-200 dark:hover:bg-white/20"
+          >
+            {en ? 'Schedule with Expert' : 'Agendar con Experto'} →
+          </a>
         </div>
 
         {comparison?.previous && (

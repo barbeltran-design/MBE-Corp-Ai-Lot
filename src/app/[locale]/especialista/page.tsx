@@ -13,6 +13,7 @@ import { Select } from '@/components/ui/select';
 import { TEMAS_ESPECIALISTA, TEMA_LABELS, type TemaEspecialista } from '@/lib/roles';
 import AgentAvatar from '@/components/agentes/AgentAvatar';
 import { BABEL_AYUDA_EVENT } from '@/components/babel/BabelAvatar';
+import { downloadMaturityAssessmentPdf } from '@/lib/deliverables';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 
 type TabKey = 'panel' | 'perfil';
@@ -125,6 +126,7 @@ export default function EspecialistaPage() {
   // Nueva actividad
   const [actForm, setActForm] = React.useState({ usuarioUid: '', usuarioNombre: '', tema: '', tipo: 'reunion', descripcion: '', fecha: '' });
   const [actMsg, setActMsg] = React.useState('');
+  const [downloadingClientPdf, setDownloadingClientPdf] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     const auth = getFirebaseAuth();
@@ -208,6 +210,31 @@ export default function EspecialistaPage() {
     setActMsg(t('Actividad registrada.', 'Activity registered.'));
     setActForm({ usuarioUid: '', usuarioNombre: '', tema: '', tipo: 'reunion', descripcion: '', fecha: '' });
     await loadPanel();
+  }
+
+  async function handleDownloadClientPdf(clientUid: string) {
+    if (!user) return;
+    setDownloadingClientPdf(clientUid);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`/api/especialista/client-report?clientUid=${encodeURIComponent(clientUid)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to fetch client report');
+      const data = await res.json();
+      const lang = dispLang === 'en' ? 'en' : 'es';
+      const langData = lang === 'en' ? data.en : data.es;
+      await downloadMaturityAssessmentPdf({
+        language: lang,
+        result: langData.result,
+        dimensions: langData.dimensions,
+      });
+    } catch (err) {
+      console.error('[Especialista] failed to download client PDF', err);
+      alert(t('No se pudo generar el reporte.', 'Could not generate the report.'));
+    } finally {
+      setDownloadingClientPdf(null);
+    }
   }
 
   if (loading) {
@@ -348,11 +375,12 @@ export default function EspecialistaPage() {
                       <th className="px-3 py-2 font-medium">{t('Nivel', 'Level')}</th>
                       <th className="px-3 py-2 font-medium">{t('Siguiente paso', 'Next step')}</th>
                       <th className="px-3 py-2 font-medium">{t('Pendientes', 'Pending')}</th>
+                      <th className="px-3 py-2 font-medium">{t('Reporte', 'Report')}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {usuarios.flatMap((u) =>
-                      u.temas.map((tema) => (
+                    {usuarios.flatMap((u, uIdx) =>
+                      u.temas.map((tema, tIdx) => (
                         <tr key={u.uid + '-' + tema.id} className="border-t border-slate-100 dark:border-slate-800">
                           <td className="px-3 py-2">
                             <div className="font-medium text-foreground">{u.nombre || '—'}</div>
@@ -372,12 +400,26 @@ export default function EspecialistaPage() {
                             {' · '}
                             <span className="font-medium text-indigo-700 dark:text-indigo-300">{u.planAccionPendientes}</span> {t('plan de acción', 'action plan')}
                           </td>
+                          {tIdx === 0 && (
+                            <td className="px-3 py-2" rowSpan={u.temas.length}>
+                              <button
+                                type="button"
+                                onClick={() => void handleDownloadClientPdf(u.uid)}
+                                disabled={downloadingClientPdf === u.uid}
+                                className="text-xs font-medium text-teal-700 underline underline-offset-2 hover:text-teal-800 disabled:opacity-60"
+                              >
+                                {downloadingClientPdf === u.uid
+                                  ? '…'
+                                  : t('Ver PDF', 'View PDF')}
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       ))
                     )}
                     {usuarios.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="px-3 py-8 text-center text-sm text-muted-foreground">
+                        <td colSpan={6} className="px-3 py-8 text-center text-sm text-muted-foreground">
                           {t('Aún no hay usuarios con evaluación en tus temas.', 'No users with assessments in your themes yet.')}
                         </td>
                       </tr>

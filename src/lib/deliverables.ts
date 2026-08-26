@@ -1,4 +1,7 @@
 import { jsPDF } from 'jspdf';
+import type { MaturityDimensionDef } from '@/lib/maturity-dimensions';
+import type { AssessmentResult } from '@/lib/maturity-scoring';
+import type { MaturityLevel } from '@/types/firestore';
 
 // ==========================================================================
 // PDF DEL PLAN COMPILADO — presentación ejecutiva con iconos
@@ -464,6 +467,749 @@ class CompiledPlanRenderer {
       );
     }
   }
+}
+
+// ==========================================================================
+// PDF DE EVALUACIÓN DE MADUREZ — informe de consultoría ejecutiva
+// ==========================================================================
+
+const LEVEL_LABELS_ES: Record<MaturityLevel, string> = {
+  execution: 'Ejecución',
+  standard: 'Estándar',
+  control: 'Control',
+  optimization: 'Optimización',
+  excellence: 'Excelencia',
+  influencer: 'Influencer',
+};
+const LEVEL_LABELS_EN: Record<MaturityLevel, string> = {
+  execution: 'Execution',
+  standard: 'Standard',
+  control: 'Control',
+  optimization: 'Optimization',
+  excellence: 'Excellence',
+  influencer: 'Influencer',
+};
+
+interface MaturityPdfDimension {
+  id: string;
+  tema: string;
+  explicacion: string;
+  score: number;
+  level: MaturityLevel;
+  superados: MaturityLevel[];
+  enProgreso: { levelKey: MaturityLevel; description: string; deliverable: string }[];
+  pendientes: MaturityLevel[];
+  nextStep: { levelKey: MaturityLevel; description: string; deliverable: string } | null;
+}
+
+interface MaturityPdfLevelInfo {
+  key: MaturityLevel;
+  nivel: string;
+  pregunta: string;
+  explicacion: string;
+  maxPoints: number;
+}
+
+interface MaturityPdfDimDef {
+  id: string;
+  tema: string;
+  explicacion: string;
+  levels: { key: MaturityLevel; description: string; deliverable: string; tutorial: { nivel: string; pregunta: string; explicacion: string }; maxPoints: number }[];
+}
+
+class MaturityPdfRenderer {
+  doc: jsPDF;
+  lang: 'es' | 'en';
+  marginX: number;
+  marginTop: number;
+  marginBottom: number;
+  pageWidth: number;
+  pageHeight: number;
+  usableWidth: number;
+  cursorY: number;
+
+  constructor(doc: jsPDF, lang: 'es' | 'en') {
+    this.doc = doc;
+    this.lang = lang;
+    this.marginX = 48;
+    this.marginTop = 56;
+    this.marginBottom = 56;
+    this.pageWidth = doc.internal.pageSize.getWidth();
+    this.pageHeight = doc.internal.pageSize.getHeight();
+    this.usableWidth = this.pageWidth - this.marginX * 2;
+    this.cursorY = this.marginTop;
+  }
+
+  ensureSpace(needed: number): void {
+    if (this.cursorY + needed > this.pageHeight - this.marginBottom) {
+      this.doc.addPage();
+      this.cursorY = this.marginTop;
+    }
+  }
+
+  setColor(color: Rgb): void {
+    this.doc.setTextColor(color[0], color[1], color[2]);
+  }
+
+  levelLabel(level: MaturityLevel): string {
+    return (this.lang === 'en' ? LEVEL_LABELS_EN : LEVEL_LABELS_ES)[level] ?? level;
+  }
+
+  icon(glyph: string, x: number, y: number, size: number, color: Rgb): void {
+    this.doc.setFont('zapfdingbats', 'normal');
+    this.doc.setFontSize(size);
+    this.setColor(color);
+    this.doc.text(glyph, x, y);
+  }
+
+  cover(logo?: { dataUrl: string; w: number; h: number }): void {
+    const isEn = this.lang === 'en';
+    if (logo) {
+      try { this.doc.addImage(logo.dataUrl, 'PNG', this.marginX, 88, logo.w, logo.h); } catch { /* */ }
+    }
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(11);
+    this.setColor(COLOR_PRIMARY);
+    this.doc.text('MBE CORPILOT AI', this.marginX, 150);
+
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(32);
+    this.setColor(COLOR_DARK);
+    this.doc.text(isEn ? 'Maturity Assessment' : 'Evaluación de Madurez', this.marginX, 210);
+
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(16);
+    this.setColor(COLOR_PRIMARY);
+    this.doc.text(
+      isEn ? 'Executive Diagnostic Report for Your Business' : 'Reporte Diagnóstico Ejecutivo para tu Negocio',
+      this.marginX,
+      238
+    );
+
+    this.doc.setDrawColor(COLOR_PRIMARY[0], COLOR_PRIMARY[1], COLOR_PRIMARY[2]);
+    this.doc.setLineWidth(1.5);
+    this.doc.line(this.marginX, 258, this.marginX + 120, 258);
+
+    const meta: [string, string][] = isEn
+      ? [
+          [DINGBAT_CHECK, '11 dimensions of organizational maturity'],
+          [DINGBAT_BOX, '6 maturity levels per dimension'],
+          [DINGBAT_DOT, new Date().toLocaleDateString('en-US', { day: '2-digit', month: 'long', year: 'numeric' })],
+        ]
+      : [
+          [DINGBAT_CHECK, '11 dimensiones de madurez organizacional'],
+          [DINGBAT_BOX, '6 niveles de madurez por dimensión'],
+          [DINGBAT_DOT, new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })],
+        ];
+
+    let my = 310;
+    for (const item of meta) {
+      this.icon(item[0], this.marginX, my, 10, COLOR_PRIMARY);
+      this.doc.setFont('helvetica', 'normal');
+      this.doc.setFontSize(11);
+      this.setColor(COLOR_MUTED);
+      this.doc.text(item[1], this.marginX + 18, my);
+      my += 22;
+    }
+
+    this.doc.addPage();
+    this.cursorY = this.marginTop;
+  }
+
+  // ── Section heading (with teal bar) ────────────────────────────────
+
+  sectionHeading(text: string, size = 14): void {
+    const segments = parseInline(text);
+    const lineHeight = size + 8;
+    const wrapped = this.wrapInline(segments, size, this.usableWidth - 16);
+    this.ensureSpace(lineHeight * wrapped.length + 14);
+    for (let li = 0; li < wrapped.length; li++) {
+      if (li === 0) {
+        this.icon(DINGBAT_DOT, this.marginX, this.cursorY + size * 0.75, size * 0.8, COLOR_PRIMARY);
+      }
+      this.doc.setFont('helvetica', 'bold');
+      this.doc.setFontSize(size);
+      this.setColor(COLOR_PRIMARY);
+      this.writeInline(this.marginX + 16, this.cursorY + size * 0.75, wrapped[li], size);
+      this.cursorY += lineHeight;
+    }
+    const lineY = this.cursorY - lineHeight + size + 4;
+    this.doc.setDrawColor(COLOR_PRIMARY[0], COLOR_PRIMARY[1], COLOR_PRIMARY[2]);
+    this.doc.setLineWidth(0.8);
+    this.doc.line(this.marginX, lineY, this.pageWidth - this.marginX, lineY);
+    this.cursorY += 10;
+  }
+
+  // ── Paragraph ──────────────────────────────────────────────────────
+
+  paragraph(text: string, size = 11, color: Rgb = COLOR_DARK, indent = 0): void {
+    const segments = parseInline(text);
+    const width = this.usableWidth - indent;
+    const wrapped = this.wrapInline(segments, size, width);
+    const lineHeight = size + 4;
+    for (let i = 0; i < wrapped.length; i++) {
+      this.ensureSpace(lineHeight);
+      this.doc.setFont('helvetica', 'normal');
+      this.doc.setFontSize(size);
+      this.setColor(color);
+      this.writeInline(this.marginX + indent, this.cursorY, wrapped[i], size);
+      this.cursorY += lineHeight;
+    }
+    this.cursorY += 3;
+  }
+
+  // ── Bold paragraph ─────────────────────────────────────────────────
+
+  boldParagraph(text: string, size = 11, color: Rgb = COLOR_DARK): void {
+    const segments = parseInline(text).map((s) => ({ ...s, bold: true }));
+    const wrapped = this.wrapInline(segments, size, this.usableWidth);
+    const lineHeight = size + 4;
+    for (let i = 0; i < wrapped.length; i++) {
+      this.ensureSpace(lineHeight);
+      this.doc.setFont('helvetica', 'bold');
+      this.doc.setFontSize(size);
+      this.setColor(color);
+      this.writeInline(this.marginX, this.cursorY, wrapped[i], size);
+      this.cursorY += lineHeight;
+    }
+    this.cursorY += 3;
+  }
+
+  // ── Bullet ─────────────────────────────────────────────────────────
+
+  bullet(text: string, size = 11, color: Rgb = COLOR_DARK): void {
+    const segments = parseInline(text);
+    const indent = 18;
+    const width = this.usableWidth - indent;
+    const wrapped = this.wrapInline(segments, size, width);
+    const lineHeight = size + 4;
+    for (let i = 0; i < wrapped.length; i++) {
+      this.ensureSpace(lineHeight);
+      if (i === 0) {
+        this.icon(DINGBAT_CHECK, this.marginX + 2, this.cursorY - 1, 10, COLOR_GREEN);
+      }
+      this.doc.setFont('helvetica', 'normal');
+      this.doc.setFontSize(size);
+      this.setColor(color);
+      this.writeInline(this.marginX + indent, this.cursorY, wrapped[i], size);
+      this.cursorY += lineHeight;
+    }
+    this.cursorY += 2;
+  }
+
+  // ── Divider ────────────────────────────────────────────────────────
+
+  divider(): void {
+    this.ensureSpace(20);
+    this.cursorY += 6;
+    this.doc.setDrawColor(COLOR_LINE[0], COLOR_LINE[1], COLOR_LINE[2]);
+    this.doc.setLineWidth(0.8);
+    this.doc.line(this.marginX, this.cursorY, this.pageWidth - this.marginX, this.cursorY);
+    this.cursorY += 12;
+  }
+
+  // ── Horizontal bar (chart element) ─────────────────────────────────
+
+  horizontalBar(label: string, value: number, maxValue: number, barWidth: number, barHeight: number, color: Rgb): void {
+    this.ensureSpace(barHeight + 20);
+    // Label
+    this.doc.setFont('helvetica', 'normal');
+    this.doc.setFontSize(10);
+    this.setColor(COLOR_DARK);
+    const labelLines = this.doc.splitTextToSize(label, this.usableWidth - barWidth - 12);
+    const labelArr = Array.isArray(labelLines) ? labelLines : [labelLines];
+    let ly = this.cursorY;
+    for (const line of labelArr) {
+      this.doc.text(line, this.marginX, ly);
+      ly += 12;
+    }
+    const barX = this.marginX;
+    const barY = this.cursorY;
+    // Background
+    this.doc.setFillColor(COLOR_LINE[0], COLOR_LINE[1], COLOR_LINE[2]);
+    this.doc.roundedRect(barX, barY, barWidth, barHeight, 3, 3, 'F');
+    // Fill
+    const fillW = Math.max(0, Math.min((value / maxValue) * barWidth, barWidth));
+    this.doc.setFillColor(color[0], color[1], color[2]);
+    this.doc.roundedRect(barX, barY, fillW, barHeight, 3, 3, 'F');
+    // Value label
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(10);
+    this.setColor(COLOR_DARK);
+    const valText = Math.round(value) + (this.lang === 'en' ? ' pts' : ' pts');
+    this.doc.text(valText, barX + barWidth + 6, barY + barHeight * 0.75);
+    this.cursorY = barY + barHeight + 6;
+  }
+
+  // ── Level color for bar ────────────────────────────────────────────
+
+  levelColor(level: MaturityLevel): Rgb {
+    const order: MaturityLevel[] = ['execution', 'standard', 'control', 'optimization', 'excellence', 'influencer'];
+    const idx = order.indexOf(level);
+    if (idx <= 1) return [220, 38, 38]; // red-600 for execution/standard
+    if (idx === 2) return [234, 179, 8]; // amber-500 for control
+    return COLOR_GREEN; // green-600 for optimization+
+  }
+
+  // ── Red flag indicator ─────────────────────────────────────────────
+
+  redFlag(text: string): void {
+    this.ensureSpace(20);
+    this.icon(DINGBAT_BOX, this.marginX, this.cursorY, 10, COLOR_AMBER);
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(10);
+    this.setColor(COLOR_AMBER);
+    this.doc.text(text, this.marginX + 16, this.cursorY);
+    this.cursorY += 16;
+  }
+
+  // ── Green congrats indicator ───────────────────────────────────────
+
+  congrats(text: string): void {
+    this.ensureSpace(20);
+    this.icon(DINGBAT_CHECK, this.marginX, this.cursorY, 10, COLOR_GREEN);
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(10);
+    this.setColor(COLOR_GREEN);
+    this.doc.text(text, this.marginX + 16, this.cursorY);
+    this.cursorY += 16;
+  }
+
+  // ── Wrap / write helpers (same as CompiledPlanRenderer) ────────────
+
+  inlineWidth(segments: InlineSegment[], size: number): number {
+    let width = 0;
+    for (let i = 0; i < segments.length; i++) {
+      const seg = segments[i];
+      this.doc.setFont('helvetica', seg.bold ? 'bold' : 'normal');
+      this.doc.setFontSize(size);
+      width += this.doc.getTextWidth(seg.text);
+    }
+    return width;
+  }
+
+  writeInline(x: number, y: number, segments: InlineSegment[], size: number): void {
+    let xCursor = x;
+    for (let i = 0; i < segments.length; i++) {
+      const seg = segments[i];
+      this.doc.setFont('helvetica', seg.bold ? 'bold' : 'normal');
+      this.doc.setFontSize(size);
+      this.doc.text(seg.text, xCursor, y);
+      xCursor += this.doc.getTextWidth(seg.text);
+    }
+  }
+
+  wrapInline(segments: InlineSegment[], size: number, width: number): InlineSegment[][] {
+    const lines: InlineSegment[][] = [];
+    let line: InlineSegment[] = [];
+    let lineW = 0;
+    const flush = () => {
+      if (line.length > 0) { lines.push(line); line = []; lineW = 0; }
+    };
+    const chunkToken = (text: string): string[] => {
+      const out: string[] = [];
+      let cur = '';
+      let curW = 0;
+      for (let ci = 0; ci < text.length; ci++) {
+        const ch = text.charAt(ci);
+        const chW = this.doc.getTextWidth(ch);
+        if (cur && curW + chW > width) { out.push(cur); cur = ''; curW = 0; }
+        cur += ch;
+        curW += chW;
+      }
+      if (cur) out.push(cur);
+      return out;
+    };
+    for (let i = 0; i < segments.length; i++) {
+      const seg = segments[i];
+      this.doc.setFont('helvetica', seg.bold ? 'bold' : 'normal');
+      this.doc.setFontSize(size);
+      const tokens = seg.text.replace(/\s+/g, ' ').split(' ');
+      for (let ti = 0; ti < tokens.length; ti++) {
+        const token = tokens[ti];
+        if (token === '') continue;
+        const isLast = ti === tokens.length - 1;
+        const tokenText = isLast ? token : token + ' ';
+        const chunks = chunkToken(tokenText);
+        for (let ci = 0; ci < chunks.length; ci++) {
+          const chunk = chunks[ci];
+          const chunkW = this.doc.getTextWidth(chunk);
+          if (line.length > 0 && lineW + chunkW > width) flush();
+          line.push({ text: chunk, bold: seg.bold });
+          lineW += chunkW;
+        }
+      }
+    }
+    flush();
+    if (lines.length === 0) lines.push([]);
+    return lines;
+  }
+
+  // ── Footers ────────────────────────────────────────────────────────
+
+  addFooters(): void {
+    const total = this.doc.getNumberOfPages();
+    for (let p = 1; p <= total; p++) {
+      this.doc.setPage(p);
+      const footerY = this.pageHeight - 36;
+      this.doc.setDrawColor(COLOR_LINE[0], COLOR_LINE[1], COLOR_LINE[2]);
+      this.doc.setLineWidth(0.6);
+      this.doc.line(this.marginX, footerY - 8, this.pageWidth - this.marginX, footerY - 8);
+      this.doc.setFont('helvetica', 'normal');
+      this.doc.setFontSize(8.5);
+      this.setColor(COLOR_MUTED);
+      this.doc.text('MBE Corpilot AI', this.marginX, footerY);
+      this.doc.text(
+        (this.lang === 'en' ? 'Page ' : 'Página ') + p + ' ' + (this.lang === 'en' ? 'of' : 'de') + ' ' + total,
+        this.pageWidth - this.marginX,
+        footerY,
+        { align: 'right' }
+      );
+    }
+  }
+}
+
+// ── Public render function for maturity assessment PDF ───────────────
+
+export interface MaturityAssessmentPdfParams {
+  language: 'es' | 'en';
+  result: AssessmentResult;
+  dimensions: MaturityDimensionDef[];
+  logo?: { dataUrl: string; w: number; h: number };
+}
+
+export function renderMaturityAssessmentPdf(params: MaturityAssessmentPdfParams): jsPDF {
+  const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+  const r = new MaturityPdfRenderer(doc, params.language);
+  const isEn = params.language === 'en';
+  const L = isEn ? LEVEL_LABELS_EN : LEVEL_LABELS_ES;
+  const { result, dimensions } = params;
+
+  // ── Cover ──────────────────────────────────────────────────────────
+  r.cover(params.logo);
+
+  // ── Section 1: ¿Qué es una evaluación de madurez? ─────────────────
+  r.sectionHeading(isEn ? 'What is a Maturity Assessment?' : '¿Qué es una Evaluación de Madurez?');
+
+  const introText = isEn
+    ? 'A maturity assessment is a strategic diagnostic tool used by leading consulting firms (McKinsey, EY, PwC, Deloitte) to measure how well an organization manages its key business areas. It evaluates your current operational state across 11 dimensions, assigns a maturity level to each, and provides a clear roadmap for improvement.'
+    : 'Una evaluación de madurez es una herramienta diagnóstica estratégica utilizada por las principales firmas de consultoría (McKinsey, EY, PwC, Deloitte) para medir qué tan bien una organización gestiona sus áreas de negocio clave. Evalúa tu estado operativo actual en 11 dimensiones, asigna un nivel de madurez a cada una y proporciona una hoja de ruta clara para la mejora.';
+  r.paragraph(introText);
+
+  const whyText = isEn
+    ? 'For micro and small businesses, this assessment is especially valuable because it identifies exactly where you stand, what you need to strengthen, and which areas are already performing well. It transforms intuition-based management into data-driven decision-making.'
+    : 'Para micro y pequeñas empresas, esta evaluación es especialmente valiosa porque identifica exactamente dónde estás, qué necesitas fortalecer y qué áreas ya están funcionando bien. Transforma la gestión basada en intuición en toma de decisiones basada en datos.';
+  r.paragraph(whyText);
+  r.divider();
+
+  // ── Section 2: Los 6 niveles de madurez ────────────────────────────
+  r.sectionHeading(isEn ? 'The 6 Maturity Levels' : 'Los 6 Niveles de Madurez');
+
+  const levelsIntro = isEn
+    ? 'Each dimension is evaluated against six progressive maturity levels. For micro and small businesses, the target is to solidly establish levels 1 through 3 (Execution, Standard, Control). Levels 4 and above represent advanced capabilities that provide competitive advantage.'
+    : 'Cada dimensión se evalúa contra seis niveles de madurez progresivos. Para micro y pequeñas empresas, el objetivo es establecer sólidamente los niveles 1 a 3 (Ejecución, Estándar, Control). Los niveles 4 y superiores representan capacidades avanzadas que brindan ventaja competitiva.';
+  r.paragraph(levelsIntro);
+
+  const LEVEL_TUTORIAL_ES_DATA: MaturityPdfLevelInfo[] = [
+    { key: 'execution', nivel: 'Ejecución Integral', pregunta: '¿Cómo lo ejecuto?', explicacion: 'Qué métodos uso y cómo lo registro', maxPoints: 10 },
+    { key: 'standard', nivel: 'Documentación Dinámica', pregunta: '¿Cómo lo documento?', explicacion: 'Documento mis procesos, son dinámicos y están disponibles', maxPoints: 20 },
+    { key: 'control', nivel: 'Control Predictivo', pregunta: '¿Cómo lo controlo?', explicacion: 'Tengo alertas de desempeño para anticipar fallas', maxPoints: 20 },
+    { key: 'optimization', nivel: 'Mejora Continua Ágil', pregunta: '¿Cómo lo mejoro?', explicacion: 'Elimino oportunamente las fallas de raíz', maxPoints: 20 },
+    { key: 'excellence', nivel: 'Excelencia Automatizada', pregunta: '¿Cómo me encamino a ser el mejor?', explicacion: 'Automatizo flujos y descentralizo decisiones', maxPoints: 20 },
+    { key: 'influencer', nivel: 'Influencer', pregunta: '¿Cómo influencio en mi industria?', explicacion: 'Inspiro y transformo mi mercado y entorno', maxPoints: 30 },
+  ];
+  const LEVEL_TUTORIAL_EN_DATA: MaturityPdfLevelInfo[] = [
+    { key: 'execution', nivel: 'Integral Execution', pregunta: 'How do I execute it?', explicacion: 'What methods I use and how I record it', maxPoints: 10 },
+    { key: 'standard', nivel: 'Dynamic Documentation', pregunta: 'How do I document it?', explicacion: 'I document my processes; they are dynamic and accessible', maxPoints: 20 },
+    { key: 'control', nivel: 'Predictive Control', pregunta: 'How do I control it?', explicacion: 'I have performance alerts to anticipate failures', maxPoints: 20 },
+    { key: 'optimization', nivel: 'Agile Continuous Improvement', pregunta: 'How do I improve it?', explicacion: 'I promptly eliminate root-cause failures', maxPoints: 20 },
+    { key: 'excellence', nivel: 'Automated Excellence', pregunta: 'How do I get on the path to being the best?', explicacion: 'I automate workflows and decentralize decision-making', maxPoints: 20 },
+    { key: 'influencer', nivel: 'Influencer', pregunta: 'How do I influence my industry?', explicacion: 'I inspire and transform my market and environment', maxPoints: 30 },
+  ];
+
+  const tutorials = isEn ? LEVEL_TUTORIAL_EN_DATA : LEVEL_TUTORIAL_ES_DATA;
+
+  for (let i = 0; i < tutorials.length; i++) {
+    const t = tutorials[i];
+    const num = String(i + 1);
+    const isTarget = i <= 2; // levels 1-3 are the target for micro/small
+    const color = isTarget ? COLOR_PRIMARY : COLOR_MUTED;
+
+    r.ensureSpace(50);
+    r.doc.setFont('helvetica', 'bold');
+    r.doc.setFontSize(12);
+    r.setColor(color);
+    r.doc.text(num + '.', r.marginX, r.cursorY);
+    r.doc.setFont('helvetica', 'bold');
+    r.doc.setFontSize(12);
+    r.setColor(COLOR_DARK);
+    r.doc.text(t.nivel, r.marginX + 20, r.cursorY);
+    r.cursorY += 18;
+
+    r.doc.setFont('helvetica', 'italic');
+    r.doc.setFontSize(10);
+    r.setColor(COLOR_MUTED);
+    r.doc.text(t.pregunta + ' — ' + t.explicacion, r.marginX + 20, r.cursorY);
+    r.cursorY += 16;
+
+    if (isTarget) {
+      r.doc.setFont('helvetica', 'normal');
+      r.doc.setFontSize(9);
+      r.setColor(COLOR_GREEN);
+      const targetMsg = isEn ? '(Target level for micro/small businesses)' : '(Nivel objetivo para micro y pequeñas empresas)';
+      r.doc.text(targetMsg, r.marginX + 20, r.cursorY);
+      r.cursorY += 14;
+    }
+    r.cursorY += 4;
+  }
+  r.divider();
+
+  // ── Section 3: Las 11 dimensiones — qué evalúa cada una ────────────
+  r.sectionHeading(isEn ? 'The 11 Dimensions of Maturity' : 'Las 11 Dimensiones de Madurez');
+
+  const dimIntro = isEn
+    ? 'Each dimension represents a critical area of your business. For each, we describe what it measures and the evidence (deliverables) expected at each maturity level.'
+    : 'Cada dimensión representa un área crítica de tu negocio. Para cada una, describimos qué mide y la evidencia (entregables) esperada en cada nivel de madurez.';
+  r.paragraph(dimIntro);
+
+  for (const dim of dimensions) {
+    r.ensureSpace(60);
+    r.boldParagraph(dim.tema + ' — ' + dim.explicacion, 12, COLOR_PRIMARY);
+
+    // Show levels 1-3 (target) as key reference
+    for (let i = 0; i < Math.min(3, dim.levels.length); i++) {
+      const lvl = dim.levels[i];
+      r.bullet(L[lvl.key] + ': ' + lvl.description, 10, COLOR_DARK);
+      r.paragraph('  ' + (isEn ? 'Evidence: ' : 'Evidencia: ') + lvl.deliverable, 9, COLOR_MUTED, 18);
+    }
+    r.cursorY += 6;
+  }
+  r.divider();
+
+  // ── Section 4: Dónde estás tú — tus resultados ────────────────────
+  r.sectionHeading(isEn ? 'Your Results: Where You Stand' : 'Tus Resultados: Dónde Estás');
+
+  const resultsIntro = isEn
+    ? 'Below is your evaluation against the target levels for micro and small businesses. For each dimension, we indicate your current score, maturity level, and whether you need attention (red flag) or deserve recognition (congratulations).'
+    : 'A continuación se presenta tu evaluación contra los niveles objetivo para micro y pequeñas empresas. Para cada dimensión, indicamos tu puntaje actual, nivel de madurez, y si necesitas atención (bandera roja) o mereces reconocimiento (felicitaciones).';
+  r.paragraph(resultsIntro);
+
+  const redFlags: string[] = [];
+  const congratsList: string[] = [];
+
+  for (const dim of result.dimensions) {
+    const dimDef = dimensions.find((d) => d.id === dim.id);
+    const levelIdx = ['execution', 'standard', 'control', 'optimization', 'excellence', 'influencer'].indexOf(dim.level);
+    const isBelowTarget = levelIdx < 2; // below control = red flag
+    const isAboveTarget = levelIdx >= 3; // optimization+ = congratulations
+
+    r.ensureSpace(40);
+    r.boldParagraph(dim.tema, 11, COLOR_DARK);
+    const scoreText = isEn
+      ? 'Score: ' + Math.round(dim.score) + ' pts | Level: ' + L[dim.level]
+      : 'Puntaje: ' + Math.round(dim.score) + ' pts | Nivel: ' + L[dim.level];
+    r.paragraph(scoreText, 10, COLOR_MUTED);
+
+    if (dim.nextStep) {
+      const nextText = isEn
+        ? 'Next step: ' + dim.nextStep.description
+        : 'Siguiente paso: ' + dim.nextStep.description;
+      r.paragraph(nextText, 10, COLOR_DARK, 8);
+    }
+
+    if (isBelowTarget) {
+      const flagText = isEn
+        ? 'RED FLAG — ' + dim.tema + ' is below the target level (Control). Priority: strengthen this area.'
+        : 'BANDERA ROJA — ' + dim.tema + ' está por debajo del nivel objetivo (Control). Prioridad: fortalecer esta área.';
+      r.redFlag(flagText);
+      redFlags.push(dim.tema);
+    } else if (isAboveTarget) {
+      const congText = isEn
+        ? 'CONGRATULATIONS — ' + dim.tema + ' exceeds the target level. You have advanced capabilities in this area.'
+        : 'FELICITACIONES — ' + dim.tema + ' supera el nivel objetivo. Tienes capacidades avanzadas en esta área.';
+      r.congrats(congText);
+      congratsList.push(dim.tema);
+    }
+    r.cursorY += 4;
+  }
+
+  // Summary
+  r.ensureSpace(60);
+  if (redFlags.length > 0) {
+    r.boldParagraph(
+      isEn
+        ? 'Areas requiring attention (' + redFlags.length + '): ' + redFlags.join(', ')
+        : 'Áreas que requieren atención (' + redFlags.length + '): ' + redFlags.join(', '),
+      10,
+      COLOR_AMBER
+    );
+  }
+  if (congratsList.length > 0) {
+    r.boldParagraph(
+      isEn
+        ? 'Areas exceeding target (' + congratsList.length + '): ' + congratsList.join(', ')
+        : 'Áreas que superan el objetivo (' + congratsList.length + '): ' + congratsList.join(', '),
+      10,
+      COLOR_GREEN
+    );
+  }
+
+  // ── Section 5: Charts ──────────────────────────────────────────────
+  r.doc.addPage();
+  r.cursorY = r.marginTop;
+  r.sectionHeading(isEn ? 'Your Maturity Overview' : 'Tu Panorama de Madurez');
+
+  // Chart 1: Dimension scores bar chart
+  const chartTitle1 = isEn ? 'Score by Dimension (max 120 pts)' : 'Puntaje por Dimensión (máx. 120 pts)';
+  r.boldParagraph(chartTitle1, 11, COLOR_DARK);
+
+  const barW = r.usableWidth - 60;
+  for (const dim of result.dimensions) {
+    const col = r.levelColor(dim.level);
+    r.horizontalBar(dim.tema, dim.score, 120, barW, 14, col);
+  }
+  r.cursorY += 8;
+
+  // Chart 2: Level progress
+  r.doc.addPage();
+  r.cursorY = r.marginTop;
+  r.sectionHeading(isEn ? 'Progress by Maturity Level' : 'Avance por Nivel de Madurez');
+
+  const chartTitle2 = isEn
+    ? 'How much of your organization has reached each level across all 11 dimensions'
+    : 'Cuánto de tu organización ha alcanzado cada nivel en las 11 dimensiones';
+  r.paragraph(chartTitle2, 10, COLOR_MUTED);
+
+  for (const lp of result.levelProgress) {
+    const label = L[lp.key];
+    const isTargetLevel = lp.key === 'execution' || lp.key === 'standard' || lp.key === 'control';
+    const col = isTargetLevel ? COLOR_PRIMARY : COLOR_GREEN;
+    r.horizontalBar(label, lp.percent, 100, barW, 14, col);
+  }
+  r.cursorY += 8;
+
+  // ── Section 6: Qué sigue — Recommendations ─────────────────────────
+  r.sectionHeading(isEn ? 'What\'s Next: Your Action Plan' : 'Qué Sigue: Tu Plan de Acción');
+
+  // Priority 1: Red flags
+  if (redFlags.length > 0) {
+    const p1Title = isEn
+      ? 'Priority 1: Strengthen areas below target'
+      : 'Prioridad 1: Fortalecer áreas por debajo del objetivo';
+    r.boldParagraph(p1Title, 12, COLOR_AMBER);
+
+    for (const dim of result.dimensions) {
+      const levelIdx = ['execution', 'standard', 'control', 'optimization', 'excellence', 'influencer'].indexOf(dim.level);
+      if (levelIdx < 2 && dim.nextStep) {
+        r.bullet(dim.tema + ': ' + dim.nextStep.description, 10, COLOR_DARK);
+        r.paragraph('  ' + (isEn ? 'Deliverable: ' : 'Entregable: ') + dim.nextStep.deliverable, 9, COLOR_MUTED, 18);
+      }
+    }
+    r.cursorY += 6;
+  }
+
+  // Priority 2: En progreso (partial)
+  const inProgressDims = result.dimensions.filter((d) => d.enProgreso.length > 0);
+  if (inProgressDims.length > 0) {
+    const p2Title = isEn
+      ? 'Priority 2: Complete partially implemented practices'
+      : 'Prioridad 2: Completar prácticas parcialmente implementadas';
+    r.boldParagraph(p2Title, 12, COLOR_PRIMARY);
+
+    for (const dim of inProgressDims) {
+      for (const ep of dim.enProgreso) {
+        r.bullet(dim.tema + ' — ' + L[ep.levelKey] + ': ' + ep.description, 10, COLOR_DARK);
+        r.paragraph('  ' + (isEn ? 'Deliverable: ' : 'Entregable: ') + ep.deliverable, 9, COLOR_MUTED, 18);
+      }
+    }
+    r.cursorY += 6;
+  }
+
+  // Priority 3: General recommendations
+  r.boldParagraph(
+    isEn ? 'General Recommendations' : 'Recomendaciones Generales',
+    12,
+    COLOR_PRIMARY
+  );
+  const globalPct = Math.round(result.overallScore);
+  const recs = isEn
+    ? [
+        'Focus on completing the first 3 levels (Execution, Standard, Control) across all dimensions before pursuing advanced capabilities.',
+        'Use the MBE Corpilot AI platform to track your monthly progress and complete the deliverables for each dimension.',
+        'Schedule a session with an expert to review your results and create a personalized action plan.',
+      ]
+    : [
+        'Enfócate en completar los primeros 3 niveles (Ejecución, Estándar, Control) en todas las dimensiones antes de buscar capacidades avanzadas.',
+        'Usa la plataforma MBE Corpilot AI para dar seguimiento a tu avance mensual y completar los entregables de cada dimensión.',
+        'Agenda una sesión con un experto para revisar tus resultados y crear un plan de acción personalizado.',
+      ];
+  for (const rec of recs) {
+    r.bullet(rec, 10, COLOR_DARK);
+  }
+
+  // Global result summary
+  r.cursorY += 8;
+  r.ensureSpace(60);
+  r.boldParagraph(
+    isEn
+      ? 'Your Global Result: ' + globalPct + ' pts — ' + L[result.overallLevel]
+      : 'Tu Resultado Global: ' + globalPct + ' pts — ' + L[result.overallLevel],
+    13,
+    COLOR_PRIMARY
+  );
+
+  const targetMsg = isEn
+    ? 'Target for micro/small businesses: solid Execution + Standard + Control (up to 50 pts). ' +
+      (globalPct >= 50 ? 'Your business meets or exceeds this target.' : 'Work toward completing these foundational levels.')
+    : 'Objetivo para micro y pequeñas empresas: Ejecución + Estándar + Control sólidos (hasta 50 pts). ' +
+      (globalPct >= 50 ? 'Tu negocio cumple o supera este objetivo.' : 'Trabaja para completar estos niveles fundamentales.');
+  r.paragraph(targetMsg, 10, COLOR_MUTED);
+
+  // ── CTA: Agendar con experto ───────────────────────────────────────
+  r.divider();
+  r.ensureSpace(80);
+  r.boldParagraph(
+    isEn ? 'Schedule a Session with an Expert' : 'Agenda una Sesión con un Experto',
+    14,
+    COLOR_PRIMARY
+  );
+  const ctaText = isEn
+    ? 'Get personalized guidance from a certified MBE mentor. They will review your results, help you prioritize actions, and support your journey toward operational excellence.'
+    : 'Obtén orientación personalizada de un mentor certificado MBE. Revisarán tus resultados, te ayudarán a priorizar acciones y acompañarán tu camino hacia la excelencia operativa.';
+  r.paragraph(ctaText);
+  r.paragraph(
+    isEn
+      ? 'Visit: mbe-corp-ai-lot.vercel.app/en/agendar'
+      : 'Visita: mbe-corp-ai-lot.vercel.app/es/agendar',
+    11,
+    COLOR_PRIMARY
+  );
+
+  r.addFooters();
+  return doc;
+}
+
+// ── Public download helper ───────────────────────────────────────────
+
+export interface DownloadMaturityAssessmentParams {
+  language: 'es' | 'en';
+  result: AssessmentResult;
+  dimensions: MaturityDimensionDef[];
+}
+
+export async function downloadMaturityAssessmentPdf(params: DownloadMaturityAssessmentParams): Promise<void> {
+  let logo: { dataUrl: string; w: number; h: number } | undefined;
+  const logoDataUrl = await loadLogoDataUrl();
+  if (logoDataUrl) {
+    const dims = await logoDimensions(logoDataUrl);
+    if (dims.w > 0 && dims.h > 0) {
+      const logoW = 56;
+      logo = { dataUrl: logoDataUrl, w: logoW, h: Math.max(8, Math.round((logoW * dims.h) / dims.w)) };
+    }
+  }
+  const doc = renderMaturityAssessmentPdf({ ...params, logo });
+  const fileName = params.language === 'en' ? 'maturity-assessment.pdf' : 'evaluacion-de-madurez.pdf';
+  doc.save(fileName);
 }
 
 export interface DownloadCompiledPlanParams {
