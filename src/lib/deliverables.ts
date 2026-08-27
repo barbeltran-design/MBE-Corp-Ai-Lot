@@ -490,32 +490,8 @@ const LEVEL_LABELS_EN: Record<MaturityLevel, string> = {
   influencer: 'Influencer',
 };
 
-interface MaturityPdfDimension {
-  id: string;
-  tema: string;
-  explicacion: string;
-  score: number;
-  level: MaturityLevel;
-  superados: MaturityLevel[];
-  enProgreso: { levelKey: MaturityLevel; description: string; deliverable: string }[];
-  pendientes: MaturityLevel[];
-  nextStep: { levelKey: MaturityLevel; description: string; deliverable: string } | null;
-}
 
-interface MaturityPdfLevelInfo {
-  key: MaturityLevel;
-  nivel: string;
-  pregunta: string;
-  explicacion: string;
-  maxPoints: number;
-}
 
-interface MaturityPdfDimDef {
-  id: string;
-  tema: string;
-  explicacion: string;
-  levels: { key: MaturityLevel; description: string; deliverable: string; tutorial: { nivel: string; pregunta: string; explicacion: string }; maxPoints: number }[];
-}
 
 class MaturityPdfRenderer {
   doc: jsPDF;
@@ -562,7 +538,7 @@ class MaturityPdfRenderer {
     this.doc.text(glyph, x, y);
   }
 
-  cover(logo?: { dataUrl: string; w: number; h: number }): void {
+  cover(logo?: { dataUrl: string; w: number; h: number }, cta?: { title: string; text: string; url: string }): void {
     const isEn = this.lang === 'en';
     if (logo) {
       try { this.doc.addImage(logo.dataUrl, 'PNG', this.marginX, 88, logo.w, logo.h); } catch { /* */ }
@@ -570,7 +546,7 @@ class MaturityPdfRenderer {
     this.doc.setFont('helvetica', 'bold');
     this.doc.setFontSize(11);
     this.setColor(COLOR_PRIMARY);
-    this.doc.text('MBE CORPILOT AI', this.marginX, 150);
+    this.doc.text('MBE Corp-Ai-Lot', this.marginX, 150);
 
     this.doc.setFont('helvetica', 'bold');
     this.doc.setFontSize(32);
@@ -592,13 +568,13 @@ class MaturityPdfRenderer {
 
     const meta: [string, string][] = isEn
       ? [
-          [DINGBAT_CHECK, '11 dimensions of organizational maturity'],
-          [DINGBAT_BOX, '6 maturity levels per dimension'],
+          [DINGBAT_CHECK, '11 key business topics'],
+          [DINGBAT_BOX, '6 maturity levels'],
           [DINGBAT_DOT, new Date().toLocaleDateString('en-US', { day: '2-digit', month: 'long', year: 'numeric' })],
         ]
       : [
-          [DINGBAT_CHECK, '11 dimensiones de madurez organizacional'],
-          [DINGBAT_BOX, '6 niveles de madurez por dimensión'],
+          [DINGBAT_CHECK, '11 temas clave del negocio'],
+          [DINGBAT_BOX, '6 niveles de madurez'],
           [DINGBAT_DOT, new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })],
         ];
 
@@ -610,6 +586,37 @@ class MaturityPdfRenderer {
       this.setColor(COLOR_MUTED);
       this.doc.text(item[1], this.marginX + 18, my);
       my += 22;
+    }
+
+    // CTA on cover
+    if (cta) {
+      my += 20;
+      this.doc.setDrawColor(COLOR_LINE[0], COLOR_LINE[1], COLOR_LINE[2]);
+      this.doc.setLineWidth(0.6);
+      this.doc.line(this.marginX, my, this.pageWidth - this.marginX, my);
+      my += 18;
+
+      this.doc.setFont('helvetica', 'bold');
+      this.doc.setFontSize(13);
+      this.setColor(COLOR_PRIMARY);
+      this.doc.text(cta.title, this.marginX, my);
+      my += 20;
+
+      this.doc.setFont('helvetica', 'normal');
+      this.doc.setFontSize(10);
+      this.setColor(COLOR_DARK);
+      const ctaLines = this.doc.splitTextToSize(cta.text, this.usableWidth);
+      const ctaArr = Array.isArray(ctaLines) ? ctaLines : [ctaLines];
+      for (const line of ctaArr) {
+        this.doc.text(line, this.marginX, my);
+        my += 14;
+      }
+      my += 6;
+
+      this.doc.setFont('helvetica', 'bold');
+      this.doc.setFontSize(10);
+      this.setColor(COLOR_PRIMARY);
+      this.doc.text(cta.url, this.marginX, my);
     }
 
     this.doc.addPage();
@@ -887,182 +894,102 @@ export function renderMaturityAssessmentPdf(params: MaturityAssessmentPdfParams)
   const { result, dimensions } = params;
 
   // ── Cover ──────────────────────────────────────────────────────────
-  r.cover(params.logo);
+  r.cover(params.logo, {
+    title: isEn ? 'Schedule a Session with an Specialist' : 'Agenda una Sesión con un Especialista',
+    text: isEn
+      ? 'Get personalized guidance from a specialist mentor who will review your results listed below, help you prioritize actions, and show you how to leverage the platform to increase your maturity. It\'s completely free.'
+      : 'Obtén orientación personalizada de un mentor especialista quien revisará contigo tus resultados a continuación listados, te ayudará a priorizar acciones y te dirá cómo aprovechar la plataforma para incrementar tu madurez. Es Totalmente Gratis.',
+    url: isEn ? 'mbe-corp-ai-lot.vercel.app/en/agendar' : 'mbe-corp-ai-lot.vercel.app/es/agendar',
+  });
 
-  // ── Section 1: ¿Qué es una evaluación de madurez? ─────────────────
+  // ── Section 1: ¿Qué es una Evaluación de Madurez? ─────────────────
   r.sectionHeading(isEn ? 'What is a Maturity Assessment?' : '¿Qué es una Evaluación de Madurez?');
 
-  const introText = isEn
-    ? 'A maturity assessment is a strategic diagnostic tool that measures how well an organization manages its key business areas. It evaluates your current operational state across 11 dimensions, assigns a maturity level to each, and provides a clear roadmap for improvement.'
-    : 'Una evaluación de madurez es una herramienta diagnóstica estratégica que mide qué tan bien una organización gestiona sus áreas de negocio clave. Evalúa tu estado operativo actual en 11 dimensiones, asigna un nivel de madurez a cada una y proporciona una hoja de ruta clara para la mejora.';
-  r.paragraph(introText);
+  r.paragraph(
+    isEn
+      ? 'A maturity assessment measures how well an organization manages key business topics for its constant development.'
+      : 'La evaluación de madurez mide qué tan bien una organización gestiona temas clave de negocio para su desarrollo constante.'
+  );
 
-  const whyText = isEn
-    ? 'For micro and small businesses, this assessment is especially valuable because it identifies exactly where you stand, what you need to strengthen, and which areas are already performing well. It transforms intuition-based management into data-driven decision-making.'
-    : 'Para micro y pequeñas empresas, esta evaluación es especialmente valiosa porque identifica exactamente dónde estás, qué necesitas fortalecer y qué áreas ya están funcionando bien. Transforma la gestión basada en intuición en toma de decisiones basada en datos.';
-  r.paragraph(whyText);
+  r.paragraph(
+    isEn
+      ? 'For any business, but especially for micro and small businesses, this assessment is very valuable to identify your current state, your strengths and weaknesses.'
+      : 'Para cualquier empresa, pero más para las micro y pequeñas, esta evaluación es muy valiosa para identificar tu estado actual, tus fortalezas y debilidades.'
+  );
+
+  r.paragraph(
+    isEn
+      ? 'And most importantly, it shows you the path to grow, because if you want to be a big company, you must behave like a big company.'
+      : 'Y lo más importante, te marca el camino para crecer, porque si quieres ser una empresa grande, debes comportarte como una empresa grande.'
+  );
+
+  // Formula
+  r.boldParagraph(
+    isEn ? 'The evaluation formula:' : 'La fórmula de evaluación:',
+    11, COLOR_PRIMARY
+  );
+  r.paragraph(
+    isEn
+      ? 'Key topic → How do I execute it? | How do I document it? | How do I improve it? | How do I become the best at it? | How do I use it to influence my environment?'
+      : 'Tema clave → ¿Cómo lo ejecuto? | ¿Cómo lo documento? | ¿Cómo lo mejoro? | ¿Cómo me encamino a ser el mejor en el tema? | ¿Cómo uso el tema para influenciar en mi entorno?',
+    10, COLOR_DARK
+  );
   r.divider();
 
-  // ── Section 2: Los 6 niveles de madurez ────────────────────────────
-  r.sectionHeading(isEn ? 'The 6 Maturity Levels' : 'Los 6 Niveles de Madurez');
+  // ── Section 2: Los 11 temas clave ──────────────────────────────────
+  r.sectionHeading(isEn ? 'The 11 Key Business Topics' : 'Los 11 Temas Clave');
 
-  const levelsIntro = isEn
-    ? 'Each dimension is evaluated against six progressive maturity levels. For micro and small businesses, the target is to solidly establish levels 1 through 3 (Execution, Standard, Control). Levels 4 and above represent advanced capabilities that provide competitive advantage.'
-    : 'Cada dimensión se evalúa contra seis niveles de madurez progresivos. Para micro y pequeñas empresas, el objetivo es establecer sólidamente los niveles 1 a 3 (Ejecución, Estándar, Control). Los niveles 4 y superiores representan capacidades avanzadas que brindan ventaja competitiva.';
-  r.paragraph(levelsIntro);
+  r.paragraph(
+    isEn
+      ? 'Each topic represents a critical area of your business to grow.'
+      : 'Cada tema representa un área crítica de tu negocio para crecer.'
+  );
 
-  const LEVEL_TUTORIAL_ES_DATA: MaturityPdfLevelInfo[] = [
-    { key: 'execution', nivel: 'Ejecución Integral', pregunta: '¿Cómo lo ejecuto?', explicacion: 'Qué métodos uso y cómo lo registro', maxPoints: 10 },
-    { key: 'standard', nivel: 'Documentación Dinámica', pregunta: '¿Cómo lo documento?', explicacion: 'Documento mis procesos, son dinámicos y están disponibles', maxPoints: 20 },
-    { key: 'control', nivel: 'Control Predictivo', pregunta: '¿Cómo lo controlo?', explicacion: 'Tengo alertas de desempeño para anticipar fallas', maxPoints: 20 },
-    { key: 'optimization', nivel: 'Mejora Continua Ágil', pregunta: '¿Cómo lo mejoro?', explicacion: 'Elimino oportunamente las fallas de raíz', maxPoints: 20 },
-    { key: 'excellence', nivel: 'Excelencia Automatizada', pregunta: '¿Cómo me encamino a ser el mejor?', explicacion: 'Automatizo flujos y descentralizo decisiones', maxPoints: 20 },
-    { key: 'influencer', nivel: 'Influencer', pregunta: '¿Cómo influencio en mi industria?', explicacion: 'Inspiro y transformo mi mercado y entorno', maxPoints: 30 },
-  ];
-  const LEVEL_TUTORIAL_EN_DATA: MaturityPdfLevelInfo[] = [
-    { key: 'execution', nivel: 'Integral Execution', pregunta: 'How do I execute it?', explicacion: 'What methods I use and how I record it', maxPoints: 10 },
-    { key: 'standard', nivel: 'Dynamic Documentation', pregunta: 'How do I document it?', explicacion: 'I document my processes; they are dynamic and accessible', maxPoints: 20 },
-    { key: 'control', nivel: 'Predictive Control', pregunta: 'How do I control it?', explicacion: 'I have performance alerts to anticipate failures', maxPoints: 20 },
-    { key: 'optimization', nivel: 'Agile Continuous Improvement', pregunta: 'How do I improve it?', explicacion: 'I promptly eliminate root-cause failures', maxPoints: 20 },
-    { key: 'excellence', nivel: 'Automated Excellence', pregunta: 'How do I get on the path to being the best?', explicacion: 'I automate workflows and decentralize decision-making', maxPoints: 20 },
-    { key: 'influencer', nivel: 'Influencer', pregunta: 'How do I influence my industry?', explicacion: 'I inspire and transform my market and environment', maxPoints: 30 },
-  ];
-
-  const tutorials = isEn ? LEVEL_TUTORIAL_EN_DATA : LEVEL_TUTORIAL_ES_DATA;
-
-  for (let i = 0; i < tutorials.length; i++) {
-    const t = tutorials[i];
-    const num = String(i + 1);
-    const isTarget = i <= 2; // levels 1-3 are the target for micro/small
-    const color = isTarget ? COLOR_PRIMARY : COLOR_MUTED;
-
-    r.ensureSpace(50);
-    r.doc.setFont('helvetica', 'bold');
-    r.doc.setFontSize(12);
-    r.setColor(color);
-    r.doc.text(num + '.', r.marginX, r.cursorY);
-    r.doc.setFont('helvetica', 'bold');
-    r.doc.setFontSize(12);
-    r.setColor(COLOR_DARK);
-    r.doc.text(t.nivel, r.marginX + 20, r.cursorY);
-    r.cursorY += 18;
-
-    r.doc.setFont('helvetica', 'italic');
-    r.doc.setFontSize(10);
-    r.setColor(COLOR_MUTED);
-    r.doc.text(t.pregunta + ' — ' + t.explicacion, r.marginX + 20, r.cursorY);
-    r.cursorY += 16;
-
-    if (isTarget) {
-      r.doc.setFont('helvetica', 'normal');
-      r.doc.setFontSize(9);
-      r.setColor(COLOR_GREEN);
-      const targetMsg = isEn ? '(Target level for micro/small businesses)' : '(Nivel objetivo para micro y pequeñas empresas)';
-      r.doc.text(targetMsg, r.marginX + 20, r.cursorY);
-      r.cursorY += 14;
-    }
-    r.cursorY += 4;
-  }
-  r.divider();
-
-  // ── Section 3: Las 11 dimensiones — qué evalúa cada una ────────────
-  r.sectionHeading(isEn ? 'The 11 Dimensions of Maturity' : 'Las 11 Dimensiones de Madurez');
-
-  const dimIntro = isEn
-    ? 'Each dimension represents a critical area of your business. For each, we describe what it measures and the evidence (deliverables) expected at each maturity level.'
-    : 'Cada dimensión representa un área crítica de tu negocio. Para cada una, describimos qué mide y la evidencia (entregables) esperada en cada nivel de madurez.';
-  r.paragraph(dimIntro);
+  // Custom explanations per dimension
+  const DIM_EXPLANATIONS_ES: Record<string, string> = {
+    strategic: 'Rumbo Estratégico: Hacia dónde va tu organización. Garantiza el crecimiento de la empresa hoy y a largo plazo.',
+    finance: 'Finanzas: Crecer mi Dinero. Evalúa cómo ser rentable.',
+    sales: 'Marketing y Ventas: Atracción de mi mercado. Dale una propuesta de valor atractiva a tus clientes.',
+    customerService: 'Atención al Cliente: Satisfacción del cliente. Asegura que tus clientes te vuelvan a comprar.',
+    compliance: 'Cumplimiento Normativo: Manejo de riesgos Legales y Fiscales. Mitiga riesgos que impactan a la sociedad y el gobierno.',
+    operations: 'Operación: Entrego en tiempo y forma. Habilita procesos simples, flexibles y ágiles a la vista de tus clientes.',
+    knowledge: 'Conocimiento: Toma de decisiones con inteligencia. Usa la información crítica para agilizar y mejorar decisiones.',
+    alliances: 'Alianzas: Estrategia de Ecosistemas. Suma organizaciones a tus objetivos.',
+    esg: 'Enfoque SocioAmbiental: Estructuro la permanencia. Genera beneficios a tu entorno para que el entorno mismo te cuide.',
+    hr: 'Capital Humano: Desarrollo de mi Personal. Ten talento competente comprometido con tu estrategia.',
+    culture: 'Cultura Organizacional: El ambiente dentro del negocio. Crea un entorno de trabajo que facilite alcanzar tus objetivos con gente contenta y leal.',
+  };
+  const DIM_EXPLANATIONS_EN: Record<string, string> = {
+    strategic: 'Strategic Direction: Where your organization is headed. Ensures company growth today and long-term.',
+    finance: 'Finance: Grow My Money. Evaluates how to be profitable.',
+    sales: 'Marketing and Sales: Attracting my market. Give your customers an attractive value proposition.',
+    customerService: 'Customer Service: Customer satisfaction. Ensure your customers come back to buy.',
+    compliance: 'Regulatory Compliance: Legal and Tax Risk Management. Mitigate risks that impact society and government.',
+    operations: 'Operations: Deliver on time and in form. Enables simple, flexible, and agile processes visible to your customers.',
+    knowledge: 'Knowledge: Decision-making with intelligence. Use critical information to speed up and improve decisions.',
+    alliances: 'Alliances: Ecosystem Strategy. Add organizations to your goals.',
+    esg: 'Socio-Environmental Focus: Structure permanence. Generate benefits to your environment so the environment itself takes care of you.',
+    hr: 'Human Capital: Staff Development. Have competent talent committed to your strategy.',
+    culture: 'Organizational Culture: The environment within the business. Create a work environment that helps you reach your goals with happy and loyal people.',
+  };
+  const dimExps = isEn ? DIM_EXPLANATIONS_EN : DIM_EXPLANATIONS_ES;
 
   for (const dim of dimensions) {
-    r.ensureSpace(60);
-    r.boldParagraph(dim.tema + ' — ' + dim.explicacion, 12, COLOR_PRIMARY);
-
-    // Show levels 1-3 (target) as key reference
-    for (let i = 0; i < Math.min(3, dim.levels.length); i++) {
-      const lvl = dim.levels[i];
-      r.bullet(L[lvl.key] + ': ' + lvl.description, 10, COLOR_DARK);
-      r.paragraph('  ' + (isEn ? 'Evidence: ' : 'Evidencia: ') + lvl.deliverable, 9, COLOR_MUTED, 18);
-    }
-    r.cursorY += 6;
+    r.ensureSpace(30);
+    const exp = dimExps[dim.id] ?? (dim.tema + ': ' + dim.explicacion);
+    r.bullet(exp, 10, COLOR_DARK);
   }
   r.divider();
 
-  // ── Section 4: Dónde estás tú — tus resultados ────────────────────
-  r.sectionHeading(isEn ? 'Your Results: Where You Stand' : 'Tus Resultados: Dónde Estás');
-
-  const resultsIntro = isEn
-    ? 'Below is your evaluation against the target levels for micro and small businesses. For each dimension, we indicate your current score, maturity level, and whether you need attention (red flag) or deserve recognition (congratulations).'
-    : 'A continuación se presenta tu evaluación contra los niveles objetivo para micro y pequeñas empresas. Para cada dimensión, indicamos tu puntaje actual, nivel de madurez, y si necesitas atención (bandera roja) o mereces reconocimiento (felicitaciones).';
-  r.paragraph(resultsIntro);
-
-  const redFlags: string[] = [];
-  const congratsList: string[] = [];
-
-  for (const dim of result.dimensions) {
-    const dimDef = dimensions.find((d) => d.id === dim.id);
-    const levelIdx = ['execution', 'standard', 'control', 'optimization', 'excellence', 'influencer'].indexOf(dim.level);
-    const isBelowTarget = levelIdx < 2; // below control = red flag
-    const isAboveTarget = levelIdx >= 3; // optimization+ = congratulations
-
-    r.ensureSpace(40);
-    r.boldParagraph(dim.tema, 11, COLOR_DARK);
-    const scoreText = isEn
-      ? 'Score: ' + Math.round(dim.score) + ' pts | Level: ' + L[dim.level]
-      : 'Puntaje: ' + Math.round(dim.score) + ' pts | Nivel: ' + L[dim.level];
-    r.paragraph(scoreText, 10, COLOR_MUTED);
-
-    if (dim.nextStep) {
-      const nextText = isEn
-        ? 'Next step: ' + dim.nextStep.description
-        : 'Siguiente paso: ' + dim.nextStep.description;
-      r.paragraph(nextText, 10, COLOR_DARK, 8);
-    }
-
-    if (isBelowTarget) {
-      const flagText = isEn
-        ? 'RED FLAG — ' + dim.tema + ' is below the target level (Control). Priority: strengthen this area.'
-        : 'BANDERA ROJA — ' + dim.tema + ' está por debajo del nivel objetivo (Control). Prioridad: fortalecer esta área.';
-      r.redFlag(flagText);
-      redFlags.push(dim.tema);
-    } else if (isAboveTarget) {
-      const congText = isEn
-        ? 'CONGRATULATIONS — ' + dim.tema + ' exceeds the target level. You have advanced capabilities in this area.'
-        : 'FELICITACIONES — ' + dim.tema + ' supera el nivel objetivo. Tienes capacidades avanzadas en esta área.';
-      r.congrats(congText);
-      congratsList.push(dim.tema);
-    }
-    r.cursorY += 4;
-  }
-
-  // Summary
-  r.ensureSpace(60);
-  if (redFlags.length > 0) {
-    r.boldParagraph(
-      isEn
-        ? 'Areas requiring attention (' + redFlags.length + '): ' + redFlags.join(', ')
-        : 'Áreas que requieren atención (' + redFlags.length + '): ' + redFlags.join(', '),
-      10,
-      COLOR_AMBER
-    );
-  }
-  if (congratsList.length > 0) {
-    r.boldParagraph(
-      isEn
-        ? 'Areas exceeding target (' + congratsList.length + '): ' + congratsList.join(', ')
-        : 'Áreas que superan el objetivo (' + congratsList.length + '): ' + congratsList.join(', '),
-      10,
-      COLOR_GREEN
-    );
-  }
-
-  // ── Section 5: Charts ──────────────────────────────────────────────
+  // ── Section 3: Tu Panorama de Madurez (Chart 1) ────────────────────
   r.doc.addPage();
   r.cursorY = r.marginTop;
   r.sectionHeading(isEn ? 'Your Maturity Overview' : 'Tu Panorama de Madurez');
 
-  // Chart 1: Dimension scores bar chart
-  const chartTitle1 = isEn ? 'Score by Dimension (max 120 pts)' : 'Puntaje por Dimensión (máx. 120 pts)';
-  r.boldParagraph(chartTitle1, 11, COLOR_DARK);
+  r.boldParagraph(
+    isEn ? 'Score by Key Topic (max 120 pts)' : 'Puntaje por Tema Clave (máx. 120 pts)',
+    11, COLOR_DARK
+  );
 
   for (const dim of result.dimensions) {
     const col = r.levelColor(dim.level);
@@ -1070,15 +997,86 @@ export function renderMaturityAssessmentPdf(params: MaturityAssessmentPdfParams)
   }
   r.cursorY += 8;
 
-  // Chart 2: Level progress
+  // ── Section 4: Las 6 Estructuras y su Madurez ──────────────────────
   r.doc.addPage();
   r.cursorY = r.marginTop;
-  r.sectionHeading(isEn ? 'Progress by Maturity Level' : 'Avance por Nivel de Madurez');
+  r.sectionHeading(isEn ? 'The 6 Structures and Their Maturity' : 'Las 6 Estructuras y su Madurez');
 
-  const chartTitle2 = isEn
-    ? 'How much of your organization has reached each level across all 11 dimensions'
-    : 'Cuánto de tu organización ha alcanzado cada nivel en las 11 dimensiones';
-  r.paragraph(chartTitle2, 10, COLOR_MUTED);
+  r.paragraph(
+    isEn
+      ? 'Each topic is validated against six structures that help it consolidate.'
+      : 'Cada tema se valida contra seis estructuras que le ayudan a consolidarse.'
+  );
+  r.paragraph(
+    isEn
+      ? 'For micro and small businesses, the goal is to mature the first 3: Integral Execution, Dynamic Documentation, and Predictive Control.'
+      : 'Para micro y pequeñas empresas, el objetivo es madurar las 3 primeras: Ejecución Integral, Documentación Dinámica y Control Predictivo.'
+  );
+  r.paragraph(
+    isEn
+      ? 'The following structures represent advanced capabilities that automatically give businesses competitive advantages. The last one, very few large companies have achieved it.'
+      : 'Las estructuras que les siguen, representan capacidades avanzadas que le brindan a las empresas en automático ventajas competitivas. La última, muy pocas empresas grandes lo han logrado.'
+  );
+
+  const LEVEL_STRUCTURE_ES: { key: MaturityLevel; label: string; desc: string; tag: string }[] = [
+    { key: 'execution', label: 'Ejecución Integral', desc: 'Qué métodos uso y cómo registro el día a día', tag: '(Nivel objetivo para micro y pequeñas empresas)' },
+    { key: 'standard', label: 'Documentación Dinámica', desc: 'Documento mis procesos, son dinámicos y están disponibles', tag: '(Nivel objetivo para micro y pequeñas empresas)' },
+    { key: 'control', label: 'Control Predictivo', desc: 'Tengo alertas de desempeño para anticipar fallas', tag: '(Nivel objetivo para micro y pequeñas empresas)' },
+    { key: 'optimization', label: 'Mejora Continua Ágil', desc: 'Elimino oportunamente las fallas de raíz', tag: '(Nivel deseable para micro y pequeñas empresas)' },
+    { key: 'excellence', label: 'Excelencia Automatizada', desc: 'Tengo el objetivo de innovar en cada tema', tag: '(Nivel aspiracional para medianas empresas)' },
+    { key: 'influencer', label: 'Influencer', desc: 'Inspiro y transformo mi mercado y entorno', tag: '(Nivel aspiracional para las grandes empresas)' },
+  ];
+  const LEVEL_STRUCTURE_EN: { key: MaturityLevel; label: string; desc: string; tag: string }[] = [
+    { key: 'execution', label: 'Integral Execution', desc: 'What methods I use and how I record the day-to-day', tag: '(Target level for micro and small businesses)' },
+    { key: 'standard', label: 'Dynamic Documentation', desc: 'I document my processes; they are dynamic and accessible', tag: '(Target level for micro and small businesses)' },
+    { key: 'control', label: 'Predictive Control', desc: 'I have performance alerts to anticipate failures', tag: '(Target level for micro and small businesses)' },
+    { key: 'optimization', label: 'Agile Continuous Improvement', desc: 'I promptly eliminate root-cause failures', tag: '(Desirable level for micro and small businesses)' },
+    { key: 'excellence', label: 'Automated Excellence', desc: 'I have the goal of innovating in every topic', tag: '(Aspirational level for medium-sized companies)' },
+    { key: 'influencer', label: 'Influencer', desc: 'I inspire and transform my market and environment', tag: '(Aspirational level for large companies)' },
+  ];
+  const structures = isEn ? LEVEL_STRUCTURE_EN : LEVEL_STRUCTURE_ES;
+
+  for (let i = 0; i < structures.length; i++) {
+    const s = structures[i];
+    const num = String(i + 1);
+    const isTarget = i <= 2;
+    const color = isTarget ? COLOR_PRIMARY : COLOR_MUTED;
+
+    r.ensureSpace(48);
+    r.doc.setFont('helvetica', 'bold');
+    r.doc.setFontSize(12);
+    r.setColor(color);
+    r.doc.text(num + '.', r.marginX, r.cursorY);
+    r.doc.setFont('helvetica', 'bold');
+    r.doc.setFontSize(12);
+    r.setColor(COLOR_DARK);
+    r.doc.text(s.label, r.marginX + 20, r.cursorY);
+    r.cursorY += 18;
+
+    r.doc.setFont('helvetica', 'normal');
+    r.doc.setFontSize(10);
+    r.setColor(COLOR_DARK);
+    r.doc.text(s.desc, r.marginX + 20, r.cursorY);
+    r.cursorY += 16;
+
+    r.doc.setFont('helvetica', 'italic');
+    r.doc.setFontSize(9);
+    r.setColor(isTarget ? COLOR_GREEN : COLOR_MUTED);
+    r.doc.text(s.tag, r.marginX + 20, r.cursorY);
+    r.cursorY += 18;
+  }
+  r.divider();
+
+  // ── Section 5: Avance por Madurez (Chart 2) ────────────────────────
+  r.doc.addPage();
+  r.cursorY = r.marginTop;
+  r.sectionHeading(isEn ? 'Progress by Maturity Structure' : 'Avance por Madurez de las Estructuras');
+
+  r.paragraph(
+    isEn
+      ? 'Which structure is most developed in your company across the 11 key topics'
+      : 'Cuál es la estructura más desarrollada en tu empresa de los 11 temas clave'
+  );
 
   for (const lp of result.levelProgress) {
     const label = L[lp.key];
@@ -1088,16 +1086,46 @@ export function renderMaturityAssessmentPdf(params: MaturityAssessmentPdfParams)
   }
   r.cursorY += 8;
 
-  // ── Section 6: Qué sigue — Recommendations ─────────────────────────
+  // ── Section 6: Qué Sigue — Tu Plan de Acción ───────────────────────
   r.sectionHeading(isEn ? 'What\'s Next: Your Action Plan' : 'Qué Sigue: Tu Plan de Acción');
+
+  // Compute red flags and congrats
+  const redFlags: string[] = [];
+  const congratsList: string[] = [];
+  for (const dim of result.dimensions) {
+    const levelIdx = ['execution', 'standard', 'control', 'optimization', 'excellence', 'influencer'].indexOf(dim.level);
+    if (levelIdx < 2) redFlags.push(dim.tema);
+    else if (levelIdx >= 3) congratsList.push(dim.tema);
+  }
+
+  // Red flags summary
+  if (redFlags.length > 0) {
+    r.boldParagraph(
+      isEn
+        ? 'Topics requiring attention (' + redFlags.length + '): ' + redFlags.join(', ')
+        : 'Temas que requieren atención (' + redFlags.length + '): ' + redFlags.join(', '),
+      11, COLOR_AMBER
+    );
+  }
+
+  // Congrats summary
+  if (congratsList.length > 0) {
+    r.boldParagraph(
+      isEn
+        ? 'Topics exceeding the target (' + congratsList.length + '): ' + congratsList.join(', ') + ' — Congratulations!'
+        : 'Temas que superan el objetivo (' + congratsList.length + '): ' + congratsList.join(', ') + ' — ¡Felicitaciones!',
+      11, COLOR_GREEN
+    );
+  }
+
+  r.cursorY += 4;
 
   // Priority 1: Red flags
   if (redFlags.length > 0) {
-    const p1Title = isEn
-      ? 'Priority 1: Strengthen areas below target'
-      : 'Prioridad 1: Fortalecer áreas por debajo del objetivo';
-    r.boldParagraph(p1Title, 12, COLOR_AMBER);
-
+    r.boldParagraph(
+      isEn ? 'Priority 1: Strengthen topics below target' : 'Prioridad 1: Fortalecer temas por debajo del objetivo',
+      12, COLOR_AMBER
+    );
     for (const dim of result.dimensions) {
       const levelIdx = ['execution', 'standard', 'control', 'optimization', 'excellence', 'influencer'].indexOf(dim.level);
       if (levelIdx < 2 && dim.nextStep) {
@@ -1108,14 +1136,13 @@ export function renderMaturityAssessmentPdf(params: MaturityAssessmentPdfParams)
     r.cursorY += 6;
   }
 
-  // Priority 2: En progreso (partial)
+  // Priority 2: In progress
   const inProgressDims = result.dimensions.filter((d) => d.enProgreso.length > 0);
   if (inProgressDims.length > 0) {
-    const p2Title = isEn
-      ? 'Priority 2: Complete partially implemented practices'
-      : 'Prioridad 2: Completar prácticas parcialmente implementadas';
-    r.boldParagraph(p2Title, 12, COLOR_PRIMARY);
-
+    r.boldParagraph(
+      isEn ? 'Priority 2: Complete partially implemented practices' : 'Prioridad 2: Completar prácticas parcialmente implementadas',
+      12, COLOR_PRIMARY
+    );
     for (const dim of inProgressDims) {
       for (const ep of dim.enProgreso) {
         r.bullet(dim.tema + ' — ' + L[ep.levelKey] + ': ' + ep.description, 10, COLOR_DARK);
@@ -1125,65 +1152,25 @@ export function renderMaturityAssessmentPdf(params: MaturityAssessmentPdfParams)
     r.cursorY += 6;
   }
 
-  // Priority 3: General recommendations
+  // General recommendations
   r.boldParagraph(
     isEn ? 'General Recommendations' : 'Recomendaciones Generales',
-    12,
-    COLOR_PRIMARY
+    12, COLOR_PRIMARY
   );
-  const globalPct = Math.round(result.overallScore);
   const recs = isEn
     ? [
-        'Focus on completing the first 3 levels (Execution, Standard, Control) across all dimensions before pursuing advanced capabilities.',
-        'Use the MBE Corpilot AI platform to track your monthly progress and complete the deliverables for each dimension.',
-        'Schedule a session with an expert to review your results and create a personalized action plan.',
+        'Focus on completing the first 3 levels (Execution, Standard, Control) across all topics before pursuing advanced capabilities.',
+        'Use the MBE Corp-Ai-Lot platform to track your monthly progress and complete the deliverables for each topic.',
+        'Schedule a session with a specialist to review your results and create a personalized action plan.',
       ]
     : [
-        'Enfócate en completar los primeros 3 niveles (Ejecución, Estándar, Control) en todas las dimensiones antes de buscar capacidades avanzadas.',
-        'Usa la plataforma MBE Corpilot AI para dar seguimiento a tu avance mensual y completar los entregables de cada dimensión.',
-        'Agenda una sesión con un experto para revisar tus resultados y crear un plan de acción personalizado.',
+        'Enfócate en completar los primeros 3 niveles (Ejecución, Estándar, Control) en todos los temas antes de buscar capacidades avanzadas.',
+        'Usa la plataforma MBE Corp-Ai-Lot para dar seguimiento a tu avance mensual y completar los entregables de cada tema.',
+        'Agenda una sesión con un especialista para revisar tus resultados y crear un plan de acción personalizado.',
       ];
   for (const rec of recs) {
     r.bullet(rec, 10, COLOR_DARK);
   }
-
-  // Global result summary
-  r.cursorY += 8;
-  r.ensureSpace(60);
-  r.boldParagraph(
-    isEn
-      ? 'Your Global Result: ' + globalPct + ' pts — ' + L[result.overallLevel]
-      : 'Tu Resultado Global: ' + globalPct + ' pts — ' + L[result.overallLevel],
-    13,
-    COLOR_PRIMARY
-  );
-
-  const targetMsg = isEn
-    ? 'Target for micro/small businesses: solid Execution + Standard + Control (up to 50 pts). ' +
-      (globalPct >= 50 ? 'Your business meets or exceeds this target.' : 'Work toward completing these foundational levels.')
-    : 'Objetivo para micro y pequeñas empresas: Ejecución + Estándar + Control sólidos (hasta 50 pts). ' +
-      (globalPct >= 50 ? 'Tu negocio cumple o supera este objetivo.' : 'Trabaja para completar estos niveles fundamentales.');
-  r.paragraph(targetMsg, 10, COLOR_MUTED);
-
-  // ── CTA: Agendar con experto ───────────────────────────────────────
-  r.divider();
-  r.ensureSpace(80);
-  r.boldParagraph(
-    isEn ? 'Schedule a Session with an Expert' : 'Agenda una Sesión con un Experto',
-    14,
-    COLOR_PRIMARY
-  );
-  const ctaText = isEn
-    ? 'Get personalized guidance from a certified MBE mentor. They will review your results with you, help you prioritize actions, and show you how to leverage the platform to achieve your goals. It\'s completely free.'
-    : 'Obtén orientación personalizada de un mentor certificado MBE. Revisará contigo tus resultados, te ayudará a priorizar acciones y te dirá cómo aprovechar la plataforma para lograr tus resultados. Es Totalmente Gratis.';
-  r.paragraph(ctaText);
-  r.paragraph(
-    isEn
-      ? 'Visit: mbe-corp-ai-lot.vercel.app/en/agendar'
-      : 'Visita: mbe-corp-ai-lot.vercel.app/es/agendar',
-    11,
-    COLOR_PRIMARY
-  );
 
   r.addFooters();
   return doc;
