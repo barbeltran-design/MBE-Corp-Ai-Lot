@@ -118,6 +118,7 @@ export const SECCIONES_ADMIN = [
   'refplace',
   'convocatorias',
   'club',
+  'notificaciones',
 ] as const;
 export type SeccionAdmin = (typeof SECCIONES_ADMIN)[number];
 
@@ -130,6 +131,7 @@ export const SECCION_ADMIN_LABELS: Record<SeccionAdmin, { es: string; en: string
   refplace: { es: 'Referencias (Reference Place)', en: 'Referrals (Reference Place)' },
   convocatorias: { es: 'Convocatorias', en: 'Funding calls' },
   club: { es: 'Club: puntos y niveles', en: 'Club: points & levels' },
+  notificaciones: { es: 'Notificaciones', en: 'Notifications' },
 };
 
 export function esAdminDeSeccion(

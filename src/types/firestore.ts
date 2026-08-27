@@ -205,3 +205,71 @@ export interface PhdDoc {
   beneficio: string;
   aplicaMBE: boolean;
 }
+
+// ---------------------------------------------------------------------------
+// Notificaciones (Fase 1: email vía Resend, digest semanal + eventos).
+// ---------------------------------------------------------------------------
+
+/** Categorías de notificación soportadas (ver src/lib/notificaciones.ts). */
+export type NotificacionCategoria =
+  | 'juntaClub'
+  | 'reunionB2B'
+  | 'referenciaAplicada'
+  | 'retoSemanal'
+  | 'actividadesVencen'
+  | 'nuevaConvocatoria'
+  | 'misionesPendientes'
+  | 'ranking'
+  | 'mentorReunionAgendada';
+
+export type NotificacionCanal = 'email' | 'whatsapp' | 'sms';
+
+/** Firestore collection: notificationPreferences/{uid} */
+export interface NotificationPreferencesDoc {
+  uid: string;
+  canales: { email: boolean; sms: boolean; whatsapp: boolean };
+  telefonoWhatsapp?: string;
+  digestSemanal: boolean; // resumen de los lunes
+  categoriasActivas: Record<NotificacionCategoria, boolean>;
+  horaPreferida?: string; // 'HH:mm', reservado para fases futuras
+  updatedAt?: string; // ISO
+}
+
+/** Firestore collection: notificationLog/{id} */
+export interface NotificationLogDoc {
+  id: string;
+  uid: string;
+  categoria: NotificacionCategoria;
+  canal: NotificacionCanal;
+  estatus: 'enviado' | 'fallido' | 'omitido';
+  disparadoPor: 'digest_semanal' | 'evento';
+  contenidoResumen: string;
+  enviadoEn: string; // ISO
+}
+
+/** Firestore collection: puntosLog/{id} — historial fechado de puntos del
+ * Club (UserDoc.puntosClub solo guarda el total acumulado; este log permite
+ * calcular "puntos ganados esta semana" para el digest de ranking). */
+export interface PuntosLogDoc {
+  id: string;
+  uid: string;
+  puntos: number; // puede ser negativo (ver CATALOGO_PUNTOS en club.ts)
+  motivo: string;
+  fecha: string; // ISO
+}
+
+/** Firestore collection: mentorBookingIntents/{id} — se crea cuando un
+ * usuario hace clic para agendar con un especialista/mentor (antes de salir
+ * a Calendly/Google Calendar), para poder notificar a ese mentor con quién
+ * solicitó la cita. No confirma que la reunión realmente se agendó en el
+ * calendario externo (ver limitación documentada en la propuesta). */
+export interface MentorBookingIntentDoc {
+  id: string;
+  mentorUid: string;
+  mentorNombre: string;
+  temaId: string;
+  solicitanteUid: string;
+  solicitanteNombre: string;
+  createdAt: string; // ISO
+  notificado: boolean;
+}

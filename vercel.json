@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/notificaciones/digest-semanal",
+      "schedule": "0 13 * * 1"
+    }
+  ]
+}
