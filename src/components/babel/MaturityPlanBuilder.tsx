@@ -6,6 +6,7 @@ import AgentAvatar from '@/components/agentes/AgentAvatar';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 import { useRouter } from 'next/navigation';
 import { getFirebaseAuth } from '@/lib/firebase';
+import { scopedKey, hydrateWorkspaceKey } from '@/lib/workspace-scope';
 import { getLatestAssessmentAnswers } from '@/lib/assessment';
 import { DIMENSION_IDS, getMaturityDimensions, type DimensionId } from '@/lib/maturity-dimensions';
 import { MENTORES, PRACTICAS_POR_TEMA, type MentorAgente, type PracticaMadurez } from '@/lib/madurez-practicas';
@@ -317,33 +318,44 @@ export default function MaturityPlanBuilder({ lang }: { lang: PlanLang }) {
   }, [user]);
 
   React.useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(PLAN_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === 'object') {
-          setPlan({
-            v: 1,
-            completados: parsed.completados ?? {},
-            compromisos: parsed.compromisos ?? {},
-            sprints: parsed.sprints ?? {},
-          });
+    if (user === undefined) return; // aun no resuelve Firebase Auth
+    const uid = user?.uid ?? null;
+    let cancelled = false;
+    (async () => {
+      await hydrateWorkspaceKey(uid, 'madurez-plan', PLAN_KEY);
+      if (cancelled) return;
+      try {
+        const raw = window.localStorage.getItem(scopedKey(PLAN_KEY, uid));
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object') {
+            setPlan({
+              v: 1,
+              completados: parsed.completados ?? {},
+              compromisos: parsed.compromisos ?? {},
+              sprints: parsed.sprints ?? {},
+            });
+          }
         }
+      } catch (err) {
+        console.error(err);
       }
-    } catch (err) {
-      console.error(err);
-    }
-    setLoaded(true);
-  }, []);
+      setLoaded(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   React.useEffect(() => {
     if (!loaded) return;
+    if (user === undefined) return;
     try {
-      window.localStorage.setItem(PLAN_KEY, JSON.stringify(plan));
+      window.localStorage.setItem(scopedKey(PLAN_KEY, user?.uid ?? null), JSON.stringify(plan));
     } catch (err) {
       console.error(err);
     }
-  }, [plan, loaded]);
+  }, [plan, loaded, user]);
 
   const baseNivel = React.useCallback(
     (themeId: DimensionId): number => {

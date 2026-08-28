@@ -4,6 +4,7 @@ import * as React from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { getFirebaseAuth, getFirebaseDb } from '@/lib/firebase';
+import { scopedKey } from '@/lib/workspace-scope';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Sincroniza el contenido de las secciones del workspace (que los builders
@@ -45,16 +46,17 @@ export function WorkspaceSyncer() {
     const db = getFirebaseDb();
     const writes: Promise<unknown>[] = [];
     for (const { seccion, key } of SECTIONS) {
+      const scoped = scopedKey(key, uid);
       let raw: string | null = null;
       try {
-        raw = window.localStorage.getItem(key);
+        raw = window.localStorage.getItem(scoped);
       } catch {
         continue;
       }
       if (!raw) continue;
-      const last = lastRef.current[key];
+      const last = lastRef.current[scoped];
       if (last === raw) continue;
-      lastRef.current[key] = raw;
+      lastRef.current[scoped] = raw;
       writes.push(
         setDoc(
           doc(db, 'users', uid, 'workspace', seccion),

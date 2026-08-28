@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { downloadFinancialGoalsExcel, computeFinancialGoals, computeFinancialChannels } from '@/lib/deliverables';
 import type { FinancialGoalsInput, FinancialGoalsResult, FinancialGoalsChannel } from '@/lib/deliverables';
+import { useAuthUidState, scopedKey, hydrateWorkspaceKey } from '@/lib/workspace-scope';
 
 type FinLang = 'es' | 'en';
 
@@ -115,14 +116,14 @@ function formFromInput(inp: FinancialGoalsInput): FinSavedForm {
   return { canales: canales, fixedItems: fixedItems, desiredProfit: desiredProfit, marketingPct: marketingPct };
 }
 
-function readFinHistory(): FinGoalsSaved[] {
+function readFinHistory(uid: string | null): FinGoalsSaved[] {
   try {
-    const raw = window.localStorage.getItem(FIN_GOALS_HISTORY_KEY);
+    const raw = window.localStorage.getItem(scopedKey(FIN_GOALS_HISTORY_KEY, uid));
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) return parsed;
     }
-    const rawOld = window.localStorage.getItem(FIN_GOALS_LAST_KEY);
+    const rawOld = window.localStorage.getItem(scopedKey(FIN_GOALS_LAST_KEY, uid));
     if (rawOld) {
       const parsedOld = JSON.parse(rawOld);
       if (parsedOld && parsedOld.input && parsedOld.result) {
@@ -133,7 +134,7 @@ function readFinHistory(): FinGoalsSaved[] {
           savedAt: parsedOld.savedAt ?? new Date().toISOString(),
           form: formFromInput(parsedOld.input),
         };
-        writeFinHistory([migrated]);
+        writeFinHistory([migrated], uid);
         return [migrated];
       }
     }
@@ -143,17 +144,17 @@ function readFinHistory(): FinGoalsSaved[] {
   return [];
 }
 
-function writeFinHistory(list: FinGoalsSaved[]): void {
+function writeFinHistory(list: FinGoalsSaved[], uid: string | null): void {
   try {
-    window.localStorage.setItem(FIN_GOALS_HISTORY_KEY, JSON.stringify(list));
+    window.localStorage.setItem(scopedKey(FIN_GOALS_HISTORY_KEY, uid), JSON.stringify(list));
     const latest = list[0];
     if (latest) {
       window.localStorage.setItem(
-        FIN_GOALS_LAST_KEY,
+        scopedKey(FIN_GOALS_LAST_KEY, uid),
         JSON.stringify({ input: latest.input, result: latest.result, savedAt: latest.savedAt })
       );
     } else {
-      window.localStorage.removeItem(FIN_GOALS_LAST_KEY);
+      window.localStorage.removeItem(scopedKey(FIN_GOALS_LAST_KEY, uid));
     }
   } catch {
     // sin acceso a localStorage
@@ -188,15 +189,28 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
   const [finHistory, setFinHistory] = React.useState<FinGoalsSaved[]>([]);
   const [finMenu, setFinMenu] = React.useState(false);
   const [finEditingId, setFinEditingId] = React.useState<string | null>(null);
+  const { uid, ready } = useAuthUidState();
 
   React.useEffect(function () {
-    const list = readFinHistory();
-    if (list.length > 0) {
-      setFinHistory(list);
-      setFinActive(true);
-      setFinMenu(true);
-    }
-  }, []);
+    if (!ready) return;
+    let cancelled = false;
+    (async function () {
+      await Promise.all([
+        hydrateWorkspaceKey(uid, 'finanzas-historial', FIN_GOALS_HISTORY_KEY),
+        hydrateWorkspaceKey(uid, 'finanzas', FIN_GOALS_LAST_KEY),
+      ]);
+      if (cancelled) return;
+      const list = readFinHistory(uid);
+      if (list.length > 0) {
+        setFinHistory(list);
+        setFinActive(true);
+        setFinMenu(true);
+      }
+    })();
+    return function () {
+      cancelled = true;
+    };
+  }, [ready, uid]);
 
   function resetFin() {
     setFinStage(1);
@@ -214,7 +228,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
 
   function handleStartFinancialGoals() {
     resetFin();
-    const list = readFinHistory();
+    const list = readFinHistory(uid);
     setFinHistory(list);
     setFinActive(true);
     setFinMenu(list.length > 0);
@@ -253,7 +267,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
   function handleDeleteSaved(id: string) {
     const next = finHistory.filter(function (h) { return h.id !== id; });
     setFinHistory(next);
-    writeFinHistory(next);
+    writeFinHistory(next, uid);
   }
   function handleCloseFinancialGoals() {
     resetFin();
@@ -535,7 +549,7 @@ export default function FinancialGoalsBuilder({ lang }: { lang: FinLang }) {
         setFinHistory(function (prev) {
           const without = prev.filter(function (h) { return h.id !== savedEntry.id; });
           const next = [savedEntry, ...without].slice(0, FIN_HISTORY_MAX);
-          writeFinHistory(next);
+          writeFinHistory(next, uid);
           return next;
         });
       } catch (saveErr) {

@@ -40,6 +40,7 @@ import { DisplayLangProvider, useDisplayLang } from '@/components/display-lang-p
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 import AgentAvatar from '@/components/agentes/AgentAvatar';
 import { getFirebaseAuth, getFirebaseDb } from '@/lib/firebase';
+import { scopedKey } from '@/lib/workspace-scope';
 import { useUserRoles } from '@/lib/use-user-roles';
 import { getMaturityDimensions, DIMENSION_IDS, type DimensionId } from '@/lib/maturity-dimensions';
 import { computeResults, type AssessmentResult, type DimensionAnswers } from '@/lib/maturity-scoring';
@@ -278,8 +279,9 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
   );
 
   React.useEffect(() => {
+    if (user === undefined) return;
     try {
-      const raw = window.localStorage.getItem(PLAN_STORAGE_KEY);
+      const raw = window.localStorage.getItem(scopedKey(PLAN_STORAGE_KEY, user?.uid ?? null));
       if (!raw) return;
       const parsed = JSON.parse(raw);
       setTienePlan(true);
@@ -295,18 +297,19 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
     } catch (err) {
       console.error('[MBE ExecutivePreview] failed to read plan from localStorage', err);
     }
-  }, []);
+  }, [user]);
 
   React.useEffect(() => {
+    if (user === undefined) return;
     try {
-      const raw = window.localStorage.getItem(FIN_GOALS_LAST_KEY);
+      const raw = window.localStorage.getItem(scopedKey(FIN_GOALS_LAST_KEY, user?.uid ?? null));
       if (!raw) return;
       const parsed = JSON.parse(raw);
       if (parsed && parsed.input && parsed.result) setFinGoals(parsed);
     } catch (err) {
       console.error('[MBE ExecutivePreview] failed to read financial goals from localStorage', err);
     }
-  }, []);
+  }, [user]);
 
   // Progreso de mundos: /api/worlds (users/{uid}.worlds.partida + puntosClub).
   React.useEffect(() => {
@@ -403,8 +406,9 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
 
   // Plan de madurez (Mundo de Retos): prácticas completadas del mes actual.
   React.useEffect(() => {
+    if (user === undefined) return;
     try {
-      const raw = window.localStorage.getItem('babel_madurez_plan_v1');
+      const raw = window.localStorage.getItem(scopedKey('babel_madurez_plan_v1', user?.uid ?? null));
       if (!raw) return;
       const parsed = JSON.parse(raw);
       let cumplidas = 0;
@@ -418,14 +422,16 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
     } catch (err) {
       console.error('[MBE ExecutivePreview] failed to read maturity plan', err);
     }
-  }, []);
+  }, [user]);
 
   // Organigrama guardado (localStorage) para la Misión 5 de Estrategia:
   // cuenta los ROLES con responsable (persona) asignado, no solo los roles creados.
   React.useEffect(() => {
+    if (user === undefined) return;
     try {
+      const uid = user?.uid ?? null;
       let conPersona = 0;
-      const raw = window.localStorage.getItem('babel_orgchart_v1');
+      const raw = window.localStorage.getItem(scopedKey('babel_orgchart_v1', uid));
       const parsed = raw ? JSON.parse(raw) : null;
       if (parsed && typeof parsed === 'object') {
         conPersona = Object.values(parsed as Record<string, unknown>).filter(
@@ -436,7 +442,7 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
             Boolean((a as { person?: string }).person && String((a as { person?: string }).person).trim())
         ).length;
       }
-      const boardRaw = window.localStorage.getItem('babel_orgchart_board_v1');
+      const boardRaw = window.localStorage.getItem(scopedKey('babel_orgchart_board_v1', uid));
       const board = boardRaw ? JSON.parse(boardRaw) : null;
       if (board && typeof board === 'object') {
         if (board.presidente && String(board.presidente).trim()) conPersona += 1;
@@ -449,7 +455,7 @@ function ExecutivePreviewContent({ routeLocale }: { routeLocale: string }) {
     } catch (err) {
       console.error('[MBE ExecutivePreview] failed to read org chart', err);
     }
-  }, []);
+  }, [user]);
 
   // Se agrupa por numero de fase (Map conserva el ultimo registro de cada
   // una) para que datos viejos con fases duplicadas -bug ya corregido en

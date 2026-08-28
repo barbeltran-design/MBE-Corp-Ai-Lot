@@ -3,6 +3,7 @@ import React from 'react';
 import { ChevronDown } from 'lucide-react';
 import AgentAvatar from '@/components/agentes/AgentAvatar';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
+import { useAuthUidState, scopedKey, hydrateWorkspaceKey } from '@/lib/workspace-scope';
 type OrgLang = 'es' | 'en';
 type OrgStatus = 'green' | 'yellow' | 'orange' | 'red';
 type ConsejeroTipo = 'permanente' | 'tema';
@@ -615,6 +616,7 @@ const PASOS_TOUR: Record<OrgLang, TourStep[]> = {
 
 export default function OrgChartBuilder({ lang }: { lang: OrgLang }) {
   const t = T[lang];
+  const { uid, ready } = useAuthUidState();
   const [assignments, setAssignments] = React.useState<Record<string, OrgAssignment>>({});
   const [expanded, setExpanded] = React.useState<Record<string, boolean>>({});
   const [loaded, setLoaded] = React.useState(false);
@@ -624,82 +626,109 @@ export default function OrgChartBuilder({ lang }: { lang: OrgLang }) {
   const [contactosLoaded, setContactosLoaded] = React.useState(false);
   const [contactosOpen, setContactosOpen] = React.useState(true);
   const [collapsedLevels, setCollapsedLevels] = React.useState<Record<string, boolean>>({});
-  React.useEffect(function () {
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === 'object') {
-          setAssignments(parsed);
+  React.useEffect(() => {
+    if (!ready) return;
+    let cancelled = false;
+    (async () => {
+      await hydrateWorkspaceKey(uid, 'organigrama', STORAGE_KEY);
+      if (cancelled) return;
+      try {
+        const raw = window.localStorage.getItem(scopedKey(STORAGE_KEY, uid));
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object') {
+            setAssignments(parsed);
+          }
         }
+      } catch {
+        // ignore corrupt storage
       }
-    } catch {
-      // ignore corrupt storage
-    }
-    setLoaded(true);
-  }, []);
+      if (!cancelled) setLoaded(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, uid]);
   React.useEffect(
     function () {
       if (!loaded) return;
       try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(assignments));
+        window.localStorage.setItem(scopedKey(STORAGE_KEY, uid), JSON.stringify(assignments));
       } catch {
         // storage full or unavailable, ignore
       }
     },
-    [assignments, loaded]
+    [assignments, loaded, uid]
   );
-  React.useEffect(function () {
-    try {
-      const raw = window.localStorage.getItem(BOARD_STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === 'object') {
-          setBoardData({
-            presidente: typeof parsed.presidente === 'string' ? parsed.presidente : '',
-            secretario: typeof parsed.secretario === 'string' ? parsed.secretario : '',
-            consejeros: Array.isArray(parsed.consejeros) ? parsed.consejeros : [],
-          });
+  React.useEffect(() => {
+    if (!ready) return;
+    let cancelled = false;
+    (async () => {
+      await hydrateWorkspaceKey(uid, 'junta-directiva', BOARD_STORAGE_KEY);
+      if (cancelled) return;
+      try {
+        const raw = window.localStorage.getItem(scopedKey(BOARD_STORAGE_KEY, uid));
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object') {
+            setBoardData({
+              presidente: typeof parsed.presidente === 'string' ? parsed.presidente : '',
+              secretario: typeof parsed.secretario === 'string' ? parsed.secretario : '',
+              consejeros: Array.isArray(parsed.consejeros) ? parsed.consejeros : [],
+            });
+          }
         }
+      } catch {
+        // ignore corrupt storage
       }
-    } catch {
-      // ignore corrupt storage
-    }
-    setBoardLoaded(true);
-  }, []);
+      if (!cancelled) setBoardLoaded(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, uid]);
   React.useEffect(
     function () {
       if (!boardLoaded) return;
       try {
-        window.localStorage.setItem(BOARD_STORAGE_KEY, JSON.stringify(boardData));
+        window.localStorage.setItem(scopedKey(BOARD_STORAGE_KEY, uid), JSON.stringify(boardData));
       } catch {
         // storage full or unavailable, ignore
       }
     },
-    [boardData, boardLoaded]
+    [boardData, boardLoaded, uid]
   );
-  React.useEffect(function () {
-    try {
-      const raw = window.localStorage.getItem(CONTACTS_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) setContactos(parsed);
+  React.useEffect(() => {
+    if (!ready) return;
+    let cancelled = false;
+    (async () => {
+      await hydrateWorkspaceKey(uid, 'contactos', CONTACTS_KEY);
+      if (cancelled) return;
+      try {
+        const raw = window.localStorage.getItem(scopedKey(CONTACTS_KEY, uid));
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) setContactos(parsed);
+        }
+      } catch {
+        // ignore corrupt storage
       }
-    } catch {
-      // ignore corrupt storage
-    }
-    setContactosLoaded(true);
-  }, []);
+      if (!cancelled) setContactosLoaded(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, uid]);
   React.useEffect(
     function () {
       if (!contactosLoaded) return;
       try {
-        window.localStorage.setItem(CONTACTS_KEY, JSON.stringify(contactos));
+        window.localStorage.setItem(scopedKey(CONTACTS_KEY, uid), JSON.stringify(contactos));
       } catch {
         // storage full or unavailable, ignore
       }
     },
-    [contactos, contactosLoaded]
+    [contactos, contactosLoaded, uid]
   );
   // Mantiene el directorio sincronizado con el organigrama: cada rol con
   // persona asignada que no tenga contacto reclamado se agrega como fila.

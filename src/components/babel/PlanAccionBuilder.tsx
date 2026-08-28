@@ -2,6 +2,7 @@
 import React from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase';
+import { scopedKey, hydrateWorkspaceKey } from '@/lib/workspace-scope';
 import { getLatestAssessmentAnswers } from '@/lib/assessment';
 import { getMaturityDimensions } from '@/lib/maturity-dimensions';
 import { computeResults, type AssessmentResult } from '@/lib/maturity-scoring';
@@ -149,6 +150,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
   const [boardSecretario, setBoardSecretario] = React.useState('');
   const [boardConsejeros, setBoardConsejeros] = React.useState<{ id: string; nombre: string }[]>([]);
   const [authUser, setAuthUser] = React.useState<User | null>(null);
+  const [authReady, setAuthReady] = React.useState(false);
   const [madurezResult, setMadurezResult] = React.useState<AssessmentResult | null>(null);
   const [babelFase1Summary, setBabelFase1Summary] = React.useState('');
   const [babelFase2Summary, setBabelFase2Summary] = React.useState('');
@@ -157,7 +159,10 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
 
   React.useEffect(() => {
     const auth = getFirebaseAuth();
-    const unsubscribe = onAuthStateChanged(auth, (u) => setAuthUser(u));
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setAuthUser(u);
+      setAuthReady(true);
+    });
     return unsubscribe;
   }, []);
 
@@ -204,65 +209,79 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
   }, [authUser, lang]);
 
   React.useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed && Array.isArray(parsed.objetivos)) setObjetivos(parsed.objetivos);
-        if (parsed && Array.isArray(parsed.entornos)) {
-          setEntornos(
-            parsed.entornos.map((e: { objetivoIds?: string[]; objetivoId?: unknown }) =>
-              Object.assign({}, e, { objetivoIds: objetivosDe(e) })
-            )
-          );
+    if (!authReady) return;
+    const uid = authUser?.uid ?? null;
+    let cancelled = false;
+    (async () => {
+      await Promise.all([
+        hydrateWorkspaceKey(uid, 'plan-accion', STORAGE_KEY),
+        hydrateWorkspaceKey(uid, 'organigrama', ORG_KEY),
+        hydrateWorkspaceKey(uid, 'junta-directiva', BOARD_KEY),
+      ]);
+      if (cancelled) return;
+      try {
+        const raw = window.localStorage.getItem(scopedKey(STORAGE_KEY, uid));
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && Array.isArray(parsed.objetivos)) setObjetivos(parsed.objetivos);
+          if (parsed && Array.isArray(parsed.entornos)) {
+            setEntornos(
+              parsed.entornos.map((e: { objetivoIds?: string[]; objetivoId?: unknown }) =>
+                Object.assign({}, e, { objetivoIds: objetivosDe(e) })
+              )
+            );
+          }
+          if (parsed && Array.isArray(parsed.fds)) {
+            setFds(
+              parsed.fds.map((f: { entornoIds?: string[]; entornoId?: unknown }) =>
+                Object.assign({}, f, { entornoIds: entornosDe(f) })
+              )
+            );
+          }
+          if (parsed && Array.isArray(parsed.proyectos)) setProyectos(parsed.proyectos);
+          if (parsed && Array.isArray(parsed.acciones)) setAcciones(parsed.acciones);
+          setEtapasOpen(!(Array.isArray(parsed.objetivos) && parsed.objetivos.length > 0));
         }
-        if (parsed && Array.isArray(parsed.fds)) {
-          setFds(
-            parsed.fds.map((f: { entornoIds?: string[]; entornoId?: unknown }) =>
-              Object.assign({}, f, { entornoIds: entornosDe(f) })
-            )
-          );
+      } catch (err) {
+        console.error(err);
+      }
+      try {
+        const rawOrg = window.localStorage.getItem(scopedKey(ORG_KEY, uid));
+        if (rawOrg) {
+          const parsedOrg = JSON.parse(rawOrg);
+          if (parsedOrg && typeof parsedOrg === 'object') setOrgAssignments(parsedOrg);
         }
-        if (parsed && Array.isArray(parsed.proyectos)) setProyectos(parsed.proyectos);
-        if (parsed && Array.isArray(parsed.acciones)) setAcciones(parsed.acciones);
-        setEtapasOpen(!(Array.isArray(parsed.objetivos) && parsed.objetivos.length > 0));
+      } catch (err) {
+        console.error(err);
       }
-    } catch (err) {
-      console.error(err);
-    }
-    try {
-      const rawOrg = window.localStorage.getItem(ORG_KEY);
-      if (rawOrg) {
-        const parsedOrg = JSON.parse(rawOrg);
-        if (parsedOrg && typeof parsedOrg === 'object') setOrgAssignments(parsedOrg);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-    try {
-      const rawBoard = window.localStorage.getItem(BOARD_KEY);
-      if (rawBoard) {
-        const parsedBoard = JSON.parse(rawBoard);
-        if (parsedBoard && typeof parsedBoard.presidente === 'string') setBoardPresidente(parsedBoard.presidente);
-        if (parsedBoard && typeof parsedBoard.secretario === 'string') setBoardSecretario(parsedBoard.secretario);
-        if (parsedBoard && Array.isArray(parsedBoard.consejeros)) {
-          setBoardConsejeros(
-            parsedBoard.consejeros
-              .filter((c: unknown) => c && typeof c === 'object' && typeof (c as { id?: unknown }).id === 'string')
-              .map((c: { id: string; nombre?: unknown }) => ({ id: c.id, nombre: typeof c.nombre === 'string' ? c.nombre : '' }))
-          );
+      try {
+        const rawBoard = window.localStorage.getItem(scopedKey(BOARD_KEY, uid));
+        if (rawBoard) {
+          const parsedBoard = JSON.parse(rawBoard);
+          if (parsedBoard && typeof parsedBoard.presidente === 'string') setBoardPresidente(parsedBoard.presidente);
+          if (parsedBoard && typeof parsedBoard.secretario === 'string') setBoardSecretario(parsedBoard.secretario);
+          if (parsedBoard && Array.isArray(parsedBoard.consejeros)) {
+            setBoardConsejeros(
+              parsedBoard.consejeros
+                .filter((c: unknown) => c && typeof c === 'object' && typeof (c as { id?: unknown }).id === 'string')
+                .map((c: { id: string; nombre?: unknown }) => ({ id: c.id, nombre: typeof c.nombre === 'string' ? c.nombre : '' }))
+            );
+          }
         }
+      } catch (err) {
+        console.error(err);
       }
-    } catch (err) {
-      console.error(err);
-    }
-    setLoaded(true);
-  }, []);
+      setLoaded(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authReady, authUser]);
 
   React.useEffect(() => {
     if (!loaded) return;
     try {
-      const raw = window.localStorage.getItem(INDICADORES_KEY);
+      const raw = window.localStorage.getItem(scopedKey(INDICADORES_KEY, authUser?.uid ?? null));
       if (!raw) return;
       const parsed = JSON.parse(raw);
       if (!Array.isArray(parsed)) return;
@@ -305,7 +324,7 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
       console.error(err);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded]);
+  }, [loaded, authUser]);
 
   React.useEffect(() => {
     if (!loaded || lang === 'es') return;
@@ -345,11 +364,11 @@ export default function PlanAccionBuilder({ lang }: { lang: PlanLang }) {
         proyectos: proyectos,
         acciones: acciones,
       };
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(blob));
+      window.localStorage.setItem(scopedKey(STORAGE_KEY, authUser?.uid ?? null), JSON.stringify(blob));
     } catch (err) {
       console.error(err);
     }
-  }, [objetivos, entornos, fds, proyectos, acciones, loaded]);
+  }, [objetivos, entornos, fds, proyectos, acciones, loaded, authUser]);
 
   const resolvePersonForRole = (roleKey: string): string => {
     if (!roleKey) return '';

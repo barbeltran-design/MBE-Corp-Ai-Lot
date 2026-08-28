@@ -5,6 +5,7 @@ import FinancialGoalsBuilder from '@/components/babel/FinancialGoalsBuilder';
 import AgentAvatar from '@/components/agentes/AgentAvatar';
 import PageTour, { type TourStep } from '@/components/ui/executive/PageTour';
 import type { PerspectivaKey } from '@/lib/plan-accion';
+import { useAuthUidState, scopedKey, hydrateWorkspaceKey } from '@/lib/workspace-scope';
 
 type PlanLang = 'es' | 'en';
 // Alias de PerspectivaKey (definida a partir de PERSPECTIVAS en lib/plan-accion.ts):
@@ -197,9 +198,9 @@ function formatMetaValue(meta: string, unidadMedida: string, lang: PlanLang): st
 // Construye el contexto financiero compacto que Babel usa para llenar los
 // [corchetes] de la perspectiva financiera, leyendo el ultimo guardado de
 // FinancialGoalsBuilder (clave babel_financial_goals_v1).
-function buildFinancialContext(lang: PlanLang): string {
+function buildFinancialContext(lang: PlanLang, uid: string | null): string {
   try {
-    const raw = window.localStorage.getItem(FIN_GOALS_LAST_KEY);
+    const raw = window.localStorage.getItem(scopedKey(FIN_GOALS_LAST_KEY, uid));
     if (!raw) return '';
     const parsed = JSON.parse(raw);
     const i = parsed && parsed.input;
@@ -311,26 +312,36 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
   const [generating, setGenerating] = React.useState(false);
   const [genError, setGenError] = React.useState('');
   const [collapsed, setCollapsed] = React.useState<Record<string, boolean>>({});
+  const { uid, ready } = useAuthUidState();
 
   React.useEffect(() => {
-    try {
-      const rawInd = window.localStorage.getItem(INDICADORES_KEY);
-      if (rawInd) {
-        const parsedInd = JSON.parse(rawInd);
-        if (Array.isArray(parsedInd)) {
-          const normalizados = parsedInd.map((ind: Indicador) =>
-            ind && typeof ind.meta === 'string'
-              ? Object.assign({}, ind, { meta: formatMetaValue(ind.meta, ind.unidadMedida || '', lang) })
-              : ind,
-          );
-          setIndicadores(normalizados);
+    if (!ready) return;
+    let cancelled = false;
+    (async () => {
+      await hydrateWorkspaceKey(uid, 'indicadores', INDICADORES_KEY);
+      if (cancelled) return;
+      try {
+        const rawInd = window.localStorage.getItem(scopedKey(INDICADORES_KEY, uid));
+        if (rawInd) {
+          const parsedInd = JSON.parse(rawInd);
+          if (Array.isArray(parsedInd)) {
+            const normalizados = parsedInd.map((ind: Indicador) =>
+              ind && typeof ind.meta === 'string'
+                ? Object.assign({}, ind, { meta: formatMetaValue(ind.meta, ind.unidadMedida || '', lang) })
+                : ind,
+            );
+            setIndicadores(normalizados);
+          }
         }
+      } catch (err) {
+        console.error(err);
       }
-    } catch (err) {
-      console.error(err);
-    }
-    setLoaded(true);
-  }, []);
+      setLoaded(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, uid]);
 
   React.useEffect(() => {
     if (!loaded || lang === 'es') return;
@@ -362,11 +373,11 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
   React.useEffect(() => {
     if (!loaded) return;
     try {
-      window.localStorage.setItem(INDICADORES_KEY, JSON.stringify(indicadores));
+      window.localStorage.setItem(scopedKey(INDICADORES_KEY, uid), JSON.stringify(indicadores));
     } catch (err) {
       console.error(err);
     }
-  }, [indicadores, loaded]);
+  }, [indicadores, loaded, uid]);
 
   const addIndicador = () => setIndicadores((prev) => prev.concat([blankIndicador()]));
   const updateIndicador = (id: string, patch: Partial<Indicador>) =>
@@ -377,7 +388,7 @@ export default function IndicadoresBuilder({ lang }: { lang: PlanLang }) {
     setGenerating(true);
     setGenError('');
     try {
-      const financialContext = buildFinancialContext(lang);
+      const financialContext = buildFinancialContext(lang, uid);
       const res = await fetch('/api/babel/indicadores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
