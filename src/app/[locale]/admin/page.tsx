@@ -31,7 +31,7 @@ import {
   type Convocatoria,
 } from '@/lib/convocatorias-data';
 
-type TabKey = 'catalog' | 'users' | 'pagos' | 'pagosEsp' | 'solicitudes' | 'refplace' | 'convocatorias' | 'club';
+type TabKey = 'catalog' | 'users' | 'pagos' | 'pagosEsp' | 'solicitudes' | 'refplace' | 'convocatorias' | 'club' | 'notificaciones';
 
 const PASOS_TOUR_ADMIN: Record<'es' | 'en', TourStep[]> = {
   es: [
@@ -69,6 +69,7 @@ const TAB_DEFS: { key: TabKey; es: string; en: string }[] = [
   { key: 'refplace', es: 'Referencias (Reference Place)', en: 'Referrals (Reference Place)' },
   { key: 'convocatorias', es: 'Convocatorias', en: 'Funding calls' },
   { key: 'club', es: 'Club: puntos y niveles', en: 'Club: points & levels' },
+  { key: 'notificaciones', es: 'Notificaciones', en: 'Notifications' },
 ];
 
 const fmtMoney = (n: number | null | undefined) =>
@@ -251,6 +252,16 @@ export default function AdminPage() {
   const [clubAccesos, setClubAccesos] = React.useState<{ id: string; es: string; en: string }[]>([]);
   const [clubMsg, setClubMsg] = React.useState('');
 
+  // Notificaciones (Fase 2): horario global del digest semanal (día/hora/zona
+  // horaria) que aplica a todos los usuarios. Ver NotificacionHorarioDoc en
+  // src/types/firestore.ts y /api/admin/notificaciones-horario.
+  const [notifHorario, setNotifHorario] = React.useState<{ diaSemana: number; hora: number; timezone: string }>({
+    diaSemana: 1,
+    hora: 8,
+    timezone: 'America/Mexico_City',
+  });
+  const [notifMsg, setNotifMsg] = React.useState('');
+
   React.useEffect(() => {
     const auth = getFirebaseAuth();
     const unsub = onAuthStateChanged(auth, (u) => setUser(u));
@@ -367,6 +378,32 @@ export default function AdminPage() {
     if (res.ok) await loadClub();
   }
 
+  const loadNotificaciones = React.useCallback(async () => {
+    const headers = await tokenHeaders();
+    const res = await fetch('/api/admin/notificaciones-horario', { headers });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data?.horario) {
+      setNotifHorario({
+        diaSemana: Number(data.horario.diaSemana),
+        hora: Number(data.horario.hora),
+        timezone: String(data.horario.timezone),
+      });
+    }
+  }, [tokenHeaders]);
+
+  async function guardarHorario() {
+    const headers = await tokenHeaders();
+    const res = await fetch('/api/admin/notificaciones-horario', {
+      method: 'PUT',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(notifHorario),
+    });
+    const data = await res.json().catch(() => ({}));
+    setNotifMsg(res.ok ? t('Guardado. El digest semanal usará este horario.', 'Saved. The weekly digest will use this schedule.') : data?.error || t('No se pudo guardar.', 'Could not save.'));
+    if (res.ok) await loadNotificaciones();
+  }
+
   React.useEffect(() => {
     if (!administracion || !user) return;
     const loaders: Record<TabKey, () => Promise<void>> = {
@@ -378,9 +415,10 @@ export default function AdminPage() {
       refplace: loadRefplace,
       convocatorias: loadConvocatorias,
       club: loadClub,
+      notificaciones: loadNotificaciones,
     };
     loaders[tab]().catch(() => {});
-  }, [administracion, user, tab, loadCatalog, loadUsers, loadPagos, loadSolicitudes, loadRefplace, loadConvocatorias, loadClub]);
+  }, [administracion, user, tab, loadCatalog, loadUsers, loadPagos, loadSolicitudes, loadRefplace, loadConvocatorias, loadClub, loadNotificaciones]);
 
   function abrirEditarRefplace(tipo: 'solicitud' | 'oferta', item: any) {
     setEditRefplace({
@@ -2225,6 +2263,90 @@ export default function AdminPage() {
                   <p className="text-sm text-muted-foreground">{t('Sin niveles.', 'No levels.')}</p>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {tab === 'notificaciones' && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">
+                {t('Horario del resumen semanal por correo', 'Weekly email digest schedule')}
+              </h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {t(
+                  'Este horario aplica para TODOS los usuarios (no es por-usuario). El correo se envía en el idioma que cada usuario tiene configurado en su perfil.',
+                  'This schedule applies to ALL users (it is not per-user). The email is sent in the language each user has set in their profile.'
+                )}
+              </p>
+            </div>
+            {notifMsg && <p className="text-sm text-emerald-700">{notifMsg}</p>}
+
+            <div className="max-w-md space-y-4 rounded-lg border border-border p-4">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                  {t('Día de la semana', 'Day of week')}
+                </label>
+                <Select
+                  value={String(notifHorario.diaSemana)}
+                  onChange={(e) => setNotifHorario((h) => ({ ...h, diaSemana: Number(e.target.value) }))}
+                >
+                  <option value="0">{t('Domingo', 'Sunday')}</option>
+                  <option value="1">{t('Lunes', 'Monday')}</option>
+                  <option value="2">{t('Martes', 'Tuesday')}</option>
+                  <option value="3">{t('Miércoles', 'Wednesday')}</option>
+                  <option value="4">{t('Jueves', 'Thursday')}</option>
+                  <option value="5">{t('Viernes', 'Friday')}</option>
+                  <option value="6">{t('Sábado', 'Saturday')}</option>
+                </Select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                  {t('Hora (en la zona horaria de abajo)', 'Hour (in the timezone below)')}
+                </label>
+                <Select
+                  value={String(notifHorario.hora)}
+                  onChange={(e) => setNotifHorario((h) => ({ ...h, hora: Number(e.target.value) }))}
+                >
+                  {Array.from({ length: 24 }, (_, i) => (
+                    <option key={i} value={i}>
+                      {String(i).padStart(2, '0')}:00
+                    </option>
+                  ))}
+                </Select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                  {t('Zona horaria', 'Timezone')}
+                </label>
+                <Select
+                  value={notifHorario.timezone}
+                  onChange={(e) => setNotifHorario((h) => ({ ...h, timezone: e.target.value }))}
+                >
+                  <option value="America/Mexico_City">{t('Ciudad de México', 'Mexico City')}</option>
+                  <option value="America/Tijuana">{t('Tijuana', 'Tijuana')}</option>
+                  <option value="America/Cancun">{t('Cancún', 'Cancun')}</option>
+                  <option value="America/Bogota">{t('Bogotá', 'Bogota')}</option>
+                  <option value="America/New_York">{t('Nueva York (este de EE. UU.)', 'New York (US Eastern)')}</option>
+                  <option value="America/Chicago">{t('Chicago (centro de EE. UU.)', 'Chicago (US Central)')}</option>
+                  <option value="America/Los_Angeles">{t('Los Ángeles (oeste de EE. UU.)', 'Los Angeles (US Pacific)')}</option>
+                  <option value="Europe/Madrid">{t('Madrid', 'Madrid')}</option>
+                  <option value="UTC">{t('UTC', 'UTC')}</option>
+                </Select>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                {t(
+                  'Nota: por el plan gratuito de Vercel, el envío se revisa cada hora, así que el correo puede llegar un poco después de la hora exacta elegida (dentro de esa hora).',
+                  'Note: on the free Vercel plan, sending is checked every hour, so the email may arrive a bit after the exact chosen hour (within that hour).'
+                )}
+              </p>
+
+              <Button type="button" size="sm" onClick={() => void guardarHorario()}>
+                {t('Guardar horario', 'Save schedule')}
+              </Button>
             </div>
           </div>
         )}

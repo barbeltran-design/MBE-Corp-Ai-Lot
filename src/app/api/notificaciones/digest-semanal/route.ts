@@ -19,18 +19,21 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebase-admin';
-import { enviarDigestSemanal, type SeccionDigest } from '@/lib/notificaciones';
+import {
+  enviarDigestSemanal,
+  obtenerHorarioDigest,
+  esHoraDeEnviar,
+  yaEnviadoRecientemente,
+  marcarEnviado,
+  type SeccionDigest,
+} from '@/lib/notificaciones';
 import { daysUntil, type PlanData, type Accion } from '@/lib/plan-accion';
-import { rolLabel, nivelDesdePuntos, NIVEL_PUNTOS } from '@/lib/club';
+import { rolLabel, nivelDesdePuntos, nivelLabel } from '@/lib/club';
 import { MISIONES_PART_LABELS, misionLabel } from '@/lib/worlds';
+import type { Language } from '@/types/firestore';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // requiere plan Vercel Pro para superar 10s (Hobby)
-
-function nivelLabelEs(id: string): string {
-  const n = NIVEL_PUNTOS.find((x) => x.id === id);
-  return n ? n.es : id;
-}
 
 function autorizado(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
@@ -51,6 +54,18 @@ interface JuntaSemana {
 export async function GET(req: NextRequest) {
   if (!autorizado(req)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  }
+
+  // Fase 2: horario configurable (admin > Notificaciones) + protección contra
+  // reenvíos duplicados. Este endpoint se dispara cada hora (ver los 24 crons
+  // en vercel.json); solo procede si "ahora", evaluado en el timezone
+  // configurado, coincide con el día/hora elegidos por el admin.
+  const horario = await obtenerHorarioDigest();
+  if (!esHoraDeEnviar(horario)) {
+    return NextResponse.json({ ok: true, omitido: 'no es la hora configurada', horario });
+  }
+  if (await yaEnviadoRecientemente()) {
+    return NextResponse.json({ ok: true, omitido: 'ya enviado recientemente' });
   }
 
   const db = getAdminDb();
@@ -99,13 +114,14 @@ export async function GET(req: NextRequest) {
     procesados++;
     const uid = userDoc.id;
     const user = userDoc.data();
+    const lang: Language = (user.language as Language) === 'en' ? 'en' : 'es';
     const secciones: SeccionDigest[] = [];
 
     // 1) Junta de la semana + rol asignado
     if (juntaSemana) {
       const j = juntaSemana as JuntaSemana;
       const miRol = j.roles ? Object.entries(j.roles).find(([, v]) => v === uid)?.[0] : undefined;
-      const rolTxt = miRol ? ` Tienes el rol de <strong>${rolLabel(miRol, 'es')}</strong>.` : '';
+      const rolTxt = miRol ? ` Tienes el rol de <strong>${rolLabel(miRol, lang)}</strong>.` : '';
       secciones.push({
         categoria: 'juntaClub',
         tituloHtml: '<h3>📅 Tu junta de esta semana</h3>',
@@ -159,7 +175,7 @@ export async function GET(req: NextRequest) {
     const partida: number[] = Array.isArray(user.worlds?.partida) ? user.worlds.partida : [];
     const faltantes = MISIONES_PART_LABELS.filter((m) => !partida.includes(m.n));
     if (faltantes.length > 0) {
-      const items = faltantes.map((m) => `<li>${misionLabel(m.n, 'es')}</li>`).join('');
+      const items = faltantes.map((m) => `<li>${misionLabel(m.n, lang)}</li>`).join('');
       secciones.push({
         categoria: 'misionesPendientes',
         tituloHtml: '<h3>🧭 Misiones pendientes</h3>',
@@ -186,7 +202,7 @@ export async function GET(req: NextRequest) {
       secciones.push({
         categoria: 'ranking',
         tituloHtml: '<h3>🏆 Tu ranking en el Club</h3>',
-        contenidoHtml: `<p>Tienes <strong>${puntosClub} puntos</strong> — nivel <strong>${nivelLabelEs(nivel)}</strong>${deltaTxt}.</p>`,
+        contenidoHtml: `<p>Tienes <strong>${puntosClub} puntos</strong> — nivel <strong>${nivelLabel(nivel, lang)}</strong>${deltaTxt}.</p>`,
         resumenTexto: `${puntosClub} pts, nivel ${nivel}${deltaTxt}`,
       });
     }
@@ -204,8 +220,12 @@ export async function GET(req: NextRequest) {
 
     if (secciones.length > 0) {
       conContenido++;
-      await enviarDigestSemanal(uid, secciones);
+      await enviarDigestSemanal(uid, secciones, lang);
     }
+  }
+
+  if (conContenido > 0) {
+    await marcarEnviado();
   }
 
   return NextResponse.json({ ok: true, usuariosProcesados: procesados, digestsEnviados: conContenido });

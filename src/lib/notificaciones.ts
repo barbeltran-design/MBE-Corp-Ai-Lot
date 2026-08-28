@@ -16,6 +16,9 @@ import type {
   NotificationPreferencesDoc,
   NotificationLogDoc,
   NotificacionCategoria,
+  NotificacionHorarioDoc,
+  NotificacionEstadoDoc,
+  Language,
 } from '@/types/firestore';
 
 const DEFAULT_CATEGORIAS: Record<NotificacionCategoria, boolean> = {
@@ -38,6 +41,106 @@ function getResend(): Resend | null {
   if (!apiKey) return null;
   if (!resendClient) resendClient = new Resend(apiKey);
   return resendClient;
+}
+
+// ---------------------------------------------------------------------------
+// Horario del digest semanal (Fase 2): un admin general elige día+hora+zona
+// horaria desde /admin > Notificaciones. Como el plan gratuito de Vercel solo
+// permite 1 disparo diario POR cron individual, vercel.json define 24 crons
+// (uno por hora UTC) que llaman al mismo endpoint cada hora; esHoraDeEnviar()
+// decide, en cada invocación, si "ahora" (evaluado en el timezone elegido)
+// coincide con el día/hora que configuró el admin.
+// ---------------------------------------------------------------------------
+
+export const DEFAULT_HORARIO: NotificacionHorarioDoc = {
+  diaSemana: 1, // lunes
+  hora: 8,
+  timezone: 'America/Mexico_City',
+};
+
+export async function obtenerHorarioDigest(): Promise<NotificacionHorarioDoc> {
+  const db = getAdminDb();
+  const snap = await db.collection('config').doc('notificaciones_horario').get();
+  if (!snap.exists) return { ...DEFAULT_HORARIO };
+  const data = snap.data() as Partial<NotificacionHorarioDoc>;
+  return {
+    diaSemana: typeof data.diaSemana === 'number' ? data.diaSemana : DEFAULT_HORARIO.diaSemana,
+    hora: typeof data.hora === 'number' ? data.hora : DEFAULT_HORARIO.hora,
+    timezone: typeof data.timezone === 'string' && data.timezone ? data.timezone : DEFAULT_HORARIO.timezone,
+    actualizadoPor: data.actualizadoPor,
+    actualizadoEn: data.actualizadoEn,
+  };
+}
+
+export async function guardarHorarioDigest(
+  horario: { diaSemana: number; hora: number; timezone: string },
+  uid: string
+): Promise<void> {
+  const db = getAdminDb();
+  await db.collection('config').doc('notificaciones_horario').set(
+    {
+      diaSemana: horario.diaSemana,
+      hora: horario.hora,
+      timezone: horario.timezone,
+      actualizadoPor: uid,
+      actualizadoEn: new Date().toISOString(),
+    },
+    { merge: true }
+  );
+}
+
+/**
+ * ¿"Ahora" coincide con el día/hora configurados, evaluados en el timezone
+ * del horario? Se compara solo por hora exacta (sin minutos): Vercel
+ * garantiza que un cron se dispara "dentro de la hora programada", no en el
+ * minuto exacto, así que cualquier ejecución dentro de esa hora cuenta.
+ */
+export function esHoraDeEnviar(horario: NotificacionHorarioDoc, ahora: Date = new Date()): boolean {
+  const partes = new Intl.DateTimeFormat('en-US', {
+    timeZone: horario.timezone,
+    weekday: 'short',
+    hour: 'numeric',
+    hour12: false,
+  }).formatToParts(ahora);
+
+  const weekdayStr = partes.find((p) => p.type === 'weekday')?.value ?? '';
+  const horaStr = partes.find((p) => p.type === 'hour')?.value ?? '';
+
+  const DIAS: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  const diaActual = DIAS[weekdayStr];
+  let horaActual = parseInt(horaStr, 10);
+  if (horaActual === 24) horaActual = 0; // Intl con hour12:false puede devolver "24" a medianoche
+
+  return diaActual === horario.diaSemana && horaActual === horario.hora;
+}
+
+/**
+ * Evita reenviar el digest si el chequeo horario (cada hora, ver vercel.json)
+ * coincide más de una vez con el horario configurado — por ejemplo si Vercel
+ * reintenta la invocación o dos de los 24 crons horarios se solapan cerca de
+ * un cambio de hora. Se considera "ya enviado" si el último envío exitoso
+ * ocurrió hace menos de 6 días (deja margen frente al intervalo semanal real
+ * de 7 días, sin depender de cálculos de número de semana ISO que se
+ * complican en cambios de año).
+ */
+export async function yaEnviadoRecientemente(): Promise<boolean> {
+  const db = getAdminDb();
+  const snap = await db.collection('config').doc('notificaciones_estado').get();
+  if (!snap.exists) return false;
+  const data = snap.data() as Partial<NotificacionEstadoDoc>;
+  if (!data.ultimoEnvioEn) return false;
+  const ultimo = new Date(data.ultimoEnvioEn).getTime();
+  if (Number.isNaN(ultimo)) return false;
+  const SEIS_DIAS_MS = 6 * 24 * 60 * 60 * 1000;
+  return Date.now() - ultimo < SEIS_DIAS_MS;
+}
+
+export async function marcarEnviado(): Promise<void> {
+  const db = getAdminDb();
+  await db.collection('config').doc('notificaciones_estado').set(
+    { ultimoEnvioEn: new Date().toISOString() },
+    { merge: true }
+  );
 }
 
 export interface NotificacionPayload {
@@ -146,14 +249,19 @@ export interface SeccionDigest {
   resumenTexto: string; // para el log (una línea, sin HTML)
 }
 
-function construirHtmlDigest(secciones: SeccionDigest[]): string {
+function construirHtmlDigest(secciones: SeccionDigest[], lang: Language): string {
   const bloques = secciones.map((s) => `${s.tituloHtml}${s.contenidoHtml}`).join('<hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;">');
+  const titulo = lang === 'en' ? 'Your weekly summary — MBE Corpilot' : 'Tu resumen semanal — MBE Corpilot';
+  const pie =
+    lang === 'en'
+      ? 'You can adjust what you receive in Profile &gt; Notification preferences.'
+      : 'Puedes ajustar qué recibes en Perfil &gt; Preferencias de notificaciones.';
   return `
     <div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;color:#1f2937;">
-      <h2 style="color:#0f172a;">Tu resumen semanal — MBE Corpilot</h2>
+      <h2 style="color:#0f172a;">${titulo}</h2>
       ${bloques}
       <p style="margin-top:24px;font-size:12px;color:#6b7280;">
-        Puedes ajustar qué recibes en Perfil &gt; Preferencias de notificaciones.
+        ${pie}
       </p>
     </div>
   `;
@@ -165,7 +273,7 @@ function construirHtmlDigest(secciones: SeccionDigest[]): string {
  * usuario) simplemente no se pasan — esta función no decide qué mostrar,
  * solo filtra por preferencias y arma/envía el correo.
  */
-export async function enviarDigestSemanal(uid: string, secciones: SeccionDigest[]): Promise<void> {
+export async function enviarDigestSemanal(uid: string, secciones: SeccionDigest[], lang: Language = 'es'): Promise<void> {
   if (secciones.length === 0) return; // nada que reportar esta semana para este usuario
 
   const prefs = await obtenerPreferencias(uid);
@@ -237,8 +345,8 @@ export async function enviarDigestSemanal(uid: string, secciones: SeccionDigest[
     await resend.emails.send({
       from: FROM_EMAIL,
       to: email,
-      subject: 'Tu resumen semanal — MBE Corpilot',
-      html: construirHtmlDigest(activas),
+      subject: lang === 'en' ? 'Your weekly summary — MBE Corpilot' : 'Tu resumen semanal — MBE Corpilot',
+      html: construirHtmlDigest(activas, lang),
     });
     for (const s of activas) {
       await registrarLog({

@@ -232,6 +232,11 @@ export const NIVEL_PUNTOS = [
   { id: 'mentor', umbral: 4000, es: 'Mentor', en: 'Mentor' },
 ] as const;
 
+export function nivelLabel(id: string, lang: 'es' | 'en'): string {
+  const n = NIVEL_PUNTOS.find((x) => x.id === id);
+  return n ? (lang === 'en' ? n.en : n.es) : id;
+}
+
 // Funcionalidades que un nivel de la comunidad puede desbloquear. El admin
 // edita que accesos tiene cada nivel (config/niveles_club en Firestore).
 export const ACCESOS_COMUNIDAD = [

@@ -258,6 +258,29 @@ export interface PuntosLogDoc {
   fecha: string; // ISO
 }
 
+/** Firestore doc: config/notificaciones_horario — horario global del digest
+ * semanal (lo define un admin general y aplica a TODOS los usuarios). El
+ * plan gratuito de Vercel solo permite disparar una tarea automática (cron)
+ * una vez al día por cada entrada, así que el envío real se revisa una vez
+ * por hora (ver los 24 crons en vercel.json) comparando la hora/día actuales
+ * — calculados en el `timezone` de este documento — contra
+ * diaSemana/hora aquí guardados. Si no existe el documento, se usa un valor
+ * por defecto razonable (ver DEFAULT_HORARIO en src/lib/notificaciones.ts). */
+export interface NotificacionHorarioDoc {
+  diaSemana: number; // 0 = domingo ... 6 = sábado
+  hora: number; // 0-23, hora local en el timezone configurado
+  timezone: string; // IANA, ej. 'America/Mexico_City'
+  actualizadoPor?: string; // uid del admin que lo configuró
+  actualizadoEn?: string; // ISO
+}
+
+/** Firestore doc: config/notificaciones_estado — evita reenviar el digest
+ * semanal más de una vez si el chequeo horario (cada hora) coincide varias
+ * veces seguidas con el horario configurado. */
+export interface NotificacionEstadoDoc {
+  ultimoEnvioEn?: string; // ISO — fecha/hora del último envío masivo exitoso
+}
+
 /** Firestore collection: mentorBookingIntents/{id} — se crea cuando un
  * usuario hace clic para agendar con un especialista/mentor (antes de salir
  * a Calendly/Google Calendar), para poder notificar a ese mentor con quién
