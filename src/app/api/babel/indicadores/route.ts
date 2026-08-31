@@ -45,7 +45,7 @@ Para cada objetivo usa EXACTAMENTE el "nombre" de la lista y la "redaccion" tal 
 
 FINANCIERA (Dinero del negocio):
 - "Ingresos (Ventas)": "Aumentar las ventas de [punto de equilibrio definido] a [ingreso meta] pesos mensuales en 12 meses."
-- "Gastos Fijos y Variables": "Reducir los gastos fijos en x% con relación a los ingresos en 12 meses." (formula obligatoria: "Suma de % de Gastos fijos + Variables + Mercadotecnia"; meta obligatoria: usa el porcentaje del contexto financiero etiquetado como gasto total (fijos + variables + mercadotecnia) como % de ingresos)
+- "Gastos Fijos y Variables": "Reducir los gastos fijos en [X]% con relación a los ingresos en 12 meses." (formula obligatoria: "Suma de % de Gastos fijos + Variables + Mercadotecnia"; meta obligatoria: usa el porcentaje del contexto financiero etiquetado como gasto total (fijos + variables + mercadotecnia) como % de ingresos; el [X] del texto DEBE ser ese mismo porcentaje calculado, nunca la letra "x" literal)
 - "Utilidad (Ganancia real)": "Lograr [utilidad deseada definida] mensuales en 12 meses."
 
 CLIENTES:
@@ -69,7 +69,7 @@ For each objective use EXACTLY the "name" from the list and the "wording" as it 
 
 FINANCIAL (Business money):
 - "Income (Sales)": "Increase sales from [defined break-even point] to [goal revenue] pesos per month in 12 months."
-- "Fixed and Variable Expenses": "Reduce fixed expenses by x% relative to income in 12 months." (mandatory formula: "Sum of % of Fixed expenses + Variable + Marketing"; mandatory target: use the percentage from the financial context labeled as total expenses (fixed + variable + marketing) as % of revenue)
+- "Fixed and Variable Expenses": "Reduce fixed expenses by [X]% relative to income in 12 months." (mandatory formula: "Sum of % of Fixed expenses + Variable + Marketing"; mandatory target: use the percentage from the financial context labeled as total expenses (fixed + variable + marketing) as % of revenue; the [X] in the wording MUST be that same calculated percentage, never the literal letter "x")
 - "Profit (Real Earnings)": "Achieve [defined desired profit] per month in 12 months."
 
 CUSTOMERS:
