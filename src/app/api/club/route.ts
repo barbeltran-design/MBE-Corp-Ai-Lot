@@ -444,12 +444,15 @@ export async function POST(req: NextRequest) {
       // Body: { anio, mes (1-12, requerido si modo!=='anio'), modo?: 'mes'|'anio',
       //         diaSemana? (0-6; si no se manda, se usa el día de la semana de
       //         la última junta creada, o viernes=5 si todavía no hay ninguna),
-      //         hora? (default '18:00') }.
+      //         hora? (default '18:00'), liga? (misma liga de videollamada para
+      //         todas las juntas generadas; opcional) }.
       if (!esAdminFlag) return NextResponse.json({ error: 'No tienes permisos.' }, { status: 403 });
       const anio = Math.round(parseNum(body?.anio, 0));
       const modo = String(body?.modo ?? 'mes') === 'anio' ? 'anio' : 'mes';
       const mes = Math.round(parseNum(body?.mes, 0));
       const hora = String(body?.hora ?? '18:00').trim();
+      let liga = String(body?.liga ?? '').trim();
+      if (liga && !/^https?:\/\//i.test(liga)) liga = 'https://' + liga;
       if (!anio) {
         return NextResponse.json({ error: 'Falta el año.' }, { status: 400 });
       }
@@ -511,7 +514,7 @@ export async function POST(req: NextRequest) {
             nombre: `Junta ${semana === 1 ? 'de Consejo' : 'semanal'} · Semana ${semana}`,
             fecha,
             hora,
-            liga: '',
+            liga,
             semanaMes: semana,
             agenda: agendaBase,
             roles: { coordinador: null, mentor_dinamica: null, mentor_crecimiento: null, mentor_b2b: null, mentor_calidad: null },
