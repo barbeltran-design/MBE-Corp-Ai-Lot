@@ -51,6 +51,26 @@ interface JuntaSemana {
   roles?: Record<string, string | null>;
 }
 
+// Ejecuta `fn` sobre `items` con un máximo de `limite` corriendo en
+// paralelo (en vez de uno por uno). Esto es lo que evita que el endpoint
+// se tarde usuarios×segundos y choque con el límite de 10s de Vercel
+// Hobby — con 15 en paralelo, 100 usuarios que antes tardaban ~100x el
+// tiempo de un usuario ahora tardan ~7x.
+async function conConcurrencia<T, R>(items: T[], limite: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const resultados: R[] = new Array(items.length);
+  let indice = 0;
+  async function trabajador() {
+    for (;;) {
+      const i = indice++;
+      if (i >= items.length) return;
+      resultados[i] = await fn(items[i]);
+    }
+  }
+  const trabajadores = Array.from({ length: Math.min(limite, items.length) }, () => trabajador());
+  await Promise.all(trabajadores);
+  return resultados;
+}
+
 export async function GET(req: NextRequest) {
   if (!autorizado(req)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
@@ -104,14 +124,16 @@ export async function GET(req: NextRequest) {
     if (d?.nombre) convocatoriasNuevas.push(String(d.nombre));
   });
 
-  // --- Por usuario ------------------------------------------------------
+  // --- Por usuario --------------------------------------------------------
+  // Se procesan varios usuarios EN PARALELO (no uno por uno) para no chocar
+  // con el límite de 10s de Vercel Hobby. Cada worker devuelve `true` si le
+  // tocó contenido (para el conteo de `conContenido`), sin usar contadores
+  // compartidos entre workers concurrentes.
 
   const usersSnap = await db.collection('users').get();
-  let procesados = 0;
-  let conContenido = 0;
+  const CONCURRENCIA = 15;
 
-  for (const userDoc of usersSnap.docs) {
-    procesados++;
+  const resultados = await conConcurrencia(usersSnap.docs, CONCURRENCIA, async (userDoc) => {
     const uid = userDoc.id;
     const user = userDoc.data();
     const lang: Language = (user.language as Language) === 'en' ? 'en' : 'es';
@@ -219,10 +241,14 @@ export async function GET(req: NextRequest) {
     }
 
     if (secciones.length > 0) {
-      conContenido++;
       await enviarDigestSemanal(uid, secciones, lang);
+      return true;
     }
-  }
+    return false;
+  });
+
+  const procesados = resultados.length;
+  const conContenido = resultados.filter(Boolean).length;
 
   if (conContenido > 0) {
     await marcarEnviado();
