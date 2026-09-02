@@ -251,6 +251,12 @@ export function ClubBuilder() {
   const [njFecha, setNjFecha] = React.useState('');
   const [njHora, setNjHora] = React.useState('19:00');
   const [njLiga, setNjLiga] = React.useState('');
+  // Generar varias juntas de un jalón (mensual o anual)
+  const [gjModo, setGjModo] = React.useState<'mes' | 'anio'>('mes');
+  const [gjAnio, setGjAnio] = React.useState(new Date().getFullYear());
+  const [gjMes, setGjMes] = React.useState(new Date().getMonth() + 1);
+  const [gjDia, setGjDia] = React.useState(5); // viernes por defecto, igual que "Crear junta"
+  const [gjHora, setGjHora] = React.useState('19:00');
   const [evNombre, setEvNombre] = React.useState('');
   const [evFecha, setEvFecha] = React.useState('');
   const [evHora, setEvHora] = React.useState('19:00');
@@ -1228,6 +1234,86 @@ export function ClubBuilder() {
             >
               {busy === 'crear-junta' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               {t('Crear junta', 'Create meeting')}
+            </button>
+          </div>
+
+          {/* Generar varias juntas de un jalón (mensual o anual) */}
+          <div className="glass-panel p-4">
+            <p className="text-sm font-semibold text-foreground">
+              {t('Generar juntas del mes o del año', 'Generate meetings for the month or year')}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t(
+                'Crea de un jalón todas las juntas que falten (una por cada día de la semana elegido). No duplica fechas que ya tengan junta.',
+                'Creates every missing meeting in one go (one per chosen weekday). Dates that already have a meeting are skipped.'
+              )}
+            </p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+              <select
+                value={gjModo}
+                onChange={(e) => setGjModo(e.target.value === 'anio' ? 'anio' : 'mes')}
+                className="rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground focus:border-teal-500 focus:outline-none"
+              >
+                <option value="mes">{t('Un mes', 'One month')}</option>
+                <option value="anio">{t('Todo el año', 'Whole year')}</option>
+              </select>
+              <input
+                type="number"
+                value={gjAnio}
+                onChange={(e) => setGjAnio(Number(e.target.value))}
+                placeholder={t('Año', 'Year')}
+                className="rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-teal-500 focus:outline-none"
+              />
+              {gjModo === 'mes' && (
+                <select
+                  value={gjMes}
+                  onChange={(e) => setGjMes(Number(e.target.value))}
+                  className="rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground focus:border-teal-500 focus:outline-none"
+                >
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                    <option key={m} value={m}>
+                      {new Date(2026, m - 1, 1).toLocaleDateString(dispLang === 'en' ? 'en-US' : 'es-MX', { month: 'long' })}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <select
+                value={gjDia}
+                onChange={(e) => setGjDia(Number(e.target.value))}
+                className="rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground focus:border-teal-500 focus:outline-none"
+              >
+                {DIAS_SEMANA.map((d) => (
+                  <option key={d.v} value={d.v}>
+                    {t(d.es, d.en)}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="time"
+                value={gjHora}
+                onChange={(e) => setGjHora(e.target.value)}
+                className="rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground focus:border-teal-500 focus:outline-none"
+              />
+            </div>
+            <button
+              type="button"
+              disabled={busy === 'generar-juntas-mes' || !gjAnio || (gjModo === 'mes' && !gjMes)}
+              onClick={() =>
+                void act(
+                  'generar-juntas-mes',
+                  { anio: gjAnio, mes: gjModo === 'mes' ? gjMes : undefined, modo: gjModo, diaSemana: gjDia, hora: gjHora },
+                  gjModo === 'anio'
+                    ? 'Juntas del año generadas (se saltaron las fechas que ya tenían junta).'
+                    : 'Juntas del mes generadas (se saltaron las fechas que ya tenían junta).',
+                  gjModo === 'anio'
+                    ? "Year's meetings generated (dates that already had a meeting were skipped)."
+                    : "Month's meetings generated (dates that already had a meeting were skipped)."
+                )
+              }
+              className="mt-3 inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:opacity-50"
+            >
+              {busy === 'generar-juntas-mes' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              {t('Generar juntas', 'Generate meetings')}
             </button>
           </div>
 
