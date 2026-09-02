@@ -366,19 +366,20 @@ export async function GET(req: NextRequest) {
 }
 
 // POST /api/club — acciones autenticadas.
-//   crear-junta      {fecha, hora, liga?}                        (admin)
-//   crear-evento     {nombre, fecha, hora, ubicacion, objetivo, precio?} (admin)
-//   asignar-roles    {juntaId, roles: {rolId: uid|null}}         (admin o coord. de esa junta)
-//   definir-tema     {juntaId, tema, tipo?: 'tutorial'|'dinamica'} (tutorial: admin/coord/mentor_crecimiento; dinamica: admin/coord/mentor_dinamica)
-//   cancelar-junta   {juntaId}                                   (solo admin)
-//   reordenar-agenda {juntaId, agenda: [{id, duracionMin}]}      (admin o coord.; suma 90)
-//   confirmar        {juntaId, confirmado}                       (cualquiera)
-//   otorgar-puntos   {juntaId, items: [{userId, categorias[]}]}  (admin o mentor_calidad)
-//   ajustar-puntos   {userId, valor, nota?}                      (solo admin)
-//   cerrar-junta     {juntaId}                                   (admin o coord.)
-//   crear-noticia    {titulo, contenido}                         (nivel Empresario Orquesta+, certificado, o admin)
-//   aprobar-noticia  {noticiaId}                                 (solo admin)
-//   rechazar-noticia {noticiaId, motivo?}                        (solo admin)
+//   crear-junta        {fecha, hora, liga?}                        (admin)
+//   generar-juntas-mes {anio, mes, hora?}                          (admin) — crea de un jalón las juntas (una por lunes) que falten en ese mes
+//   crear-evento       {nombre, fecha, hora, ubicacion, objetivo, precio?} (admin)
+//   asignar-roles      {juntaId, roles: {rolId: uid|null}}         (admin o coord. de esa junta)
+//   definir-tema       {juntaId, tema, tipo?: 'tutorial'|'dinamica'} (tutorial: admin/coord/mentor_crecimiento; dinamica: admin/coord/mentor_dinamica)
+//   cancelar-junta     {juntaId}                                   (solo admin)
+//   reordenar-agenda   {juntaId, agenda: [{id, duracionMin}]}      (admin o coord.; suma 90)
+//   confirmar          {juntaId, confirmado}                       (cualquiera)
+//   otorgar-puntos     {juntaId, items: [{userId, categorias[]}]}  (admin o mentor_calidad)
+//   ajustar-puntos     {userId, valor, nota?}                      (solo admin)
+//   cerrar-junta       {juntaId}                                   (admin o coord.)
+//   crear-noticia      {titulo, contenido}                         (nivel Empresario Orquesta+, certificado, o admin)
+//   aprobar-noticia    {noticiaId}                                 (solo admin)
+//   rechazar-noticia   {noticiaId, motivo?}                        (solo admin)
 export async function POST(req: NextRequest) {
   let uid: string;
   try {
@@ -427,6 +428,64 @@ export async function POST(req: NextRequest) {
       };
       const ref = await db.collection('juntas_club').add(doc);
       return NextResponse.json({ ok: true, id: ref.id });
+    }
+
+    if (accion === 'generar-juntas-mes') {
+      // Crea de un jalón las juntas semanales que falten para un mes dado
+      // (una por cada lunes del mes), sin duplicar fechas que ya tengan
+      // junta programada. Body: { anio, mes (1-12), hora? (default '18:00') }.
+      if (!esAdminFlag) return NextResponse.json({ error: 'No tienes permisos.' }, { status: 403 });
+      const anio = Math.round(parseNum(body?.anio, 0));
+      const mes = Math.round(parseNum(body?.mes, 0));
+      const hora = String(body?.hora ?? '18:00').trim();
+      if (!anio || !mes || mes < 1 || mes > 12) {
+        return NextResponse.json({ error: 'Falta año o mes válido.' }, { status: 400 });
+      }
+      const lunesDelMes: string[] = [];
+      const cursor = new Date(anio, mes - 1, 1);
+      while (cursor.getMonth() === mes - 1) {
+        if (cursor.getDay() === 1) {
+          lunesDelMes.push(
+            `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`
+          );
+        }
+        cursor.setDate(cursor.getDate() + 1);
+      }
+      const existentesSnap = await db.collection('juntas_club').where('tipo', '==', 'junta').get();
+      const fechasExistentes = new Set(existentesSnap.docs.map((d) => String(d.data().fecha ?? '')));
+      const agendaOverridesNueva = await leerAgendaMaestra(db);
+      const agendaBase = aplicarAgendaMaestra(agendaOverridesNueva);
+      const batch = db.batch();
+      const creadas: string[] = [];
+      for (const fecha of lunesDelMes) {
+        if (fechasExistentes.has(fecha)) continue;
+        const semana = semanaDeMes(fecha);
+        const doc: JuntaClubDoc = {
+          tipo: 'junta',
+          nombre: `Junta ${semana === 1 ? 'de Consejo' : 'semanal'} · Semana ${semana}`,
+          fecha,
+          hora,
+          liga: '',
+          semanaMes: semana,
+          agenda: agendaBase,
+          roles: { coordinador: null, mentor_dinamica: null, mentor_crecimiento: null, mentor_b2b: null, mentor_calidad: null },
+          asistentes: {},
+          temaDefinido: '',
+          creadoPor: uid,
+          creadoEn: now,
+          estatus: 'programada',
+        };
+        const ref = db.collection('juntas_club').doc();
+        batch.set(ref, doc);
+        creadas.push(fecha);
+      }
+      await batch.commit();
+      return NextResponse.json({
+        ok: true,
+        creadas: creadas.length,
+        fechas: creadas,
+        omitidasPorDuplicado: lunesDelMes.length - creadas.length,
+      });
     }
 
     if (accion === 'crear-evento') {
