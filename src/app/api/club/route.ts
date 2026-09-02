@@ -367,7 +367,13 @@ export async function GET(req: NextRequest) {
 
 // POST /api/club — acciones autenticadas.
 //   crear-junta        {fecha, hora, liga?}                        (admin)
-//   generar-juntas-mes {anio, mes, hora?}                          (admin) — crea de un jalón las juntas (una por lunes) que falten en ese mes
+//   generar-juntas-mes {anio, mes?, modo?: 'mes'|'anio', diaSemana?: 0-6, hora?}
+//                                                                   (admin) — crea de un jalón las juntas
+//                                                                   que falten (una por cada `diaSemana` de
+//                                                                   cada mes cubierto). Si no se manda
+//                                                                   `diaSemana`, se toma el día de la semana
+//                                                                   de la última junta creada (o viernes=5
+//                                                                   si no hay ninguna todavía).
 //   crear-evento       {nombre, fecha, hora, ubicacion, objetivo, precio?} (admin)
 //   asignar-roles      {juntaId, roles: {rolId: uid|null}}         (admin o coord. de esa junta)
 //   definir-tema       {juntaId, tema, tipo?: 'tutorial'|'dinamica'} (tutorial: admin/coord/mentor_crecimiento; dinamica: admin/coord/mentor_dinamica)
@@ -431,60 +437,104 @@ export async function POST(req: NextRequest) {
     }
 
     if (accion === 'generar-juntas-mes') {
-      // Crea de un jalón las juntas semanales que falten para un mes dado
-      // (una por cada lunes del mes), sin duplicar fechas que ya tengan
-      // junta programada. Body: { anio, mes (1-12), hora? (default '18:00') }.
+      // Crea de un jalón las juntas que falten para un mes (modo:'mes', default)
+      // o para los 12 meses de un año (modo:'anio'), una por cada `diaSemana`
+      // (0=domingo … 6=sábado) de cada mes cubierto, sin duplicar fechas que ya
+      // tengan junta programada.
+      // Body: { anio, mes (1-12, requerido si modo!=='anio'), modo?: 'mes'|'anio',
+      //         diaSemana? (0-6; si no se manda, se usa el día de la semana de
+      //         la última junta creada, o viernes=5 si todavía no hay ninguna),
+      //         hora? (default '18:00') }.
       if (!esAdminFlag) return NextResponse.json({ error: 'No tienes permisos.' }, { status: 403 });
       const anio = Math.round(parseNum(body?.anio, 0));
+      const modo = String(body?.modo ?? 'mes') === 'anio' ? 'anio' : 'mes';
       const mes = Math.round(parseNum(body?.mes, 0));
       const hora = String(body?.hora ?? '18:00').trim();
-      if (!anio || !mes || mes < 1 || mes > 12) {
-        return NextResponse.json({ error: 'Falta año o mes válido.' }, { status: 400 });
+      if (!anio) {
+        return NextResponse.json({ error: 'Falta el año.' }, { status: 400 });
       }
-      const lunesDelMes: string[] = [];
-      const cursor = new Date(anio, mes - 1, 1);
-      while (cursor.getMonth() === mes - 1) {
-        if (cursor.getDay() === 1) {
-          lunesDelMes.push(
-            `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`
-          );
-        }
-        cursor.setDate(cursor.getDate() + 1);
+      if (modo === 'mes' && (!mes || mes < 1 || mes > 12)) {
+        return NextResponse.json({ error: 'Falta un mes válido.' }, { status: 400 });
       }
+
+      // Una sola lectura (where simple, sin orderBy en otro campo — así no
+      // depende de ningún índice compuesto de Firestore) que sirve para dos
+      // cosas: saber qué fechas ya tienen junta (evitar duplicados) y, si el
+      // admin no mandó `diaSemana`, deducirlo de la última junta creada.
       const existentesSnap = await db.collection('juntas_club').where('tipo', '==', 'junta').get();
-      const fechasExistentes = new Set(existentesSnap.docs.map((d) => String(d.data().fecha ?? '')));
+      const fechasExistentesArr = existentesSnap.docs.map((d) => String(d.data().fecha ?? '')).filter(Boolean);
+      const fechasExistentes = new Set(fechasExistentesArr);
+
+      // Día de la semana objetivo: el que mande el admin (0-6) o, si no manda
+      // nada, el mismo día de la última junta ya creada (para no romper la
+      // cadencia existente); si todavía no hay ninguna junta, viernes (5).
+      let diaSemana = Math.round(parseNum(body?.diaSemana, NaN));
+      if (!Number.isFinite(diaSemana) || diaSemana < 0 || diaSemana > 6) {
+        const ultimaFecha = fechasExistentesArr.sort().pop();
+        if (ultimaFecha) {
+          const [y, m, dd] = ultimaFecha.split('-').map(Number);
+          diaSemana = new Date(y, (m || 1) - 1, dd || 1).getDay();
+        } else {
+          diaSemana = 5; // viernes, día por default del formulario "Crear junta"
+        }
+      }
+
+      const mesesCubrir = modo === 'anio' ? Array.from({ length: 12 }, (_, i) => i + 1) : [mes];
+      const fechasGenerar: string[] = [];
+      for (const m of mesesCubrir) {
+        const cursor = new Date(anio, m - 1, 1);
+        while (cursor.getMonth() === m - 1) {
+          if (cursor.getDay() === diaSemana) {
+            fechasGenerar.push(
+              `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`
+            );
+          }
+          cursor.setDate(cursor.getDate() + 1);
+        }
+      }
+
       const agendaOverridesNueva = await leerAgendaMaestra(db);
       const agendaBase = aplicarAgendaMaestra(agendaOverridesNueva);
-      const batch = db.batch();
+
+      const pendientes = fechasGenerar.filter((fecha) => !fechasExistentes.has(fecha));
       const creadas: string[] = [];
-      for (const fecha of lunesDelMes) {
-        if (fechasExistentes.has(fecha)) continue;
-        const semana = semanaDeMes(fecha);
-        const doc: JuntaClubDoc = {
-          tipo: 'junta',
-          nombre: `Junta ${semana === 1 ? 'de Consejo' : 'semanal'} · Semana ${semana}`,
-          fecha,
-          hora,
-          liga: '',
-          semanaMes: semana,
-          agenda: agendaBase,
-          roles: { coordinador: null, mentor_dinamica: null, mentor_crecimiento: null, mentor_b2b: null, mentor_calidad: null },
-          asistentes: {},
-          temaDefinido: '',
-          creadoPor: uid,
-          creadoEn: now,
-          estatus: 'programada',
-        };
-        const ref = db.collection('juntas_club').doc();
-        batch.set(ref, doc);
-        creadas.push(fecha);
+      // Firestore limita ~500 escrituras por batch; se manda en bloques de 400
+      // para quedar con margen (relevante sobre todo en modo 'anio').
+      const TAM_BLOQUE = 400;
+      for (let i = 0; i < pendientes.length; i += TAM_BLOQUE) {
+        const bloque = pendientes.slice(i, i + TAM_BLOQUE);
+        const batch = db.batch();
+        for (const fecha of bloque) {
+          const semana = semanaDeMes(fecha);
+          const doc: JuntaClubDoc = {
+            tipo: 'junta',
+            nombre: `Junta ${semana === 1 ? 'de Consejo' : 'semanal'} · Semana ${semana}`,
+            fecha,
+            hora,
+            liga: '',
+            semanaMes: semana,
+            agenda: agendaBase,
+            roles: { coordinador: null, mentor_dinamica: null, mentor_crecimiento: null, mentor_b2b: null, mentor_calidad: null },
+            asistentes: {},
+            temaDefinido: '',
+            creadoPor: uid,
+            creadoEn: now,
+            estatus: 'programada',
+          };
+          const ref = db.collection('juntas_club').doc();
+          batch.set(ref, doc);
+          creadas.push(fecha);
+        }
+        await batch.commit();
       }
-      await batch.commit();
+
       return NextResponse.json({
         ok: true,
+        modo,
+        diaSemana,
         creadas: creadas.length,
         fechas: creadas,
-        omitidasPorDuplicado: lunesDelMes.length - creadas.length,
+        omitidasPorDuplicado: fechasGenerar.length - creadas.length,
       });
     }
 
