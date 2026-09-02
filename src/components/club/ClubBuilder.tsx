@@ -257,6 +257,7 @@ export function ClubBuilder() {
   const [gjMes, setGjMes] = React.useState(new Date().getMonth() + 1);
   const [gjDia, setGjDia] = React.useState(5); // viernes por defecto, igual que "Crear junta"
   const [gjHora, setGjHora] = React.useState('19:00');
+  const [gjLiga, setGjLiga] = React.useState('');
   const [evNombre, setEvNombre] = React.useState('');
   const [evFecha, setEvFecha] = React.useState('');
   const [evHora, setEvHora] = React.useState('19:00');
@@ -1294,14 +1295,23 @@ export function ClubBuilder() {
                 onChange={(e) => setGjHora(e.target.value)}
                 className="rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground focus:border-teal-500 focus:outline-none"
               />
+              <input
+                value={gjLiga}
+                onChange={(e) => setGjLiga(e.target.value)}
+                placeholder={t('Liga de videollamada (opcional)', 'Video call link (optional)')}
+                className="rounded-lg border border-glass-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-teal-500 focus:outline-none lg:col-span-2"
+              />
             </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t('Si pones una liga, se usa la misma para todas las juntas que se generen en este lote.', 'If you set a link, the same one is used for every meeting generated in this batch.')}
+            </p>
             <button
               type="button"
               disabled={busy === 'generar-juntas-mes' || !gjAnio || (gjModo === 'mes' && !gjMes)}
               onClick={() =>
                 void act(
                   'generar-juntas-mes',
-                  { anio: gjAnio, mes: gjModo === 'mes' ? gjMes : undefined, modo: gjModo, diaSemana: gjDia, hora: gjHora },
+                  { anio: gjAnio, mes: gjModo === 'mes' ? gjMes : undefined, modo: gjModo, diaSemana: gjDia, hora: gjHora, liga: gjLiga },
                   gjModo === 'anio'
                     ? 'Juntas del año generadas (se saltaron las fechas que ya tenían junta).'
                     : 'Juntas del mes generadas (se saltaron las fechas que ya tenían junta).',
