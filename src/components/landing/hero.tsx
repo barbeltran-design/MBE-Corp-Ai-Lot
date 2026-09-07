@@ -1,6 +1,5 @@
 import { useTranslations } from 'next-intl';
 import { Sparkles } from 'lucide-react';
-import { HeroMascots } from './hero-mascots';
 
 export function Hero() {
   const t = useTranslations('landing.hero');
@@ -15,9 +14,6 @@ export function Hero() {
         {t('title')}
       </h1>
       <p className="mt-5 whitespace-pre-line text-lg text-slate-600">{t('subtitle')}</p>
-      <p className="mt-4 text-sm text-slate-400">{t('socialProof')}</p>
-
-      <HeroMascots />
     </div>
   );
 }
