@@ -66,7 +66,7 @@ export function LoginForm() {
   }
 
   return (
-    <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-lg sm:p-8">
+    <div className="w-full max-w-md rounded-2xl border border-white/60 bg-white/90 p-6 shadow-2xl backdrop-blur-md sm:p-8">
       <h2 className="text-xl font-semibold text-slate-900">{t('title')}</h2>
       <p className="mt-1 text-sm text-slate-500">{t('subtitle')}</p>
 
