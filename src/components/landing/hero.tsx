@@ -13,7 +13,9 @@ export function Hero() {
       <h1 className="mt-5 text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
         {t('title')}
       </h1>
-      <p className="mt-5 whitespace-pre-line text-lg text-slate-600">{t('subtitle')}</p>
+      <p className="mt-5 whitespace-pre-line text-lg text-slate-600">
+        {t.rich('subtitle', { b: (chunks) => <strong className="font-semibold text-slate-900">{chunks}</strong> })}
+      </p>
     </div>
   );
 }
