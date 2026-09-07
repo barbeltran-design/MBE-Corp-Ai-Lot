@@ -41,10 +41,25 @@ export default async function LoginPage({ params }: { params: Promise<{ locale: 
         </div>
       </header>
 
-      <section id="beneficios" className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-6 py-10 lg:grid-cols-2 lg:py-20">
-        <Hero />
-        <div className="flex justify-center lg:justify-end">
-          <LoginForm />
+      <section id="beneficios" className="relative isolate overflow-hidden">
+        {/* Foto de fondo decorativa */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/hero-equipo.jpg"
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-gradient-to-b from-slate-900/20 via-white/50 to-white"
+        />
+
+        <div className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-6 py-14 lg:grid-cols-2 lg:py-24">
+          <Hero />
+          <div className="flex justify-center lg:justify-end">
+            <LoginForm />
+          </div>
         </div>
       </section>
 
