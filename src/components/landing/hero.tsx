@@ -1,8 +1,6 @@
 import { useTranslations } from 'next-intl';
 import { Sparkles } from 'lucide-react';
-
-const HERO_COVER_URL =
-  'https://d8j0ntlcm91z4.cloudfront.net/user_3GKSOWtJRYR8ZbKliULo84biwzL/hf_20260814_015644_b2eab912-9908-446d-9e44-e56c82142d11.png';
+import { HeroMascots } from './hero-mascots';
 
 export function Hero() {
   const t = useTranslations('landing.hero');
@@ -19,13 +17,7 @@ export function Hero() {
       <p className="mt-5 whitespace-pre-line text-lg text-slate-600">{t('subtitle')}</p>
       <p className="mt-4 text-sm text-slate-400">{t('socialProof')}</p>
 
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={HERO_COVER_URL}
-        alt={t('title')}
-        className="mt-6 w-full max-w-sm rounded-2xl border border-emerald-100 object-cover shadow-lg"
-        loading="lazy"
-      />
+      <HeroMascots />
     </div>
   );
 }
