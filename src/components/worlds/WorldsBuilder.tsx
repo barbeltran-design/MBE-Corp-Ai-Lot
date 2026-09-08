@@ -12,9 +12,11 @@ import { computeResults, type DimensionAnswers } from '@/lib/maturity-scoring';
 import { nivelDesdePuntos } from '@/lib/club';
 import { getBabelSessionIfExists } from '@/lib/babel-session';
 import { PRACTICAS_POR_TEMA, type MentorAgente } from '@/lib/madurez-practicas';
+import { hydrateWorkspaceKey } from '@/lib/workspace-scope';
 import Link from 'next/link';
 import {
   loadPlanAccion,
+  STORAGE_KEY as PLAN_ACCION_STORAGE_KEY,
   accionesDeObjetivo,
   priorityRank,
   priorityTier,
@@ -715,10 +717,19 @@ export function WorldsBuilder({ vistaInicial }: { vistaInicial?: Vista }) {
   // (panel de actividades por agente). Se considera DEFINIDO cuando ya
   // tiene acciones.
   React.useEffect(() => {
-    const pa = loadPlanAccion();
-    setPlanAccion(pa);
-    setPlanAccionDefinido(Array.isArray(pa?.acciones) && pa.acciones.length > 0);
-  }, []);
+    if (!uid) return;
+    let cancelled = false;
+    (async () => {
+      await hydrateWorkspaceKey(uid, 'plan-accion', PLAN_ACCION_STORAGE_KEY);
+      if (cancelled) return;
+      const pa = loadPlanAccion(uid);
+      setPlanAccion(pa);
+      setPlanAccionDefinido(Array.isArray(pa?.acciones) && pa.acciones.length > 0);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [uid]);
 
   // Racha de días conectados seguidos (visitas a este mapa). Se cuenta en
   // días consecutivos: si ayer también hubo visita, suma uno; si no, reinicia.
