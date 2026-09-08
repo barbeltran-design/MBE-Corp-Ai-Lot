@@ -1,3 +1,5 @@
+import { scopedKey } from '@/lib/workspace-scope';
+
 export type PlanLang = 'es' | 'en';
 export type EntornoTipo = 'amenaza' | 'oportunidad';
 export type FDTipo = 'fortaleza' | 'debilidad';
@@ -293,9 +295,9 @@ export function perspectivaEstilo(key: string): PerspectivaEstilo {
   return SIN_PERSPECTIVA_STYLE;
 }
 
-export function loadPlanAccion(): PlanData | null {
+export function loadPlanAccion(uid: string | null): PlanData | null {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(scopedKey(STORAGE_KEY, uid));
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return null;
@@ -312,10 +314,10 @@ export function loadPlanAccion(): PlanData | null {
   }
 }
 
-export function savePlanAccion(data: PlanData) {
+export function savePlanAccion(data: PlanData, uid: string | null) {
   try {
     window.localStorage.setItem(
-      STORAGE_KEY,
+      scopedKey(STORAGE_KEY, uid),
       JSON.stringify({
         objetivos: data.objetivos,
         entornos: data.entornos,
@@ -329,9 +331,9 @@ export function savePlanAccion(data: PlanData) {
   }
 }
 
-export function loadContactos(): Contacto[] {
+export function loadContactos(uid: string | null): Contacto[] {
   try {
-    const rawC = window.localStorage.getItem(CONTACTS_KEY);
+    const rawC = window.localStorage.getItem(scopedKey(CONTACTS_KEY, uid));
     if (rawC) {
       const parsedC = JSON.parse(rawC);
       if (Array.isArray(parsedC)) return parsedC;
@@ -349,10 +351,10 @@ export type OrgData = {
   consejeros: { id: string; nombre: string }[];
 };
 
-export function loadOrgData(): OrgData {
+export function loadOrgData(uid: string | null): OrgData {
   const result: OrgData = { assignments: {}, presidente: '', secretario: '', consejeros: [] };
   try {
-    const rawOrg = window.localStorage.getItem(ORG_KEY);
+    const rawOrg = window.localStorage.getItem(scopedKey(ORG_KEY, uid));
     if (rawOrg) {
       const parsedOrg = JSON.parse(rawOrg);
       if (parsedOrg && typeof parsedOrg === 'object') result.assignments = parsedOrg;
@@ -361,7 +363,7 @@ export function loadOrgData(): OrgData {
     console.error(err);
   }
   try {
-    const rawBoard = window.localStorage.getItem(BOARD_KEY);
+    const rawBoard = window.localStorage.getItem(scopedKey(BOARD_KEY, uid));
     if (rawBoard) {
       const parsedBoard = JSON.parse(rawBoard);
       if (parsedBoard && typeof parsedBoard.presidente === 'string') result.presidente = parsedBoard.presidente;
