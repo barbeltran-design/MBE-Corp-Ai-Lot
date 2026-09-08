@@ -1,8 +1,7 @@
 'use client';
 import React from 'react';
 import Link from 'next/link';
-import { onAuthStateChanged, type User } from 'firebase/auth';
-import { getFirebaseAuth } from '@/lib/firebase';
+import { useAuthUidState, hydrateWorkspaceKey } from '@/lib/workspace-scope';
 import { AREAS_MENTOR, esMentorValido, MENTOR_IDS, type MentorId } from '@/lib/mentores';
 import { getLatestAssessmentAnswers } from '@/lib/assessment';
 import { getMaturityDimensions } from '@/lib/maturity-dimensions';
@@ -16,6 +15,8 @@ import {
   type Proyecto,
   type Accion,
   type OrgData,
+  STORAGE_KEY,
+  ORG_KEY,
   FACTIBILIDAD_OPTIONS,
   IMPACTO_OPTIONS,
   ROLE_OPTIONS,
@@ -41,6 +42,7 @@ export default function AccionesPlanBuilder({
   mentorInicial?: MentorId | null;
 }) {
   const t = LABELS[lang];
+  const { uid, ready: authReady } = useAuthUidState();
 
   const [objetivos, setObjetivos] = React.useState<Objetivo[]>([]);
   const [entornos, setEntornos] = React.useState<AmenazaOportunidad[]>([]);
@@ -59,37 +61,40 @@ export default function AccionesPlanBuilder({
   }, [mentorInicial]);
 
   React.useEffect(() => {
-    const plan = loadPlanAccion();
-    if (plan) {
-      setObjetivos(plan.objetivos);
-      setEntornos(plan.entornos);
-      setFds(plan.fds);
-      setProyectos(plan.proyectos);
-      setAcciones(plan.acciones);
-    }
-    setOrg(loadOrgData());
-    setLoaded(true);
-  }, []);
+    if (!authReady) return;
+    let cancelled = false;
+    (async () => {
+      await Promise.all([
+        hydrateWorkspaceKey(uid, 'plan-accion', STORAGE_KEY),
+        hydrateWorkspaceKey(uid, 'organigrama', ORG_KEY),
+      ]);
+      if (cancelled) return;
+      const plan = loadPlanAccion(uid);
+      if (plan) {
+        setObjetivos(plan.objetivos);
+        setEntornos(plan.entornos);
+        setFds(plan.fds);
+        setProyectos(plan.proyectos);
+        setAcciones(plan.acciones);
+      }
+      setOrg(loadOrgData(uid));
+      setLoaded(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authReady, uid]);
 
   React.useEffect(() => {
     if (!loaded) return;
-    savePlanAccion({ objetivos, entornos, fds, proyectos, acciones });
-  }, [objetivos, entornos, fds, proyectos, acciones, loaded]);
+    savePlanAccion({ objetivos, entornos, fds, proyectos, acciones }, uid);
+  }, [objetivos, entornos, fds, proyectos, acciones, loaded, uid]);
 
   // Retos por mentor (mismo cálculo que en la Misión "Plan de Acción" de cada
   // Mundo / WorldsBuilder.tsx): agrupa los temas pendientes del diagnóstico de
   // madurez por el agente de IA dueño de cada tema, para mostrarlos aquí ya
   // filtrados por mentor.
-  const [uid, setUid] = React.useState<string | null>(null);
   const [respuestas, setRespuestas] = React.useState<Record<string, string[]> | null>(null);
-
-  React.useEffect(() => {
-    const auth = getFirebaseAuth();
-    const unsub = onAuthStateChanged(auth, (usr: User | null) => {
-      setUid(usr ? usr.uid : null);
-    });
-    return () => unsub();
-  }, []);
 
   React.useEffect(() => {
     if (!uid) return;
