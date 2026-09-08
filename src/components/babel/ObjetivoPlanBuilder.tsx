@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import AgentAvatar from '@/components/agentes/AgentAvatar';
 import { esMentorValido, MENTOR_IDS, mentorPorPerspectiva, type MentorId } from '@/lib/mentores';
+import { useAuthUidState, hydrateWorkspaceKey } from '@/lib/workspace-scope';
 import {
   type PlanLang,
   type Estatus,
@@ -14,6 +15,9 @@ import {
   type Accion,
   type Contacto,
   type OrgData,
+  STORAGE_KEY,
+  CONTACTS_KEY,
+  ORG_KEY,
   ROLE_OPTIONS,
   FACTIBILIDAD_OPTIONS,
   IMPACTO_OPTIONS,
@@ -50,6 +54,7 @@ type TabActiva = 'acciones' | 'diagnostico';
 export default function ObjetivoPlanBuilder({ lang, objetivoId }: { lang: PlanLang; objetivoId: string }) {
   const router = useRouter();
   const t = LABELS[lang];
+  const { uid, ready: authReady } = useAuthUidState();
   const [translationCache, setTranslationCache] = React.useState<Record<string, string>>({});
   const tr = React.useCallback(function (text: string): string {
     if (lang === 'es' || !text) return text;
@@ -81,23 +86,36 @@ export default function ObjetivoPlanBuilder({ lang, objetivoId }: { lang: PlanLa
   const [ayudaCargando, setAyudaCargando] = React.useState(false);
 
   React.useEffect(() => {
-    const plan = loadPlanAccion();
-    if (plan) {
-      setObjetivos(plan.objetivos);
-      setEntornos(plan.entornos);
-      setFds(plan.fds);
-      setProyectos(plan.proyectos);
-      setAcciones(plan.acciones);
-    }
-    setContactos(loadContactos());
-    setOrg(loadOrgData());
-    setLoaded(true);
-  }, []);
+    if (!authReady) return;
+    let cancelled = false;
+    (async () => {
+      await Promise.all([
+        hydrateWorkspaceKey(uid, 'plan-accion', STORAGE_KEY),
+        hydrateWorkspaceKey(uid, 'contactos', CONTACTS_KEY),
+        hydrateWorkspaceKey(uid, 'organigrama', ORG_KEY),
+      ]);
+      if (cancelled) return;
+      const plan = loadPlanAccion(uid);
+      if (plan) {
+        setObjetivos(plan.objetivos);
+        setEntornos(plan.entornos);
+        setFds(plan.fds);
+        setProyectos(plan.proyectos);
+        setAcciones(plan.acciones);
+      }
+      setContactos(loadContactos(uid));
+      setOrg(loadOrgData(uid));
+      setLoaded(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authReady, uid]);
 
   React.useEffect(() => {
     if (!loaded) return;
-    savePlanAccion({ objetivos, entornos, fds, proyectos, acciones });
-  }, [objetivos, entornos, fds, proyectos, acciones, loaded]);
+    savePlanAccion({ objetivos, entornos, fds, proyectos, acciones }, uid);
+  }, [objetivos, entornos, fds, proyectos, acciones, loaded, uid]);
 
   React.useEffect(() => {
     if (!loaded || lang === 'es') return;
