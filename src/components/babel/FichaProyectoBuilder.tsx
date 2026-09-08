@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import Link from 'next/link';
+import { useAuthUidState, hydrateWorkspaceKey } from '@/lib/workspace-scope';
 import {
   type PlanLang,
   type Objetivo,
@@ -8,6 +9,7 @@ import {
   type FortalezaDebilidad,
   type Proyecto,
   type Accion,
+  STORAGE_KEY,
   priorityRank,
   priorityTier,
   daysUntil,
@@ -19,6 +21,7 @@ import {
 
 export default function FichaProyectoBuilder({ lang, proyectoId }: { lang: PlanLang; proyectoId: string }) {
   const t = LABELS[lang];
+  const { uid, ready: authReady } = useAuthUidState();
 
   const [objetivos, setObjetivos] = React.useState<Objetivo[]>([]);
   const [entornos, setEntornos] = React.useState<AmenazaOportunidad[]>([]);
@@ -28,21 +31,30 @@ export default function FichaProyectoBuilder({ lang, proyectoId }: { lang: PlanL
   const [loaded, setLoaded] = React.useState(false);
 
   React.useEffect(() => {
-    const plan = loadPlanAccion();
-    if (plan) {
-      setObjetivos(plan.objetivos);
-      setEntornos(plan.entornos);
-      setFds(plan.fds);
-      setProyectos(plan.proyectos);
-      setAcciones(plan.acciones);
-    }
-    setLoaded(true);
-  }, []);
+    if (!authReady) return;
+    let cancelled = false;
+    (async () => {
+      await hydrateWorkspaceKey(uid, 'plan-accion', STORAGE_KEY);
+      if (cancelled) return;
+      const plan = loadPlanAccion(uid);
+      if (plan) {
+        setObjetivos(plan.objetivos);
+        setEntornos(plan.entornos);
+        setFds(plan.fds);
+        setProyectos(plan.proyectos);
+        setAcciones(plan.acciones);
+      }
+      setLoaded(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authReady, uid]);
 
   React.useEffect(() => {
     if (!loaded) return;
-    savePlanAccion({ objetivos, entornos, fds, proyectos, acciones });
-  }, [objetivos, entornos, fds, proyectos, acciones, loaded]);
+    savePlanAccion({ objetivos, entornos, fds, proyectos, acciones }, uid);
+  }, [objetivos, entornos, fds, proyectos, acciones, loaded, uid]);
 
   const plan = { objetivos, entornos, fds, proyectos, acciones };
   const proyecto = proyectos.find((p) => p.id === proyectoId);
